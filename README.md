@@ -1,91 +1,71 @@
-# 🎵 Tocador
+# Tocador
 
-Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` compatível e toque.
+Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` compatível e toque — sem build, sem dependências pesadas, funciona em qualquer CDN estática.
 
-Sem build. Sem dependências pesadas. Funciona em qualquer CDN estática.
+> **Tocador é uma plataforma** — o mesmo player reproduz muitos acervos diferentes. Cada acervo é um catálogo independente apontado via `?acervo=`.
 
-**Demo ao vivo →** `https://rafapolo.github.io/tocador/`  
-_(carrega o Acervo UQT por padrão — 1.658 horas de MPB)_
+## ✨ Características
 
----
+### 🎨 Interface Spotify-Style Grid
+- **Grid de álbuns central**: Grade responsiva de capas com rolagem virtual — apenas ~30 cards no DOM independente do tamanho da biblioteca
+- **Painel de faixas lateral**: Clique em um álbum para exibir capa grande, info e lista de faixas
+- **Capas lazy-loaded**: Carregadas sob demanda com placeholder SVG embutido — sem impacto no carregamento inicial
+- **Player compacto**: Barra sticky no rodapé com controles de play/pausa/próxima, progresso e stats da biblioteca
 
-## ✨ Funcionalidades
-
-### 🎨 Interface
-
-- **Grid virtual de álbuns** — renderiza apenas ~30 cards no DOM independente do tamanho do acervo; ResizeObserver recalcula colunas ao redimensionar
-- **Painel de faixas** — clique num álbum para ver capa, info e lista de faixas (desktop) ou drawer deslizante (mobile)
-- **Capas lazy-loaded** — placeholder SVG embutido enquanto carrega; fallback silencioso em erro
-- **Player compacto** — barra sticky no rodapé com capa, título, progresso e controles
-
-### 🔍 Busca e Filtros
-
-- **Busca em tempo real** — filtra por artista, título de álbum, path e títulos de faixas — debounce de 150ms
-- **Filtro por década** — botões gerados automaticamente dos dados (`Todos | <1940 | 1950 … 2010 | ∞`)
-- **Filtros combinados** — busca + década funcionam juntos
-- **Deep links** — `?album=`, `?t=`, `?q=`, `?ano=`, `?play=1` preservados na URL; compartilhe qualquer faixa com link direto
-- **Histórico** — navegação por browser back/forward restaura seleção e filtros
-
-### 🎼 Áudio
-
-- **Seleção intencional** — clique no álbum carrega sem tocar; play começa quando o usuário pede
-- **Auto-próxima** — avança automaticamente ao terminar a faixa
-- **Barra de progresso** — clique ou toque para pular; ponto de posição sempre visível; área de toque ampla
-- **Shuffle** — aleatório ponderado por faixas em O(1), sem alocações
-- **Repeat** — off → repetir faixa → repetir álbum
-- **Volume** — slider no player desktop
-- **Persistência** — shuffle, repeat e volume salvos no `localStorage`
-- **Media Session API** — controles na tela de bloqueio e fones Bluetooth
-- **Singleton entre abas** — pausa automaticamente outras abas via `BroadcastChannel`
+### 🔍 Busca e Filtros Inteligentes
+- **Links compartilháveis por faixa**: URL inclui `?album=...&t=N` — compartilhe um álbum ou uma faixa específica; adicione `&play=1` para que o áudio inicie automaticamente ao abrir o link
+- **Busca em tempo real**: Filtre por nome do artista, álbum ou qualquer metadado — com debounce de 150ms
+- **Botão de limpar** (✕): Aparece no campo de busca ao digitar; limpa e reposiciona o foco
+- **Contagem de resultados**: Exibe quantos álbuns correspondem ao filtro ativo
+- **Filtro por década**: Botões compactos (Todos | <1940 | 1950 … 2010) — clique para explorar épocas; linha única com scroll horizontal no mobile
+- **Filtros combinados**: Use busca + década juntos para encontrar exatamente o que procura
 
 ### ♿ Acessibilidade
+- **Navegação por teclado**: todos os elementos interativos (álbuns, faixas, links de artista/ano, controles do player) alcançáveis via Tab e ativáveis com Enter/Espaço
+- **Leitor de tela**: `aria-label` em todos os botões de ícone; `aria-pressed` em shuffle e repeat; `aria-expanded` no drawer de faixas; `role="slider"` com `aria-valuenow` atualizado em tempo real na barra de progresso
+- **Anúncio automático de faixa**: região `aria-live="polite"` anuncia "Reproduzindo: [faixa] — [artista]" a cada troca sem que o usuário precise navegar
+- **HTML semântico**: filtro de décadas como `<nav>`, grid de álbuns com `role="list"`, campo de busca com `<label>` visualmente oculto
+- **Focus-visible**: estilo de foco explícito em todos os elementos interativos — distinguível do foco por mouse
 
-- Navegação completa por teclado — `Tab`, `Enter`, `Espaço` em todos os elementos interativos
-- `aria-label` em todos os botões de ícone; `aria-pressed` em shuffle e repeat; `aria-live` anuncia faixa atual
-- `role="slider"` + `aria-valuenow` atualizado em tempo real na barra de progresso
-- HTML semântico — `<nav>` para décadas, `role="list"` no grid, `<label>` no campo de busca
-- Focus-visible explícito em todos os elementos
+### 📱 Totalmente Responsivo
+- **Desktop**: Layout lado-a-lado (grid de álbuns + painel de faixas lateral com auto-scroll para a faixa tocando)
+- **Mobile**: Grid de álbuns em tela cheia; painel de faixas como drawer deslizante no player (☰ à direita); shuffle (à esquerda) e controles centrais na barra do player; header compacto com stats visíveis
 
-### 📱 Mobile
-
-- Header compacto de 44px com stats inline
-- Grid de álbuns em tela cheia
-- Drawer deslizante de faixas no player (toggle ☰)
-- Overlay full-screen de "now playing" com swipe-to-dismiss
-
-### ⌨️ Atalhos
-
-| tecla | ação |
-|---|---|
-| `Espaço` | play / pausa |
-| `←` / `→` | recua / avança 10s |
-| `n` | próxima faixa |
-| `p` | faixa anterior |
-| `/` | foca busca |
-
----
+### 🎼 Funcionalidades de Áudio
+- **Seleção intencional**: Clique em um álbum para carregá-lo no player — o áudio só começa ao pressionar play
+- **Auto-play da próxima**: Continua automaticamente para a próxima faixa ao final
+- **Barra de progresso estilo Spotify**: Linha fina com ponto de posição sempre visível; cresce levemente no hover; área de toque ampla para mobile
+- **Controle de progresso**: Clique (ou toque) na barra para pular para qualquer ponto
+- **Shuffle**: Embaralha a ordem das faixas do álbum atual
+- **Repeat**: Cicla entre três modos — sem repetição → repetir faixa → repetir álbum
+- **Volume**: Slider de volume no player (desktop)
+- **Persistência**: Shuffle, modo de repetição e volume são salvos no `localStorage` e restaurados ao reabrir
+- **Atalhos de teclado**: `Espaço` play/pausa · `←/→` recua/avança 10s · `n` próxima · `p` anterior
 
 ## 📦 Acervos
 
-O Tocador usa `?acervo=` para saber qual arquivo carregar.
+O Tocador usa `?acervo=` para saber qual catálogo carregar:
 
 ```
-https://rafapolo.github.io/tocador/?acervo=<url_encoded>
+https://rafapolo.github.io/tocador/?acervo=<alias_ou_url>
 ```
 
-Uma vez carregado, o acervo persiste na sessão — recarregar sem o parâmetro mantém o mesmo.
+Pode ser um **alias pré-configurado** ou uma **URL direta** para qualquer `.json.gz` compatível. Uma vez carregado, o acervo persiste na sessão — recarregar sem o parâmetro mantém o mesmo.
 
 ### Aliases prontos
 
 | alias | acervo |
 |---|---|
-| `?acervo=uqt` | Acervo UQT — 2.155 álbuns, 1.658h de MPB |
+| `?acervo=uqt` | Acervo UQT — MPB, samba, bossa nova |
+| `?acervo=homi` | Acervo Homi |
 
-### Padrão
+### Acervo externo
 
-Sem `?acervo=` → carrega o Acervo UQT automaticamente.
+```
+?acervo=https://exemplo.com/meu-acervo.json.gz
+```
 
----
+Qualquer URL pública para um `.json.gz` no formato correto funciona diretamente.
 
 ## 🗂️ Formato do acervo
 
@@ -123,73 +103,75 @@ Um `.json.gz` com esta estrutura:
 `base_url + "/" + path + "/" + file` → URL do áudio  
 `base_url + "/" + path + "/capa-min.jpg"` → capa do álbum
 
----
-
 ## 🛠️ Criar um acervo
 
 Veja [`script/README.md`](script/README.md) para o guia completo em pt-BR:
 
-- Como organizar as pastas de músicas
-- Como limpar arquivos indesejados
-- Como compilar e usar o **gerador Rust** (`script/generate-albums/`)
-- Como hospedar o `.json.gz` no S3, R2 ou GitHub Releases
+```bash
+# 1. Gerar catálogo de álbuns a partir dos MP3s locais
+ARCHIVE_DIR=/path/to/musicas node script/generate-albums.js
 
----
+# 2. Sincronizar áudio para o bucket S3
+ARCHIVE_DIR=/path/to/musicas node script/sync-to-bucket.js
 
-## 🔁 Como funciona
-
-### Fluxo de carregamento
-
-1. Browser carrega `index.html` da CDN estática (GitHub Pages ou qualquer host)
-2. `ui.js` lê `?acervo=` (ou alias `uqt`) da URL → resolve para a URL do `.json.gz`
-3. `fetch(dataUrl)` + `DecompressionStream('gzip')` descomprime o catálogo inline, sem dependências externas
-4. `db.meta.base_url` é extraído do JSON — define de onde vêm os arquivos de áudio e capas
-5. `buildAlbums()` pré-processa os dados (lowercase para busca, URLs de capa, cache de duração)
-6. `VirtualGrid` renderiza apenas os cards visíveis no viewport
-
-### Fluxo de reprodução
-
-1. Usuário clica num álbum → primeiro track é "primado" (`audio.src` + `audio.load()`) sem tocar
-2. Usuário pressiona play → `safePlay(audio)` inicia a reprodução
-3. URL construída como `{base_url}/{album_path}/{track_file}`
-4. Browser faz `GET` direto ao servidor de mídia definido em `base_url`
-5. `audio.ended` → `playNext()` avança automaticamente
-
-### Streaming
-
-O Tocador não faz proxy de áudio — reproduz direto da URL em `base_url`. O servidor de mídia precisa:
-- Suportar **CORS** (`Access-Control-Allow-Origin: *`) para ser acessado do browser
-- Servir **`Content-Type: audio/mpeg`** para `.mp3`
-- Suportar **`Range` requests** para seek e streaming eficiente
-
-Opções prontas: S3 público, Cloudflare R2, GitHub Releases (arquivos pequenos), qualquer CDN.
-
----
-
-## 🏗️ Arquitetura
-
-```
-index.html                     app shell
-js/ui.js                       toda a lógica — player, grid virtual, filtros, áudio
-assets/player.css              estilos
-assets/capa.jpg                placeholder de capa
-script/generate-albums/        gerador Rust — lê MP3s, escreve .json.gz
-script/README.md               guia para criar acervos (pt-BR)
+# 3. Redimensionar e fazer upload das capas (200px)
+ARCHIVE_DIR=/path/to/musicas node script/resize-cover-images.js
 ```
 
-Dependências de frontend: [Umbrella JS](https://umbrellajs.com/) (~2.6 KB). Descompressão via `DecompressionStream` nativa. Zero bundler. Zero framework.
+### Arquitetura
+- **Player**: HTML5 + CSS3 + JavaScript vanilla — servido pelo GitHub Pages ou qualquer CDN estática
+- **Dados**: `.json.gz` — catálogo gzipado carregado assincronamente e descomprimido via `DecompressionStream` nativa do browser
+- **Capas e áudio**: Servidos pelo `base_url` definido em cada acervo
+- **Proxy opcional**: Node.js + S3 SDK — para acervos com armazenamento privado
 
----
+### Fluxo de uma requisição
+1. Browser carrega `index.html` do GitHub Pages
+2. `ui.js` lê `?acervo=` da URL, resolve alias ou URL direta, faz fetch do catálogo gzipado e renderiza o grid
+3. Ao clicar num álbum, constrói a URL `{base_url}/{path}/{file}`
+4. Browser faz `GET` direto ao servidor de mídia — ou via proxy, se o acervo usar armazenamento privado
 
-## ⚡ Performance
+### Frontend
+- Dependências mínimas: Umbrella JS (~2.6 KB); descompressão gzip via `DecompressionStream` nativa (zero KB extra)
+- CSS com Flexbox, sem frameworks; grid substituído por posicionamento absoluto virtual
+- Placeholder de capa embutido como data-URI (nenhum round-trip extra)
+- Delegação de eventos: 3 listeners no total para álbuns, faixas e drawer mobile
 
-- **Virtual scrolling** — `VirtualGrid` mantém ~30 nós no DOM; pool de nós reciclados reduz 65% das alocações em scroll
-- **Gzip assíncrono** — `DecompressionStream` nativa descomprime o catálogo sem bloquear a thread principal
-- **Event delegation** — 3 listeners cobrem todo o grid, em vez de um por álbum
-- **Hot-path DOM cacheado** — 9 elementos críticos inicializados uma vez no boot; zero `getElementById` durante playback
-- **Pre-lowercase** — strings de busca normalizadas em `buildAlbums()` → zero `.toLowerCase()` por chamada de filtro
-- **Track list diffing** — troca de faixa no mesmo álbum só atualiza `.playing`, sem reconstruir o DOM
+## 💡 Dicas de Uso
+
+### Exploração Rápida
+1. Use os **botões de década** para navegar por época
+2. **Clique em qualquer álbum** para ver todas as faixas
+3. Clique em uma faixa para **começar a tocar**
+
+## 🎯 Otimizações de Performance
+
+### Carregamento de dados
+- **Gzip assíncrono**: catálogo carregado via `fetch` + `DecompressionStream` nativa — elimina MB de JS bloqueante no parse inicial
+- **Virtual scrolling**: `VirtualGrid` renderiza ~30 cards em posicionamento absoluto; scroll event passivo + ResizeObserver — DOM nunca passa de ~100 nós
+- **Event delegation**: 3 listeners delegados substituem centenas de listeners individuais por álbum
+- **Track list diffing**: `renderTrackList()` detecta se o álbum já está renderizado — ao trocar faixa no mesmo álbum, só atualiza `.playing` sem reconstruir o DOM
+
+### DOM e JavaScript
+- **Refs em módulo**: 9 elementos hot-path inicializados uma vez no `DOMContentLoaded` — `updateNowPlaying()` e `setLoading()`, chamados a cada faixa, fazem zero `getElementById`
+- **Shuffle O(1) sem alocação**: caminhada aleatória ponderada por peso de faixas — escolhe álbum em O(nAlbums), faixa em O(1), zero alocações
+- **indexOf vs findIndex**: comparação por identidade sem closure na navegação de faixas
+- **CSS deduplicado**: blocos `@media` e seletores duplicados merged em bloco único
+
+### Streaming e Deployment
+- **Servidor de mídia**: `Range` suportado para seek/streaming eficiente
+- **Capas**: `capa-min.jpg` (200px wide) — geradas por `script/resize-cover-images.js`
+- **Lazy loading**: zero impacto no carregamento inicial
+- **Cache-Control em camadas**: capas com `immutable`; áudio com cache longo; catálogo JSON com TTL curto
+- **Deployment**: Haloy + Docker, rolling updates sem downtime
+
+## 🤝 Contribuições
+
+Para sugerir melhorias ou adicionar suporte a novos acervos:
+1. Abra uma [issue](https://github.com/rafapolo/tocador/issues)
+2. Ou submeta um [pull request](https://github.com/rafapolo/tocador/pulls)
 
 ---
 
 **Feito para tocar** ♪
+
+[Demo ao vivo →](https://rafapolo.github.io/tocador/)

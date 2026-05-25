@@ -22,6 +22,9 @@ const KNOWN_ACERVOS = {
     data: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/js/uqt-albums.json.gz',
     base_url: 'https://uqt.xn--2dk.xyz/uqt',
   },
+  homi: {
+    data: 'https://github.com/rafapolo/uqt/raw/refs/heads/master/js/homi-albums.json.gz',
+  },
 };
 const DEFAULT_ACERVO = 'uqt';
 
