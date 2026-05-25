@@ -18,9 +18,12 @@ let _playerTitleEl = null, _volumeWave = null, _searchInput = null, _overlayCove
 let _overlayTrackArtist = null;
 
 const KNOWN_ACERVOS = {
-  uqt: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/js/uqt-albums.json.gz',
+  uqt: {
+    data: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/js/uqt-albums.json.gz',
+    base_url: 'https://uqt.xn--2dk.xyz/uqt',
+  },
 };
-const DEFAULT_ACERVO = KNOWN_ACERVOS.uqt;
+const DEFAULT_ACERVO = 'uqt';
 
 let BASE_URL = '';
 const failedCovers = new Set();
@@ -943,15 +946,17 @@ u(document).on('DOMContentLoaded', async function () {
   // Async data: ?acervo=<url|alias> selects the archive; defaults to UQT if omitted
   const acervoParam = new URLSearchParams(location.search).get('acervo');
   if (acervoParam) {
-    const resolved = KNOWN_ACERVOS[acervoParam] || decodeURIComponent(acervoParam);
-    sessionStorage.setItem('acervo', resolved);
+    const entry = KNOWN_ACERVOS[acervoParam];
+    sessionStorage.setItem('acervo', entry ? entry.data : decodeURIComponent(acervoParam));
+    if (entry?.base_url) sessionStorage.setItem('acervo-base', entry.base_url);
   }
-  const dataUrl = sessionStorage.getItem('acervo') || DEFAULT_ACERVO;
+  const defaultEntry = KNOWN_ACERVOS[DEFAULT_ACERVO];
+  const dataUrl = sessionStorage.getItem('acervo') || defaultEntry.data;
   const json = await new Response(
     (await fetch(dataUrl)).body.pipeThrough(new DecompressionStream('gzip'))
   ).text();
   db = JSON.parse(json);
-  BASE_URL = db.meta?.base_url || '';
+  BASE_URL = db.meta?.base_url || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
   skeletonEl.remove();
   applyArchiveMeta();
 
