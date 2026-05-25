@@ -472,8 +472,8 @@ function applyArchiveMeta() {
   const title = meta.title || 'Tocador';
   const subtitle = meta.subtitle || '';
   let hours = meta.hours || '';
-  if (!hours) {
-    const totalSeconds = db.albums.reduce((s, a) => s + a.tracks.reduce((ts, t) => ts + (t.duration || 0), 0), 0);
+  if (!hours && db.albums) {
+    const totalSeconds = db.albums.reduce((s, a) => s + (a.tracks || []).reduce((ts, t) => ts + (t.duration || 0), 0), 0);
     if (totalSeconds > 0) hours = Math.round(totalSeconds / 3600).toString();
   }
   document.title = title;
