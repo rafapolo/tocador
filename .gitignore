@@ -1,0 +1,10 @@
+node_modules/
+config.json
+unzips/
+js/uqt-albums.js
+js/uqt-albums.json.gz
+genres.json
+script/models/
+.env
+test-results/
+dist/
