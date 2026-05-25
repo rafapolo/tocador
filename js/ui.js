@@ -461,6 +461,20 @@ function updateLibraryStats() {
   u('#mobile-stat-artists').text(`${totalArtists} artista${totalArtists !== 1 ? 's' : ''}`);
 }
 
+function applyArchiveMeta() {
+  const meta = db.meta || {};
+  const title = meta.title || 'Tocador';
+  const subtitle = meta.subtitle || '';
+  const hours = meta.hours || '';
+  document.title = title;
+  const titleEl = document.getElementById('app-title');
+  const subtitleEl = document.getElementById('app-subtitle');
+  const hoursEl = document.getElementById('stat-hours');
+  if (titleEl) titleEl.textContent = title;
+  if (subtitleEl) subtitleEl.textContent = subtitle;
+  if (hoursEl) hoursEl.textContent = hours ? `${hours} horas` : '';
+}
+
 // ── Decade Buttons (rendered once on init) ────────────────────────────────
 
 function renderDecadeButtons() {
@@ -481,17 +495,23 @@ function renderDecadeButtons() {
     todosBtn.classList.add('active');
   });
 
+  const frag = document.createDocumentFragment();
+
   const globeBtn = document.createElement('a');
   globeBtn.className = 'decade-btn decade-btn--globe';
   globeBtn.href = './3d.html';
   globeBtn.title = 'Universo 3D';
   globeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
-  globeBtn.addEventListener('click', (e) => {
+  globeBtn.addEventListener('click', e => {
+    e.preventDefault();
+    const covers = albums.filter(a => a.cover).map(a => a.cover);
+    const params = new URLSearchParams({ covers: JSON.stringify(covers) });
+    const target = `./3d.html?${params}`;
     const audio = document.getElementById('audio');
-    if (audio && !audio.paused) { e.preventDefault(); window.open('./3d.html', '_blank'); }
+    if (audio && !audio.paused) window.open(target, '_blank');
+    else window.location.href = target;
   });
 
-  const frag = document.createDocumentFragment();
   frag.append(globeBtn, todosBtn);
 
   const pre1940Btn = document.createElement('button');
@@ -920,19 +940,20 @@ u(document).on('DOMContentLoaded', async function () {
   // Init virtual grid before data loads so it sizes correctly
   virtualGrid = new VirtualGrid(albumsList);
 
-  // Load archive config (config.json sets baseUrl + dataUrl for this deployment)
-  const cfg = await fetch('config.json').then(r => r.json()).catch(() => ({}));
-  BASE_URL = cfg.baseUrl || '';
-
-  // Async data: fetch gzipped JSON; ?acervo=<encoded_url> overrides the default source
+  // Async data: ?acervo=<url|alias> selects the archive; defaults to UQT if omitted
   const acervoParam = new URLSearchParams(location.search).get('acervo');
-  if (acervoParam) sessionStorage.setItem('acervo', decodeURIComponent(acervoParam));
-  const dataUrl = sessionStorage.getItem('acervo') || cfg.dataUrl || 'js/uqt-albums.json.gz';
+  if (acervoParam) {
+    const resolved = KNOWN_ACERVOS[acervoParam] || decodeURIComponent(acervoParam);
+    sessionStorage.setItem('acervo', resolved);
+  }
+  const dataUrl = sessionStorage.getItem('acervo') || DEFAULT_ACERVO;
   const json = await new Response(
     (await fetch(dataUrl)).body.pipeThrough(new DecompressionStream('gzip'))
   ).text();
   db = JSON.parse(json);
+  BASE_URL = db.meta?.base_url || '';
   skeletonEl.remove();
+  applyArchiveMeta();
 
   // Cache hot-path DOM elements once at init time
   _btnPlay = document.getElementById('btn-play');
@@ -1084,7 +1105,7 @@ u(document).on('DOMContentLoaded', async function () {
   // Singleton player across tabs: pause this tab when another tab starts playing
   if (typeof BroadcastChannel !== 'undefined') {
     const TAB_ID = crypto.randomUUID();
-    const playerChannel = new BroadcastChannel('uqt-player');
+    const playerChannel = new BroadcastChannel('tocador-player');
     audio.addEventListener('play', () => playerChannel.postMessage({ tabId: TAB_ID }));
     playerChannel.onmessage = ({ data }) => {
       if (data?.tabId !== TAB_ID) audio.pause();
@@ -1161,7 +1182,7 @@ u(document).on('DOMContentLoaded', async function () {
       btnRepeat.setAttribute('aria-label', labels[mode]);
       btnRepeat.setAttribute('aria-pressed', String(isActive));
     }
-    localStorage.setItem('uqt-repeat', mode);
+    localStorage.setItem('tocador-repeat', mode);
   }
 
   function applyShuffle(val) {
@@ -1176,13 +1197,13 @@ u(document).on('DOMContentLoaded', async function () {
       btnShuffleMobile.setAttribute('aria-pressed', String(shuffleOn));
       btnShuffleMobile.setAttribute('aria-label', shuffleOn ? 'Modo aleatório: ativado' : 'Modo aleatório: desativado');
     }
-    localStorage.setItem('uqt-shuffle', shuffleOn);
+    localStorage.setItem('tocador-shuffle', shuffleOn);
   }
 
   // Restore persisted state
-  applyShuffle(localStorage.getItem('uqt-shuffle') === 'true');
-  applyRepeatMode(localStorage.getItem('uqt-repeat') || 'off');
-  const savedVolume = parseFloat(localStorage.getItem('uqt-volume') ?? '1');
+  applyShuffle(localStorage.getItem('tocador-shuffle') === 'true');
+  applyRepeatMode(localStorage.getItem('tocador-repeat') || 'off');
+  const savedVolume = parseFloat(localStorage.getItem('tocador-volume') ?? '1');
   if (volumeSlider) volumeSlider.value = savedVolume;
   audio.volume = savedVolume;
   if (savedVolume === 0 && _volumeWave) _volumeWave.style.display = 'none';
@@ -1198,7 +1219,7 @@ u(document).on('DOMContentLoaded', async function () {
     const vol = parseFloat(volumeSlider.value);
     audio.volume = vol;
     if (_volumeWave) _volumeWave.style.display = vol === 0 ? 'none' : '';
-    localStorage.setItem('uqt-volume', vol);
+    localStorage.setItem('tocador-volume', vol);
   });
 
   function seekFromClient(clientX, barEl) {

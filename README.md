@@ -136,6 +136,36 @@ Veja [`script/README.md`](script/README.md) para o guia completo em pt-BR:
 
 ---
 
+## 🔁 Como funciona
+
+### Fluxo de carregamento
+
+1. Browser carrega `index.html` da CDN estática (GitHub Pages ou qualquer host)
+2. `ui.js` lê `?acervo=` (ou alias `uqt`) da URL → resolve para a URL do `.json.gz`
+3. `fetch(dataUrl)` + `DecompressionStream('gzip')` descomprime o catálogo inline, sem dependências externas
+4. `db.meta.base_url` é extraído do JSON — define de onde vêm os arquivos de áudio e capas
+5. `buildAlbums()` pré-processa os dados (lowercase para busca, URLs de capa, cache de duração)
+6. `VirtualGrid` renderiza apenas os cards visíveis no viewport
+
+### Fluxo de reprodução
+
+1. Usuário clica num álbum → primeiro track é "primado" (`audio.src` + `audio.load()`) sem tocar
+2. Usuário pressiona play → `safePlay(audio)` inicia a reprodução
+3. URL construída como `{base_url}/{album_path}/{track_file}`
+4. Browser faz `GET` direto ao servidor de mídia definido em `base_url`
+5. `audio.ended` → `playNext()` avança automaticamente
+
+### Streaming
+
+O Tocador não faz proxy de áudio — reproduz direto da URL em `base_url`. O servidor de mídia precisa:
+- Suportar **CORS** (`Access-Control-Allow-Origin: *`) para ser acessado do browser
+- Servir **`Content-Type: audio/mpeg`** para `.mp3`
+- Suportar **`Range` requests** para seek e streaming eficiente
+
+Opções prontas: S3 público, Cloudflare R2, GitHub Releases (arquivos pequenos), qualquer CDN.
+
+---
+
 ## 🏗️ Arquitetura
 
 ```
