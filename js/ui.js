@@ -17,6 +17,11 @@ let _btnPlay = null, _mobileDrawer = null, _drawerCover = null, _overlayTrackTit
 let _playerTitleEl = null, _volumeWave = null, _searchInput = null, _overlayCover = null;
 let _overlayTrackArtist = null;
 
+const KNOWN_ACERVOS = {
+  uqt: 'https://github.com/rafapolo/uqt/raw/refs/heads/master/js/uqt-albums.json.gz',
+};
+const DEFAULT_ACERVO = KNOWN_ACERVOS.uqt;
+
 // Set after loading db.meta.base_url
 let BASE_URL = '';
 const failedCovers = new Set();
@@ -902,16 +907,13 @@ u(document).on('DOMContentLoaded', async function () {
   // Init virtual grid before data loads so it sizes correctly
   virtualGrid = new VirtualGrid(albumsList);
 
-  // Async data: ?acervo=<encoded_url> required; persisted in sessionStorage for the tab lifetime
+  // Async data: ?acervo=<url|alias> selects the archive; defaults to UQT if omitted
   const acervoParam = new URLSearchParams(location.search).get('acervo');
-  if (acervoParam) sessionStorage.setItem('acervo', decodeURIComponent(acervoParam));
-  const dataUrl = sessionStorage.getItem('acervo');
-
-  if (!dataUrl) {
-    skeletonEl.remove();
-    albumsList.innerHTML = '<p class="no-acervo">Nenhum acervo carregado.<br>Use <code>?acervo=&lt;url&gt;</code> para carregar um acervo.</p>';
-    return;
+  if (acervoParam) {
+    const resolved = KNOWN_ACERVOS[acervoParam] || decodeURIComponent(acervoParam);
+    sessionStorage.setItem('acervo', resolved);
   }
+  const dataUrl = sessionStorage.getItem('acervo') || DEFAULT_ACERVO;
 
   const json = await new Response(
     (await fetch(dataUrl)).body.pipeThrough(new DecompressionStream('gzip'))
