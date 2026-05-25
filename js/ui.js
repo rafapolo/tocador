@@ -17,6 +17,11 @@ let _btnPlay = null, _mobileDrawer = null, _drawerCover = null, _overlayTrackTit
 let _playerTitleEl = null, _volumeWave = null, _searchInput = null, _overlayCover = null;
 let _overlayTrackArtist = null;
 
+const KNOWN_ACERVOS = {
+  uqt: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/js/uqt-albums.json.gz',
+};
+const DEFAULT_ACERVO = KNOWN_ACERVOS.uqt;
+
 let BASE_URL = '';
 const failedCovers = new Set();
 const PLACEHOLDER_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Cdefs%3E%3ClinearGradient id="grad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%232a2620;stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:%231a1814;stop-opacity:1" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23grad)" width="200" height="200"/%3E%3Ccircle cx="100" cy="100" r="40" fill="none" stroke="%23d4a574" stroke-width="8"/%3E%3Ccircle cx="100" cy="100" r="15" fill="none" stroke="%23d4a574" stroke-width="2"/%3E%3Cpath d="M 100 60 Q 120 80 120 100 Q 120 125 100 140 Q 80 125 80 100 Q 80 80 100 60" fill="none" stroke="%23d4a574" stroke-width="3" stroke-linecap="round"/%3E%3C/svg%3E';
@@ -136,10 +141,11 @@ function setMeta(attr, key, value) {
 
 function updateMetaTags(album) {
   const title = `${album.name} — ${album.artists} (${album.year})`;
-  const desc = `Álbum de ${album.artists}, ${album.year}. Ouça no Acervo UQT.`;
+  const archiveTitle = db?.meta?.title || 'Tocador';
+  const desc = `Álbum de ${album.artists}, ${album.year}. Ouça no ${archiveTitle}.`;
   const image = `${BASE_URL}/${encodeURI(album.path)}/capa-min.jpg`;
   const url = generateAlbumUrl(album);
-  document.title = `${album.name} · Acervo UQT`;
+  document.title = `${album.name} · ${archiveTitle}`;
   setMeta('property', 'og:title', title);
   setMeta('property', 'og:description', desc);
   setMeta('property', 'og:image', image);
