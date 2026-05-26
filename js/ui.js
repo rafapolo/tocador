@@ -435,7 +435,21 @@ function buildAlbums() {
     const nameLower    = (album.title  || '').toLowerCase();
     const artistsLower = (album.artist || '').toLowerCase();
     const pathLower    = (album.path   || '').toLowerCase();
-    const tracks = album.tracks.map((track, i) => {
+    // Dedup: generator sometimes finds same track at two paths (direct + subfolder).
+    // Prefer the direct-path variant (no '/' in file field).
+    const seenTitles = new Map();
+    const dedupedTracks = [];
+    for (const t of album.tracks) {
+      const key = (t.title || '').toLowerCase();
+      const isSubfolder = t.file?.includes('/');
+      if (!seenTitles.has(key)) {
+        seenTitles.set(key, dedupedTracks.length);
+        dedupedTracks.push(t);
+      } else if (!isSubfolder && dedupedTracks[seenTitles.get(key)].file?.includes('/')) {
+        dedupedTracks[seenTitles.get(key)] = t;
+      }
+    }
+    const tracks = dedupedTracks.map((track, i) => {
       const file = `${encodeURI(album.path)}/${encodeURI(track.file)}`;
       if (track.duration) durationCache.set(file, track.duration);
       const trackArtist = track.artists || album.artist;
@@ -985,17 +999,18 @@ u(document).on('DOMContentLoaded', async function () {
     if (entry?.base_url) sessionStorage.setItem('acervo-base', entry.base_url);
   }
   let defaultKey = DEFAULT_ACERVO;
+  let cfg = {};
   try {
-    const cfg = await fetch('config.json').then(r => r.ok ? r.json() : {});
+    cfg = await fetch('config.json').then(r => r.ok ? r.json() : {});
     if (cfg.acervo && KNOWN_ACERVOS[cfg.acervo]) defaultKey = cfg.acervo;
   } catch {}
   const defaultEntry = KNOWN_ACERVOS[defaultKey];
-  const dataUrl = sessionStorage.getItem('acervo') || defaultEntry.data;
+  const dataUrl = sessionStorage.getItem('acervo') || cfg.dataUrl || defaultEntry.data;
   const json = await new Response(
     (await fetch(dataUrl)).body.pipeThrough(new DecompressionStream('gzip'))
   ).text();
   db = JSON.parse(json);
-  BASE_URL = db.meta?.base_url || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
+  BASE_URL = db.meta?.base_url || cfg.baseUrl || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
   const btn3d = document.getElementById('btn-3d');
   if (btn3d) btn3d.href = `./3d.html?acervo=${encodeURIComponent(acervoParam || defaultKey)}`;
   skeletonEl.remove();
