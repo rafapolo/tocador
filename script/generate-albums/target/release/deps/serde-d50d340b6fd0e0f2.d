@@ -1,0 +1,14 @@
+/Users/polux/Projetos/tocador/script/generate-albums/target/release/deps/serde-d50d340b6fd0e0f2.d: /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/polux/Projetos/tocador/script/generate-albums/target/release/build/serde-bff05568f762bd28/out/private.rs
+
+/Users/polux/Projetos/tocador/script/generate-albums/target/release/deps/libserde-d50d340b6fd0e0f2.rlib: /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/polux/Projetos/tocador/script/generate-albums/target/release/build/serde-bff05568f762bd28/out/private.rs
+
+/Users/polux/Projetos/tocador/script/generate-albums/target/release/deps/libserde-d50d340b6fd0e0f2.rmeta: /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/polux/Projetos/tocador/script/generate-albums/target/release/build/serde-bff05568f762bd28/out/private.rs
+
+/Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/polux/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/polux/Projetos/tocador/script/generate-albums/target/release/build/serde-bff05568f762bd28/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/polux/Projetos/tocador/script/generate-albums/target/release/build/serde-bff05568f762bd28/out
