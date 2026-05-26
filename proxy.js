@@ -62,6 +62,7 @@ if (cluster.isPrimary) {
     'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
     'Access-Control-Allow-Headers': 'Range, Content-Type',
     'Access-Control-Expose-Headers': 'Content-Length, Content-Type, Content-Range, ETag, Accept-Ranges',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
     'X-Content-Type-Options': 'nosniff',
   };
 
@@ -152,8 +153,52 @@ if (cluster.isPrimary) {
     }
 
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, corsHeaders);
+      res.writeHead(204, { ...corsHeaders, 'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS' });
       res.end();
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/report-error') {
+      const token = process.env.GITHUB_TOKEN;
+      if (!token) {
+        res.writeHead(503, { 'Content-Type': 'text/plain', ...corsHeaders });
+        res.end('Not configured');
+        return;
+      }
+      let raw = '';
+      req.on('data', chunk => { raw += chunk; if (raw.length > 8192) req.destroy(); });
+      req.on('end', async () => {
+        let payload;
+        try { payload = JSON.parse(raw); } catch {
+          res.writeHead(400, { 'Content-Type': 'text/plain', ...corsHeaders });
+          res.end('Bad Request');
+          return;
+        }
+        const { title, body } = payload;
+        if (!title || typeof title !== 'string' || typeof body !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'text/plain', ...corsHeaders });
+          res.end('Bad Request');
+          return;
+        }
+        try {
+          const gh = await fetch('https://api.github.com/repos/rafapolo/tocador/issues', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/vnd.github+json',
+              'Content-Type': 'application/json',
+              'User-Agent': 'tocador-proxy',
+            },
+            body: JSON.stringify({ title: title.slice(0, 200), body, labels: ['bug'] }),
+          });
+          res.writeHead(gh.ok ? 201 : gh.status, { 'Content-Type': 'text/plain', ...corsHeaders });
+          res.end(gh.ok ? 'Created' : 'GitHub error');
+        } catch (err) {
+          console.error('report-error github call failed:', err.message);
+          res.writeHead(502, { 'Content-Type': 'text/plain', ...corsHeaders });
+          res.end('Bad Gateway');
+        }
+      });
       return;
     }
 
