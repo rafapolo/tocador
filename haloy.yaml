@@ -21,7 +21,7 @@ env:
     from:
       env: S3_BUCKET
   - name: S3_BUCKET_MAP
-    value: "indie/:indie"
+    value: "uqt/:sambaraiz,indie/:indie"
   - name: GITHUB_TOKEN
     from:
       env: GITHUB_TOKEN
