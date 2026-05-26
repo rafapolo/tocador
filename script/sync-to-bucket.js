@@ -8,23 +8,36 @@ const { Upload } = require('@aws-sdk/lib-storage');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const LOCAL_DIR  = process.env.ARCHIVE_DIR || path.join(__dirname, '..', 'unzips');
-const BUCKET     = process.env.S3_BUCKET;
-const PREFIX     = 'uqt/';
-const ENDPOINT   = process.env.S3_ENDPOINT;
+const LOCAL_DIR   = process.env.ARCHIVE_DIR || path.join(__dirname, '..', 'unzips');
+const ENDPOINT    = process.env.S3_ENDPOINT || 'https://hel1.your-objectstorage.com';
 const CONCURRENCY = 20;
 
 // ── Load .env ─────────────────────────────────────────────────────────────────
 
 function loadEnv(file = '.env') {
-  const lines = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8').split('\n');
-  for (const line of lines) {
+  const p = path.resolve(__dirname, '..', file);
+  if (!fs.existsSync(p)) return;
+  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
     const m = line.match(/^\s*([\w]+)\s*=\s*"?([^"]*)"?\s*$/);
     if (m) process.env[m[1]] = m[2];
   }
 }
 
 loadEnv();
+
+const BUCKET = process.env.S3_BUCKET;
+
+// ── Read s3_prefix from acervo JSON metadata ──────────────────────────────────
+
+function acervoMeta() {
+  const p = process.env.ACERVO_JSON;
+  if (!p || !fs.existsSync(p)) return {};
+  try {
+    return JSON.parse(require('zlib').gunzipSync(fs.readFileSync(p))).meta || {};
+  } catch { return {}; }
+}
+
+const PREFIX = acervoMeta().s3_prefix || process.env.S3_PREFIX || 'uqt/';
 
 const s3 = new S3Client({
   endpoint: ENDPOINT,
