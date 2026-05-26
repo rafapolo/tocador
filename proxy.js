@@ -23,6 +23,17 @@ if (cluster.isPrimary) {
   });
 
   const BUCKET = process.env.S3_BUCKET;
+  // Extra prefix→bucket overrides: "prefix:bucket,prefix2:bucket2"
+  const BUCKET_MAP = Object.fromEntries(
+    (process.env.S3_BUCKET_MAP || '').split(',').filter(Boolean)
+      .map(e => { const [p, b] = e.split(':'); return [p, b]; })
+  );
+  function bucketFor(key) {
+    for (const [prefix, bucket] of Object.entries(BUCKET_MAP)) {
+      if (key.startsWith(prefix)) return bucket;
+    }
+    return BUCKET;
+  }
   const PORT = 9001;
   const MAX_CONCURRENT = 80;
   const REQUEST_TIMEOUT = 30000;
@@ -94,9 +105,10 @@ if (cluster.isPrimary) {
     activeRequests++;
 
     try {
+      const bucket = bucketFor(key);
       const cmd = isHead
-        ? new HeadObjectCommand({ Bucket: BUCKET, Key: key, Range: req.headers.range })
-        : new GetObjectCommand({ Bucket: BUCKET, Key: key, Range: req.headers.range });
+        ? new HeadObjectCommand({ Bucket: bucket, Key: key, Range: req.headers.range })
+        : new GetObjectCommand({ Bucket: bucket, Key: key, Range: req.headers.range });
       const obj = await s3.send(cmd, { abortSignal: abort.signal });
 
       const headers = { ...corsHeaders, 'Content-Type': mimeFor(key), 'Cache-Control': cacheControlFor(key) };

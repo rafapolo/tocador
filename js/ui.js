@@ -970,6 +970,8 @@ u(document).on('DOMContentLoaded', async function () {
   ).text();
   db = JSON.parse(json);
   BASE_URL = db.meta?.base_url || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
+  const btn3d = document.getElementById('btn-3d');
+  if (btn3d) btn3d.href = `./3d.html?acervo=${encodeURIComponent(acervoParam || defaultKey)}`;
   skeletonEl.remove();
   applyArchiveMeta();
 
