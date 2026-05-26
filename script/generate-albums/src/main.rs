@@ -29,9 +29,11 @@ static RE_ALBUM_YEAR: Lazy<Regex> = Lazy::new(|| {
 #[derive(Serialize)]
 struct Track {
     title: String,
-    num: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    num: Option<u32>,
     file: String,
-    artists: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    artists: Option<String>,
     duration: u32,
 }
 
@@ -41,6 +43,7 @@ struct Album {
     artist: String,
     year: u32,
     path: String,
+    #[serde(skip_serializing_if = "Clone::clone")]
     has_cover: bool,
     tracks: Vec<Track>,
 }
@@ -169,9 +172,8 @@ fn process_album(folder: &Path) -> Option<Album> {
         } else {
             title
         };
-        let artists = if artist.is_empty() { album_artist.clone() } else { artist };
-
-        tracks.push(Track { title, num: track_n, file, artists, duration });
+        let track_artist = if artist.is_empty() { album_artist.clone() } else { artist };
+        tracks.push(Track { title, num: Some(track_n), file, artists: Some(track_artist), duration });
     }
 
     // Fall back to folder name parsing when ID3 tags are missing or incomplete
@@ -180,6 +182,16 @@ fn process_album(folder: &Path) -> Option<Album> {
         if album_artist.is_empty() { album_artist = fa; }
         if album_title.is_empty()  { album_title  = ft; }
         if album_year  == 0        { album_year   = fy; }
+    }
+
+    // Omit artists when it duplicates the album artist; omit num when it equals array position.
+    for (i, t) in tracks.iter_mut().enumerate() {
+        if t.artists.as_deref() == Some(album_artist.as_str()) {
+            t.artists = None;
+        }
+        if t.num == Some((i + 1) as u32) {
+            t.num = None;
+        }
     }
 
     Some(Album {

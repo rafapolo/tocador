@@ -23,7 +23,7 @@ const KNOWN_ACERVOS = {
     base_url: 'https://uqt.xn--2dk.xyz/uqt',
   },
   homi: {
-    data: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/js/homi-albums.json.gz',
+    data: 'https://raw.githubusercontent.com/rafapolo/hominiscanidae/refs/heads/main/js/homi-albums.json.gz',
   },
 };
 const DEFAULT_ACERVO = 'uqt';
@@ -395,12 +395,12 @@ function buildAlbums() {
     const nameLower    = (album.title  || '').toLowerCase();
     const artistsLower = (album.artist || '').toLowerCase();
     const pathLower    = (album.path   || '').toLowerCase();
-    const tracks = album.tracks.map(track => {
+    const tracks = album.tracks.map((track, i) => {
       const file = `${encodeURI(album.path)}/${encodeURI(track.file)}`;
       if (track.duration) durationCache.set(file, track.duration);
       const trackArtist = track.artists || album.artist;
       return {
-        title: track.title, num: track.num, file,
+        title: track.title, num: track.num ?? (i + 1), file,
         album: album.title, artists: trackArtist, year: album.year,
         titleLower: (track.title   || '').toLowerCase(),
         artistsLower: (trackArtist || '').toLowerCase(),
@@ -957,7 +957,12 @@ u(document).on('DOMContentLoaded', async function () {
     sessionStorage.setItem('acervo', entry ? entry.data : decodeURIComponent(acervoParam));
     if (entry?.base_url) sessionStorage.setItem('acervo-base', entry.base_url);
   }
-  const defaultEntry = KNOWN_ACERVOS[DEFAULT_ACERVO];
+  let defaultKey = DEFAULT_ACERVO;
+  try {
+    const cfg = await fetch('config.json').then(r => r.ok ? r.json() : {});
+    if (cfg.acervo && KNOWN_ACERVOS[cfg.acervo]) defaultKey = cfg.acervo;
+  } catch {}
+  const defaultEntry = KNOWN_ACERVOS[defaultKey];
   const dataUrl = sessionStorage.getItem('acervo') || defaultEntry.data;
   const json = await new Response(
     (await fetch(dataUrl)).body.pipeThrough(new DecompressionStream('gzip'))
