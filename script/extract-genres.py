@@ -24,6 +24,7 @@ import json
 import random
 import contextlib
 import urllib.request
+import signal
 import numpy as np
 from pathlib import Path
 
@@ -309,9 +310,49 @@ AUDIO_CLIP_S = 30      # seconds to sample per track (MAEST's design window)
 _PRED_CACHE: dict = {}
 
 
-def _load_audio(mp3: Path) -> np.ndarray:
+import threading
+import queue
+
+
+class UnreadableAudio(Exception):
+    pass
+
+
+def _load_audio_with_timeout(mp3: Path, timeout_s: float = 15.0) -> np.ndarray:
+    result_queue = queue.Queue()
+    error_queue = queue.Queue()
+
+    def _load():
+        try:
+            result_queue.put(_do_load_audio(mp3))
+        except Exception as e:
+            error_queue.put(e)
+
+    t = threading.Thread(target=_load)
+    t.daemon = True
+    t.start()
+    t.join(timeout=timeout_s)
+
+    if t.is_alive():
+        raise TimeoutError(f'Audio loading timed out after {timeout_s}s')
+
+    if not error_queue.empty():
+        raise error_queue.get()
+
+    if not result_queue.empty():
+        return result_queue.get()
+
+    raise RuntimeError('Audio loading produced no result')
+
+
+def _do_load_audio(mp3: Path) -> np.ndarray:
     import essentia.standard as es
-    audio = es.MonoLoader(filename=str(mp3), sampleRate=MAEST_SR)()
+    try:
+        audio = es.MonoLoader(filename=str(mp3), sampleRate=MAEST_SR)()
+    except RuntimeError as e:
+        if 'swresample' in str(e) or 'AudioLoader' in str(e):
+            raise UnreadableAudio(str(e)) from e
+        raise
     limit = MAEST_SR * AUDIO_CLIP_S
     if len(audio) > limit:
         start = (len(audio) - limit) // 2
@@ -485,10 +526,10 @@ def _classify_album(album_name: str, infer_fn):
     tracks = {}
     for mp3 in mp3s:
         try:
-            result = infer_fn(_load_audio(mp3))
+            result = infer_fn(_load_audio_with_timeout(mp3))
             if result:
                 tracks[mp3.name] = result
-        except Exception as e:
+        except (UnreadableAudio, TimeoutError, Exception) as e:
             print(f'  warn {mp3.name}: {e}', file=sys.stderr)
 
     return album_name, tracks or None
