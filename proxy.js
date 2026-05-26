@@ -57,14 +57,17 @@ if (cluster.isPrimary) {
     }),
   });
 
-  const corsHeaders = {
+  // corsBase: sent on every response (errors included) — MUST NOT contain nosniff,
+  // because text/plain + nosniff on error bodies triggers CORB for cross-origin img/audio.
+  const corsBase = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
     'Access-Control-Allow-Headers': 'Range, Content-Type',
     'Access-Control-Expose-Headers': 'Content-Length, Content-Type, Content-Range, ETag, Accept-Ranges',
     'Cross-Origin-Resource-Policy': 'cross-origin',
-    'X-Content-Type-Options': 'nosniff',
   };
+  // corsHeaders: corsBase + nosniff, used only on successful media responses.
+  const corsHeaders = { ...corsBase, 'X-Content-Type-Options': 'nosniff' };
 
   // Cache-Control by asset type:
   // - Images (capa-min.jpg) are immutable content; browsers should never revalidate.
@@ -95,7 +98,7 @@ if (cluster.isPrimary) {
 
   async function handleObject(req, res, key, ip) {
     if (activeRequests >= MAX_CONCURRENT) {
-      res.writeHead(503, { 'Content-Type': 'text/plain', ...corsHeaders });
+      res.writeHead(503, { 'Content-Type': 'text/plain', ...corsBase });
       res.end('Too Many Requests');
       return;
     }
@@ -128,7 +131,7 @@ if (cluster.isPrimary) {
       const code = err.name === 'AbortError' ? 504 : (err.$metadata?.httpStatusCode ?? 500);
       console.error(`[${code}] ${req.method} ${key}: ${err.name}`);
       if (!res.headersSent) {
-        res.writeHead(code, { 'Content-Type': 'text/plain', ...corsHeaders });
+        res.writeHead(code, { 'Content-Type': 'text/plain', ...corsBase });
         res.end(err.name);
       }
     } finally {
@@ -161,7 +164,7 @@ if (cluster.isPrimary) {
     if (req.method === 'POST' && req.url === '/report-error') {
       const token = process.env.GITHUB_TOKEN;
       if (!token) {
-        res.writeHead(503, { 'Content-Type': 'text/plain', ...corsHeaders });
+        res.writeHead(503, { 'Content-Type': 'text/plain', ...corsBase });
         res.end('Not configured');
         return;
       }
@@ -170,13 +173,13 @@ if (cluster.isPrimary) {
       req.on('end', async () => {
         let payload;
         try { payload = JSON.parse(raw); } catch {
-          res.writeHead(400, { 'Content-Type': 'text/plain', ...corsHeaders });
+          res.writeHead(400, { 'Content-Type': 'text/plain', ...corsBase });
           res.end('Bad Request');
           return;
         }
         const { title, body } = payload;
         if (!title || typeof title !== 'string' || typeof body !== 'string') {
-          res.writeHead(400, { 'Content-Type': 'text/plain', ...corsHeaders });
+          res.writeHead(400, { 'Content-Type': 'text/plain', ...corsBase });
           res.end('Bad Request');
           return;
         }
@@ -191,11 +194,11 @@ if (cluster.isPrimary) {
             },
             body: JSON.stringify({ title: title.slice(0, 200), body, labels: ['bug'] }),
           });
-          res.writeHead(gh.ok ? 201 : gh.status, { 'Content-Type': 'text/plain', ...corsHeaders });
+          res.writeHead(gh.ok ? 201 : gh.status, { 'Content-Type': 'text/plain', ...corsBase });
           res.end(gh.ok ? 'Created' : 'GitHub error');
         } catch (err) {
           console.error('report-error github call failed:', err.message);
-          res.writeHead(502, { 'Content-Type': 'text/plain', ...corsHeaders });
+          res.writeHead(502, { 'Content-Type': 'text/plain', ...corsBase });
           res.end('Bad Gateway');
         }
       });
@@ -203,7 +206,7 @@ if (cluster.isPrimary) {
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.writeHead(405, { ...corsHeaders, 'Content-Type': 'text/plain' });
+      res.writeHead(405, { ...corsBase, 'Content-Type': 'text/plain' });
       res.end('Method Not Allowed');
       return;
     }
@@ -211,7 +214,7 @@ if (cluster.isPrimary) {
     const ua = req.headers['user-agent'] || '';
     if (botRegex.test(ua)) {
       console.log(`[BLOCKED] bot: ${ua}`);
-      res.writeHead(403, { 'Content-Type': 'text/plain', ...corsHeaders });
+      res.writeHead(403, { 'Content-Type': 'text/plain', ...corsBase });
       res.end('Forbidden');
       return;
     }
@@ -230,7 +233,7 @@ if (cluster.isPrimary) {
     if (ip) {
       const ipActive = ipCounts.get(ip) ?? 0;
       if (ipActive >= 5) {
-        res.writeHead(429, { 'Content-Type': 'text/plain', 'Retry-After': '5', ...corsHeaders });
+        res.writeHead(429, { 'Content-Type': 'text/plain', 'Retry-After': '5', ...corsBase });
         res.end('Too Many Requests');
         return;
       }
