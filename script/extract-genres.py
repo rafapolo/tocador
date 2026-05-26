@@ -28,7 +28,7 @@ import numpy as np
 from pathlib import Path
 
 UNZIPS    = Path(os.environ.get('ARCHIVE_DIR', Path(__file__).parent.parent / 'unzips'))
-OUTPUT    = Path(__file__).parent.parent / 'genres.json'
+OUTPUT    = Path(os.environ.get('OUTPUT_FILE', Path(__file__).parent.parent / 'genres.json'))
 MODEL_DIR = Path(__file__).parent / 'models'
 
 MODELS = {
@@ -467,6 +467,13 @@ def _infer_dortmund(audio: np.ndarray):
     return {'top': genres[0]['label'], 'genres': genres[:3]}
 
 
+def _save_result(album_name: str, result):
+    """Atomically merge one album result into the output file."""
+    on_disk = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
+    on_disk[album_name] = result
+    OUTPUT.write_text(json.dumps(on_disk, ensure_ascii=False, indent=2))
+
+
 def _classify_album(album_name: str, infer_fn):
     album_dir = UNZIPS / album_name
     if not album_dir.is_dir():
@@ -569,6 +576,8 @@ def main():
                 print(f'[{i}/{total}] {album_name}', flush=True)
                 if result:
                     results[album_name] = result
+                    if not test_mode:
+                        _save_result(album_name, result)
                     tops = ', '.join(set(v['top'] for v in result.values()))
                     print(f'  → {len(result)} tracks  {tops}')
                 else:
@@ -581,6 +590,8 @@ def main():
             elapsed   = time.time() - t0
             if result:
                 results[name] = result
+                if not test_mode:
+                    _save_result(name, result)
                 tops = ', '.join(set(v['top'] for v in result.values()))
                 print(f'  → {len(result)} tracks  {tops}  [{elapsed:.1f}s]')
             else:
@@ -589,10 +600,8 @@ def main():
     if test_mode:
         print(json.dumps(results, ensure_ascii=False, indent=2))
     else:
-        existing = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
-        merged   = {**existing, **results}
-        OUTPUT.write_text(json.dumps(merged, ensure_ascii=False, indent=2))
-        print(f'\n✓ {len(merged)} total in {OUTPUT}')
+        total_done = len(json.loads(OUTPUT.read_text())) if OUTPUT.exists() else len(results)
+        print(f'\n✓ {total_done} total in {OUTPUT}')
 
 
 if __name__ == '__main__':
