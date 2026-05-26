@@ -8,3 +8,4 @@ script/models/
 .env
 test-results/
 dist/
+sync-to-bucket.log

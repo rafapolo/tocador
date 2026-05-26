@@ -1,3 +1,42 @@
+// Error reporter — posts uncaught JS errors to tocador/issues via the proxy
+(function () {
+  const REPORT_URL = 'https://uqt.xn--2dk.xyz/report-error';
+  const seen = new Set();
+  let count = 0;
+
+  function report(title, detail) {
+    if (count >= 3 || seen.has(title)) return;
+    seen.add(title);
+    count++;
+    const body = [
+      `**${title}**`,
+      '',
+      '```',
+      detail,
+      '```',
+      '',
+      `**URL:** ${location.href}`,
+      `**UA:** ${navigator.userAgent}`,
+      `**Time:** ${new Date().toISOString()}`,
+    ].join('\n');
+    navigator.sendBeacon
+      ? navigator.sendBeacon(REPORT_URL, new Blob([JSON.stringify({ title, body })], { type: 'application/json' }))
+      : fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, body }), keepalive: true }).catch(() => {});
+  }
+
+  window.addEventListener('error', e => {
+    const msg = e.message || String(e);
+    const loc = e.filename ? ` @ ${e.filename.replace(/.*\//, '')}:${e.lineno}` : '';
+    report(`[tocador] JS error: ${msg}${loc}`, e.error?.stack || msg);
+  });
+
+  window.addEventListener('unhandledrejection', e => {
+    const reason = e.reason;
+    const msg = reason?.message || String(reason);
+    report(`[tocador] Unhandled rejection: ${msg}`, reason?.stack || msg);
+  });
+})();
+
 // State
 let db;
 let albums = [];
@@ -508,22 +547,7 @@ function renderDecadeButtons() {
 
   const frag = document.createDocumentFragment();
 
-  const globeBtn = document.createElement('a');
-  globeBtn.className = 'decade-btn decade-btn--globe';
-  globeBtn.href = './3d.html';
-  globeBtn.title = 'Universo 3D';
-  globeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
-  globeBtn.addEventListener('click', e => {
-    e.preventDefault();
-    const covers = albums.filter(a => a.cover).map(a => a.cover);
-    const params = new URLSearchParams({ covers: JSON.stringify(covers) });
-    const target = `./3d.html?${params}`;
-    const audio = document.getElementById('audio');
-    if (audio && !audio.paused) window.open(target, '_blank');
-    else window.location.href = target;
-  });
-
-  frag.append(globeBtn, todosBtn);
+  frag.append(todosBtn);
 
   const pre1940Btn = document.createElement('button');
   pre1940Btn.className = 'decade-btn';
@@ -693,8 +717,10 @@ function safePlay(audio) {
   if (p?.catch) p.catch(err => {
     if (err.name === 'NotAllowedError') {
       (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('autoplay-blocked');
+    } else if (err.name === 'NotSupportedError') {
+      showToast('Arquivo não suportado ou indisponível', 4000);
     } else if (err.name !== 'AbortError') {
-      console.error('audio.play() failed:', err);
+      showToast(`Erro ao reproduzir: ${err.message}`, 4000);
     }
   });
 }
