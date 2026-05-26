@@ -139,7 +139,37 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const BASE_URL = 'https://uqt.xn--2dk.xyz/uqt';
+const KNOWN_ACERVOS = {
+  uqt: {
+    data: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/js/uqt-albums.json.gz',
+    base_url: 'https://uqt.xn--2dk.xyz/uqt',
+  },
+  homi: {
+    data: 'https://raw.githubusercontent.com/rafapolo/hominiscanidae/refs/heads/main/js/homi-albums.json.gz',
+    base_url: 'https://uqt.xn--2dk.xyz/indie',
+  },
+};
+const DEFAULT_ACERVO = 'uqt';
+
+const _acervoParam = new URLSearchParams(location.search).get('acervo');
+let _dataUrl, _fallbackBaseUrl;
+if (_acervoParam) {
+  const entry = KNOWN_ACERVOS[_acervoParam];
+  if (entry) {
+    _dataUrl = entry.data;
+    _fallbackBaseUrl = entry.base_url;
+  } else {
+    _dataUrl = decodeURIComponent(_acervoParam);
+    _fallbackBaseUrl = sessionStorage.getItem('acervo-base') || '';
+  }
+} else {
+  const ssAcervo = sessionStorage.getItem('acervo');
+  const defaultEntry = KNOWN_ACERVOS[DEFAULT_ACERVO];
+  _dataUrl = ssAcervo || defaultEntry.data;
+  _fallbackBaseUrl = sessionStorage.getItem('acervo-base') || defaultEntry.base_url;
+}
+
+let BASE_URL = _fallbackBaseUrl;
 const SPHERE_RADIUS = 300;
 const PLANE_SIZE = 16;
 const isMobile = window.matchMedia('(max-width: 768px)').matches
@@ -592,12 +622,12 @@ function setStatus(msg) {
 // ─── Data loading ─────────────────────────────────────────────────────────────
 
 async function loadAlbumData() {
-  const res = await fetch('./js/uqt-albums.json.gz');
+  const res = await fetch(_dataUrl);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const ds = new DecompressionStream('gzip');
   const decompressed = res.body.pipeThrough(ds);
   const text = await new Response(decompressed).text();
-  return JSON.parse(text).albums;
+  return JSON.parse(text);
 }
 
 // ─── Render loop ──────────────────────────────────────────────────────────────
@@ -633,9 +663,14 @@ document.addEventListener('visibilitychange', () => {
 async function main() {
   try {
     setStatus('Carregando álbuns...');
-    const albums = await loadAlbumData();
+    const dbData = await loadAlbumData();
+    BASE_URL = dbData.meta?.base_url || _fallbackBaseUrl || '';
+    const acervoTitle = dbData.meta?.title || 'Universo';
+    document.getElementById('loading-title').textContent = acervoTitle;
+    document.title = acervoTitle;
     setProgress(30);
 
+    const albums = dbData.albums;
     // Only place albums that have a confirmed cover image
     const withCover = albums.filter(a => a.has_cover !== false);
     setStatus(`Posicionando ${withCover.length} álbuns...`);
