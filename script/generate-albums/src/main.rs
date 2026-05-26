@@ -58,6 +58,8 @@ struct Meta {
     hours: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     base_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    s3_prefix: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -211,6 +213,7 @@ struct Config {
     meta_subtitle: Option<String>,
     meta_hours: Option<String>,
     meta_base_url: Option<String>,
+    meta_s3_prefix: Option<String>,
 }
 
 fn parse_args() -> Config {
@@ -218,7 +221,7 @@ fn parse_args() -> Config {
     if args.is_empty() || args.iter().any(|a| a == "--help" || a == "-h") {
         eprintln!("Uso: generate-albums <pasta-de-musicas> [saida.json.gz]");
         eprintln!("     [--title \"Nome do Acervo\"] [--subtitle \"Subtítulo\"]");
-        eprintln!("     [--hours \"42\"] [--base-url \"https://cdn.exemplo.com/musicas\"]");
+        eprintln!("     [--hours \"42\"] [--base-url \"https://cdn.exemplo.com/musicas\"] [--s3-prefix \"indie/\"]");
         std::process::exit(if args.is_empty() { 1 } else { 0 });
     }
 
@@ -227,14 +230,16 @@ fn parse_args() -> Config {
     let mut meta_subtitle = None;
     let mut meta_hours = None;
     let mut meta_base_url = None;
+    let mut meta_s3_prefix = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--title"    => { i += 1; meta_title    = args.get(i).cloned(); }
-            "--subtitle" => { i += 1; meta_subtitle = args.get(i).cloned(); }
-            "--hours"    => { i += 1; meta_hours    = args.get(i).cloned(); }
-            "--base-url" => { i += 1; meta_base_url = args.get(i).cloned(); }
-            other        => positional.push(other.to_string()),
+            "--title"     => { i += 1; meta_title     = args.get(i).cloned(); }
+            "--subtitle"  => { i += 1; meta_subtitle  = args.get(i).cloned(); }
+            "--hours"     => { i += 1; meta_hours     = args.get(i).cloned(); }
+            "--base-url"  => { i += 1; meta_base_url  = args.get(i).cloned(); }
+            "--s3-prefix" => { i += 1; meta_s3_prefix = args.get(i).cloned(); }
+            other         => positional.push(other.to_string()),
         }
         i += 1;
     }
@@ -244,7 +249,7 @@ fn parse_args() -> Config {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("acervo.json.gz"));
 
-    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url }
+    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix }
 }
 
 fn main() {
@@ -296,6 +301,7 @@ fn main() {
             subtitle: cfg.meta_subtitle,
             hours: cfg.meta_hours,
             base_url: cfg.meta_base_url,
+            s3_prefix: cfg.meta_s3_prefix,
         },
         albums,
     };

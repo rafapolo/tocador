@@ -6,16 +6,29 @@ const fs   = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const MC_ALIAS = 'hetzner';
-const BUCKET   = process.env.S3_BUCKET;
-const PREFIX   = 'uqt';
-const MC_BASE  = `${MC_ALIAS}/${BUCKET}/${PREFIX}`;
+const MC_ALIAS = process.env.MC_ALIAS || 'hel1';
 
-let db;
-eval(fs.readFileSync(path.resolve(__dirname, '../js/uqt-albums.js'), 'utf8'));
+function loadEnv(file = '.env') {
+  const p = path.resolve(__dirname, '..', file);
+  if (!fs.existsSync(p)) return;
+  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([\w]+)\s*=\s*"?([^"]*)"?\s*$/);
+    if (m) process.env[m[1]] = m[2];
+  }
+}
+
+loadEnv();
+
+const BUCKET = process.env.S3_BUCKET;
+
+const jsonGzPath = process.env.ACERVO_JSON || path.resolve(__dirname, '../js/uqt-albums.json.gz');
+const db = JSON.parse(zlib.gunzipSync(fs.readFileSync(jsonGzPath)));
 console.log(`DB loaded: ${db.albums.length} albums`);
 
-console.log('Listing S3 paths...');
+const PREFIX = (db.meta?.s3_prefix || process.env.S3_PREFIX || 'uqt').replace(/\/$/, '');
+const MC_BASE = `${MC_ALIAS}/${BUCKET}/${PREFIX}`;
+
+console.log(`Listing S3 paths at ${MC_BASE}/…`);
 const mcOut = execSync(`mc ls "${MC_BASE}/"`, { encoding: 'utf8' });
 const s3Paths = new Set(
   mcOut.split('\n')
@@ -28,15 +41,6 @@ const filtered = db.albums.filter(a => s3Paths.has(a.path));
 const removed  = db.albums.length - filtered.length;
 console.log(`Keeping ${filtered.length} albums, removing ${removed} with no S3 path`);
 
-const outDir  = path.resolve(__dirname, '../js');
-const jsonStr = JSON.stringify({ albums: filtered });
-
-fs.writeFileSync(
-  path.join(outDir, 'uqt-albums.js'),
-  'db = ' + JSON.stringify({ albums: filtered }, null, 2)
-);
-fs.writeFileSync(
-  path.join(outDir, 'uqt-albums.json.gz'),
-  zlib.gzipSync(Buffer.from(jsonStr))
-);
-console.log('Written: js/uqt-albums.js and js/uqt-albums.json.gz');
+const out = { meta: db.meta, albums: filtered };
+fs.writeFileSync(jsonGzPath, zlib.gzipSync(Buffer.from(JSON.stringify(out))));
+console.log(`Written: ${jsonGzPath}  (${Math.round(fs.statSync(jsonGzPath).size / 1024)} KB)`);
