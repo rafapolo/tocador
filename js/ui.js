@@ -20,9 +20,11 @@ let _overlayTrackArtist = null;
 const KNOWN_ACERVOS = {
   uqt: {
     data: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/js/uqt-albums.json.gz',
+    base_url: 'https://uqt.xn--2dk.xyz/uqt',
   },
   homi: {
     data: 'https://raw.githubusercontent.com/rafapolo/hominiscanidae/refs/heads/main/js/homi-albums.json.gz',
+    base_url: 'https://uqt.xn--2dk.xyz/indie',
   },
 };
 const DEFAULT_ACERVO = 'uqt';
