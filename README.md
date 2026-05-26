@@ -136,6 +136,68 @@ ARCHIVE_DIR=/path/to/musicas node script/resize-cover-images.js
 - Placeholder de capa embutido como data-URI (nenhum round-trip extra)
 - Delegação de eventos: 3 listeners no total para álbuns, faixas e drawer mobile
 
+## 📡 API Subsonic
+
+O proxy expõe uma API compatível com o protocolo [Subsonic](https://www.subsonic.org/pages/api.jsp) (v1.16.1), permitindo conectar qualquer cliente Subsonic aos acervos.
+
+### Clientes compatíveis
+
+| Plataforma | Apps |
+|---|---|
+| Android | DSub, Ultrasonic, Symfonium, Substreamer |
+| iOS | play:Sub, Substreamer |
+| Desktop | Sonixd, Sublime Music, Feishin |
+
+### Configuração
+
+No cliente, aponte para:
+
+```
+URL do servidor: https://uqt.xn--2dk.xyz
+Usuário: admin  (ou SUBSONIC_USER no .env)
+Senha:   admin  (ou SUBSONIC_PASS no .env)
+```
+
+### Variáveis de ambiente
+
+```env
+SUBSONIC_USER=admin   # usuário para autenticação
+SUBSONIC_PASS=admin   # senha (suporta password plain, enc: e token MD5)
+```
+
+### Endpoints implementados
+
+| Método | Descrição |
+|---|---|
+| `ping` | Verifica conectividade |
+| `getLicense` | Licença sempre válida |
+| `getMusicFolders` | Lista acervos (uqt, homi, …) |
+| `getIndexes` | Artistas agrupados por letra |
+| `getArtists` | Modo ID3 — artistas |
+| `getArtist` | Artista com seus álbuns |
+| `getAlbum` | Álbum com faixas |
+| `getSong` | Metadados de uma faixa |
+| `getAlbumList` / `getAlbumList2` | Lista de álbuns (paginada, com ordenação) |
+| `search2` / `search3` | Busca por artista, álbum e faixa |
+| `getMusicDirectory` | Navegação hierárquica pasta→artista→álbum |
+| `stream` / `download` | Streaming de áudio via S3 proxy |
+| `getCoverArt` | Capa do álbum via S3 proxy |
+| `getPlaylists` | Lista vazia (sem playlists) |
+| `getStarred2` | Lista vazia (sem favoritos) |
+| `getScanStatus` | Sempre `scanning=false` |
+
+Os dados vêm diretamente dos `.json.gz` existentes — nenhum banco de dados extra necessário. O índice é recarregado automaticamente a cada hora.
+
+### Testando
+
+```bash
+# Testes unitários (sem dependências externas)
+npm run test:subsonic
+
+# Verificar manualmente
+curl "https://uqt.xn--2dk.xyz/rest/ping.view?u=admin&p=admin&v=1.16.1&c=curl"
+```
+
 ## 💡 Dicas de Uso
 
 ### Exploração Rápida

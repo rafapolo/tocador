@@ -14,6 +14,7 @@ if (cluster.isPrimary) {
   const http = require('http');
   const { S3Client, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
   const { NodeHttpHandler } = require('@smithy/node-http-handler');
+  const { createSubsonicHandler } = require('./subsonic');
 
   process.on('uncaughtException', (err) => {
     console.error('uncaughtException:', err.message);
@@ -144,6 +145,8 @@ if (cluster.isPrimary) {
     }
   }
 
+  const handleSubsonic = createSubsonicHandler(handleObject);
+
   const botRegex = /scrapy|selenium(?:-webdriver)?|puppeteer|playwright|phantomjs|casperjs|headless\s*(chrome|browser)?|headlesschrome|automation\s*tool|automated\s*browser|bot\s*automation|httpclient|http\s*client|axios\/\d+|node-fetch|got\/\d+|mechanize|urllib|requests\/\d+|okhttp|retrofit|wget\/|httrack|aria2|lftp|webcopy|web\s*scraper|data\s*scraper|content\s*scraper|mass\s*(crawl|scrape|download)|bulk\s*(crawl|download|fetch)|site\s*crawler|link\s*crawler|botkit|dialogflow|rasa|botpress|datacenter\s*proxy|residential\s*proxy|rotating\s*proxy|proxy\s*rotation|proxy\s*pool|tor\s*exit|tor\s+network|jsdom|cheerio|aws\s*lambda|google\s*cloud\s*functions|azure\s*functions|python-requests|python\s*urllib|aiohttp|go-http-client|java\/\d+\.\d+|bot\s*engine|crawler\s*engine|spider\s*engine|auto\s*fetch|auto\s*scrape|auto\s*crawl/i;
 
   const server = http.createServer(async (req, res) => {
@@ -158,6 +161,12 @@ if (cluster.isPrimary) {
     if (req.method === 'OPTIONS') {
       res.writeHead(204, { ...corsHeaders, 'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS' });
       res.end();
+      return;
+    }
+
+    if (req.url.startsWith('/rest/')) {
+      const urlObj = new URL(req.url, `http://localhost:${PORT}`);
+      await handleSubsonic(req, res, urlObj);
       return;
     }
 
