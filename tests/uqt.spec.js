@@ -11,8 +11,18 @@ async function gotoWithFixture(page, url = '/') {
     localStorage.removeItem('uqt-shuffle');
     localStorage.removeItem('uqt-repeat');
     localStorage.removeItem('uqt-volume');
+    localStorage.removeItem('homi-shuffle');
+    localStorage.removeItem('homi-repeat');
+    localStorage.removeItem('homi-volume');
   });
   await page.route('**/uqt-albums.json.gz', route => {
+    route.fulfill({
+      status: 200,
+      headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' },
+      body: fixtureGz,
+    });
+  });
+  await page.route('**/homi-albums.json.gz', route => {
     route.fulfill({
       status: 200,
       headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' },
