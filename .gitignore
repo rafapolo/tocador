@@ -3,6 +3,7 @@ config.json
 unzips/
 js/uqt-albums.js
 js/uqt-albums.json.gz
+js/homi-albums.json.gz
 genres.json
 script/models/
 .env

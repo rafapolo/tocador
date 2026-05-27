@@ -79,21 +79,21 @@ External acervos work too: `?acervo=https://example.com/my-archive.json.gz`
 
 ### Generating an acervo (Rust — preferred for large archives)
 
-Title, subtitle, base_url and hours are read from `acervo.json` in the music dir (see `config/`). No flags needed:
+Title, subtitle, hours are read from `acervo.json` in the music dir; `base_url` from `.env` there. No flags needed. Each acervo outputs directly into its own repo:
 
 ```bash
-# uqt
+# uqt → ../uqt repo
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/bkps/UQT/sambaderaiz \
-  js/uqt-albums.json.gz
+  ../uqt/js/uqt-albums.json.gz
 
-# hominiscanidae
+# hominiscanidae → ../hominiscanidae repo
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/hominiscanidae/unzips \
-  js/homi-albums.json.gz
+  ../hominiscanidae/js/homi-albums.json.gz
 ```
 
-CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`) override the config file when passed.
+Then commit and push in each repo. CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`) override config when passed.
 
 Build first: `cd script/generate-albums && cargo build --release`
 
