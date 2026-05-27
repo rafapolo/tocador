@@ -14,6 +14,10 @@ use walkdir::WalkDir;
 const IMAGE_EXTS: &[&str] = &[".jpg", ".jpeg", ".png", ".webp"];
 const COVER_PRIORITY: &[&str] = &["cover", "capa", "folder", "front", "artwork", "albumart"];
 
+// Matches OS copy suffixes like " (2)", " (3)" — not "(1)" and not 4-digit years
+static RE_COPY_SUFFIX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(.*)\s+\(([2-9]|[1-9]\d{1,2})\)\s*$").unwrap()
+});
 static RE_ARTIST_ALBUM_YEAR: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(.+?)\s*[-–]\s*(.+?)\s*\((\d{4})\)\s*$").unwrap()
 });
@@ -279,7 +283,7 @@ fn main() {
     println!("Processando {} pastas...", total);
 
     let counter = AtomicUsize::new(0);
-    let mut albums: Vec<Album> = folders
+    let albums: Vec<Album> = folders
         .par_iter()
         .filter_map(|folder| {
             let result = process_album(folder);
@@ -292,6 +296,34 @@ fn main() {
         .collect();
 
     eprintln!("\r  [{total}/{total}] pronto        ");
+
+    // Merge albums split across OS-numbered copies ("Álbum (2)", "Álbum (3)" → "Álbum").
+    // Only merges when the base album already exists; preserves original path otherwise.
+    let albums = {
+        let mut merged: Vec<Album> = Vec::with_capacity(albums.len());
+        for mut album in albums {
+            let base = RE_COPY_SUFFIX.captures(&album.path).map(|c| c[1].to_string());
+            let absorbed = if let Some(ref base_path) = base {
+                if let Some(existing) = merged.iter_mut().find(|a| a.path == *base_path) {
+                    for t in album.tracks.drain(..) {
+                        if !existing.tracks.iter().any(|e| e.file == t.file) {
+                            existing.tracks.push(t);
+                        }
+                    }
+                    if album.has_cover { existing.has_cover = true; }
+                    true
+                } else { false }
+            } else { false };
+            if !absorbed {
+                merged.push(album);
+            }
+        }
+        for a in &mut merged {
+            a.tracks.sort_by(|x, y| x.file.cmp(&y.file));
+        }
+        merged
+    };
+    let mut albums = albums;
 
     albums.sort_by(|a, b| b.year.cmp(&a.year));
 
