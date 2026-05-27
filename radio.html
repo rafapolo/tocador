@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rádio</title>
+  <style>
+    :root {
+      --bg:      #0f0e0c;
+      --surface: #1a1814;
+      --accent:  #d4a574;
+      --text:    #f5f1ed;
+      --dim:     #b8b0a8;
+      --border:  #3a3530;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .widget {
+      width: 320px;
+      height: 350px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 16px 14px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+    }
+
+    /* ── Cover ─────────────────────────────────────────── */
+    .cover-wrap {
+      width: 210px;
+      height: 210px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: 0 6px 28px rgba(0,0,0,.6), 0 0 0 1px var(--border);
+    }
+
+    .cover-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Info ──────────────────────────────────────────── */
+    .info {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .track-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+
+    .track-meta {
+      font-size: 12px;
+      color: var(--dim);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+
+    .track-album {
+      font-size: 11px;
+      color: var(--dim);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+      opacity: .7;
+    }
+
+    .artist-link, .album-link {
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: color .15s;
+    }
+    .artist-link:hover, .album-link:hover { color: var(--accent); }
+
+    /* ── Marquee ───────────────────────────────────────── */
+    @keyframes marquee-scroll {
+      0%   { transform: translateX(0); }
+      10%  { transform: translateX(0); }
+      85%  { transform: translateX(var(--marquee-distance)); }
+      95%  { transform: translateX(var(--marquee-distance)); }
+      100% { transform: translateX(0); }
+    }
+    .marquee-active { overflow: hidden; text-overflow: clip; }
+    .marquee-active .marquee-inner {
+      display: inline-block;
+      white-space: nowrap;
+      animation: marquee-scroll var(--marquee-duration, 12s) linear infinite;
+      animation-delay: 1.5s;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .marquee-active .marquee-inner { animation: none; }
+    }
+
+    /* ── Progress ──────────────────────────────────────── */
+    .progress {
+      width: 100%;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      flex-shrink: 0;
+      cursor: pointer;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .progress:hover { height: 3px; margin-bottom: 9px; }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      border-radius: 2px;
+      opacity: .65;
+      pointer-events: none;
+    }
+
+    /* ── Controls ──────────────────────────────────────── */
+    .controls {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: color .15s ease, transform .1s ease;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+    }
+    .btn:hover  { color: var(--text); }
+    .btn:active { transform: scale(.88); }
+
+    .btn-play {
+      width: 34px;
+      height: 34px;
+      background: var(--accent);
+      color: var(--bg);
+      box-shadow: 0 2px 10px rgba(212,165,116,.28);
+    }
+    .btn-play:hover { background: #dfb98a; color: var(--bg); }
+
+    /* ── Loading shimmer ───────────────────────────────── */
+    @keyframes shimmer {
+      0%, 100% { opacity: .5; }
+      50%       { opacity: 1;  }
+    }
+    .loading .cover-wrap,
+    .loading .track-title,
+    .loading .track-meta { animation: shimmer 1.4s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+
+<div class="widget loading" id="widget">
+  <div class="cover-wrap">
+    <img id="cover" src="" alt="">
+  </div>
+
+  <div class="info">
+    <div class="track-title" id="track-title">Carregando…</div>
+    <div class="track-meta"  id="track-meta"></div>
+    <div class="track-album" id="track-album"></div>
+  </div>
+
+  <div class="progress" id="progress" aria-hidden="true">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btn-prev" aria-label="Anterior">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="5" y="5" width="2.5" height="14" rx="0.5"/>
+        <path d="M18 5 L9 12 L18 19z"/>
+      </svg>
+    </button>
+
+    <button class="btn btn-play" id="btn-play" aria-label="Tocar">
+      <svg id="icon-play" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M8 5v14l11-7z"/>
+      </svg>
+      <svg id="icon-pause" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none">
+        <path d="M6 19h4V5H6zm8-14v14h4V5z"/>
+      </svg>
+    </button>
+
+    <button class="btn" id="btn-next" aria-label="Próxima">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M6 5 L15 12 L6 19z"/>
+        <rect x="16.5" y="5" width="2.5" height="14" rx="0.5"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+
+<script>
+const ACERVOS = {
+  uqt:  { data: 'https://rafapolo.github.io/uqt/js/uqt-albums.json.gz',             base_url: 'https://uqt.xn--2dk.xyz/uqt' },
+  homi: { data: 'https://rafapolo.github.io/hominiscanidae/js/homi-albums.json.gz', base_url: 'https://uqt.xn--2dk.xyz/indie' },
+};
+
+const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" viewBox%3D"0 0 200 200"%3E%3Cdefs%3E%3ClinearGradient id%3D"grad" x1%3D"0%25" y1%3D"0%25" x2%3D"100%25" y2%3D"100%25"%3E%3Cstop offset%3D"0%25" style%3D"stop-color%3A%232a2620%3Bstop-opacity%3A1" %2F%3E%3Cstop offset%3D"100%25" style%3D"stop-color%3A%231a1814%3Bstop-opacity%3A1" %2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect fill%3D"url(%23grad)" width%3D"200" height%3D"200"%2F%3E%3Ccircle cx%3D"100" cy%3D"100" r%3D"40" fill%3D"none" stroke%3D"%23d4a574" stroke-width%3D"8"%2F%3E%3Ccircle cx%3D"100" cy%3D"100" r%3D"15" fill%3D"none" stroke%3D"%23d4a574" stroke-width%3D"2"%2F%3E%3Cpath d%3D"M 100 60 Q 120 80 120 100 Q 120 125 100 140 Q 80 125 80 100 Q 80 80 100 60" fill%3D"none" stroke%3D"%23d4a574" stroke-width%3D"3" stroke-linecap%3D"round"%2F%3E%3C%2Fsvg%3E';
+
+let albums = [], BASE_URL = '', acervoParam = 'homi', hist = [];
+let curAlbum = null, curTrack = null;
+const failed = new Set();
+
+const $ = id => document.getElementById(id);
+const audio       = $('audio');
+const widget      = $('widget');
+const coverImg    = $('cover');
+const titleEl     = $('track-title');
+const metaEl      = $('track-meta');
+const btnPlay     = $('btn-play');
+const iconPlay    = $('icon-play');
+const iconPause   = $('icon-pause');
+const albumEl     = $('track-album');
+const progressEl  = $('progress');
+const fillEl      = $('progress-fill');
+
+function checkMarquee(el) {
+  if (!el) return;
+  const existing = el.querySelector('.marquee-inner');
+  if (existing) el.innerHTML = existing.innerHTML;
+  el.classList.remove('marquee-active');
+  el.style.removeProperty('--marquee-distance');
+  el.style.removeProperty('--marquee-duration');
+  requestAnimationFrame(() => {
+    if (el.scrollWidth <= el.offsetWidth) return;
+    const distance = el.offsetWidth - el.scrollWidth;
+    const secs = Math.max(6, Math.abs(distance) / 50 / 0.75);
+    el.style.setProperty('--marquee-distance', `${distance}px`);
+    el.style.setProperty('--marquee-duration', `${secs.toFixed(1)}s`);
+    const inner = document.createElement('span');
+    inner.className = 'marquee-inner';
+    inner.innerHTML = el.innerHTML;
+    el.innerHTML = '';
+    el.appendChild(inner);
+    el.classList.add('marquee-active');
+  });
+}
+
+const rand       = n => Math.floor(Math.random() * n);
+const pickRandom = () => { const a = albums[rand(albums.length)]; return { album: a, track: a.tracks[rand(a.tracks.length)] }; };
+
+function coverURL(album) {
+  return (album.has_cover === false || failed.has(album.path))
+    ? PLACEHOLDER
+    : `${BASE_URL}/${encodeURI(album.path)}/capa-min.jpg`;
+}
+
+function setPlaying(on) {
+  iconPlay.style.display  = on ? 'none' : '';
+  iconPause.style.display = on ? '' : 'none';
+  btnPlay.setAttribute('aria-label', on ? 'Pausar' : 'Tocar');
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function showTrack(album, track) {
+  curAlbum = album;
+  curTrack = track;
+  titleEl.textContent = track.title;
+  const artist = track.artists || album.artist || '';
+  const artistHTML = artist
+    ? `<span class="artist-link" data-artist="${esc(artist)}">${esc(artist)}</span>`
+    : '';
+  metaEl.innerHTML = [artistHTML, album.year].filter(Boolean).join(' • ');
+  albumEl.innerHTML = album.title
+    ? `<span class="album-link" data-path="${esc(album.path)}">${esc(album.title)}</span>`
+    : '';
+  checkMarquee(titleEl);
+  checkMarquee(metaEl);
+  checkMarquee(albumEl);
+  const url = coverURL(album);
+  if (coverImg.src !== url) coverImg.src = url;
+  if ('mediaSession' in navigator)
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title, artist, album: album.title,
+      artwork: url.startsWith('data:') ? [] : [{ src: url }],
+    });
+}
+
+function playTrack(album, track) {
+  showTrack(album, track);
+  const src = `${BASE_URL}/${encodeURI(album.path)}/${encodeURI(track.file)}`;
+  if (audio.src !== src) { audio.src = src; audio.load(); }
+  audio.play().catch(() => {});
+}
+
+function pushHist() {
+  if (!curAlbum || !curTrack) return;
+  hist.push({ album: curAlbum, track: curTrack });
+  if (hist.length > 50) hist.shift();
+}
+
+function next() { pushHist(); const p = pickRandom(); playTrack(p.album, p.track); }
+function prev() { if (hist.length) { const p = hist.pop(); playTrack(p.album, p.track); } }
+
+btnPlay.addEventListener('click', e => {
+  e.currentTarget.blur();
+  if (!curTrack) return;
+  audio.paused ? audio.play().catch(() => {}) : audio.pause();
+});
+$('btn-next').addEventListener('click', e => { e.currentTarget.blur(); next(); });
+$('btn-prev').addEventListener('click', e => { e.currentTarget.blur(); prev(); });
+
+metaEl.addEventListener('click', e => {
+  const link = e.target.closest('.artist-link');
+  if (!link) return;
+  window.open(`/?acervo=${encodeURIComponent(acervoParam)}&q=${encodeURIComponent(link.dataset.artist)}`, '_blank');
+});
+
+albumEl.addEventListener('click', e => {
+  const link = e.target.closest('.album-link');
+  if (!link) return;
+  window.open(`/?acervo=${encodeURIComponent(acervoParam)}&album=${encodeURIComponent(link.dataset.path)}`, '_blank');
+});
+
+// Pause radio when main player starts (and vice-versa)
+if (typeof BroadcastChannel !== 'undefined') {
+  const TAB_ID = crypto.randomUUID();
+  const ch = new BroadcastChannel('tocador-player');
+  audio.addEventListener('play', () => ch.postMessage({ tabId: TAB_ID }));
+  ch.onmessage = ({ data }) => { if (data?.tabId !== TAB_ID) audio.pause(); };
+}
+
+audio.addEventListener('play',  () => setPlaying(true));
+audio.addEventListener('pause', () => setPlaying(false));
+audio.addEventListener('ended', next);
+
+audio.addEventListener('timeupdate', () => {
+  if (audio.duration) fillEl.style.width = (audio.currentTime / audio.duration * 100) + '%';
+});
+
+progressEl.addEventListener('click', e => {
+  if (!audio.duration) return;
+  const r = progressEl.getBoundingClientRect();
+  audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+});
+
+coverImg.addEventListener('error', () => {
+  if (curAlbum) failed.add(curAlbum.path);
+  coverImg.src = PLACEHOLDER;
+});
+
+async function load() {
+  acervoParam  = new URLSearchParams(location.search).get('acervo') || 'homi';
+  const param  = acervoParam;
+  const entry  = ACERVOS[param];
+  const url    = entry?.data ?? param;
+
+  const ds   = new DecompressionStream('gzip');
+  const blob = await new Response((await fetch(url)).body.pipeThrough(ds)).blob();
+  const db   = JSON.parse(await blob.text());
+
+  BASE_URL = db.meta?.base_url || entry?.base_url || '';
+  albums   = db.albums.filter(a => a.tracks?.length);
+
+  widget.classList.remove('loading');
+
+  const { album, track } = pickRandom();
+  playTrack(album, track);
+}
+
+load().catch(err => {
+  widget.classList.remove('loading');
+  titleEl.textContent = 'Erro ao carregar';
+  console.error(err);
+});
+</script>
+</body>
+</html>

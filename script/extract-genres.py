@@ -603,23 +603,32 @@ def main():
         idx         = args.index('--albums')
         album_names = [a for a in args[idx + 1:] if not a.startswith('--')]
     else:
-        existing    = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
+        results     = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
         all_dirs    = [d.name for d in UNZIPS.iterdir() if d.is_dir()]
-        album_names = [n for n in all_dirs if n not in existing]
-        print(f'Resuming: {len(album_names)} remaining ({len(existing)} done)')
+        album_names = [n for n in all_dirs if n not in results]
+        print(f'Resuming: {len(album_names)} remaining ({len(results)} done)')
 
     _quiet_essentia()
     download_models(model)
     _warm_up(model)   # also primes _PRED_CACHE for single-process runs
 
-    import time
-    results  = {}
-    total    = len(album_names)
+    if test_mode:
+        results = {}
+    total = len(album_names)
     ordering = {name: i for i, name in enumerate(album_names, 1)}
+
+    def _fmt_eta(remaining: int, rate_per_s: float) -> str:
+        if rate_per_s <= 0:
+            return '?'
+        eta_s = remaining / rate_per_s
+        h, m = int(eta_s // 3600), int((eta_s % 3600) // 60)
+        return f'{h}h{m:02d}m'
 
     if n_workers > 1:
         from concurrent.futures import ProcessPoolExecutor, as_completed
-        print(f'Running with {n_workers} workers...')
+        print(f'Running with {n_workers} workers...', flush=True)
+        wall_start = time.time()
+        completed  = 0
         with ProcessPoolExecutor(
             max_workers=n_workers,
             initializer=_worker_init,
@@ -628,36 +637,45 @@ def main():
             futures = {pool.submit(classify_fn, name): name for name in album_names}
             for fut in as_completed(futures):
                 album_name, result = fut.result()
-                i = ordering[album_name]
+                completed += 1
+                wall_elapsed = time.time() - wall_start
+                rate = completed / wall_elapsed
+                eta  = _fmt_eta(total - completed, rate)
+                i    = ordering[album_name]
                 print(f'[{i}/{total}] {album_name}', flush=True)
                 if result:
-                    results[album_name] = result
                     if not test_mode:
-                        _save_result(album_name, result)
+                        _save_result(results, album_name, result, OUTPUT)
+                    else:
+                        results[album_name] = result
                     tops = ', '.join(set(v['top'] for v in result.values()))
-                    print(f'  → {len(result)} tracks  {tops}')
+                    print(f'  → {len(result)} tracks  {tops}  [{rate*60:.1f}/min | ETA {eta}]')
                 else:
-                    print(f'  → no audio')
+                    print(f'  → no audio  [{rate*60:.1f}/min | ETA {eta}]')
     else:
+        times: deque = deque(maxlen=20)
         for i, name in enumerate(album_names, 1):
             t0 = time.time()
             print(f'[{i}/{total}] {name}', flush=True)
             _, result = classify_fn(name)
-            elapsed   = time.time() - t0
+            elapsed = time.time() - t0
+            times.append(elapsed)
+            rate = len(times) / sum(times)
+            eta  = _fmt_eta(total - i, rate)
             if result:
-                results[name] = result
                 if not test_mode:
-                    _save_result(name, result)
+                    _save_result(results, name, result, OUTPUT)
+                else:
+                    results[name] = result
                 tops = ', '.join(set(v['top'] for v in result.values()))
-                print(f'  → {len(result)} tracks  {tops}  [{elapsed:.1f}s]')
+                print(f'  → {len(result)} tracks  {tops}  [{elapsed:.1f}s | {rate*60:.1f}/min | ETA {eta}]')
             else:
-                print(f'  → no audio  [{elapsed:.1f}s]')
+                print(f'  → no audio  [{elapsed:.1f}s | {rate*60:.1f}/min | ETA {eta}]')
 
     if test_mode:
         print(json.dumps(results, ensure_ascii=False, indent=2))
     else:
-        total_done = len(json.loads(OUTPUT.read_text())) if OUTPUT.exists() else len(results)
-        print(f'\n✓ {total_done} total in {OUTPUT}')
+        print(f'\n✓ {len(results)} total in {OUTPUT}')
 
 
 if __name__ == '__main__':
