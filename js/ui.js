@@ -66,7 +66,7 @@ const KNOWN_ACERVOS = {
     base_url: 'https://uqt.xn--2dk.xyz/indie',
   },
 };
-const DEFAULT_ACERVO = 'uqt';
+const DEFAULT_ACERVO = 'homi';
 
 let BASE_URL = '';
 const failedCovers = new Set();
