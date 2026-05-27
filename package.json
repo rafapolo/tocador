@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node proxy.js",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:subsonic": "node --test tests/subsonic.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1053.0",
