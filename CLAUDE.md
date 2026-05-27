@@ -79,21 +79,21 @@ External acervos work too: `?acervo=https://example.com/my-archive.json.gz`
 
 ### Generating an acervo (Rust — preferred for large archives)
 
-Always pass `--base-url`:
+Title, subtitle, base_url and hours are read from `acervo.json` in the music dir (see `config/`). No flags needed:
 
 ```bash
 # uqt
 ./script/generate-albums/target/release/generate-albums \
-  /Volumes/EXTRA/bkps/sambaderaiz \
-  js/uqt-albums.json.gz \
-  --base-url "https://uqt.xn--2dk.xyz/uqt"
+  /Volumes/EXTRA/bkps/UQT/sambaderaiz \
+  js/uqt-albums.json.gz
 
 # hominiscanidae
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/hominiscanidae/unzips \
-  js/homi-albums.json.gz \
-  --base-url "https://uqt.xn--2dk.xyz/indie"
+  js/homi-albums.json.gz
 ```
+
+CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`) override the config file when passed.
 
 Build first: `cd script/generate-albums && cargo build --release`
 

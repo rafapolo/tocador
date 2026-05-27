@@ -28,6 +28,15 @@ static RE_ALBUM_YEAR: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(.+?)\s*\((\d{4})\)\s*$").unwrap()
 });
 
+// Per-directory config file (acervo.json in the music root)
+
+#[derive(serde::Deserialize, Default)]
+struct DirConfig {
+    title:    Option<String>,
+    subtitle: Option<String>,
+    base_url: Option<String>,
+}
+
 // Tocador-compatible schema
 
 #[derive(Serialize)]
@@ -264,6 +273,15 @@ fn main() {
         std::process::exit(1);
     }
 
+    let dir_cfg: DirConfig = fs::read_to_string(cfg.music_dir.join("acervo.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default();
+
+    let meta_title    = cfg.meta_title   .or(dir_cfg.title);
+    let meta_subtitle = cfg.meta_subtitle.or(dir_cfg.subtitle);
+    let meta_base_url = cfg.meta_base_url.or(dir_cfg.base_url);
+
     let mut folders: Vec<PathBuf> = fs::read_dir(&cfg.music_dir)
         .expect("Não foi possível abrir a pasta de músicas")
         .filter_map(|e| e.ok())
@@ -327,12 +345,20 @@ fn main() {
 
     albums.sort_by(|a, b| b.year.cmp(&a.year));
 
+    let total_secs: u64 = albums.iter()
+        .flat_map(|a| a.tracks.iter())
+        .map(|t| t.duration as u64)
+        .sum();
+    let meta_hours = cfg.meta_hours.or_else(|| {
+        (total_secs > 0).then(|| format!("{}", (total_secs as f64 / 3600.0).round() as u64))
+    });
+
     let output = Output {
         meta: Meta {
-            title: cfg.meta_title,
-            subtitle: cfg.meta_subtitle,
-            hours: cfg.meta_hours,
-            base_url: cfg.meta_base_url,
+            title: meta_title,
+            subtitle: meta_subtitle,
+            hours: meta_hours,
+            base_url: meta_base_url,
             s3_prefix: cfg.meta_s3_prefix,
         },
         albums,
