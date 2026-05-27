@@ -24,9 +24,14 @@ import json
 import random
 import contextlib
 import urllib.request
-import signal
+import warnings
+import time
+from collections import deque
 import numpy as np
 from pathlib import Path
+
+# Suppress harmless multiprocessing resource-tracker warnings on macOS
+warnings.filterwarnings('ignore', message='resource_tracker.*')
 
 UNZIPS    = Path(os.environ.get('ARCHIVE_DIR', Path(__file__).parent.parent / 'unzips'))
 OUTPUT    = Path(os.environ.get('OUTPUT_FILE', Path(__file__).parent.parent / 'genres.json'))
@@ -310,39 +315,41 @@ AUDIO_CLIP_S = 30      # seconds to sample per track (MAEST's design window)
 _PRED_CACHE: dict = {}
 
 
-import threading
-import queue
-
-
 class UnreadableAudio(Exception):
     pass
 
 
+def _audio_worker(mp3_path: str, q):
+    """Load audio in a subprocess (module-level for pickling)."""
+    try:
+        audio = _do_load_audio(Path(mp3_path))
+        q.put(('ok', audio))
+    except Exception as e:
+        q.put(('error', e))
+
+
 def _load_audio_with_timeout(mp3: Path, timeout_s: float = 15.0) -> np.ndarray:
-    result_queue = queue.Queue()
-    error_queue = queue.Queue()
-
-    def _load():
-        try:
-            result_queue.put(_do_load_audio(mp3))
-        except Exception as e:
-            error_queue.put(e)
-
-    t = threading.Thread(target=_load)
-    t.daemon = True
-    t.start()
-    t.join(timeout=timeout_s)
-
-    if t.is_alive():
+    import multiprocessing as _mp
+    from multiprocessing import Queue as _mpQueue
+    from queue import Empty as _QueueEmpty
+    q = _mpQueue()
+    p = _mp.Process(target=_audio_worker, args=(str(mp3), q))
+    p.start()
+    try:
+        status, result = q.get(timeout=timeout_s)
+    except _QueueEmpty:
+        if p.is_alive():
+            p.terminate()
+            p.join()
+        q.close()
+        q.join_thread()
         raise TimeoutError(f'Audio loading timed out after {timeout_s}s')
-
-    if not error_queue.empty():
-        raise error_queue.get()
-
-    if not result_queue.empty():
-        return result_queue.get()
-
-    raise RuntimeError('Audio loading produced no result')
+    p.join(timeout=5)
+    q.close()
+    q.join_thread()
+    if status == 'error':
+        raise result
+    return result
 
 
 def _do_load_audio(mp3: Path) -> np.ndarray:
@@ -508,11 +515,18 @@ def _infer_dortmund(audio: np.ndarray):
     return {'top': genres[0]['label'], 'genres': genres[:3]}
 
 
-def _save_result(album_name: str, result):
-    """Atomically merge one album result into the output file."""
-    on_disk = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
-    on_disk[album_name] = result
-    OUTPUT.write_text(json.dumps(on_disk, ensure_ascii=False, indent=2))
+def _save_result(results: dict, album_name: str, result, output: Path = OUTPUT):
+    """Atomically write in-memory results dict to disk (no re-read, atomic rename)."""
+    results[album_name] = result
+    tmp = output.with_suffix('.tmp')
+    tmp.write_text(json.dumps(results, ensure_ascii=False))
+    tmp.replace(output)
+
+
+def _auto_workers() -> int:
+    """Pick worker count for this machine: (cpu_count - 2), capped at 5."""
+    cpus = os.cpu_count() or 4
+    return max(2, min(cpus - 2, 5))
 
 
 def _classify_album(album_name: str, infer_fn):
@@ -563,10 +577,11 @@ def main():
         model = 'discogs400'
 
     if '--workers' in args:
-        idx       = args.index('--workers')
-        n_workers = int(args[idx + 1]) if idx + 1 < len(args) else (os.cpu_count() or 1)
+        idx = args.index('--workers')
+        val = args[idx + 1] if idx + 1 < len(args) else 'auto'
+        n_workers = _auto_workers() if val == 'auto' else int(val)
     else:
-        n_workers = 1
+        n_workers = _auto_workers()
 
     if model == 'discogs519':
         classify_fn = classify_album_discogs519
