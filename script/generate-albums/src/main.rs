@@ -34,7 +34,6 @@ static RE_ALBUM_YEAR: Lazy<Regex> = Lazy::new(|| {
 struct DirConfig {
     title:    Option<String>,
     subtitle: Option<String>,
-    base_url: Option<String>,
 }
 
 // Tocador-compatible schema
@@ -278,9 +277,20 @@ fn main() {
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
 
+    // base_url: CLI flag → .env in music dir → BASE_URL env var
+    let env_base_url = fs::read_to_string(cfg.music_dir.join(".env")).ok()
+        .and_then(|s| {
+            s.lines()
+                .filter(|l| !l.starts_with('#'))
+                .find(|l| l.trim_start().starts_with("BASE_URL="))
+                .map(|l| l.splitn(2, '=').nth(1).unwrap_or("").trim().to_string())
+        })
+        .filter(|s| !s.is_empty())
+        .or_else(|| std::env::var("BASE_URL").ok());
+
     let meta_title    = cfg.meta_title   .or(dir_cfg.title);
     let meta_subtitle = cfg.meta_subtitle.or(dir_cfg.subtitle);
-    let meta_base_url = cfg.meta_base_url.or(dir_cfg.base_url);
+    let meta_base_url = cfg.meta_base_url.or(env_base_url);
 
     let mut folders: Vec<PathBuf> = fs::read_dir(&cfg.music_dir)
         .expect("Não foi possível abrir a pasta de músicas")
