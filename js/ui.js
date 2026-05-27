@@ -19,9 +19,7 @@
       `**UA:** ${navigator.userAgent}`,
       `**Time:** ${new Date().toISOString()}`,
     ].join('\n');
-    navigator.sendBeacon
-      ? navigator.sendBeacon(REPORT_URL, new Blob([JSON.stringify({ title, body })], { type: 'application/json' }))
-      : fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, body }), keepalive: true }).catch(() => {});
+    fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, body }), keepalive: true, credentials: 'omit' }).catch(() => {});
   }
 
   window.addEventListener('error', e => {
