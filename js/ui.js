@@ -530,7 +530,7 @@ function applyArchiveMeta() {
     const totalSeconds = db.albums.reduce((s, a) => s + (a.tracks || []).reduce((ts, t) => ts + (t.duration || 0), 0), 0);
     if (totalSeconds > 0) hours = Math.round(totalSeconds / 3600).toString();
   }
-  const displayTitle = title !== 'Tocador' ? `♪ Tocador — ${title}` : 'Tocador';
+  const displayTitle = title !== 'Tocador' ? `♪ Tocador / ${title}` : 'Tocador';
   document.title = displayTitle;
   const titleEl = document.getElementById('app-title');
   const subtitleEl = document.getElementById('app-subtitle');
