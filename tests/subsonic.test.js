@@ -2,9 +2,15 @@
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+
+const TEST_PASS = 'Liga o Tocador!';
+const TEST_PASS_HEX = Buffer.from(TEST_PASS).toString('hex');
+const TEST_SALT = 'testsalt';
+const TEST_TOKEN = crypto.createHash('md5').update(TEST_PASS + TEST_SALT).digest('hex');
 
 const { buildIndex, createSubsonicHandler } = require('../subsonic');
 
@@ -48,7 +54,7 @@ async function call(handler, path) {
   return res;
 }
 
-const BASE = '/rest/%s.view?u=admin&p=admin&v=1.16.1&c=test';
+const BASE = `/rest/%s.view?u=tocador&t=${TEST_TOKEN}&s=${TEST_SALT}&v=1.16.1&c=test`;
 function url(method, extra = '') {
   return BASE.replace('%s', method) + extra;
 }
@@ -98,29 +104,35 @@ describe('buildIndex', () => {
 describe('auth', () => {
   const handler = makeHandler();
 
-  test('rejects wrong password', async () => {
-    const res = await call(handler, '/rest/ping.view?u=admin&p=wrong&v=1.16.1&c=test');
+  test('rejects wrong password (token)', async () => {
+    const badToken = crypto.createHash('md5').update('wrongpassword' + TEST_SALT).digest('hex');
+    const res = await call(handler, `/rest/ping.view?u=tocador&t=${badToken}&s=${TEST_SALT}&v=1.16.1&c=test`);
     assert.equal(res.status, 200);
     assert.ok(res.body.includes('status="failed"'));
     assert.ok(res.body.includes('code="40"'));
   });
 
-  test('rejects wrong username', async () => {
-    const res = await call(handler, '/rest/ping.view?u=nobody&p=admin&v=1.16.1&c=test');
+  test('rejects wrong enc: password', async () => {
+    const wrongHex = Buffer.from('wrongpassword').toString('hex');
+    const res = await call(handler, `/rest/ping.view?u=tocador&p=enc:${wrongHex}&v=1.16.1&c=test`);
     assert.ok(res.body.includes('status="failed"'));
+    assert.ok(res.body.includes('code="40"'));
   });
 
   test('accepts token auth (md5)', async () => {
-    const crypto = require('crypto');
-    const salt = 'abc123';
-    const token = crypto.createHash('md5').update('admin' + salt).digest('hex');
-    const res = await call(handler, `/rest/ping.view?u=admin&t=${token}&s=${salt}&v=1.16.1&c=test`);
+    const res = await call(handler, url('ping'));
     assert.ok(res.body.includes('status="ok"'), `Expected ok, got: ${res.body}`);
   });
 
-  test('accepts hex-encoded password (enc: prefix)', async () => {
-    const hex = Buffer.from('admin').toString('hex');
-    const res = await call(handler, `/rest/ping.view?u=admin&p=enc:${hex}&v=1.16.1&c=test`);
+  test('accepts enc: password', async () => {
+    const res = await call(handler, `/rest/ping.view?u=qualquer&p=enc:${TEST_PASS_HEX}&v=1.16.1&c=test`);
+    assert.ok(res.body.includes('status="ok"'));
+  });
+
+  test('accepts any username with correct password', async () => {
+    const salt = 'saltsalt';
+    const token = crypto.createHash('md5').update(TEST_PASS + salt).digest('hex');
+    const res = await call(handler, `/rest/ping.view?u=anyusername&t=${token}&s=${salt}&v=1.16.1&c=test`);
     assert.ok(res.body.includes('status="ok"'));
   });
 });
@@ -429,5 +441,66 @@ describe('stub endpoints', () => {
   test('unknown method returns error 30', async () => {
     const res = await call(handler, url('nonExistentMethod'));
     assert.ok(res.body.includes('code="30"'));
+  });
+});
+
+// ── OpenSubsonic ──────────────────────────────────────────────────────────────
+
+describe('openSubsonic', () => {
+  const handler = makeHandler();
+
+  test('ping XML declares openSubsonic="true"', async () => {
+    const res = await call(handler, url('ping'));
+    assert.ok(res.body.includes('openSubsonic="true"'), res.body);
+  });
+
+  test('ping XML declares type="tocador"', async () => {
+    const res = await call(handler, url('ping'));
+    assert.ok(res.body.includes('type="tocador"'), res.body);
+  });
+
+  test('ping XML declares serverVersion', async () => {
+    const res = await call(handler, url('ping'));
+    assert.ok(res.body.includes('serverVersion='), res.body);
+  });
+
+  test('ping XML includes openSubsonicExtensions element', async () => {
+    const res = await call(handler, url('ping'));
+    assert.ok(res.body.includes('<openSubsonicExtensions'), res.body);
+  });
+
+  test('ping JSON has openSubsonic=true', async () => {
+    const res = await call(handler, url('ping') + '&f=json');
+    const data = JSON.parse(res.body);
+    assert.equal(data['subsonic-response'].openSubsonic, true);
+  });
+
+  test('ping JSON has type="tocador"', async () => {
+    const res = await call(handler, url('ping') + '&f=json');
+    const data = JSON.parse(res.body);
+    assert.equal(data['subsonic-response'].type, 'tocador');
+  });
+
+  test('ping JSON has serverVersion', async () => {
+    const res = await call(handler, url('ping') + '&f=json');
+    const data = JSON.parse(res.body);
+    assert.ok(data['subsonic-response'].serverVersion);
+  });
+
+  test('ping JSON has empty openSubsonicExtensions array', async () => {
+    const res = await call(handler, url('ping') + '&f=json');
+    const data = JSON.parse(res.body);
+    assert.deepEqual(data['subsonic-response'].openSubsonicExtensions, []);
+  });
+
+  test('error responses also declare openSubsonic="true"', async () => {
+    const badToken = crypto.createHash('md5').update('wrong' + TEST_SALT).digest('hex');
+    const res = await call(handler, `/rest/ping.view?u=x&t=${badToken}&s=${TEST_SALT}&v=1.16.1&c=test`);
+    assert.ok(res.body.includes('openSubsonic="true"'), res.body);
+  });
+
+  test('non-ping endpoints also carry openSubsonic="true"', async () => {
+    const res = await call(handler, url('getMusicFolders'));
+    assert.ok(res.body.includes('openSubsonic="true"'), res.body);
   });
 });

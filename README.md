@@ -138,7 +138,7 @@ ARCHIVE_DIR=/path/to/musicas node script/resize-cover-images.js
 
 ## 📡 API Subsonic
 
-O proxy expõe uma API compatível com o protocolo [Subsonic](https://www.subsonic.org/pages/api.jsp) (v1.16.1), permitindo conectar qualquer cliente Subsonic aos acervos.
+O proxy expõe uma API compatível com o protocolo [Subsonic](https://www.subsonic.org/pages/api.jsp) (v1.16.1) e com o [OpenSubsonic](https://opensubsonic.netlify.app/) (declarado no `ping`), permitindo conectar qualquer cliente Subsonic aos acervos.
 
 ### Clientes compatíveis
 
@@ -154,15 +154,8 @@ No cliente, aponte para:
 
 ```
 URL do servidor: https://uqt.xn--2dk.xyz
-Usuário: admin  (ou SUBSONIC_USER no .env)
-Senha:   admin  (ou SUBSONIC_PASS no .env)
-```
-
-### Variáveis de ambiente
-
-```env
-SUBSONIC_USER=admin   # usuário para autenticação
-SUBSONIC_PASS=admin   # senha (suporta password plain, enc: e token MD5)
+Usuário: qualquer (não verificado)
+Senha:   Liga o Tocador!
 ```
 
 ### Endpoints implementados
@@ -195,7 +188,7 @@ Os dados vêm diretamente dos `.json.gz` existentes — nenhum banco de dados ex
 npm run test:subsonic
 
 # Verificar manualmente
-curl "https://uqt.xn--2dk.xyz/rest/ping.view?u=admin&p=admin&v=1.16.1&c=curl"
+curl "https://uqt.xn--2dk.xyz/rest/ping.view?u=tocador&p=Liga%20o%20Tocador!&v=1.16.1&c=curl"
 ```
 
 ## 💡 Dicas de Uso

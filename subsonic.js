@@ -7,7 +7,12 @@ const zlib = require('zlib');
 const crypto = require('crypto');
 
 const API_VERSION = '1.16.1';
+const SERVER_TYPE = 'tocador';
+const SERVER_VERSION = '1.0.0';
 const RELOAD_MS = 3_600_000; // refresh index every hour
+
+const PASS = 'Liga o Tocador!';
+const PASS_MD5 = '7359999a0ba97b74a6278711ef854be0';
 
 // Mirrors KNOWN_ACERVOS in ui.js
 const DEFAULT_SOURCES = [
@@ -26,19 +31,14 @@ const DEFAULT_SOURCES = [
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 function checkAuth(params) {
-  const user = process.env.SUBSONIC_USER || 'admin';
-  const pass = process.env.SUBSONIC_PASS || 'admin';
-  if (params.get('u') !== user) return false;
-
   const t = params.get('t');
   const s = params.get('s');
   if (t && s) {
-    return crypto.createHash('md5').update(pass + s).digest('hex') === t;
+    return crypto.createHash('md5').update(PASS + s).digest('hex') === t;
   }
-
   const p = params.get('p') || '';
   const raw = p.startsWith('enc:') ? Buffer.from(p.slice(4), 'hex').toString('utf8') : p;
-  return raw === pass;
+  return crypto.createHash('md5').update(raw).digest('hex') === PASS_MD5;
 }
 
 // ── Data loading ──────────────────────────────────────────────────────────────
@@ -190,26 +190,30 @@ function attrsStr(obj) {
 
 const CORS = { 'Access-Control-Allow-Origin': '*' };
 
+const ROOT_ATTRS = `xmlns="http://subsonic.org/restapi" version="${API_VERSION}" openSubsonic="true" type="${SERVER_TYPE}" serverVersion="${SERVER_VERSION}"`;
+
 function okXml(res, inner) {
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<subsonic-response xmlns="http://subsonic.org/restapi" status="ok" version="${API_VERSION}">\n${inner}\n</subsonic-response>\n`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<subsonic-response ${ROOT_ATTRS} status="ok">\n${inner}\n</subsonic-response>\n`;
   res.writeHead(200, { 'Content-Type': 'text/xml; charset=utf-8', ...CORS });
   res.end(xml);
 }
 
 function errXml(res, code, message) {
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<subsonic-response xmlns="http://subsonic.org/restapi" status="failed" version="${API_VERSION}">\n<error code="${code}" message="${xe(message)}"/>\n</subsonic-response>\n`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<subsonic-response ${ROOT_ATTRS} status="failed">\n<error code="${code}" message="${xe(message)}"/>\n</subsonic-response>\n`;
   res.writeHead(200, { 'Content-Type': 'text/xml; charset=utf-8', ...CORS });
   res.end(xml);
 }
 
+const BASE_JSON = { xmlns: 'http://subsonic.org/restapi', version: API_VERSION, openSubsonic: true, type: SERVER_TYPE, serverVersion: SERVER_VERSION };
+
 function okJson(res, data) {
-  const body = JSON.stringify({ 'subsonic-response': { xmlns: 'http://subsonic.org/restapi', status: 'ok', version: API_VERSION, ...data } });
+  const body = JSON.stringify({ 'subsonic-response': { ...BASE_JSON, status: 'ok', ...data } });
   res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', ...CORS });
   res.end(body);
 }
 
 function errJson(res, code, message) {
-  const body = JSON.stringify({ 'subsonic-response': { xmlns: 'http://subsonic.org/restapi', status: 'failed', version: API_VERSION, error: { code, message } } });
+  const body = JSON.stringify({ 'subsonic-response': { ...BASE_JSON, status: 'failed', error: { code, message } } });
   res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', ...CORS });
   res.end(body);
 }
@@ -283,7 +287,7 @@ function groupByLetter(artists) {
 // ── Method handlers ───────────────────────────────────────────────────────────
 
 function handlePing(res, fmt) {
-  ok(res, fmt, '', {});
+  ok(res, fmt, '<openSubsonicExtensions/>', { openSubsonicExtensions: [] });
 }
 
 function handleGetLicense(res, fmt) {
