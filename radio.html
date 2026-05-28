@@ -84,7 +84,7 @@
       width: 100%;
     }
 
-    .track-title {
+    .track-album {
       font-size: 13px;
       font-weight: 400;
       color: var(--dim);
@@ -94,7 +94,7 @@
       width: 100%;
     }
 
-    .track-album {
+    .track-title {
       font-size: 12px;
       font-weight: 400;
       color: var(--dim);
@@ -253,8 +253,8 @@
 
   <div class="info">
     <div class="track-meta"  id="track-meta"></div>
-    <div class="track-title" id="track-title">Carregando…</div>
     <div class="track-album" id="track-album"></div>
+    <div class="track-title" id="track-title">Carregando…</div>
   </div>
 
   <div class="progress" id="progress" aria-hidden="true">
@@ -386,7 +386,7 @@ function showTrack(album, track) {
   const albumPart = album.title
     ? `<span class="album-link" data-path="${esc(album.path)}">${esc(album.title)}</span>`
     : '';
-  albumEl.innerHTML = [album.year, albumPart].filter(Boolean).join(' · ');
+  albumEl.innerHTML = [album.year, albumPart].filter(Boolean).join(' - ');
   timeCurrentEl.textContent = '00:00';
   timeTotalEl.textContent   = '00:00';
   checkMarquee(titleEl);
