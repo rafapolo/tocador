@@ -134,7 +134,7 @@ Gera o `.json.gz` a partir de uma pasta de MP3s. Ver seção acima.
 Faz upload dos arquivos `.mp3` para o bucket S3.
 
 ```bash
-ARCHIVE_DIR=/caminho/musicas node sync-to-bucket.js
+ARCHIVE_DIR=/caminho/musicas bun sync-to-bucket.js
 ```
 
 Requer `.env` com `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_BUCKET`.
@@ -144,7 +144,7 @@ Requer `.env` com `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `
 Redimensiona capas para 200px de largura (`capa-min.jpg`) e faz upload para S3.
 
 ```bash
-ARCHIVE_DIR=/caminho/musicas node resize-cover-images.js
+ARCHIVE_DIR=/caminho/musicas bun resize-cover-images.js
 ```
 
 ### `extract-genres.py` — Classificação de gêneros com ML
