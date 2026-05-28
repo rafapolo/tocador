@@ -3,6 +3,14 @@ const path = require('path');
 const fs = require('fs');
 
 const CDN = 'https://cdn.tocador.cc';
+
+// All domains that host the player — audio requests from these must not 403
+const PLAYER_ORIGINS = [
+  'https://rafapolo.github.io',
+  'https://tocador.cc',
+  'https://cdn.tocador.cc',
+  'https://radio.tocador.cc',
+];
 const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const PLAYER_REFERER = 'https://rafapolo.github.io/';
 
@@ -13,6 +21,17 @@ const TRACKS = [
   'indie/2026 - Barulhista - música para dançar sentado/Barulhista - debaixo do sol.mp3',
   'indie/2026 - Cobra de Coleira - Cárcere Cognitivo/02. Fobia Social.mp3',
 ];
+
+// ── Hotlink origin allowlist ──────────────────────────────────────────────────
+
+for (const origin of PLAYER_ORIGINS) {
+  test(`CDN: audio allowed from ${origin}`, async ({ request }) => {
+    const res = await request.head(`${CDN}/${encodeURI(TRACKS[0])}`, {
+      headers: { 'User-Agent': BROWSER_UA, 'Referer': `${origin}/` },
+    });
+    expect(res.status()).toBe(200);
+  });
+}
 
 // ── CDN HEAD checks ───────────────────────────────────────────────────────────
 
