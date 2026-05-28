@@ -346,7 +346,7 @@ _server = Bun.serve({
         if (endStr !== '') {
           // Fixed range bytes=start-end: Content-Length known, no stat needed
           const end = Number(endStr);
-          status = 206; body = file.slice(start, end + 1);
+          status = 206; body = file.slice(start, end + 1).stream();
           extra = {
             'Content-Range': `bytes ${start}-${end}/*`,
             'Content-Length': String(end - start + 1),
@@ -356,7 +356,7 @@ _server = Bun.serve({
           // Open range bytes=start-: need total size for Content-Range header
           const stat = await file.stat();
           const end = stat.size - 1;
-          status = 206; body = file.slice(start);
+          status = 206; body = file.slice(start).stream();
           extra = {
             'Content-Range': `bytes ${start}-${end}/${stat.size}`,
             'Content-Length': String(stat.size - start),
@@ -367,7 +367,7 @@ _server = Bun.serve({
       } else {
         // Full GET: stat for Content-Length so browser can show scrubber and seek
         const stat = await file.stat();
-        status = 200; body = file;
+        status = 200; body = file.stream();
         extra = {
           'Content-Length': String(stat.size),
           'Accept-Ranges': 'bytes',
