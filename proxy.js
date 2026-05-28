@@ -1,257 +1,400 @@
-#!/usr/bin/env node
-const cluster = require('cluster');
-const os = require('os');
+#!/usr/bin/env bun
 
-if (cluster.isPrimary) {
-  const n = os.cpus().length;
-  console.log(`Primary ${process.pid}: forking ${n} workers`);
-  for (let i = 0; i < n; i++) cluster.fork();
-  cluster.on('exit', (worker, code, signal) => {
-    console.error(`Worker ${worker.process.pid} exited (${signal ?? code}), restarting`);
-    cluster.fork();
-  });
-} else {
-  const http = require('http');
-  const { S3Client, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
-  const { NodeHttpHandler } = require('@smithy/node-http-handler');
+// §8 — ip concurrency tracking with hard cap
+const IP_MAP_HARD_CAP = 50_000;
+const ipCounts = new Map();
+const ipLastSeen = new Map();
 
-  process.on('uncaughtException', (err) => {
-    console.error('uncaughtException:', err.message);
-  });
-  process.on('unhandledRejection', (reason) => {
-    console.error('unhandledRejection:', reason);
-  });
+function incIp(ip) {
+  if (ipCounts.size >= IP_MAP_HARD_CAP && !ipCounts.has(ip)) return false;
+  ipCounts.set(ip, (ipCounts.get(ip) ?? 0) + 1);
+  ipLastSeen.set(ip, Date.now());
+  return true;
+}
+function decIp(ip) {
+  const n = (ipCounts.get(ip) ?? 1) - 1;
+  if (n <= 0) { ipCounts.delete(ip); ipLastSeen.delete(ip); }
+  else ipCounts.set(ip, n);
+}
+setInterval(() => {
+  const cutoff = Date.now() - 5 * 60_000;
+  for (const [ip, ts] of ipLastSeen) if (ts < cutoff) { ipCounts.delete(ip); ipLastSeen.delete(ip); }
+}, 60_000).unref();
 
-  const BUCKET = process.env.S3_BUCKET;
-  // Extra prefix→bucket overrides: "prefix:bucket,prefix2:bucket2"
-  const BUCKET_MAP = Object.fromEntries(
-    (process.env.S3_BUCKET_MAP || '').split(',').filter(Boolean)
-      .map(e => { const [p, b] = e.split(':'); return [p, b]; })
-  );
-  function bucketFor(key) {
-    for (const [prefix, bucket] of Object.entries(BUCKET_MAP)) {
-      if (key.startsWith(prefix)) return bucket;
-    }
-    return BUCKET;
+// §4 — token bucket rate limit (audio only, 30 req cap, 0.5 tokens/s refill)
+const BUCKET_CAP = 30;
+const BUCKET_REFILL = 0.5;
+const tokenBuckets = new Map();
+
+function take(ip) {
+  const now = Date.now();
+  const b = tokenBuckets.get(ip);
+  if (!b) { tokenBuckets.set(ip, { tokens: BUCKET_CAP - 1, last: now }); return true; }
+  const elapsed = (now - b.last) / 1000;
+  b.tokens = Math.min(BUCKET_CAP, b.tokens + elapsed * BUCKET_REFILL);
+  b.last = now;
+  if (b.tokens < 1) return false;
+  b.tokens -= 1;
+  return true;
+}
+setInterval(() => {
+  const cutoff = Date.now() - 10 * 60_000;
+  for (const [ip, b] of tokenBuckets) if (b.last < cutoff) tokenBuckets.delete(ip);
+}, 5 * 60_000).unref();
+
+// §13 — observability: event-loop lag + aggregate counters
+let activeRequests = 0;
+let eventLoopLag = 0;
+let _lastTick = Date.now();
+const counters = { ok: 0, c4xx: 0, c5xx: 0 };
+
+setInterval(() => {
+  const now = Date.now(); eventLoopLag = now - _lastTick - 1000; _lastTick = now;
+}, 1000).unref();
+
+setInterval(() => {
+  if (counters.ok + counters.c4xx + counters.c5xx > 0) {
+    console.log(`[stats] active=${activeRequests} 2xx=${counters.ok} 4xx=${counters.c4xx} 5xx=${counters.c5xx} lag=${eventLoopLag}ms ipmap=${ipCounts.size}`);
+    counters.ok = counters.c4xx = counters.c5xx = 0;
   }
-  const PORT = Number(process.env.PORT) || 9001;
-  const MAX_CONCURRENT = 400;
-  const REQUEST_TIMEOUT = 30000;
+}, 10_000).unref();
 
-  let activeRequests = 0;
-  const ipCounts = new Map();
+function metricsBody() {
+  const m = process.memoryUsage();
+  return [
+    `# TYPE tocador_active_requests gauge`,
+    `tocador_active_requests ${activeRequests}`,
+    `tocador_ip_map_size ${ipCounts.size}`,
+    `tocador_event_loop_lag_ms ${eventLoopLag}`,
+    `tocador_memory_rss_bytes ${m.rss}`,
+    `tocador_memory_heap_used_bytes ${m.heapUsed}`,
+    `tocador_requests_total{code="2xx"} ${counters.ok}`,
+    `tocador_requests_total{code="4xx"} ${counters.c4xx}`,
+    `tocador_requests_total{code="5xx"} ${counters.c5xx}`,
+  ].join('\n') + '\n';
+}
 
-  const s3 = new S3Client({
-    endpoint: process.env.S3_ENDPOINT,
-    region: 'hel1',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    },
-    forcePathStyle: true,
-    requestHandler: new NodeHttpHandler({
-      connectionTimeout: 5000,
-      socketTimeout: 30000,
-      maxSockets: 300,
-      maxFreeSockets: 60,
-    }),
-  });
+// CORS — corsBase on all responses including errors (nosniff omitted to avoid CORB on text/plain error bodies)
+const corsBase = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+  'Access-Control-Allow-Headers': 'Range, Content-Type',
+  'Access-Control-Expose-Headers': 'Content-Length, Content-Type, Content-Range, ETag, Accept-Ranges',
+  'Cross-Origin-Resource-Policy': 'cross-origin',
+};
+const corsHeaders = { ...corsBase, 'X-Content-Type-Options': 'nosniff' };
 
-  // corsBase: sent on every response (errors included) — MUST NOT contain nosniff,
-  // because text/plain + nosniff on error bodies triggers CORB for cross-origin img/audio.
-  const corsBase = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-    'Access-Control-Allow-Headers': 'Range, Content-Type',
-    'Access-Control-Expose-Headers': 'Content-Length, Content-Type, Content-Range, ETag, Accept-Ranges',
-    'Cross-Origin-Resource-Policy': 'cross-origin',
-  };
-  // corsHeaders: corsBase + nosniff, used only on successful media responses.
-  const corsHeaders = { ...corsBase, 'X-Content-Type-Options': 'nosniff' };
+function mimeFor(key) {
+  const k = key.toLowerCase();
+  if (k.endsWith('.mp3')) return 'audio/mpeg';
+  if (k.endsWith('.mp4') || k.endsWith('.m4a')) return 'audio/mp4';
+  if (k.endsWith('.jpg') || k.endsWith('.jpeg')) return 'image/jpeg';
+  if (k.endsWith('.png')) return 'image/png';
+  if (k.endsWith('.webp')) return 'image/webp';
+  if (k.endsWith('.json')) return 'application/json';
+  return 'application/octet-stream';
+}
 
-  // Cache-Control by asset type:
-  // - Images (capa-min.jpg) are immutable content; browsers should never revalidate.
-  // - Audio files are large and also content-addressed; long cache, no immutable
-  //   so range-request resumption works on restart.
-  // - JSON/other: short cache.
-  function cacheControlFor(key) {
-    const k = key.toLowerCase();
-    if (k.endsWith('.jpg') || k.endsWith('.jpeg') || k.endsWith('.png') || k.endsWith('.webp')) {
-      return 'public, max-age=31536000, immutable';
-    }
-    if (k.endsWith('.mp3') || k.endsWith('.mp4') || k.endsWith('.m4a')) {
-      return 'public, max-age=31536000';
-    }
-    return 'public, max-age=3600';
+function cacheControlFor(key) {
+  const k = key.toLowerCase();
+  if (k.endsWith('.jpg') || k.endsWith('.jpeg') || k.endsWith('.png') || k.endsWith('.webp'))
+    return 'public, max-age=31536000, immutable';
+  if (k.endsWith('.mp3') || k.endsWith('.mp4') || k.endsWith('.m4a'))
+    return 'public, max-age=31536000';
+  return 'public, max-age=3600';
+}
+
+// §1 — path traversal guard: reject .., ., NUL, backslash, empty segments
+function isSafeKey(key) {
+  if (key.length === 0 || key.length > 1024) return false;
+  if (key.includes('\0') || key.includes('\\')) return false;
+  for (const seg of key.split('/')) {
+    if (seg === '..' || seg === '.' || seg === '') return false;
   }
+  return true;
+}
 
-  function mimeFor(key) {
-    const k = key.toLowerCase();
-    if (k.endsWith('.mp3')) return 'audio/mpeg';
-    if (k.endsWith('.mp4') || k.endsWith('.m4a')) return 'audio/mp4';
-    if (k.endsWith('.jpg') || k.endsWith('.jpeg')) return 'image/jpeg';
-    if (k.endsWith('.png')) return 'image/png';
-    if (k.endsWith('.webp')) return 'image/webp';
-    if (k.endsWith('.json')) return 'application/json';
-    return 'application/octet-stream';
+// §6 — Range header regex (hoisted to avoid per-request allocation)
+const RANGE_RE = /^bytes=(\d{0,15})-(\d{0,15})$/;
+
+// §3 — XFF trust boundary: only believe X-Forwarded-For from trusted proxies
+const TRUSTED_PROXIES = new Set(
+  (process.env.TRUSTED_PROXY_IPS ?? '127.0.0.1,::1').split(',').filter(Boolean)
+);
+function realIp(req, server) {
+  const sock = server.requestIP(req);
+  const remoteIp = sock?.address ?? '0.0.0.0';
+  if (!TRUSTED_PROXIES.has(remoteIp)) return remoteIp;
+  const xff = req.headers.get('x-forwarded-for');
+  if (!xff) return remoteIp;
+  return xff.split(',', 1)[0].trim().slice(0, 64) || remoteIp;
+}
+
+// §5 — hotlink protection: audio only; images (covers) are explicitly exempt
+const ALLOWED_ORIGINS = new Set([
+  'https://rafapolo.github.io',
+  'https://uqt.xn--2dk.xyz',
+  'http://localhost:9001',
+]);
+function refererAllowed(req) {
+  const ref = req.headers.get('referer') ?? req.headers.get('origin');
+  if (!ref) return true;
+  try {
+    const u = new URL(ref);
+    return ALLOWED_ORIGINS.has(`${u.protocol}//${u.host}`);
+  } catch { return true; }
+}
+
+const botRegex = /scrapy|selenium(?:-webdriver)?|puppeteer|playwright|phantomjs|casperjs|headless\s*(chrome|browser)?|headlesschrome|automation\s*tool|automated\s*browser|bot\s*automation|httpclient|http\s*client|axios\/\d+|node-fetch|got\/\d+|mechanize|urllib|requests\/\d+|okhttp|retrofit|wget\/|httrack|aria2|lftp|webcopy|web\s*scraper|data\s*scraper|content\s*scraper|mass\s*(crawl|scrape|download)|bulk\s*(crawl|download|fetch)|site\s*crawler|link\s*crawler|botkit|dialogflow|rasa|botpress|datacenter\s*proxy|residential\s*proxy|rotating\s*proxy|proxy\s*rotation|proxy\s*pool|tor\s*exit|tor\s+network|jsdom|cheerio|aws\s*lambda|google\s*cloud\s*functions|azure\s*functions|python-requests|python\s*urllib|aiohttp|go-http-client|java\/\d+\.\d+|bot\s*engine|crawler\s*engine|spider\s*engine|auto\s*fetch|auto\s*scrape|auto\s*crawl/i;
+
+const BUCKET = process.env.S3_BUCKET;
+const BUCKET_MAP = Object.fromEntries(
+  (process.env.S3_BUCKET_MAP ?? '').split(',').filter(Boolean)
+    .map(e => { const [p, b] = e.split(':'); return [p, b]; })
+);
+function bucketFor(key) {
+  for (const [prefix, bucket] of Object.entries(BUCKET_MAP)) {
+    if (key.startsWith(prefix)) return bucket;
   }
+  return BUCKET;
+}
 
-  async function handleObject(req, res, key, ip) {
-    if (activeRequests >= MAX_CONCURRENT) {
-      res.writeHead(503, { 'Content-Type': 'text/plain', ...corsBase });
-      res.end('Too Many Requests');
-      return;
+const PORT = Number(process.env.PORT) || 9001;
+const MAX_CONCURRENT = 400;
+
+const s3 = new Bun.S3Client({
+  endpoint: process.env.S3_ENDPOINT,
+  region: 'hel1',
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+});
+
+// §12 — graceful shutdown: drain up to 25s on SIGTERM/SIGINT/uncaughtException
+let shuttingDown = false;
+let _server;
+
+function gracefulShutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal} — draining (${activeRequests} active)`);
+  _server?.stop(false);
+  setTimeout(() => { console.error('[shutdown] drain timeout, forcing exit'); process.exit(1); }, 25_000).unref();
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+process.on('uncaughtException',  (err) => { console.error('uncaughtException:', err);  gracefulShutdown('uncaughtException'); });
+process.on('unhandledRejection', (r)   => { console.error('unhandledRejection:', r); });
+
+_server = Bun.serve({
+  port: PORT,
+  hostname: '127.0.0.1',   // §3 — never 0.0.0.0; only nginx on loopback connects here
+  maxRequestBodySize: 8192, // §2/§10 — guards POST body upload (report-error) and slow-body attacks
+
+  async fetch(req, server) {
+    if (shuttingDown) return new Response('Service Unavailable', { status: 503, headers: corsBase });
+
+    // §2 — reject oversized URLs before any parsing
+    if (req.url.length > 1200) { counters.c4xx++; return new Response('URI Too Long', { status: 414, headers: corsBase }); }
+
+    const url = new URL(req.url);
+
+    // §13 — enriched health: reports saturation and event-loop lag; haloy removes node before it becomes a black hole
+    if (url.pathname === '/health') {
+      const degraded = shuttingDown || activeRequests >= MAX_CONCURRENT * 0.9 || eventLoopLag > 500;
+      counters.ok++;
+      return new Response(
+        JSON.stringify({ status: degraded ? 'degraded' : 'ok', activeRequests, eventLoopLag }),
+        { status: degraded ? 503 : 200, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } }
+      );
     }
 
-    const isHead = req.method === 'HEAD';
-    const abort = new AbortController();
-    const timer = setTimeout(() => abort.abort(), REQUEST_TIMEOUT);
-    activeRequests++;
-
-    try {
-      const bucket = bucketFor(key);
-      const cmd = isHead
-        ? new HeadObjectCommand({ Bucket: bucket, Key: key, Range: req.headers.range })
-        : new GetObjectCommand({ Bucket: bucket, Key: key, Range: req.headers.range });
-      const obj = await s3.send(cmd, { abortSignal: abort.signal });
-
-      const headers = { ...corsHeaders, 'Content-Type': mimeFor(key), 'Cache-Control': cacheControlFor(key) };
-      if (obj.ContentLength != null) headers['Content-Length'] = String(obj.ContentLength);
-      if (obj.ContentRange) headers['Content-Range'] = obj.ContentRange;
-      if (obj.AcceptRanges) headers['Accept-Ranges'] = obj.AcceptRanges;
-      if (obj.ETag) headers['ETag'] = obj.ETag;
-      if (obj.LastModified) headers['Last-Modified'] = obj.LastModified.toUTCString();
-
-      const status = obj.ContentRange ? 206 : 200;
-      res.writeHead(status, headers);
-      if (isHead || !obj.Body) { res.end(); return; }
-      obj.Body.on('error', (e) => { console.error('stream err:', e.message); res.destroy(); });
-      obj.Body.pipe(res);
-    } catch (err) {
-      const code = err.name === 'AbortError' ? 504 : (err.$metadata?.httpStatusCode ?? 500);
-      console.error(`[${code}] ${req.method} ${key}: ${err.name}`);
-      if (!res.headersSent) {
-        res.writeHead(code, { 'Content-Type': 'text/plain', ...corsBase });
-        res.end(err.name);
-      }
-    } finally {
-      clearTimeout(timer);
-      activeRequests--;
-      if (ip) {
-        const n = (ipCounts.get(ip) ?? 1) - 1;
-        if (n <= 0) ipCounts.delete(ip); else ipCounts.set(ip, n);
-      }
-    }
-  }
-
-  const botRegex = /scrapy|selenium(?:-webdriver)?|puppeteer|playwright|phantomjs|casperjs|headless\s*(chrome|browser)?|headlesschrome|automation\s*tool|automated\s*browser|bot\s*automation|httpclient|http\s*client|axios\/\d+|node-fetch|got\/\d+|mechanize|urllib|requests\/\d+|okhttp|retrofit|wget\/|httrack|aria2|lftp|webcopy|web\s*scraper|data\s*scraper|content\s*scraper|mass\s*(crawl|scrape|download)|bulk\s*(crawl|download|fetch)|site\s*crawler|link\s*crawler|botkit|dialogflow|rasa|botpress|datacenter\s*proxy|residential\s*proxy|rotating\s*proxy|proxy\s*rotation|proxy\s*pool|tor\s*exit|tor\s+network|jsdom|cheerio|aws\s*lambda|google\s*cloud\s*functions|azure\s*functions|python-requests|python\s*urllib|aiohttp|go-http-client|java\/\d+\.\d+|bot\s*engine|crawler\s*engine|spider\s*engine|auto\s*fetch|auto\s*scrape|auto\s*crawl/i;
-
-  const server = http.createServer(async (req, res) => {
-    req.on('error', (err) => console.error('req error:', err.message));
-
-    if (req.url === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders, 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
-      return;
+    // §13 — Prometheus metrics (port 9002 is not exposed externally)
+    if (url.pathname === '/metrics') {
+      return new Response(metricsBody(), { headers: { 'Content-Type': 'text/plain; version=0.0.4' } });
     }
 
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, { ...corsHeaders, 'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS' });
-      res.end();
-      return;
+      return new Response(null, { status: 204, headers: { ...corsHeaders, 'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS' } });
     }
 
-    if (req.method === 'POST' && req.url === '/report-error') {
+    // POST /report-error — body size already capped by maxRequestBodySize: 8192
+    if (req.method === 'POST' && url.pathname === '/report-error') {
       const token = process.env.GITHUB_TOKEN;
-      if (!token) {
-        res.writeHead(503, { 'Content-Type': 'text/plain', ...corsBase });
-        res.end('Not configured');
-        return;
+      if (!token) return new Response('Not configured', { status: 503, headers: corsBase });
+      let payload;
+      try { payload = await req.json(); }
+      catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
+      const { title, body } = payload;
+      if (!title || typeof title !== 'string' || typeof body !== 'string') {
+        counters.c4xx++;
+        return new Response('Bad Request', { status: 400, headers: corsBase });
       }
-      let raw = '';
-      req.on('data', chunk => { raw += chunk; if (raw.length > 8192) req.destroy(); });
-      req.on('end', async () => {
-        let payload;
-        try { payload = JSON.parse(raw); } catch {
-          res.writeHead(400, { 'Content-Type': 'text/plain', ...corsBase });
-          res.end('Bad Request');
-          return;
-        }
-        const { title, body } = payload;
-        if (!title || typeof title !== 'string' || typeof body !== 'string') {
-          res.writeHead(400, { 'Content-Type': 'text/plain', ...corsBase });
-          res.end('Bad Request');
-          return;
-        }
-        try {
-          const gh = await fetch('https://api.github.com/repos/rafapolo/tocador/issues', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/vnd.github+json',
-              'Content-Type': 'application/json',
-              'User-Agent': 'tocador-proxy',
-            },
-            body: JSON.stringify({ title: title.slice(0, 200), body, labels: ['bug'] }),
-          });
-          res.writeHead(gh.ok ? 201 : gh.status, { 'Content-Type': 'text/plain', ...corsBase });
-          res.end(gh.ok ? 'Created' : 'GitHub error');
-        } catch (err) {
-          console.error('report-error github call failed:', err.message);
-          res.writeHead(502, { 'Content-Type': 'text/plain', ...corsBase });
-          res.end('Bad Gateway');
-        }
-      });
-      return;
+      try {
+        const gh = await fetch('https://api.github.com/repos/rafapolo/tocador/issues', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'tocador-proxy',
+          },
+          body: JSON.stringify({ title: title.slice(0, 200), body, labels: ['bug'] }),
+        });
+        if (gh.ok) counters.ok++; else counters.c5xx++;
+        return new Response(gh.ok ? 'Created' : 'GitHub error', { status: gh.ok ? 201 : gh.status, headers: corsBase });
+      } catch (err) {
+        console.error('report-error failed:', err.message);
+        counters.c5xx++;
+        return new Response('Bad Gateway', { status: 502, headers: corsBase });
+      }
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.writeHead(405, { ...corsBase, 'Content-Type': 'text/plain' });
-      res.end('Method Not Allowed');
-      return;
+      counters.c4xx++;
+      return new Response('Method Not Allowed', { status: 405, headers: corsBase });
     }
 
-    const ua = req.headers['user-agent'] || '';
+    const ua = req.headers.get('user-agent') ?? '';
     if (botRegex.test(ua)) {
-      console.log(`[BLOCKED] bot: ${ua}`);
-      res.writeHead(403, { 'Content-Type': 'text/plain', ...corsBase });
-      res.end('Forbidden');
-      return;
+      console.log(`[BLOCKED] bot: ${ua.slice(0, 100)}`);
+      counters.c4xx++;
+      return new Response('Forbidden', { status: 403, headers: corsBase });
     }
 
-    const path = decodeURI(req.url.replace(/^\/+/, '').split('?')[0]);
-    if (!path) {
-      res.writeHead(301, { Location: 'https://rafapolo.github.io/uqt/3d', ...corsHeaders });
-      res.end();
-      return;
+    // §1 — decode path with try/catch; malformed percent-sequences return 400 instead of crashing
+    let path;
+    try { path = decodeURIComponent(url.pathname.replace(/^\/+/, '')); }
+    catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
+
+    if (!path) return Response.redirect('https://rafapolo.github.io/uqt/3d', 301);
+
+    // §1 — path traversal: reject .., empty segments, NUL, backslash
+    if (!isSafeKey(path)) { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
+
+    // §6 — Range: reject malformed and multi-range (multi-range never used by audio players)
+    const rangeHeader = req.headers.get('range');
+    if (rangeHeader && (rangeHeader.length > 128 || !RANGE_RE.test(rangeHeader))) {
+      counters.c4xx++;
+      return new Response('Bad Request', { status: 400, headers: corsBase });
     }
 
     const isAudio = /\.(mp3|mp4|m4a)$/i.test(path);
-    const ip = isAudio
-      ? ((req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress)
-      : null;
+    const isHead  = req.method === 'HEAD';
+
+    // §5 — hotlink block for audio; radio embeds (?ctx=radio or Referer contains /radio) pass through
+    const isRadioCtx = url.searchParams.get('ctx') === 'radio'
+                    || (req.headers.get('referer') ?? '').includes('/radio');
+    if (isAudio && !isRadioCtx && !refererAllowed(req)) {
+      console.warn(`[HOTLINK] ${realIp(req, server)} ref=${req.headers.get('referer')}`);
+      counters.c4xx++;
+      return new Response('Forbidden', { status: 403, headers: corsBase });
+    }
+
+    // §3 — resolve client IP only for audio (images are unrestricted)
+    const ip = isAudio ? realIp(req, server) : null;
+
+    // §4 — token bucket: 30 req burst, 0.5 tokens/s sustained (30/min)
+    if (ip && !take(ip)) {
+      counters.c4xx++;
+      return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '60' } });
+    }
+
+    // Per-IP concurrency limit (5 simultaneous audio streams per IP)
     if (ip) {
       const ipActive = ipCounts.get(ip) ?? 0;
       if (ipActive >= 5) {
-        res.writeHead(429, { 'Content-Type': 'text/plain', 'Retry-After': '5', ...corsBase });
-        res.end('Too Many Requests');
-        return;
+        counters.c4xx++;
+        return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '5' } });
       }
-      ipCounts.set(ip, ipActive + 1);
+      if (!incIp(ip)) { counters.c5xx++; return new Response('Service Unavailable', { status: 503, headers: corsBase }); }
     }
 
-    console.log(`[${new Date().toISOString()}] w${process.pid} ${req.method} ${path}`);
-    await handleObject(req, res, path, ip);
-  });
+    // Global concurrency ceiling
+    if (activeRequests >= MAX_CONCURRENT) {
+      if (ip) decIp(ip);
+      counters.c5xx++;
+      return new Response('Too Many Requests', { status: 503, headers: corsBase });
+    }
 
-  server.maxConnections = 2000;
-  server.keepAliveTimeout = 30000;
-  server.headersTimeout = 35000;
-  server.setTimeout(REQUEST_TIMEOUT);
+    activeRequests++;
+    try {
+      const file = s3.file(path, { bucket: bucketFor(path) });
+      let body, status, extra = {};
 
-  server.on('error', (err) => console.error('server error:', err.message));
+      if (isHead) {
+        // §9 — HEAD: one S3 stat call, return headers only
+        const stat = await file.stat();
+        status = 200; body = null;
+        extra = {
+          'Content-Length': String(stat.size),
+          'Accept-Ranges': 'bytes',
+          'ETag': stat.etag,
+          'Last-Modified': stat.lastModified?.toUTCString(),
+        };
+      } else if (rangeHeader) {
+        const m = RANGE_RE.exec(rangeHeader);
+        const start = Number(m[1]);
+        const endStr = m[2];
+        if (endStr !== '') {
+          // Fixed range bytes=start-end: Content-Length known, no stat needed
+          const end = Number(endStr);
+          status = 206; body = file.slice(start, end + 1);
+          extra = {
+            'Content-Range': `bytes ${start}-${end}/*`,
+            'Content-Length': String(end - start + 1),
+            'Accept-Ranges': 'bytes',
+          };
+        } else {
+          // Open range bytes=start-: need total size for Content-Range header
+          const stat = await file.stat();
+          const end = stat.size - 1;
+          status = 206; body = file.slice(start);
+          extra = {
+            'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+            'Content-Length': String(stat.size - start),
+            'Accept-Ranges': 'bytes',
+            'ETag': stat.etag,
+          };
+        }
+      } else {
+        // Full GET: stat for Content-Length so browser can show scrubber and seek
+        const stat = await file.stat();
+        status = 200; body = file;
+        extra = {
+          'Content-Length': String(stat.size),
+          'Accept-Ranges': 'bytes',
+          'ETag': stat.etag,
+          'Last-Modified': stat.lastModified?.toUTCString(),
+        };
+      }
 
-  server.listen(PORT, () => {
-    console.log(`Worker ${process.pid} listening on :${PORT} -> s3://${BUCKET}/`);
-  });
-}
+      const headers = {
+        ...corsHeaders,
+        'Content-Type': mimeFor(path),
+        'Cache-Control': cacheControlFor(path),
+        ...extra,
+      };
+      for (const k of Object.keys(headers)) if (headers[k] == null) delete headers[k];
+
+      counters.ok++;
+      return new Response(body, { status, headers });
+    } catch (err) {
+      const code = err?.status ?? err?.statusCode ?? 500;
+      console.error(`[${code}] ${req.method} ${path}: ${err?.message ?? err}`);
+      if (code >= 500) counters.c5xx++; else counters.c4xx++;
+      return new Response(err?.name ?? 'Error', { status: code, headers: corsBase });
+    } finally {
+      activeRequests--;
+      if (ip) decIp(ip);
+    }
+  },
+
+  error(err) {
+    console.error('[server]', err.message);
+    counters.c5xx++;
+    return new Response('Internal Server Error', { status: 500, headers: corsBase });
+  },
+});
+
+console.log(`Proxy listening on :${PORT} -> s3://${BUCKET}/`);
