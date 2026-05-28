@@ -1,5 +1,5 @@
 name: your-archive
-server: haloy.xn--2dk.xyz
+server: haloy.tocador.cc
 api_token:
   from:
     env: "HALOY_API_TOKEN"
