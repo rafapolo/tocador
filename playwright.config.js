@@ -9,7 +9,7 @@ module.exports = defineConfig({
     navigationTimeout: 10000,
   },
   webServer: {
-    command: 'npx serve . -p 3456 -s',
+    command: 'npx serve . -p 3456',
     port: 3456,
     reuseExistingServer: !process.env.CI,
     timeout: 10000,
