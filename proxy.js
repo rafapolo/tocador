@@ -271,7 +271,7 @@ _server = Bun.serve({
 
     // §1 — decode path with try/catch; malformed percent-sequences return 400 instead of crashing
     let path;
-    try { path = decodeURIComponent(url.pathname.replace(/^\/+/, '')); }
+    try { path = decodeURIComponent(url.pathname.replace(/^\/+/, '')).normalize('NFC'); }
     catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
 
     if (!path) return Response.redirect('https://rafapolo.github.io/uqt/3d', 301);
