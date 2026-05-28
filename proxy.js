@@ -35,7 +35,7 @@ if (cluster.isPrimary) {
     return BUCKET;
   }
   const PORT = Number(process.env.PORT) || 9001;
-  const MAX_CONCURRENT = 80;
+  const MAX_CONCURRENT = 400;
   const REQUEST_TIMEOUT = 30000;
 
   let activeRequests = 0;
@@ -52,8 +52,8 @@ if (cluster.isPrimary) {
     requestHandler: new NodeHttpHandler({
       connectionTimeout: 5000,
       socketTimeout: 30000,
-      maxSockets: 150,
-      maxFreeSockets: 30,
+      maxSockets: 300,
+      maxFreeSockets: 60,
     }),
   });
 
@@ -244,9 +244,9 @@ if (cluster.isPrimary) {
     await handleObject(req, res, path, ip);
   });
 
-  server.maxConnections = 500;
-  server.keepAliveTimeout = 10000;
-  server.headersTimeout = 15000;
+  server.maxConnections = 2000;
+  server.keepAliveTimeout = 30000;
+  server.headersTimeout = 35000;
   server.setTimeout(REQUEST_TIMEOUT);
 
   server.on('error', (err) => console.error('server error:', err.message));
