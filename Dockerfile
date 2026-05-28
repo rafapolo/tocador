@@ -17,4 +17,4 @@ EXPOSE 9001
 
 ENV PORT=9002
 
-CMD sh -c "nginx && exec node --enable-source-maps proxy.js"
+CMD sh -c "PORT=9002 node --enable-source-maps /app/proxy.js & nginx -g 'daemon off;'"
