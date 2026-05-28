@@ -1,5 +1,5 @@
 name: uqt
-server: haloy.tocador.cc
+server: haloy.xn--2dk.xyz
 api_token:
   from:
     env: "HALOY_API_TOKEN"
