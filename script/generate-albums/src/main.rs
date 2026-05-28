@@ -171,7 +171,9 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
 
     let folder_name = folder.file_name()?.to_string_lossy().into_owned();
     let rel_path = folder.strip_prefix(music_dir).ok()?.to_string_lossy().replace('\\', "/");
-    let (mut album_artist, mut album_title, mut album_year) = (String::new(), String::new(), 0u32);
+    // Folder name is the authoritative source for album-level metadata; ID3 fills gaps only.
+    let (fa, ft, fy) = parse_folder_name(&folder_name);
+    let (mut album_artist, mut album_title, mut album_year) = (fa, ft, fy);
     let mut tracks = Vec::new();
 
     for mp3 in &mp3s {
@@ -194,14 +196,6 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         };
         let track_artist = if artist.is_empty() { album_artist.clone() } else { artist };
         tracks.push(Track { title, num: Some(track_n), file, artists: Some(track_artist), duration });
-    }
-
-    // Fall back to folder name parsing when ID3 tags are missing or incomplete
-    if album_artist.is_empty() || album_title.is_empty() || album_year == 0 {
-        let (fa, ft, fy) = parse_folder_name(&folder_name);
-        if album_artist.is_empty() { album_artist = fa; }
-        if album_title.is_empty()  { album_title  = ft; }
-        if album_year  == 0        { album_year   = fy; }
     }
 
     // Omit artists when it duplicates the album artist; omit num when it equals array position.
