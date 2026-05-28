@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Rádio</title>
+  <title>♪ Tocador / Rádio</title>
   <style>
     :root {
       --bg:      #0f0e0c;
@@ -41,13 +41,14 @@
 
     /* ── Cover ─────────────────────────────────────────── */
     .cover-wrap {
-      width: 210px;
-      height: 210px;
+      width: 190px;
+      height: 190px;
       flex-shrink: 0;
       border-radius: 4px;
       overflow: hidden;
       background: var(--surface);
       box-shadow: 0 6px 28px rgba(0,0,0,.6), 0 0 0 1px var(--border);
+      margin: 8px 0;
     }
 
     .cover-wrap img {
@@ -68,11 +69,14 @@
       padding: 0 8px;
       text-align: center;
       overflow: hidden;
+      line-height: 1.3;
+      gap: 5px;
     }
 
     .track-title {
       font-size: 14px;
       font-weight: 600;
+      letter-spacing: .01em;
       line-height: 1.3;
       white-space: nowrap;
       overflow: hidden;
@@ -81,9 +85,9 @@
     }
 
     .track-meta {
-      font-size: 12px;
+      font-size: 13px;
+      font-weight: 400;
       color: var(--dim);
-      margin-top: 2px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -91,14 +95,14 @@
     }
 
     .track-album {
-      font-size: 11px;
+      font-size: 12px;
+      font-weight: 400;
       color: var(--dim);
-      margin-top: 2px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       width: 100%;
-      opacity: .7;
+      opacity: .6;
     }
 
     .artist-link, .album-link {
@@ -136,10 +140,10 @@
       border-radius: 2px;
       flex-shrink: 0;
       cursor: pointer;
-      margin-bottom: 10px;
+      margin: 8px 0;
       position: relative;
     }
-    .progress:hover { height: 3px; margin-bottom: 9px; }
+    .progress:hover { height: 3px; }
 
     .progress-fill {
       height: 100%;
@@ -153,9 +157,27 @@
     /* ── Controls ──────────────────────────────────────── */
     .controls {
       flex-shrink: 0;
+      width: 100%;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+    }
+
+    .time {
+      font-size: 11px;
+      color: var(--dim);
+      opacity: .65;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+      min-width: 32px;
+    }
+    #time-total   { text-align: left; }
+    #time-current { text-align: right; }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
       gap: 12px;
     }
 
@@ -193,6 +215,33 @@
     .loading .cover-wrap,
     .loading .track-title,
     .loading .track-meta { animation: shimmer 1.4s ease-in-out infinite; }
+
+    /* ── Play button spinner ───────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: none;
+      width: 17px;
+      height: 17px;
+      border: 2.5px solid rgba(0,0,0,.25);
+      border-top-color: var(--bg);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .btn-loading .spinner { display: block; }
+    .btn-loading #icon-play,
+    .btn-loading #icon-pause { display: none !important; }
+
+    /* ── Offline error ─────────────────────────────────── */
+    #offline-msg {
+      display: none;
+      width: 100%;
+      text-align: center;
+      font-size: 11px;
+      color: var(--dim);
+      opacity: .7;
+      line-height: 1.5;
+    }
+    #offline-msg.visible { display: block; }
   </style>
 </head>
 <body>
@@ -212,30 +261,39 @@
     <div class="progress-fill" id="progress-fill"></div>
   </div>
 
-  <div class="controls">
-    <button class="btn" id="btn-prev" aria-label="Anterior">
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <rect x="5" y="5" width="2.5" height="14" rx="0.5"/>
-        <path d="M18 5 L9 12 L18 19z"/>
-      </svg>
-    </button>
+  <div class="controls" id="controls">
+    <span class="time" id="time-total" aria-hidden="true">—</span>
 
-    <button class="btn btn-play" id="btn-play" aria-label="Tocar">
-      <svg id="icon-play" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M8 5v14l11-7z"/>
-      </svg>
-      <svg id="icon-pause" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none">
-        <path d="M6 19h4V5H6zm8-14v14h4V5z"/>
-      </svg>
-    </button>
+    <div class="btn-group">
+      <button class="btn" id="btn-prev" aria-label="Anterior">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <rect x="5" y="5" width="2.5" height="14" rx="0.5"/>
+          <path d="M18 5 L9 12 L18 19z"/>
+        </svg>
+      </button>
 
-    <button class="btn" id="btn-next" aria-label="Próxima">
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M6 5 L15 12 L6 19z"/>
-        <rect x="16.5" y="5" width="2.5" height="14" rx="0.5"/>
-      </svg>
-    </button>
+      <button class="btn btn-play" id="btn-play" aria-label="Tocar">
+        <svg id="icon-play" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+        <svg id="icon-pause" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none">
+          <path d="M6 19h4V5H6zm8-14v14h4V5z"/>
+        </svg>
+        <div class="spinner" aria-hidden="true"></div>
+      </button>
+
+      <button class="btn" id="btn-next" aria-label="Próxima">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M6 5 L15 12 L6 19z"/>
+          <rect x="16.5" y="5" width="2.5" height="14" rx="0.5"/>
+        </svg>
+      </button>
+    </div>
+
+    <span class="time" id="time-current" aria-hidden="true">—</span>
   </div>
+
+  <div id="offline-msg" aria-live="polite"></div>
 </div>
 
 <audio id="audio" preload="auto"></audio>
@@ -253,17 +311,25 @@ let curAlbum = null, curTrack = null;
 const failed = new Set();
 
 const $ = id => document.getElementById(id);
-const audio       = $('audio');
-const widget      = $('widget');
-const coverImg    = $('cover');
-const titleEl     = $('track-title');
-const metaEl      = $('track-meta');
-const btnPlay     = $('btn-play');
-const iconPlay    = $('icon-play');
-const iconPause   = $('icon-pause');
-const albumEl     = $('track-album');
-const progressEl  = $('progress');
-const fillEl      = $('progress-fill');
+const audio         = $('audio');
+const widget        = $('widget');
+const coverImg      = $('cover');
+const titleEl       = $('track-title');
+const metaEl        = $('track-meta');
+const btnPlay       = $('btn-play');
+const iconPlay      = $('icon-play');
+const iconPause     = $('icon-pause');
+const albumEl       = $('track-album');
+const progressEl    = $('progress');
+const fillEl        = $('progress-fill');
+const timeCurrentEl = $('time-current');
+const timeTotalEl   = $('time-total');
+
+function fmtTime(s) {
+  if (!isFinite(s) || s < 0) return '00:00';
+  const m = Math.floor(s / 60);
+  return `${String(m).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+}
 
 function checkMarquee(el) {
   if (!el) return;
@@ -302,6 +368,10 @@ function setPlaying(on) {
   btnPlay.setAttribute('aria-label', on ? 'Pausar' : 'Tocar');
 }
 
+function setLoading(on) {
+  btnPlay.classList.toggle('btn-loading', on);
+}
+
 function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 
 function showTrack(album, track) {
@@ -312,10 +382,13 @@ function showTrack(album, track) {
   const artistHTML = artist
     ? `<span class="artist-link" data-artist="${esc(artist)}">${esc(artist)}</span>`
     : '';
-  metaEl.innerHTML = [artistHTML, album.year].filter(Boolean).join(' • ');
-  albumEl.innerHTML = album.title
+  metaEl.innerHTML = artistHTML;
+  const albumPart = album.title
     ? `<span class="album-link" data-path="${esc(album.path)}">${esc(album.title)}</span>`
     : '';
+  albumEl.innerHTML = [album.year, albumPart].filter(Boolean).join(' · ');
+  timeCurrentEl.textContent = '00:00';
+  timeTotalEl.textContent   = '00:00';
   checkMarquee(titleEl);
   checkMarquee(metaEl);
   checkMarquee(albumEl);
@@ -328,10 +401,43 @@ function showTrack(album, track) {
     });
 }
 
+const controlsEl  = $('controls');
+const offlineEl   = $('offline-msg');
+let loadTimer     = null;
+let timeoutStreak = 0;
+
+function clearLoadTimer() {
+  if (loadTimer) { clearTimeout(loadTimer); loadTimer = null; }
+}
+
+function onLoadTimeout() {
+  loadTimer = null;
+  timeoutStreak++;
+  if (timeoutStreak >= 5) {
+    fatalError();
+  } else {
+    next();
+  }
+}
+
+function fatalError() {
+  clearLoadTimer();
+  setLoading(false);
+  controlsEl.style.display = 'none';
+  offlineEl.classList.add('visible');
+  offlineEl.innerHTML = 'sem conexão com o servidor';
+  titleEl.textContent  = '';
+  metaEl.innerHTML     = '';
+  albumEl.innerHTML    = '';
+}
+
 function playTrack(album, track) {
   showTrack(album, track);
   const src = `${BASE_URL}/${encodeURI(album.path)}/${encodeURI(track.file)}`;
   if (audio.src !== src) { audio.src = src; audio.load(); }
+  setLoading(true);
+  clearLoadTimer();
+  loadTimer = setTimeout(onLoadTimeout, 3000);
   audio.play().catch(() => {});
 }
 
@@ -372,12 +478,26 @@ if (typeof BroadcastChannel !== 'undefined') {
   ch.onmessage = ({ data }) => { if (data?.tabId !== TAB_ID) audio.pause(); };
 }
 
-audio.addEventListener('play',  () => setPlaying(true));
-audio.addEventListener('pause', () => setPlaying(false));
-audio.addEventListener('ended', next);
+audio.addEventListener('play',    () => setPlaying(true));
+audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); });
+audio.addEventListener('playing', () => { clearLoadTimer(); timeoutStreak = 0; setLoading(false); });
+audio.addEventListener('waiting', () => setLoading(true));
+audio.addEventListener('ended',   next);
+audio.addEventListener('error',   () => {
+  clearLoadTimer();
+  setLoading(false);
+  timeoutStreak++;
+  if (timeoutStreak >= 5) fatalError();
+  else if (albums.length) setTimeout(next, 500);
+});
+
+audio.addEventListener('durationchange', () => {
+  timeTotalEl.textContent = fmtTime(audio.duration);
+});
 
 audio.addEventListener('timeupdate', () => {
   if (audio.duration) fillEl.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  timeCurrentEl.textContent = fmtTime(audio.currentTime);
 });
 
 progressEl.addEventListener('click', e => {
