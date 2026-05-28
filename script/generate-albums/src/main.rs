@@ -139,15 +139,20 @@ fn has_cover(folder: &Path) -> bool {
 }
 
 fn collect_mp3s(folder: &Path) -> Vec<PathBuf> {
-    let mut mp3s: Vec<PathBuf> = WalkDir::new(folder)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| {
-            let name = e.file_name().to_string_lossy().to_lowercase();
-            e.file_type().is_file() && name.ends_with(".mp3") && !name.starts_with("._")
+    let mut mp3s: Vec<PathBuf> = fs::read_dir(folder)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    let name = e.file_name().to_string_lossy().to_lowercase();
+                    e.file_type().map(|t| t.is_file()).unwrap_or(false)
+                        && name.ends_with(".mp3")
+                        && !name.starts_with("._")
+                })
+                .map(|e| e.path())
+                .collect()
         })
-        .map(|e| e.path().to_path_buf())
-        .collect();
+        .unwrap_or_default();
     mp3s.sort_by(|a, b| {
         a.file_name()
             .unwrap_or_default()
@@ -158,13 +163,14 @@ fn collect_mp3s(folder: &Path) -> Vec<PathBuf> {
     mp3s
 }
 
-fn process_album(folder: &Path) -> Option<Album> {
+fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
     let mp3s = collect_mp3s(folder);
     if mp3s.is_empty() {
         return None;
     }
 
     let folder_name = folder.file_name()?.to_string_lossy().into_owned();
+    let rel_path = folder.strip_prefix(music_dir).ok()?.to_string_lossy().replace('\\', "/");
     let (mut album_artist, mut album_title, mut album_year) = (String::new(), String::new(), 0u32);
     let mut tracks = Vec::new();
 
@@ -212,7 +218,7 @@ fn process_album(folder: &Path) -> Option<Album> {
         title: album_title,
         artist: album_artist,
         year: album_year,
-        path: folder_name,
+        path: rel_path,
         has_cover: has_cover(folder),
         tracks,
     })
@@ -292,14 +298,15 @@ fn main() {
     let meta_subtitle = cfg.meta_subtitle.or(dir_cfg.subtitle);
     let meta_base_url = cfg.meta_base_url.or(env_base_url);
 
-    let mut folders: Vec<PathBuf> = fs::read_dir(&cfg.music_dir)
-        .expect("Não foi possível abrir a pasta de músicas")
+    let mut folders: Vec<PathBuf> = WalkDir::new(&cfg.music_dir)
+        .min_depth(1)
+        .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| {
-            e.file_type().map(|t| t.is_dir()).unwrap_or(false)
+            e.file_type().is_dir()
                 && !e.file_name().to_string_lossy().starts_with('_')
         })
-        .map(|e| e.path())
+        .map(|e| e.path().to_path_buf())
         .collect();
 
     folders.sort_by(|a, b| {
@@ -311,10 +318,11 @@ fn main() {
     println!("Processando {} pastas...", total);
 
     let counter = AtomicUsize::new(0);
+    let music_dir = &cfg.music_dir;
     let albums: Vec<Album> = folders
         .par_iter()
         .filter_map(|folder| {
-            let result = process_album(folder);
+            let result = process_album(folder, music_dir);
             let n = counter.fetch_add(1, Ordering::Relaxed) + 1;
             if n % 200 == 0 || n == total {
                 eprint!("\r  [{n}/{total}]   ");
