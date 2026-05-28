@@ -46,7 +46,7 @@ cat > ~/.haloyd/services/uqt-proxy.json << 'HALOYD_CONFIG'
   "env": {},
   "restart": true,
   "public": true,
-  "domain": "xn--2dk.xyz",
+  "domain": "tocador.cc",
   "path": "/uqt"
 }
 HALOYD_CONFIG
@@ -144,15 +144,15 @@ echo "✅ Deployment complete!"
 echo ""
 echo "📍 Proxy running at:"
 echo "   http://localhost:9001/uqt (local)"
-echo "   http://xn--2dk.xyz:9001/uqt (public - if port 9001 exposed)"
+echo "   http://tocador.cc:9001/uqt (public - if port 9001 exposed)"
 echo ""
 echo "📝 Next steps:"
 if command -v haloyd &> /dev/null; then
   echo "   1. Reload haloyd: haloyd reload"
-  echo "   2. Test: curl -I http://xn--2dk.xyz/uqt/uqt.json"
+  echo "   2. Test: curl -I http://tocador.cc/uqt/uqt.json"
 else
   echo "   1. Expose port 9001 publicly (firewall/DNS/reverse proxy)"
-  echo "   2. Test: curl -I http://xn--2dk.xyz:9001/uqt/uqt.json"
+  echo "   2. Test: curl -I http://tocador.cc:9001/uqt/uqt.json"
 fi
 echo "   3. Check GitHub Pages for covers loading"
 echo ""
