@@ -204,9 +204,6 @@ _server = Bun.serve({
     if (req.headers.get('host') === 'radio.tocador.cc')
       return Response.redirect('https://rafapolo.github.io/tocador/radio.html', 301);
 
-    if (req.headers.get('host') === 'uqt.xn--2dk.xyz')
-      return Response.redirect('https://cdn.tocador.cc' + url.pathname + url.search, 301);
-
     // §13 — enriched health: reports saturation and event-loop lag; haloy removes node before it becomes a black hole
     if (url.pathname === '/health') {
       const degraded = shuttingDown || activeRequests >= MAX_CONCURRENT * 0.9 || eventLoopLag > 500;
@@ -280,6 +277,10 @@ _server = Bun.serve({
     // §1 — path traversal: reject .., empty segments, NUL, backslash
     if (!isSafeKey(path)) { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
 
+    // Bun's S3Client doesn't encode # or ? in the key, causing them to be treated as URL
+    // fragment/query delimiters. Pre-encode them so the S3 request URL is correct.
+    const s3Key = path.replace(/#/g, '%23').replace(/\?/g, '%3F');
+
     // §6 — Range: reject malformed and multi-range (multi-range never used by audio players)
     const rangeHeader = req.headers.get('range');
     if (rangeHeader && (rangeHeader.length > 128 || !RANGE_RE.test(rangeHeader))) {
@@ -327,7 +328,7 @@ _server = Bun.serve({
 
     activeRequests++;
     try {
-      const file = s3.file(path, { bucket: bucketFor(path) });
+      const file = s3.file(s3Key, { bucket: bucketFor(path) });
       let body, status, extra = {};
 
       if (isHead) {
