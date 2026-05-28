@@ -7,6 +7,7 @@ port: 9001
 health_check_path: /health
 domains:
   - domain: "cdn.tocador.cc"
+  - domain: "radio.tocador.cc"
 env:
   - name: AWS_ACCESS_KEY_ID
     from:
