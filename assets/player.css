@@ -115,12 +115,6 @@ body {
   position: relative;
 }
 
-.app-title::after {
-  content: '♪';
-  margin-left: 8px;
-  font-size: 1.2rem;
-  animation: samba-bounce 1.2s ease-in-out infinite;
-}
 
 @keyframes samba-bounce {
   0%, 100% {
