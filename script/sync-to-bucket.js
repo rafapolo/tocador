@@ -141,7 +141,7 @@ async function main() {
 
   // Diff
   const toUpload = localFiles.filter(({ relativePath, size }) => {
-    const key   = PREFIX + relativePath.replace(/\\/g, '/');
+    const key   = (PREFIX + relativePath.replace(/\\/g, '/')).normalize('NFC');
     const s3obj = s3Map.get(key);
     return !s3obj || s3obj.size !== size;
   });
@@ -159,7 +159,7 @@ async function main() {
   renderBar(0, toUpload.length, startMs);
 
   await runPool(toUpload, CONCURRENCY, async ({ localPath, relativePath }) => {
-    const key = PREFIX + relativePath.replace(/\\/g, '/');
+    const key = (PREFIX + relativePath.replace(/\\/g, '/')).normalize('NFC');
     await uploadFile(localPath, key);
     done++;
     renderBar(done, toUpload.length, startMs);
