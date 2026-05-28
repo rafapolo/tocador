@@ -14,7 +14,7 @@ The app fetches the acervo `.json.gz` asynchronously on load, decompresses via n
 
 ### Backend / Infrastructure
 - **proxy.js** — Bun reverse proxy on port 9002 (behind nginx on 9001). Uses `Bun.S3Client` (native, no npm deps). CORS, MIME, Range, security hardening (path traversal, hotlink, rate limit, graceful shutdown). Zero production npm dependencies.
-- **haloy.yaml** — Deployment config; deploys proxy to `uqt.xn--2dk.xyz`
+- **haloy.yaml** — Deployment config; deploys proxy to `cdn.tocador.cc`
 - **Dockerfile** — Packages proxy.js for haloy deployment
 
 ### Scripts (`script/`)
@@ -32,8 +32,8 @@ Registered in `js/ui.js` → `KNOWN_ACERVOS`. Each entry has only `data` (URL to
 
 | alias | data URL | S3 prefix |
 |---|---|---|
-| `uqt` | `js/uqt-albums.json.gz` (GitHub raw) | `https://uqt.xn--2dk.xyz/uqt` |
-| `homi` | `js/homi-albums.json.gz` (GitHub raw) | `https://uqt.xn--2dk.xyz/indie` |
+| `uqt` | `js/uqt-albums.json.gz` (GitHub raw) | `https://cdn.tocador.cc/uqt` |
+| `homi` | `js/homi-albums.json.gz` (GitHub raw) | `https://cdn.tocador.cc/indie` |
 
 Player priority for `base_url`: `db.meta.base_url` → `sessionStorage` → `''`.
 
@@ -47,7 +47,7 @@ External acervos work too: `?acervo=https://example.com/my-archive.json.gz`
     "title": "Nome do Acervo",
     "subtitle": "Subtítulo opcional",
     "hours": "705",
-    "base_url": "https://uqt.xn--2dk.xyz/uqt"
+    "base_url": "https://cdn.tocador.cc/uqt"
   },
   "albums": [
     {
@@ -124,7 +124,7 @@ curl -I http://localhost:9001/health
 ### Deploying
 
 ```bash
-haloy deploy   # requires HALOY_API_TOKEN; deploys to uqt.xn--2dk.xyz
+haloy deploy   # requires HALOY_API_TOKEN; deploys to cdn.tocador.cc
 ```
 
 ## Key Technical Notes

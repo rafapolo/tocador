@@ -1,6 +1,6 @@
 // Error reporter — posts uncaught JS errors to tocador/issues via the proxy
 (function () {
-  const REPORT_URL = 'https://uqt.xn--2dk.xyz/report-error';
+  const REPORT_URL = 'https://cdn.tocador.cc/report-error';
   const seen = new Set();
   let count = 0;
 
@@ -57,11 +57,11 @@ let _overlayTrackArtist = null;
 const KNOWN_ACERVOS = {
   uqt: {
     data: 'https://rafapolo.github.io/uqt/js/uqt-albums.json.gz',
-    base_url: 'https://uqt.xn--2dk.xyz/uqt',
+    base_url: 'https://cdn.tocador.cc/uqt',
   },
   homi: {
     data: 'https://rafapolo.github.io/hominiscanidae/js/homi-albums.json.gz',
-    base_url: 'https://uqt.xn--2dk.xyz/indie',
+    base_url: 'https://cdn.tocador.cc/indie',
   },
 };
 const DEFAULT_ACERVO = 'homi';

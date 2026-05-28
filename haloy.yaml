@@ -6,7 +6,7 @@ api_token:
 port: 9001
 health_check_path: /health
 domains:
-  - domain: "uqt.xn--2dk.xyz"
+  - domain: "cdn.tocador.cc"
 env:
   - name: AWS_ACCESS_KEY_ID
     from:

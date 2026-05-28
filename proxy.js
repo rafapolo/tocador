@@ -133,7 +133,7 @@ function realIp(req, server) {
 // §5 — hotlink protection: audio only; images (covers) are explicitly exempt
 const ALLOWED_ORIGINS = new Set([
   'https://rafapolo.github.io',
-  'https://uqt.xn--2dk.xyz',
+  'https://cdn.tocador.cc',
   'http://localhost:9001',
 ]);
 function refererAllowed(req) {
