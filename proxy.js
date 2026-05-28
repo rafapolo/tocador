@@ -134,6 +134,7 @@ function realIp(req, server) {
 const ALLOWED_ORIGINS = new Set([
   'https://rafapolo.github.io',
   'https://cdn.tocador.cc',
+  'https://radio.tocador.cc',
   'http://localhost:9001',
 ]);
 function refererAllowed(req) {
@@ -198,6 +199,9 @@ _server = Bun.serve({
     if (req.url.length > 1200) { counters.c4xx++; return new Response('URI Too Long', { status: 414, headers: corsBase }); }
 
     const url = new URL(req.url);
+
+    if (req.headers.get('host') === 'radio.tocador.cc')
+      return Response.redirect('https://rafapolo.github.io/tocador/radio.html', 301);
 
     // §13 — enriched health: reports saturation and event-loop lag; haloy removes node before it becomes a black hole
     if (url.pathname === '/health') {
