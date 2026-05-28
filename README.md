@@ -4,6 +4,22 @@ Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` com
 
 > **Tocador é uma plataforma** — o mesmo player reproduz muitos acervos diferentes. Cada acervo é um catálogo independente apontado via `?acervo=`.
 
+## 📻 Rádio
+
+O Tocador tem um modo rádio standalone em [`radio.html`](radio.html) — um widget minimalista que toca faixas aleatórias de qualquer acervo, sem a interface completa do player.
+
+```
+https://rafapolo.github.io/tocador/radio.html?acervo=homi
+https://rafapolo.github.io/tocador/radio.html?acervo=uqt
+```
+
+- Toca aleatoriamente por todo o acervo — álbuns e faixas
+- Avança automaticamente ao terminar cada faixa ou em caso de erro
+- Histórico de navegação: botão anterior volta à faixa tocada antes
+- Capa do álbum, artista, álbum e ano exibidos em tempo real com marquee animado
+- Barra de progresso clicável
+- Clique no artista ou álbum para abrir no player principal
+
 ## ✨ Características
 
 ### 🎨 Interface Spotify-Style Grid
@@ -119,10 +135,11 @@ ARCHIVE_DIR=/path/to/musicas node script/resize-cover-images.js
 ```
 
 ### Arquitetura
-- **Player**: HTML5 + CSS3 + JavaScript vanilla — servido pelo GitHub Pages ou qualquer CDN estática
+- **Player** (`index.html`): HTML5 + CSS3 + JavaScript vanilla — servido pelo GitHub Pages ou qualquer CDN estática
+- **Rádio** (`radio.html`): Widget standalone, mesmo acervo, interface mínima
 - **Dados**: `.json.gz` — catálogo gzipado carregado assincronamente e descomprimido via `DecompressionStream` nativa do browser
 - **Capas e áudio**: Servidos pelo `base_url` definido em cada acervo
-- **Proxy opcional**: Node.js + S3 SDK — para acervos com armazenamento privado
+- **Proxy** (`proxy.js`): Node.js + S3 SDK atrás de nginx com cache de imagens em disco
 
 ### Fluxo de uma requisição
 1. Browser carrega `index.html` do GitHub Pages
@@ -162,7 +179,8 @@ ARCHIVE_DIR=/path/to/musicas node script/resize-cover-images.js
 - **Capas**: `capa-min.jpg` (200px wide) — geradas por `script/resize-cover-images.js`
 - **Lazy loading**: zero impacto no carregamento inicial
 - **Cache-Control em camadas**: capas com `immutable`; áudio com cache longo; catálogo JSON com TTL curto
-- **Deployment**: Haloy + Docker, rolling updates sem downtime
+- **Nginx + cache de imagens**: capas cacheadas em disco por 30 dias — `proxy_cache_lock` evita thundering herd (centenas de requisições simultâneas para a mesma capa fazem apenas uma chamada ao S3)
+- **Deployment**: Haloy + Docker (nginx + node no mesmo container), rolling updates sem downtime
 
 ## 🤝 Contribuições
 
