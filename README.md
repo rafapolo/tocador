@@ -125,13 +125,13 @@ Veja [`script/README.md`](script/README.md) para o guia completo em pt-BR:
 
 ```bash
 # 1. Gerar catálogo de álbuns a partir dos MP3s locais
-ARCHIVE_DIR=/path/to/musicas node script/generate-albums.js
+ARCHIVE_DIR=/path/to/musicas bun script/generate-albums.js
 
 # 2. Sincronizar áudio para o bucket S3
-ARCHIVE_DIR=/path/to/musicas node script/sync-to-bucket.js
+ARCHIVE_DIR=/path/to/musicas bun script/sync-to-bucket.js
 
 # 3. Redimensionar e fazer upload das capas (200px)
-ARCHIVE_DIR=/path/to/musicas node script/resize-cover-images.js
+ARCHIVE_DIR=/path/to/musicas bun script/resize-cover-images.js
 ```
 
 ### Arquitetura
@@ -139,7 +139,7 @@ ARCHIVE_DIR=/path/to/musicas node script/resize-cover-images.js
 - **Rádio** (`radio.html`): Widget standalone, mesmo acervo, interface mínima
 - **Dados**: `.json.gz` — catálogo gzipado carregado assincronamente e descomprimido via `DecompressionStream` nativa do browser
 - **Capas e áudio**: Servidos pelo `base_url` definido em cada acervo
-- **Proxy** (`proxy.js`): Node.js + S3 SDK atrás de nginx com cache de imagens em disco
+- **Proxy** (`proxy.js`): Bun + `Bun.S3Client` nativo atrás de nginx com cache de imagens em disco
 
 ### Fluxo de uma requisição
 1. Browser carrega `index.html` do GitHub Pages
@@ -180,7 +180,7 @@ ARCHIVE_DIR=/path/to/musicas node script/resize-cover-images.js
 - **Lazy loading**: zero impacto no carregamento inicial
 - **Cache-Control em camadas**: capas com `immutable`; áudio com cache longo; catálogo JSON com TTL curto
 - **Nginx + cache de imagens**: capas cacheadas em disco por 30 dias — `proxy_cache_lock` evita thundering herd (centenas de requisições simultâneas para a mesma capa fazem apenas uma chamada ao S3)
-- **Deployment**: Haloy + Docker (nginx + node no mesmo container), rolling updates sem downtime
+- **Deployment**: Haloy + Docker (nginx + Bun no mesmo container), rolling updates sem downtime
 
 ## 🤝 Contribuições
 

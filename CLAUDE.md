@@ -13,7 +13,7 @@ Shared music player platform — the same player hosts multiple independent arch
 The app fetches the acervo `.json.gz` asynchronously on load, decompresses via native `DecompressionStream`, then renders into a virtual scrolling grid (~30 DOM nodes regardless of library size).
 
 ### Backend / Infrastructure
-- **proxy.js** — Node.js reverse proxy on port 9001. Forwards requests to S3, adds CORS headers, sets correct MIME types, supports `Range` for audio seeking. Clustered across all CPU cores.
+- **proxy.js** — Bun reverse proxy on port 9002 (behind nginx on 9001). Uses `Bun.S3Client` (native, no npm deps). CORS, MIME, Range, security hardening (path traversal, hotlink, rate limit, graceful shutdown). Zero production npm dependencies.
 - **haloy.yaml** — Deployment config; deploys proxy to `uqt.xn--2dk.xyz`
 - **Dockerfile** — Packages proxy.js for haloy deployment
 
@@ -101,15 +101,15 @@ Build first: `cd script/generate-albums && cargo build --release`
 
 ```bash
 brew install ffmpeg   # once
-node script/generate-albums.js
+bun script/generate-albums.js
 ```
 
 ### Syncing audio to S3
 
 ```bash
-node script/sync-to-bucket.js      # uploads diff (size-based) with 20 workers
-node script/resize-cover-images.js # resizes covers to 200px and uploads
-node script/filter-albums-by-s3.js # trims JSON to albums confirmed in S3
+bun script/sync-to-bucket.js      # uploads diff (size-based) with 20 workers
+bun script/resize-cover-images.js # resizes covers to 200px and uploads
+bun script/filter-albums-by-s3.js # trims JSON to albums confirmed in S3
 ```
 
 Requires `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET` in `.env`.
@@ -117,7 +117,7 @@ Requires `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET` in `.env`.
 ### Running the proxy locally
 
 ```bash
-node proxy.js   # listens on :9001
+bun proxy.js   # listens on :9001
 curl -I http://localhost:9001/health
 ```
 

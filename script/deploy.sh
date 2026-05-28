@@ -7,12 +7,13 @@ set -e
 echo "🎵 UQT Server Deployment"
 echo "======================="
 
-# Check Node.js
-if ! command -v node &> /dev/null; then
-  echo "📦 Installing Node.js..."
-  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - > /dev/null 2>&1
-  sudo apt-get install -y nodejs > /dev/null 2>&1
-  echo "   ✅ Node.js installed"
+# Check Bun
+if ! command -v bun &> /dev/null; then
+  echo "📦 Installing Bun..."
+  curl -fsSL https://bun.sh/install | bash > /dev/null 2>&1
+  export BUN_INSTALL="$HOME/.bun"
+  export PATH="$BUN_INSTALL/bin:$PATH"
+  echo "   ✅ Bun installed"
 fi
 
 # 1. Download proxy script
@@ -38,7 +39,7 @@ cat > ~/.haloyd/services/uqt-proxy.json << 'HALOYD_CONFIG'
 {
   "name": "uqt-proxy",
   "description": "UQT Hetzner S3 Reverse Proxy",
-  "command": "node",
+  "command": "bun",
   "args": ["proxy.js"],
   "cwd": "~/uqt-proxy",
   "port": 9001,
@@ -65,7 +66,7 @@ After=network.target
 Type=simple
 User=$USER
 WorkingDirectory=$HOME/uqt-proxy
-ExecStart=/usr/bin/node proxy.js
+ExecStart=/usr/bin/env bun proxy.js
 Restart=always
 RestartSec=10
 
