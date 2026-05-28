@@ -203,6 +203,9 @@ _server = Bun.serve({
     if (req.headers.get('host') === 'radio.tocador.cc')
       return Response.redirect('https://rafapolo.github.io/tocador/radio.html', 301);
 
+    if (req.headers.get('host') === 'uqt.xn--2dk.xyz')
+      return Response.redirect('https://cdn.tocador.cc' + url.pathname + url.search, 301);
+
     // §13 — enriched health: reports saturation and event-loop lag; haloy removes node before it becomes a black hole
     if (url.pathname === '/health') {
       const degraded = shuttingDown || activeRequests >= MAX_CONCURRENT * 0.9 || eventLoopLag > 500;
