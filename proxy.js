@@ -104,6 +104,52 @@ function cacheControlFor(key) {
   return 'public, max-age=3600';
 }
 
+// Minimal AWS Signature V4 — used only for S3 keys Bun's client fails on (# and ?)
+const S3_ENDPOINT  = process.env.S3_ENDPOINT  ?? '';
+const S3_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID ?? '';
+const S3_SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY ?? '';
+const S3_REGION    = 'hel1';
+
+async function hmacSHA256(key, data) {
+  const k = typeof key === 'string' ? new TextEncoder().encode(key) : key;
+  const cryptoKey = await crypto.subtle.importKey('raw', k, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data)));
+}
+async function sha256hex(data) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function s3GetSigned(bucket, key, rangeHeader) {
+  const now = new Date();
+  const amzDate  = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const dateStamp = amzDate.slice(0, 8);
+  const encodedKey = key.split('/').map(seg => encodeURIComponent(seg)).join('/');
+  const url = `${S3_ENDPOINT}/${bucket}/${encodedKey}`;
+  const host = new URL(S3_ENDPOINT).host;
+
+  const payloadHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  const headers = { host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate };
+  if (rangeHeader) headers['range'] = rangeHeader;
+
+  const signedHeaders = Object.keys(headers).sort().join(';');
+  const canonicalHeaders = Object.entries(headers).sort(([a], [b]) => a < b ? -1 : 1)
+    .map(([k, v]) => `${k}:${v}\n`).join('');
+  const canonicalUri = `/${bucket}/${encodedKey}`;
+  const canonicalRequest = `GET\n${canonicalUri}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+
+  const credScope = `${dateStamp}/${S3_REGION}/s3/aws4_request`;
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credScope}\n${await sha256hex(canonicalRequest)}`;
+
+  let sigKey = await hmacSHA256(`AWS4${S3_SECRET_KEY}`, dateStamp);
+  sigKey = await hmacSHA256(sigKey, S3_REGION);
+  sigKey = await hmacSHA256(sigKey, 's3');
+  sigKey = await hmacSHA256(sigKey, 'aws4_request');
+  const sig = Array.from(await hmacSHA256(sigKey, stringToSign)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const auth = `AWS4-HMAC-SHA256 Credential=${S3_ACCESS_KEY}/${credScope}, SignedHeaders=${signedHeaders}, Signature=${sig}`;
+  return fetch(url, { headers: { ...headers, Authorization: auth } });
+}
+
 // §1 — path traversal guard: reject .., ., NUL, backslash, empty segments
 function isSafeKey(key) {
   if (key.length === 0 || key.length > 1024) return false;
@@ -277,9 +323,7 @@ _server = Bun.serve({
     // §1 — path traversal: reject .., empty segments, NUL, backslash
     if (!isSafeKey(path)) { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
 
-    // Bun's S3Client doesn't encode # or ? in the key, causing them to be treated as URL
-    // fragment/query delimiters. Pre-encode them so the S3 request URL is correct.
-    const s3Key = path.replace(/#/g, '%23').replace(/\?/g, '%3F');
+    const s3Key = path;
 
     // §6 — Range: reject malformed and multi-range (multi-range never used by audio players)
     const rangeHeader = req.headers.get('range');
@@ -328,8 +372,34 @@ _server = Bun.serve({
 
     activeRequests++;
     try {
-      const file = s3.file(s3Key, { bucket: bucketFor(path) });
+      const bucket = bucketFor(path);
       let body, status, extra = {};
+
+      // Bun's S3Client doesn't encode # or ? in keys, causing URL fragment/query truncation.
+      // For those keys we bypass it and use a manually-signed fetch instead.
+      if (path.includes('#') || path.includes('?')) {
+        const fetchRange = isHead ? null : rangeHeader;
+        const r = await s3GetSigned(bucket, path, fetchRange);
+        if (!r.ok && r.status !== 206) {
+          const code = r.status >= 500 ? 500 : r.status;
+          if (code >= 500) counters.c5xx++; else counters.c4xx++;
+          return new Response('Error', { status: code, headers: corsBase });
+        }
+        const fwdHeaders = {
+          ...corsHeaders,
+          'Content-Type': mimeFor(path),
+          'Cache-Control': cacheControlFor(path),
+          'Accept-Ranges': 'bytes',
+        };
+        for (const h of ['content-length', 'content-range', 'etag', 'last-modified']) {
+          const v = r.headers.get(h);
+          if (v) fwdHeaders[h] = v;
+        }
+        counters.ok++;
+        return new Response(isHead ? null : r.body, { status: isHead ? 200 : r.status, headers: fwdHeaders });
+      }
+
+      const file = s3.file(s3Key, { bucket });
 
       if (isHead) {
         // §9 — HEAD: one S3 stat call, return headers only
