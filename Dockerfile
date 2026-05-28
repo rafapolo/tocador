@@ -11,7 +11,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY start.sh .
 RUN chmod +x start.sh && mkdir -p /var/cache/nginx/images
 
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=20s \
   CMD node -e "require('http').get('http://localhost:9001/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)}).on('error', () => process.exit(1))"
 
 EXPOSE 9001
