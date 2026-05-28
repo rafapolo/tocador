@@ -135,6 +135,7 @@ const ALLOWED_ORIGINS = new Set([
   'https://rafapolo.github.io',
   'https://cdn.tocador.cc',
   'https://radio.tocador.cc',
+  'https://tocador.cc',
   'http://localhost:9001',
 ]);
 function refererAllowed(req) {
