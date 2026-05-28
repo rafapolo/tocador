@@ -187,7 +187,7 @@ function updateMetaTags(album) {
   const title = `${album.name} — ${album.artists} (${album.year})`;
   const archiveTitle = db?.meta?.title || 'Tocador';
   const desc = `Álbum de ${album.artists}, ${album.year}. Ouça no ${archiveTitle}.`;
-  const image = `${BASE_URL}/${encodeURI(album.path)}/capa-min.jpg`;
+  const image = `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg`;
   const url = generateAlbumUrl(album);
   document.title = `${album.name} · ${archiveTitle}`;
   setMeta('property', 'og:title', title);
@@ -448,7 +448,7 @@ function buildAlbums() {
       }
     }
     const tracks = dedupedTracks.map((track, i) => {
-      const file = `${encodeURI(album.path)}/${encodeURI(track.file)}`;
+      const file = `${encodeURIComponent(album.path)}/${encodeURIComponent(track.file)}`;
       if (track.duration) durationCache.set(file, track.duration);
       const trackArtist = track.artists || album.artist;
       return {
@@ -460,7 +460,7 @@ function buildAlbums() {
     });
     return {
       name: album.title, artists: album.artist, year: album.year, path: album.path,
-      cover: album.has_cover !== false ? `${BASE_URL}/${encodeURI(album.path)}/capa-min.jpg` : null,
+      cover: album.has_cover !== false ? `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg` : null,
       tracks, nameLower, artistsLower, pathLower,
     };
   });
@@ -946,7 +946,7 @@ u(document).on('DOMContentLoaded', async function () {
     }
     const path = e.state?.album ?? new URLSearchParams(window.location.search).get('album');
     if (!path) return;
-    const album = albums.find(a => a.path === path);
+    const album = albums.find(a => a.path.normalize('NFC') === path.normalize('NFC'));
     if (!album || album === selectedAlbum) return;
     albumsList.querySelector('.album-item.active')?.classList.remove('active');
     selectedAlbum = album;
@@ -1044,7 +1044,7 @@ u(document).on('DOMContentLoaded', async function () {
 
   // Select initial album from URL or first in list
   const albumFromUrl = getAlbumFromUrl();
-  let albumToSelect = albumFromUrl ? albums.find(a => a.path === albumFromUrl) : null;
+  let albumToSelect = albumFromUrl ? albums.find(a => a.path.normalize('NFC') === albumFromUrl.normalize('NFC')) : null;
   if (!albumToSelect && filteredAlbums.length > 0) albumToSelect = filteredAlbums[0];
 
   if (albumToSelect) {
