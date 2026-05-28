@@ -437,7 +437,7 @@ function playTrack(album, track) {
   if (audio.src !== src) { audio.src = src; audio.load(); }
   setLoading(true);
   clearLoadTimer();
-  loadTimer = setTimeout(onLoadTimeout, 3000);
+  loadTimer = setTimeout(onLoadTimeout, 6000);
   audio.play().catch(() => {});
 }
 
