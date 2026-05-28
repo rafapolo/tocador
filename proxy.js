@@ -34,7 +34,7 @@ if (cluster.isPrimary) {
     }
     return BUCKET;
   }
-  const PORT = 9001;
+  const PORT = Number(process.env.PORT) || 9001;
   const MAX_CONCURRENT = 80;
   const REQUEST_TIMEOUT = 30000;
 
