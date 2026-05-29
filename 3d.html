@@ -125,15 +125,14 @@
 /*
  * UQT · UNIVERSO — 3D Album Globe
  *
- * ARCHITECTURE: Option A (individual textures, lazy-loaded)
- * 2303 PlaneGeometry meshes on Fibonacci sphere, textures loaded by view priority.
+ * ARCHITECTURE: Option A (lazy per-texture) with Option C (atlas) auto-upgrade.
  *
- * OPTION C UPGRADE PATH (pre-built atlas, ~3 draw calls):
- *  1. Run: node script/build-3d-atlas.js
- *     → downloads all covers via BASE_URL, packs into 3× 4096² JPEGs + atlas-map.json
- *  2. 3d.html checks for atlas-map.json at startup:
- *     - present: InstancedMesh + ShaderMaterial sampling atlas UV per instance
- *     - absent: current Option A path (this code)
+ * Atlas path (active when 3d-atlas/atlas-map.json exists at BASE_URL):
+ *   node script/build-3d-atlas.js --acervo homi
+ *   → packs all covers into N× 4096² WebP atlases + atlas-map.json (with pre-baked edge colors)
+ *   → uploads to S3; 3d.html fetches atlas-map.json on startup and loads 2 files instead of thousands
+ *
+ * Fallback (Option A): lazy per-texture load, priority-queued by frustum visibility.
  */
 
 import * as THREE from 'three';
@@ -658,6 +657,70 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) clock.stop(); else clock.start();
 });
 
+// ─── Atlas mode ───────────────────────────────────────────────────────────────
+
+async function tryLoadAtlas() {
+  try {
+    const res = await fetch(`${BASE_URL}/3d-atlas/atlas-map.json`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+function applyAtlasMode(atlasData) {
+  const { tile, size, atlases, map } = atlasData;
+  const tpr = size / tile; // tiles per row (e.g. 64 for 4096/64)
+
+  return new Promise(resolve => {
+    let loaded = 0;
+    const textures = new Array(atlases.length).fill(null);
+
+    atlases.forEach((relPath, i) => {
+      texLoader.load(`${BASE_URL}/${relPath}`, tex => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.generateMipmaps = false;
+        tex.minFilter = THREE.LinearFilter;
+        tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+        textures[i] = tex;
+        if (++loaded === atlases.length) applyToMeshes();
+      }, undefined, () => { if (++loaded === atlases.length) applyToMeshes(); });
+    });
+
+    function applyToMeshes() {
+      albumMeshes.forEach(mesh => {
+        const entry = map[mesh.userData.album.path];
+        if (!entry) return;
+        const [atlasIdx, col, row, cr, cl, ct, cb, ck] = entry;
+        const tex = textures[atlasIdx];
+        if (!tex) return;
+
+        // clone geometry so each mesh gets its own UV for the front face
+        const geo = sharedGeo.clone();
+        const uv  = geo.attributes.uv;
+        const u0 = col / tpr,       u1 = (col + 1) / tpr;
+        const v1 = 1 - row / tpr,   v0 = 1 - (row + 1) / tpr;
+        // BoxGeometry front face (+Z) = uv vertices 16-19 (top-left, top-right, bottom-left, bottom-right)
+        uv.setXY(16, u0, v1); uv.setXY(17, u1, v1);
+        uv.setXY(18, u0, v0); uv.setXY(19, u1, v0);
+        uv.needsUpdate = true;
+        mesh.geometry = geo;
+
+        mesh.material = [
+          new THREE.MeshLambertMaterial({ color: cr }),
+          new THREE.MeshLambertMaterial({ color: cl }),
+          new THREE.MeshLambertMaterial({ color: ct }),
+          new THREE.MeshLambertMaterial({ color: cb }),
+          new THREE.MeshPhongMaterial({ map: tex, shininess: 2, specular: 0x050505 }),
+          new THREE.MeshLambertMaterial({ color: ck }),
+        ];
+        mesh.userData.frontMat = mesh.material[4];
+        mesh.userData.textureLoaded = true;
+      });
+      resolve();
+    }
+  });
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -679,11 +742,11 @@ async function main() {
     resolveOverlaps(positions, PLANE_SIZE);
     buildAlbumMeshes(withCover, positions);
     initAnimationData();
-    setProgress(70);
+    setProgress(60);
 
-    setStatus('Iniciando carregamento de capas...');
-    initTextureQueue();
-    setProgress(90);
+    setStatus('Verificando atlas...');
+    const atlasData = await tryLoadAtlas();
+    setProgress(80);
 
     startRenderLoop();
 
@@ -694,9 +757,14 @@ async function main() {
         overlay.style.opacity = '0';
         overlay.style.pointerEvents = 'none';
         setTimeout(() => overlay.remove(), 750);
-
       });
     });
+
+    if (atlasData) {
+      applyAtlasMode(atlasData); // downloads atlas WebPs; covers pop in as a batch
+    } else {
+      initTextureQueue();
+    }
 
   } catch (err) {
     setStatus(`Erro: ${err.message}`);
