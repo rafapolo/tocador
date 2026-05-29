@@ -52,6 +52,16 @@ const OUT_DIR  = path.resolve(__dirname, '..', `tmp-atlas-${acervoArg}`);
 
 const BUCKET   = process.env.S3_BUCKET;
 const ENDPOINT = process.env.S3_ENDPOINT || 'https://hel1.your-objectstorage.com';
+const BUCKET_MAP = Object.fromEntries(
+  (process.env.S3_BUCKET_MAP ?? '').split(',').filter(Boolean)
+    .map(e => { const [p, b] = e.split(':'); return [p, b]; })
+);
+function bucketFor(key) {
+  for (const [prefix, bucket] of Object.entries(BUCKET_MAP)) {
+    if (key.startsWith(prefix)) return bucket;
+  }
+  return BUCKET;
+}
 
 const s3 = new S3Client({
   endpoint: ENDPOINT,
@@ -246,7 +256,7 @@ async function main() {
   for (let i = 0; i < totalAtlases; i++) {
     const key = `${s3Prefix}/3d-atlas/atlas-${i}.webp`;
     await s3.send(new PutObjectCommand({
-      Bucket: BUCKET, Key: key,
+      Bucket: bucketFor(key), Key: key,
       Body: fs.readFileSync(path.join(OUT_DIR, `atlas-${i}.webp`)),
       ContentType: 'image/webp',
       CacheControl: 'public, max-age=31536000',
@@ -256,7 +266,7 @@ async function main() {
 
   const mapKey = `${s3Prefix}/3d-atlas/atlas-map.json.gz`;
   await s3.send(new PutObjectCommand({
-    Bucket: BUCKET, Key: mapKey,
+    Bucket: bucketFor(mapKey), Key: mapKey,
     Body: fs.readFileSync(mapPath),
     ContentType: 'application/gzip',
     CacheControl: 'public, max-age=3600',

@@ -660,14 +660,21 @@ document.addEventListener('visibilitychange', () => {
 
 // ─── Atlas mode ───────────────────────────────────────────────────────────────
 
+let _atlasBase = null; // base URL that successfully served the atlas map
+
 async function tryLoadAtlas() {
-  try {
-    const res = await fetch(`${BASE_URL}/3d-atlas/atlas-map.json.gz`);
-    if (!res.ok) return null;
-    const ds = new DecompressionStream('gzip');
-    const text = await new Response(res.body.pipeThrough(ds)).text();
-    return JSON.parse(text);
-  } catch { return null; }
+  // try meta base_url first, then KNOWN_ACERVOS fallback (handles cross-bucket cases)
+  for (const base of [...new Set([BASE_URL, _fallbackBaseUrl])].filter(Boolean)) {
+    try {
+      const res = await fetch(`${base}/3d-atlas/atlas-map.json.gz`);
+      if (!res.ok) continue;
+      const ds = new DecompressionStream('gzip');
+      const text = await new Response(res.body.pipeThrough(ds)).text();
+      _atlasBase = base;
+      return JSON.parse(text);
+    } catch {}
+  }
+  return null;
 }
 
 function applyAtlasMode(atlasData) {
@@ -679,7 +686,7 @@ function applyAtlasMode(atlasData) {
     const textures = new Array(atlases.length).fill(null);
 
     atlases.forEach((relPath, i) => {
-      texLoader.load(`${BASE_URL}/${relPath}`, tex => {
+      texLoader.load(`${_atlasBase}/${relPath}`, tex => {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.generateMipmaps = false;
         tex.minFilter = THREE.LinearFilter;
