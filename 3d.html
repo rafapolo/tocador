@@ -730,7 +730,7 @@ function applyAtlasMode(atlasData) {
     function applyToMeshes() {
       albumMeshes.forEach(mesh => {
         const entry = map[mesh.userData.album.path];
-        if (!entry) return;
+        if (!entry) { mesh.userData.failed = true; return; } // no cover in atlas — skip CDN
         const [atlasIdx, col, row, cr, cl, ct, cb, ck] = entry;
         const tex = textures[atlasIdx];
         if (!tex) return;
