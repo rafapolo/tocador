@@ -305,7 +305,7 @@ function animateFire(_t) {}
 
 // ─── Light toggle ─────────────────────────────────────────────────────────────
 
-let lightsOn = false;
+let lightsOn = true;
 document.getElementById('light-toggle').addEventListener('click', function () {
   lightsOn = !lightsOn;
   ambientLight.intensity = lightsOn ? 1.0 : 0.10;
