@@ -246,9 +246,12 @@ async function main() {
 
   console.log(`Done: ${done} ok, ${failed} failed`);
 
+  // versioned filenames bypass nginx long-lived image cache on re-builds
+  const version = Math.floor(Date.now() / 1000);
+
   // write atlas WebP files
   for (let i = 0; i < totalAtlases; i++) {
-    const outPath = path.join(OUT_DIR, `atlas-${i}.webp`);
+    const outPath = path.join(OUT_DIR, `atlas-${i}-${version}.webp`);
     await sharp(bufs[i], { raw: { width: ATLAS_SIZE, height: ATLAS_SIZE, channels: 3 } })
       .webp({ quality: 85, effort: 4 })
       .toFile(outPath);
@@ -257,7 +260,7 @@ async function main() {
   }
 
   // write atlas-map.json.gz
-  const atlasNames = Array.from({ length: totalAtlases }, (_, i) => `3d-atlas/atlas-${i}.webp`);
+  const atlasNames = Array.from({ length: totalAtlases }, (_, i) => `3d-atlas/atlas-${i}-${version}.webp`);
   const mapData = { tile: TILE_SIZE, size: ATLAS_SIZE, atlases: atlasNames, map: atlasMap };
   const mapPath = path.join(OUT_DIR, 'atlas-map.json.gz');
   fs.writeFileSync(mapPath, zlib.gzipSync(JSON.stringify(mapData), { level: 9 }));
@@ -270,7 +273,7 @@ async function main() {
 
   console.log(`Uploading to s3://${BUCKET}/${s3Prefix}/3d-atlas/ ...`);
   for (let i = 0; i < totalAtlases; i++) {
-    const key = `${s3Prefix}/3d-atlas/atlas-${i}.webp`;
+    const key = `${s3Prefix}/3d-atlas/atlas-${i}-${version}.webp`;
     await s3.send(new PutObjectCommand({
       Bucket: bucketFor(key), Key: key,
       Body: fs.readFileSync(path.join(OUT_DIR, `atlas-${i}.webp`)),
