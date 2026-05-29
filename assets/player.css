@@ -157,6 +157,25 @@ body {
 }
 
 .btn-3d {
+  color: rgba(90, 160, 240, 0.85);
+  background: rgba(90, 160, 240, 0.08);
+  border: 1px solid rgba(90, 160, 240, 0.35);
+  padding: 4px 8px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.btn-3d:hover {
+  color: rgba(130, 190, 255, 1);
+  border-color: rgba(130, 190, 255, 0.7);
+  background: rgba(90, 160, 240, 0.18);
+}
+.btn-radio {
   color: rgba(212, 165, 116, 0.6);
   background: rgba(212, 165, 116, 0.08);
   border: 1px solid rgba(212, 165, 116, 0.3);
@@ -170,7 +189,7 @@ body {
   flex-shrink: 0;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
-.btn-3d:hover {
+.btn-radio:hover {
   color: var(--color-accent);
   border-color: var(--color-accent);
   background: rgba(212, 165, 116, 0.15);
