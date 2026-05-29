@@ -405,6 +405,9 @@ const albumMeshes = [];
 const albumGroup = new THREE.Group();
 scene.add(albumGroup);
 
+// shared outline material — BackSide so it peeks out beyond the cover as a border
+const outlineMat = new THREE.MeshBasicMaterial({ color: 0xd4a574, side: THREE.BackSide });
+
 function buildAlbumMeshes(albums, positions) {
   albums.forEach((album, i) => {
     const mesh = new THREE.Mesh(sharedGeo, boxMats(getDecadeFrontMat(album.year)));
@@ -412,6 +415,14 @@ function buildAlbumMeshes(albums, positions) {
     mesh.lookAt(0, 0, 0);
     mesh.castShadow = true;
     mesh.userData = { album, index: i, textureLoaded: false, loading: false };
+
+    const outline = new THREE.Mesh(sharedGeo, outlineMat);
+    outline.scale.set(1.08, 1.08, 1.0);
+    outline.visible = false;
+    outline.raycast = () => {};
+    mesh.add(outline);
+    mesh.userData.outline = outline;
+
     albumGroup.add(mesh);
     albumMeshes.push(mesh);
   });
@@ -585,22 +596,12 @@ const pointer = new THREE.Vector2();
 let pointerDown = null;
 let hoveredMesh = null;
 
-const HOVER_EMISSIVE = new THREE.Color(0xd4a574);
-const HOVER_EMISSIVE_INTENSITY = 0.35;
-
 function setHover(mesh) {
   if (hoveredMesh === mesh) return;
-  if (hoveredMesh) {
-    const m = hoveredMesh.userData.frontMat;
-    if (m) { m.emissive.set(0x000000); m.emissiveIntensity = 0; }
-    renderer.domElement.style.cursor = '';
-  }
+  if (hoveredMesh?.userData.outline) hoveredMesh.userData.outline.visible = false;
   hoveredMesh = mesh;
-  if (hoveredMesh) {
-    const m = hoveredMesh.userData.frontMat;
-    if (m) { m.emissive.copy(HOVER_EMISSIVE); m.emissiveIntensity = HOVER_EMISSIVE_INTENSITY; }
-    renderer.domElement.style.cursor = 'pointer';
-  }
+  if (hoveredMesh?.userData.outline) hoveredMesh.userData.outline.visible = true;
+  renderer.domElement.style.cursor = mesh ? 'pointer' : '';
 }
 
 renderer.domElement.addEventListener('pointermove', (e) => {
