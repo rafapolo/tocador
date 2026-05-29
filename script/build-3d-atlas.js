@@ -276,7 +276,7 @@ async function main() {
     const key = `${s3Prefix}/3d-atlas/atlas-${i}-${version}.webp`;
     await s3.send(new PutObjectCommand({
       Bucket: bucketFor(key), Key: key,
-      Body: fs.readFileSync(path.join(OUT_DIR, `atlas-${i}.webp`)),
+      Body: fs.readFileSync(path.join(OUT_DIR, `atlas-${i}-${version}.webp`)),
       ContentType: 'image/webp',
       CacheControl: 'public, max-age=31536000',
     }));
