@@ -101,8 +101,6 @@ function cacheControlFor(key) {
     return 'public, max-age=31536000, immutable';
   if (k.endsWith('.mp3') || k.endsWith('.mp4') || k.endsWith('.m4a'))
     return 'public, max-age=31536000';
-  if (k.endsWith('.gz'))
-    return 'public, max-age=3600';
   return 'public, max-age=3600';
 }
 
