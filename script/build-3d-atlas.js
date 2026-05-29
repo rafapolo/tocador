@@ -129,6 +129,33 @@ function computeEdgeColors(rgb, S) {
   return [right, left, top, bottom, dk(avg)]; // cr, cl, ct, cb, ck
 }
 
+// ── iTunes artwork fallback ───────────────────────────────────────────────────
+
+const ITUNES_CONCURRENCY = 8;
+let _itunesRunning = 0;
+const _itunesWaiting = [];
+
+function _itunesNext() {
+  while (_itunesRunning < ITUNES_CONCURRENCY && _itunesWaiting.length > 0) {
+    const { album, resolve } = _itunesWaiting.shift();
+    _itunesRunning++;
+    (async () => {
+      await new Promise(r => setTimeout(r, 60)); // ~13 req/s per slot
+      try {
+        const q = encodeURIComponent(`${album.artist || ''} ${album.title || ''}`.trim().slice(0, 100));
+        const buf = await fetchBuffer(`https://itunes.apple.com/search?term=${q}&country=br&media=music&entity=album&limit=1`);
+        const { results } = JSON.parse(buf.toString('utf8'));
+        resolve(results?.[0]?.artworkUrl100?.replace('100x100bb', '600x600bb') || null);
+      } catch { resolve(null); }
+      finally { _itunesRunning--; _itunesNext(); }
+    })();
+  }
+}
+
+function itunesArtwork(album) {
+  return new Promise(resolve => { _itunesWaiting.push({ album, resolve }); _itunesNext(); });
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -161,26 +188,31 @@ async function main() {
     const encodedPath = album.path.split('/').map(encodeURIComponent).join('/');
     const url = `${baseUrl}/${encodedPath}/capa-min.jpg`;
 
-    try {
-      const imgBuf = await fetchBuffer(url);
+    async function packImage(imgBuf) {
       const rgb = await sharp(imgBuf)
         .resize(TILE_SIZE, TILE_SIZE, { fit: 'cover' })
         .flatten({ background: '#000' })
         .raw()
         .toBuffer();
-
-      // copy tile rows into atlas buffer
       for (let ty = 0; ty < TILE_SIZE; ty++) {
         const src = ty * TILE_SIZE * 3;
         const dst = ((row * TILE_SIZE + ty) * ATLAS_SIZE + col * TILE_SIZE) * 3;
         rgb.copy(bufs[atlasIdx], dst, src, src + TILE_SIZE * 3);
       }
-
       const [cr, cl, ct, cb, ck] = computeEdgeColors(rgb, TILE_SIZE);
       atlasMap[album.path] = [atlasIdx, col, row, cr, cl, ct, cb, ck];
       done++;
       if (done % 500 === 0) process.stdout.write(`  ${done}/${albums.length}\n`);
+    }
+
+    try {
+      await packImage(await fetchBuffer(url));
     } catch {
+      // primary CDN failed — try iTunes
+      try {
+        const artUrl = await itunesArtwork(album);
+        if (artUrl) { await packImage(await fetchBuffer(artUrl)); return; }
+      } catch {}
       failed++;
       atlasMap[album.path] = null;
     }
