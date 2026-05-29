@@ -118,7 +118,7 @@
 </div>
 
 <a id="back-link" href="./">← Acervo</a>
-<button id="light-toggle" title="Ascender Luz">☀︎</button>
+<button id="light-toggle" class="on" title="Apagar Luz">☀︎</button>
 <p id="hint">arraste para girar · scroll para avançar · clique em um álbum</p>
 
 <script type="module">
@@ -169,7 +169,7 @@ if (_acervoParam) {
 }
 
 let BASE_URL = _fallbackBaseUrl;
-const SPHERE_RADIUS = 300;
+let SPHERE_RADIUS = 300;
 const PLANE_SIZE = 16;
 const isMobile = window.matchMedia('(max-width: 768px)').matches
   || /Mobi|Android/i.test(navigator.userAgent);
@@ -271,11 +271,11 @@ renderer.domElement.addEventListener('touchmove', (e) => {
 
 // ─── Lighting ────────────────────────────────────────────────────────────────
 
-// 50% dark baseline everywhere
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.10);
+// lights-on default: uniform ambient; headSpot used only when user dims lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
 scene.add(ambientLight);
 
-// ambient(0.10) + spot(0.90) = 1.0 at cone centre; warm yellow-white; wider cone
+// spot follows camera for the dim-light cinematic mode
 const headSpot = new THREE.SpotLight(0xfff4cc, 0.90, 0, 0.572, 0.5, 0);
 const spotTarget = new THREE.Object3D();
 spotTarget.position.set(0, 0, -50); // camera looks in -Z in local space
@@ -288,6 +288,7 @@ headSpot.shadow.camera.near = 10;
 headSpot.shadow.camera.far = 900;
 headSpot.shadow.bias = -0.003;
 headSpot.shadow.normalBias = 0.05;
+headSpot.visible = false;
 scene.add(camera);
 
 // ─── Room ─────────────────────────────────────────────────────────────────────
@@ -738,6 +739,16 @@ async function main() {
     const albums = dbData.albums;
     // Only place albums that have a confirmed cover image
     const withCover = albums.filter(a => a.has_cover !== false);
+
+    // scale sphere so each album gets ~2× its own area regardless of collection size
+    SPHERE_RADIUS = Math.max(300, Math.ceil(PLANE_SIZE * Math.sqrt(withCover.length / (2 * Math.PI))));
+    roomMesh.geometry.dispose();
+    roomMesh.geometry = new THREE.BoxGeometry(SPHERE_RADIUS * 2.6, SPHERE_RADIUS * 2.6, SPHERE_RADIUS * 2.6);
+    controls.maxDistance = SPHERE_RADIUS * 0.85;
+    headSpot.shadow.camera.far = SPHERE_RADIUS * 3;
+    headSpot.shadow.camera.updateProjectionMatrix();
+    scene.fog.density = 0.21 / SPHERE_RADIUS;
+
     setStatus(`Posicionando ${withCover.length} álbuns...`);
     buildStarfield();
     const positions = fibonacciPoints(withCover.length, SPHERE_RADIUS);
