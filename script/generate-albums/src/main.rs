@@ -27,6 +27,9 @@ static RE_YEAR_ARTIST_ALBUM: Lazy<Regex> = Lazy::new(|| {
 static RE_ALBUM_YEAR: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(.+?)\s*\((\d{4})\)\s*$").unwrap()
 });
+static RE_YEAR_ALBUM: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(\d{4})\s*[-–]\s*(.+)$").unwrap()
+});
 
 // Per-directory config file (acervo.json in the music root)
 
@@ -92,6 +95,10 @@ fn parse_folder_name(name: &str) -> (String, String, u32) {
     if let Some(caps) = RE_ALBUM_YEAR.captures(name) {
         let year = caps[2].parse().unwrap_or(0);
         return (String::new(), caps[1].trim().to_string(), year);
+    }
+    if let Some(caps) = RE_YEAR_ALBUM.captures(name) {
+        let year = caps[1].parse().unwrap_or(0);
+        return (String::new(), caps[2].trim().to_string(), year);
     }
     (String::new(), name.to_string(), 0)
 }
