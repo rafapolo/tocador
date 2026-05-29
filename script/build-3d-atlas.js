@@ -198,12 +198,12 @@ async function main() {
     console.log(`Saved ${path.basename(outPath)} (${mb} MB)`);
   }
 
-  // write atlas-map.json
+  // write atlas-map.json.gz
   const atlasNames = Array.from({ length: totalAtlases }, (_, i) => `3d-atlas/atlas-${i}.webp`);
   const mapData = { tile: TILE_SIZE, size: ATLAS_SIZE, atlases: atlasNames, map: atlasMap };
-  const mapPath = path.join(OUT_DIR, 'atlas-map.json');
-  fs.writeFileSync(mapPath, JSON.stringify(mapData));
-  console.log(`Saved atlas-map.json (${(fs.statSync(mapPath).size / 1024).toFixed(0)} KB)`);
+  const mapPath = path.join(OUT_DIR, 'atlas-map.json.gz');
+  fs.writeFileSync(mapPath, zlib.gzipSync(JSON.stringify(mapData), { level: 9 }));
+  console.log(`Saved atlas-map.json.gz (${(fs.statSync(mapPath).size / 1024).toFixed(0)} KB)`);
 
   if (!BUCKET) {
     console.log('S3_BUCKET not set — skipping upload. Files in:', OUT_DIR);
@@ -222,11 +222,11 @@ async function main() {
     console.log(`  uploaded ${key}`);
   }
 
-  const mapKey = `${s3Prefix}/3d-atlas/atlas-map.json`;
+  const mapKey = `${s3Prefix}/3d-atlas/atlas-map.json.gz`;
   await s3.send(new PutObjectCommand({
     Bucket: BUCKET, Key: mapKey,
     Body: fs.readFileSync(mapPath),
-    ContentType: 'application/json',
+    ContentType: 'application/gzip',
     CacheControl: 'public, max-age=3600',
   }));
   console.log(`  uploaded ${mapKey}`);

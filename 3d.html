@@ -661,9 +661,11 @@ document.addEventListener('visibilitychange', () => {
 
 async function tryLoadAtlas() {
   try {
-    const res = await fetch(`${BASE_URL}/3d-atlas/atlas-map.json`);
+    const res = await fetch(`${BASE_URL}/3d-atlas/atlas-map.json.gz`);
     if (!res.ok) return null;
-    return res.json();
+    const ds = new DecompressionStream('gzip');
+    const text = await new Response(res.body.pipeThrough(ds)).text();
+    return JSON.parse(text);
   } catch { return null; }
 }
 
