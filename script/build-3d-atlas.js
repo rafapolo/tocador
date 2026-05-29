@@ -50,6 +50,11 @@ const { dataUrl, baseUrl } = KNOWN_ACERVOS[acervoArg];
 const s3Prefix = new URL(baseUrl).pathname.replace(/^\//, ''); // e.g. "indie" or "uqt"
 const OUT_DIR  = path.resolve(__dirname, '..', `tmp-atlas-${acervoArg}`);
 
+const localUnzipsArg = process.argv.find(a => a.startsWith('--local-unzips='))?.split('=').slice(1).join('=')
+  || (() => { const i = process.argv.indexOf('--local-unzips'); return i >= 0 ? process.argv[i+1] : null; })()
+  || null;
+const LOCAL_UNZIPS = localUnzipsArg ? path.resolve(localUnzipsArg) : null;
+
 const BUCKET   = process.env.S3_BUCKET;
 const ENDPOINT = process.env.S3_ENDPOINT || 'https://hel1.your-objectstorage.com';
 const BUCKET_MAP = Object.fromEntries(
@@ -198,6 +203,16 @@ async function main() {
     const encodedPath = album.path.split('/').map(encodeURIComponent).join('/');
     const url = `${baseUrl}/${encodedPath}/capa-min.jpg`;
 
+    // try local file first when --local-unzips provided
+    async function localImgBuf() {
+      if (!LOCAL_UNZIPS) return null;
+      for (const name of ['capa-min.jpg', 'capa.jpg', 'cover.jpg', 'folder.jpg']) {
+        const p = path.join(LOCAL_UNZIPS, album.path, name);
+        if (fs.existsSync(p)) return fs.readFileSync(p);
+      }
+      return null;
+    }
+
     async function packImage(imgBuf) {
       const rgb = await sharp(imgBuf)
         .resize(TILE_SIZE, TILE_SIZE, { fit: 'cover' })
@@ -216,7 +231,8 @@ async function main() {
     }
 
     try {
-      await packImage(await fetchBuffer(url));
+      const local = await localImgBuf();
+      await packImage(local || await fetchBuffer(url));
     } catch {
       // primary CDN failed — try iTunes
       try {
