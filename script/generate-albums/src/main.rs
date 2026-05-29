@@ -233,6 +233,7 @@ struct Config {
     meta_hours: Option<String>,
     meta_base_url: Option<String>,
     meta_s3_prefix: Option<String>,
+    meta_sitemap_url: Option<String>, // overrides base_url for sitemap <loc>
 }
 
 fn parse_args() -> Config {
@@ -241,6 +242,7 @@ fn parse_args() -> Config {
         eprintln!("Uso: generate-albums <pasta-de-musicas> [saida.json.gz]");
         eprintln!("     [--title \"Nome do Acervo\"] [--subtitle \"Subtítulo\"]");
         eprintln!("     [--hours \"42\"] [--base-url \"https://cdn.exemplo.com/musicas\"] [--s3-prefix \"indie/\"]");
+        eprintln!("     [--sitemap-url \"https://exemplo.com/player\"]");
         std::process::exit(if args.is_empty() { 1 } else { 0 });
     }
 
@@ -250,15 +252,17 @@ fn parse_args() -> Config {
     let mut meta_hours = None;
     let mut meta_base_url = None;
     let mut meta_s3_prefix = None;
+    let mut meta_sitemap_url = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--title"     => { i += 1; meta_title     = args.get(i).cloned(); }
-            "--subtitle"  => { i += 1; meta_subtitle  = args.get(i).cloned(); }
-            "--hours"     => { i += 1; meta_hours     = args.get(i).cloned(); }
-            "--base-url"  => { i += 1; meta_base_url  = args.get(i).cloned(); }
-            "--s3-prefix" => { i += 1; meta_s3_prefix = args.get(i).cloned(); }
-            other         => positional.push(other.to_string()),
+            "--title"       => { i += 1; meta_title       = args.get(i).cloned(); }
+            "--subtitle"    => { i += 1; meta_subtitle    = args.get(i).cloned(); }
+            "--hours"       => { i += 1; meta_hours       = args.get(i).cloned(); }
+            "--base-url"    => { i += 1; meta_base_url    = args.get(i).cloned(); }
+            "--s3-prefix"   => { i += 1; meta_s3_prefix   = args.get(i).cloned(); }
+            "--sitemap-url" => { i += 1; meta_sitemap_url = args.get(i).cloned(); }
+            other           => positional.push(other.to_string()),
         }
         i += 1;
     }
@@ -268,7 +272,7 @@ fn parse_args() -> Config {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("acervo.json.gz"));
 
-    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix }
+    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix, meta_sitemap_url }
 }
 
 fn main() {
@@ -399,4 +403,78 @@ fn main() {
     let n_albums = output.albums.len();
     let size_gz = fs::metadata(&out_gz).map(|m| m.len() / 1024).unwrap_or(0);
     println!("{} álbuns  →  {} ({size_gz} KB)", n_albums, out_gz.display());
+
+    if let Some(ref sitemap_url) = cfg.meta_sitemap_url {
+        let sitemap_out = out_gz.parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("sitemap.xml"))
+            .unwrap_or_else(|| PathBuf::from("sitemap.xml"));
+        write_sitemap(&output.albums, sitemap_url, &sitemap_out);
+    }
+}
+
+fn is_leap(y: u32) -> bool {
+    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+}
+
+fn today_iso() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let mut days = (secs / 86400) as u32;
+    let mut year = 1970u32;
+    loop {
+        let in_year = if is_leap(year) { 366 } else { 365 };
+        if days < in_year { break; }
+        days -= in_year;
+        year += 1;
+    }
+    let month_days = [31u32, if is_leap(year) { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let mut month = 1u32;
+    for &m in &month_days {
+        if days < m { break; }
+        days -= m;
+        month += 1;
+    }
+    format!("{:04}-{:02}-{:02}", year, month, days + 1)
+}
+
+fn form_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() * 2);
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' |
+            b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            b' ' => out.push('+'),
+            _ => { out.push('%'); out.push_str(&format!("{:02X}", b)); }
+        }
+    }
+    out
+}
+
+fn write_sitemap(albums: &[Album], base_url: &str, sitemap_path: &Path) {
+    let today = today_iso();
+    let base = base_url.trim_end_matches('/');
+
+    let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    xml.push_str("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+
+    for album in albums {
+        let album_param = form_encode(&album.path);
+        let mut loc = format!("{}/?album={}", base, album_param);
+        if !album.artist.is_empty() {
+            loc.push_str(&format!("&amp;artist={}", form_encode(&album.artist)));
+        }
+        let priority = if album.year >= 2020 { "0.9" } else if album.year >= 2010 { "0.7" } else { "0.5" };
+        xml.push_str(&format!(
+            "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>{}</priority>\n  </url>\n",
+            loc, today, priority
+        ));
+    }
+
+    xml.push_str("</urlset>\n");
+    fs::write(&sitemap_path, xml).expect("Falha ao escrever sitemap.xml");
+    let size = fs::metadata(&sitemap_path).map(|m| m.len() / 1024).unwrap_or(0);
+    println!("sitemap.xml  →  {} ({} KB, {} URLs)", sitemap_path.display(), size, albums.len());
 }
