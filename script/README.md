@@ -161,6 +161,23 @@ Requer: `essentia`, `tensorflow`, modelos em `script/models/`.
 
 Lista álbuns com títulos semelhantes para revisão manual.
 
+### `../scripts/utils/clean_s3.py` — Auditar e limpar orphans no S3 (hominiscanidae)
+
+Cruza as pastas do bucket S3 com `js/homi-albums.json.gz` (normalização NFC) e reporta:
+- **Orphans no S3**: pastas que não existem no acervo — duplicatas `(2)/(3)`, compilações antigas, nomes divergentes
+- **Faltando no S3**: álbuns no acervo sem pasta correspondente no bucket
+- **Nested subdirs**: subdiretórios dentro de pastas de álbum em `unzips/` com as mesmas faixas que o pai — causam caminhos com `/` no catálogo
+
+```bash
+# auditoria sem alterar nada (padrão)
+python3 scripts/utils/clean_s3.py
+
+# aplicar: deletar orphans no S3 e remover subdirs aninhados
+python3 scripts/utils/clean_s3.py --delete --fix-nested
+```
+
+Roda **após** `generate-albums` (catálogo gerado) e **antes** de `sync-to-bucket` (upload incremental).
+
 ### `filter-albums-by-s3.js` — Filtrar álbuns presentes no S3
 
 Verifica quais álbuns do catálogo têm arquivos no bucket.
