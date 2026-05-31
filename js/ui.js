@@ -31,9 +31,23 @@
   window.addEventListener('unhandledrejection', e => {
     const reason = e.reason;
     const msg = reason?.message || String(reason);
-    report(`[tocador] Unhandled rejection: ${msg}`, reason?.stack || msg);
+    const syntheticStack = new Error().stack || '';
+    const stack = (reason?.stack && reason.stack !== msg) ? reason.stack : syntheticStack;
+    const conn = navigator.connection;
+    const extra = [
+      `**online:** ${navigator.onLine}`,
+      conn ? `**connection:** ${[conn.effectiveType, conn.downlink && conn.downlink + 'Mbps'].filter(Boolean).join(' ')}` : null,
+      `**acervo:** ${new URLSearchParams(location.search).get('acervo') || '(default)'}`,
+      window.__lastFetchUrl ? `**last fetch:** ${window.__lastFetchUrl}` : null,
+    ].filter(Boolean).join('\n');
+    report(`[tocador] Unhandled rejection: ${msg}`, `${stack}\n\n${extra}`);
   });
 })();
+
+function trackedFetch(url, opts) {
+  window.__lastFetchUrl = url;
+  return fetch(url, opts);
+}
 
 // State
 let db;
@@ -1000,13 +1014,13 @@ u(document).on('DOMContentLoaded', async function () {
   let defaultKey = DEFAULT_ACERVO;
   let cfg = {};
   try {
-    cfg = await fetch('config.json').then(r => r.ok ? r.json() : {});
+    cfg = await trackedFetch('config.json').then(r => r.ok ? r.json() : {});
     if (cfg.acervo && KNOWN_ACERVOS[cfg.acervo]) defaultKey = cfg.acervo;
   } catch {}
   const defaultEntry = KNOWN_ACERVOS[defaultKey];
   const dataUrl = sessionStorage.getItem('acervo') || cfg.dataUrl || defaultEntry.data;
   const json = await new Response(
-    (await fetch(dataUrl)).body.pipeThrough(new DecompressionStream('gzip'))
+    (await trackedFetch(dataUrl)).body.pipeThrough(new DecompressionStream('gzip'))
   ).text();
   db = JSON.parse(json);
   BASE_URL = db.meta?.base_url || cfg.baseUrl || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';

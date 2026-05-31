@@ -51,15 +51,23 @@ const s3 = new S3Client({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const ALLOWED_EXTS = new Set(['.mp3', '.jpg', '.jpeg', '.png', '.json', '.gz']);
+
 function walkDir(dir, base = dir) {
   const entries = [];
   for (const name of fs.readdirSync(dir)) {
+    if (name.startsWith('.')) continue;
     const full = path.join(dir, name);
     const stat = fs.statSync(full);
     if (stat.isDirectory()) {
       entries.push(...walkDir(full, base));
     } else {
-      entries.push({ localPath: full, relativePath: path.relative(base, full), size: stat.size });
+      const ext = path.extname(name).toLowerCase();
+      if (ALLOWED_EXTS.has(ext)) {
+        entries.push({ localPath: full, relativePath: path.relative(base, full), size: stat.size });
+      } else {
+        console.warn(`skipping ${path.relative(base, full)} (ext: ${ext || 'none'})`);
+      }
     }
   }
   return entries;
