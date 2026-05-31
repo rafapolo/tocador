@@ -300,6 +300,28 @@
 <audio id="audio" preload="auto"></audio>
 
 <script>
+(function () {
+  const REPORT_URL = 'https://cdn.tocador.cc/report-error';
+  const seen = new Set();
+  let count = 0;
+  function report(title, detail) {
+    if (count >= 3 || seen.has(title)) return;
+    seen.add(title); count++;
+    const body = [`**${title}**`, '', '```', detail, '```', '', `**URL:** ${location.href}`, `**UA:** ${navigator.userAgent}`, `**Time:** ${new Date().toISOString()}`].join('\n');
+    fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, body }), keepalive: true, credentials: 'omit' }).catch(() => {});
+  }
+  window.addEventListener('error', e => {
+    const msg = e.message || String(e);
+    const loc = e.filename ? ` @ ${e.filename.replace(/.*\//, '')}:${e.lineno}` : '';
+    report(`[radio] JS error: ${msg}${loc}`, e.error?.stack || msg);
+  });
+  window.addEventListener('unhandledrejection', e => {
+    const reason = e.reason;
+    const msg = reason?.message || String(reason);
+    report(`[radio] Unhandled rejection: ${msg}`, reason?.stack || new Error().stack || msg);
+  });
+})();
+
 const ACERVOS = {
   uqt:  { data: 'https://rafapolo.github.io/uqt/js/uqt-albums.json.gz',             base_url: 'https://cdn.tocador.cc/uqt' },
   homi: { data: 'https://rafapolo.github.io/hominiscanidae/js/homi-albums.json.gz', base_url: 'https://cdn.tocador.cc/indie' },
@@ -360,7 +382,7 @@ const pickRandom = () => { const a = albums[rand(albums.length)]; return { album
 function coverURL(album) {
   return (album.has_cover === false || failed.has(album.path))
     ? PLACEHOLDER
-    : `${BASE_URL}/${encodeURI(album.path)}/capa-min.jpg`;
+    : `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg`;
 }
 
 function setPlaying(on) {
@@ -395,11 +417,17 @@ function showTrack(album, track) {
   checkMarquee(albumEl);
   const url = coverURL(album);
   if (coverImg.src !== url) coverImg.src = url;
-  if ('mediaSession' in navigator)
+  if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title, artist, album: album.title,
       artwork: url.startsWith('data:') ? [] : [{ src: url }],
     });
+    navigator.mediaSession.setActionHandler('previoustrack', prev);
+    navigator.mediaSession.setActionHandler('nexttrack', next);
+    navigator.mediaSession.setActionHandler('seekbackward', ({ seekOffset = 10 }) => { audio.currentTime = Math.max(0, audio.currentTime - seekOffset); });
+    navigator.mediaSession.setActionHandler('seekforward',  ({ seekOffset = 10 }) => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + seekOffset); });
+    navigator.mediaSession.setActionHandler('seekto', ({ seekTime }) => { audio.currentTime = seekTime; });
+  }
 }
 
 const controlsEl  = $('controls');
@@ -434,7 +462,7 @@ function fatalError() {
 
 function playTrack(album, track) {
   showTrack(album, track);
-  const src = `${BASE_URL}/${encodeURI(album.path)}/${encodeURI(track.file)}`;
+  const src = `${BASE_URL}/${encodeURIComponent(album.path)}/${encodeURIComponent(track.file)}`;
   if (audio.src !== src) { audio.src = src; audio.load(); }
   setLoading(true);
   clearLoadTimer();
@@ -483,6 +511,8 @@ audio.addEventListener('play',    () => setPlaying(true));
 audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); });
 audio.addEventListener('playing', () => { clearLoadTimer(); timeoutStreak = 0; setLoading(false); });
 audio.addEventListener('waiting', () => setLoading(true));
+audio.addEventListener('stalled', () => setLoading(true));
+audio.addEventListener('canplay', () => setLoading(false));
 audio.addEventListener('ended',   next);
 audio.addEventListener('error',   () => {
   clearLoadTimer();
@@ -497,15 +527,23 @@ audio.addEventListener('durationchange', () => {
 });
 
 audio.addEventListener('timeupdate', () => {
-  if (audio.duration) fillEl.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  if (audio.duration) {
+    fillEl.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    if ('mediaSession' in navigator && !isNaN(audio.duration)) {
+      try { navigator.mediaSession.setPositionState({ duration: audio.duration, playbackRate: audio.playbackRate, position: audio.currentTime }); } catch (_) {}
+    }
+  }
   timeCurrentEl.textContent = fmtTime(audio.currentTime);
 });
 
-progressEl.addEventListener('click', e => {
+function seekFromClient(clientX) {
   if (!audio.duration) return;
   const r = progressEl.getBoundingClientRect();
-  audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
-});
+  audio.currentTime = Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * audio.duration;
+}
+progressEl.addEventListener('click', e => seekFromClient(e.clientX));
+progressEl.addEventListener('touchstart', e => { e.preventDefault(); seekFromClient(e.touches[0].clientX); }, { passive: false });
+progressEl.addEventListener('touchmove',  e => { e.preventDefault(); seekFromClient(e.touches[0].clientX); }, { passive: false });
 
 coverImg.addEventListener('error', () => {
   if (curAlbum) failed.add(curAlbum.path);
