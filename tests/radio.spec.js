@@ -110,3 +110,62 @@ test('R12: radio widget renders correctly on mobile (375px)', async ({ page }) =
   const relevant = errors.filter(e => !e.includes('favicon') && !e.includes('umami'));
   expect(relevant).toHaveLength(0);
 });
+
+// ── R. URL encoding for paths containing # ───────────────────────────────────
+// Regression: encodeURI does not encode #, so folder names like
+// "Hominis Canidae #42" produced URLs truncated at the # (treated as a
+// fragment by the browser). encodeURIComponent must be used instead.
+
+test('R13: audio src encodes # as %23 for albums with # in path', async ({ page }) => {
+  await gotoRadio(page, '?all=1');
+
+  // Force the radio to play the album whose path contains #
+  const [request] = await Promise.all([
+    page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 5000 }),
+    page.evaluate(() => {
+      const hashAlbum = albums.find(a => a.path.includes('#'));
+      if (!hashAlbum) throw new Error('fixture has no album with # in path');
+      playTrack(hashAlbum, hashAlbum.tracks[0]);
+    }),
+  ]);
+
+  const url = request.url();
+  expect(url).not.toMatch(/#[^/]/);   // bare # must not appear in path
+  expect(url).toContain('%23');        // must be percent-encoded
+});
+
+test('R14: cover src encodes # as %23 for albums with # in path', async ({ page }) => {
+  await gotoRadio(page, '?all=1');
+
+  await page.evaluate(() => {
+    const hashAlbum = albums.find(a => a.path.includes('#'));
+    if (!hashAlbum) throw new Error('fixture has no album with # in path');
+    playTrack(hashAlbum, hashAlbum.tracks[0]);
+  });
+
+  const coverSrc = await page.locator('#cover').getAttribute('src');
+  // src is either the CDN URL (correctly encoded) or the placeholder data URI
+  if (coverSrc && !coverSrc.startsWith('data:')) {
+    expect(coverSrc).not.toMatch(/#[^/]/);
+    expect(coverSrc).toContain('%23');
+  }
+});
+
+test('R15: radio filter selects albums with "hominis canidae" and encodes # correctly', async ({ page }) => {
+  await gotoRadio(page); // no ?all=1 — exercises the hominis canidae filter
+
+  // The fixture now includes "Hominis Canidae #42" which the filter should pick.
+  // Force playback of that specific album and verify the audio URL.
+  const [request] = await Promise.all([
+    page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 5000 }),
+    page.evaluate(() => {
+      const hcAlbum = albums.find(a => a.path.toLowerCase().includes('hominis canidae #'));
+      if (!hcAlbum) throw new Error('fixture has no Hominis Canidae # album');
+      playTrack(hcAlbum, hcAlbum.tracks[0]);
+    }),
+  ]);
+
+  const url = request.url();
+  expect(url).not.toMatch(/#[^/]/);
+  expect(url).toContain('%23');
+});

@@ -109,6 +109,27 @@
       "tracks": [
         { "title": "Faixa Sem Data", "num": 1, "file": "01 Faixa Sem Data.mp3", "duration": 120 }
       ]
+    },
+    {
+      "title": "Hominis Canidae #42 - Maio",
+      "artist": "Vários",
+      "year": 2025,
+      "path": "2025 - Vários - Hominis Canidae #42 - Maio",
+      "has_cover": true,
+      "tracks": [
+        { "title": "Faixa Um", "num": 1, "file": "01 Faixa Um.mp3", "duration": 210 },
+        { "title": "Faixa Dois", "num": 2, "file": "02 Faixa Dois.mp3", "duration": 185 }
+      ]
+    },
+    {
+      "title": "Álbum com # no caminho",
+      "artist": "Artista Teste",
+      "year": 2024,
+      "path": "2024 - Artista Teste - Álbum #99",
+      "has_cover": false,
+      "tracks": [
+        { "title": "Faixa Hash", "num": 1, "file": "01 Faixa Hash.mp3", "duration": 150 }
+      ]
     }
   ]
 }
