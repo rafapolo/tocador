@@ -516,8 +516,9 @@ def _infer_dortmund(audio: np.ndarray):
 
 
 def _save_result(results: dict, album_name: str, result, output: Path = OUTPUT):
-    """Atomically write in-memory results dict to disk (no re-read, atomic rename)."""
-    results[album_name] = result
+    """Atomically merge new tracks into existing album entry and write to disk."""
+    existing = results.get(album_name, {})
+    results[album_name] = {**existing, **result}
     tmp = output.with_suffix('.tmp')
     tmp.write_text(json.dumps(results, ensure_ascii=False))
     tmp.replace(output)
@@ -529,7 +530,7 @@ def _auto_workers() -> int:
     return max(2, min(cpus - 2, 5))
 
 
-def _classify_album(album_name: str, infer_fn):
+def _classify_album(album_name: str, infer_fn, existing_tracks: dict | None = None):
     album_dir = UNZIPS / album_name
     if not album_dir.is_dir():
         return album_name, None
@@ -537,8 +538,11 @@ def _classify_album(album_name: str, infer_fn):
     if not mp3s:
         return album_name, None
 
+    skip = set(existing_tracks.keys()) if existing_tracks else set()
     tracks = {}
     for mp3 in mp3s:
+        if mp3.name in skip:
+            continue
         try:
             result = infer_fn(_load_audio_with_timeout(mp3))
             if result:
@@ -549,16 +553,16 @@ def _classify_album(album_name: str, infer_fn):
     return album_name, tracks or None
 
 
-def classify_album_discogs400(album_name: str):
-    return _classify_album(album_name, _infer_discogs400)
+def classify_album_discogs400(album_name: str, existing_tracks: dict | None = None):
+    return _classify_album(album_name, _infer_discogs400, existing_tracks)
 
 
-def classify_album_discogs519(album_name: str):
-    return _classify_album(album_name, _infer_discogs519)
+def classify_album_discogs519(album_name: str, existing_tracks: dict | None = None):
+    return _classify_album(album_name, _infer_discogs519, existing_tracks)
 
 
-def classify_album_dortmund(album_name: str):
-    return _classify_album(album_name, _infer_dortmund)
+def classify_album_dortmund(album_name: str, existing_tracks: dict | None = None):
+    return _classify_album(album_name, _infer_dortmund, existing_tracks)
 
 
 def _worker_init(model: str):
@@ -603,10 +607,20 @@ def main():
         idx         = args.index('--albums')
         album_names = [a for a in args[idx + 1:] if not a.startswith('--')]
     else:
-        results     = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
-        all_dirs    = [d.name for d in UNZIPS.iterdir() if d.is_dir()]
-        album_names = [n for n in all_dirs if n not in results]
-        print(f'Resuming: {len(album_names)} remaining ({len(results)} done)')
+        results  = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
+        all_dirs = [d.name for d in UNZIPS.iterdir() if d.is_dir()]
+        album_names = []
+        done = 0
+        for n in all_dirs:
+            if n not in results:
+                album_names.append(n)
+            else:
+                mp3s = {f.name for f in find_mp3s(UNZIPS / n)}
+                if mp3s - results[n].keys():
+                    album_names.append(n)
+                else:
+                    done += 1
+        print(f'Resuming: {len(album_names)} remaining ({done} fully done)')
 
     _quiet_essentia()
     download_models(model)
@@ -634,7 +648,10 @@ def main():
             initializer=_worker_init,
             initargs=(model,),
         ) as pool:
-            futures = {pool.submit(classify_fn, name): name for name in album_names}
+            futures = {
+                pool.submit(classify_fn, name, results.get(name)): name
+                for name in album_names
+            }
             for fut in as_completed(futures):
                 album_name, result = fut.result()
                 completed += 1
@@ -657,7 +674,7 @@ def main():
         for i, name in enumerate(album_names, 1):
             t0 = time.time()
             print(f'[{i}/{total}] {name}', flush=True)
-            _, result = classify_fn(name)
+            _, result = classify_fn(name, results.get(name))
             elapsed = time.time() - t0
             times.append(elapsed)
             rate = len(times) / sum(times)
