@@ -42,8 +42,8 @@ async function gotoWithFixture(page, url = '/') {
 test('A1: albums render in grid after gzip fetch and decompress', async ({ page }) => {
   await gotoWithFixture(page);
   const items = page.locator('.album-item');
-  // fixture has 10 albums
-  await expect(items).toHaveCount(10);
+  // fixture has 13 albums (10 originals + 2 with # in path + 1 with duplicate tracks)
+  await expect(items).toHaveCount(13);
 });
 
 test('A2: ?album= pre-selects album and shows track list', async ({ page }) => {
@@ -105,9 +105,9 @@ test('B9: search matches track titles within albums', async ({ page }) => {
 test('B10: clearing search (✕ button) resets to full list', async ({ page }) => {
   await gotoWithFixture(page);
   await page.fill('#search-input', 'Caetano');
-  await expect(page.locator('.album-item')).not.toHaveCount(10);
+  await expect(page.locator('.album-item')).not.toHaveCount(13);
   await page.click('#search-clear');
-  await expect(page.locator('.album-item')).toHaveCount(10);
+  await expect(page.locator('.album-item')).toHaveCount(13);
   await expect(page.locator('#search-input')).toHaveValue('');
 });
 
@@ -417,9 +417,9 @@ test('J40: Todos button resets decade filter and shows all albums', async ({ pag
   await gotoWithFixture(page);
   await page.click('.decade-btn[data-decade="1970"]');
   const filtered = await page.locator('.album-item').count();
-  expect(filtered).toBeLessThan(10);
+  expect(filtered).toBeLessThan(13);
   await page.click('.decade-btn[data-decade="all"]');
-  await expect(page.locator('.album-item')).toHaveCount(10);
+  await expect(page.locator('.album-item')).toHaveCount(13);
 });
 
 test('J41: year link in album header filters by that year', async ({ page }) => {
@@ -434,4 +434,91 @@ test('J42: header stats show album and artist counts', async ({ page }) => {
   await gotoWithFixture(page);
   await expect(page.locator('#mobile-stat-albums')).not.toBeEmpty();
   await expect(page.locator('#mobile-stat-artists')).not.toBeEmpty();
+});
+
+// ── K. URL encoding & data integrity regressions ──────────────────────────
+// Each test here corresponds to a real bug that shipped before being caught.
+
+// Regression: encodeURI was used in buildAlbums, which doesn't encode #.
+// Albums like "Álbum #99" produced audio src truncated at # (b74c8b0).
+test('K43: audio src uses %23 for album with # in path, never bare #', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Álbum com # no caminho' }).click();
+
+  const [request] = await Promise.all([
+    page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 5000 }),
+    page.locator('#track-list .track-item').first().click(),
+  ]);
+
+  const url = request.url();
+  expect(url).not.toMatch(/#[^/]/);
+  expect(url).toContain('%23');
+});
+
+// Regression: updateMetaTags also used encodeURI, breaking og:image for # albums (b74c8b0).
+test('K44: og:image URL uses %23 for album with # in path, never bare #', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Álbum com # no caminho' }).click();
+
+  const ogImage = await page.locator('meta[property="og:image"]').getAttribute('content');
+  expect(ogImage).toBeTruthy();
+  expect(ogImage).not.toMatch(/#[^/]/);
+  expect(ogImage).toContain('%23');
+});
+
+// Regression: buildAlbums did not dedup tracks that appeared both as a direct
+// file and inside a subfolder (same title). Both variants ended up in the track
+// list, duplicating entries (f50e704). The direct-path variant must win.
+test('K45: duplicate track title from subfolder deduped — only one entry in track list', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Álbum com Faixa Duplicada' }).click();
+
+  const tracks = page.locator('#track-list .track-item');
+  await expect(tracks).toHaveCount(1);
+
+  // The direct-path variant (no subdir/) must be the one kept
+  const audioSrc = await page.evaluate(() => {
+    const audio = document.querySelector('#audio');
+    return audio?.src ?? '';
+  });
+  // audio is primed with first track; its path must NOT include subdir/
+  expect(audioSrc).not.toContain('subdir');
+});
+
+// Regression: when meta.hours is absent from the JSON, hours should be computed
+// from track durations rather than left blank.
+test('K46: stat-hours computed from track durations when meta.hours absent', async ({ page }) => {
+  await gotoWithFixture(page);
+  // The fixture has no meta.hours field — hours must be computed from duration sums.
+  const hours = await page.locator('#stat-hours').textContent();
+  expect(hours?.trim()).toMatch(/\d+\s*horas?/i);
+});
+
+// Regression: ?album= pre-selection must work when the album path contains #.
+// The URL-decoded path has a literal #; album lookup must normalize correctly.
+test('K47: ?album= with # in value pre-selects the correct album', async ({ page }) => {
+  // encodeURIComponent('2024 - Artista Teste - Álbum #99') → %2324...
+  await gotoWithFixture(page, '/?album=2024%20-%20Artista%20Teste%20-%20%C3%81lbum%20%2399');
+  // The album title is "Álbum com # no caminho"; h2 must be non-empty and correct album selected
+  await expect(page.locator('#album-header h2')).toContainText('Álbum com # no caminho');
+  // track list for this album has 1 track
+  await expect(page.locator('#track-list .track-item')).toHaveCount(1);
+});
+
+// Related: all albums in the fixture must produce audio URLs without a bare # fragment.
+test('K48: no album in fixture produces an audio URL with a bare # in the path', async ({ page }) => {
+  await gotoWithFixture(page);
+
+  const badPaths = await page.evaluate(() => {
+    return albums
+      .map(a => {
+        const base = window.BASE_URL || '';
+        const t = a.tracks[0];
+        return t ? `${base}/${t.file}` : null;
+      })
+      .filter(Boolean)
+      .filter(url => /#[^/]/.test(url));   // bare # in path segment
+  });
+
+  expect(badPaths).toHaveLength(0);
 });

@@ -99,3 +99,46 @@ test('CDN: player builds valid audio URL and CDN serves it', async ({ page, requ
   const relevantErrors = errors.filter(e => !e.includes('favicon') && !e.includes('umami'));
   expect(relevantErrors).toHaveLength(0);
 });
+
+// ── Proxy regression tests ────────────────────────────────────────────────────
+
+// Regression: X-Content-Type-Options: nosniff on error bodies triggered CORB
+// for cross-origin <audio>/<img> elements, silently blocking playback (2cba18a).
+// Error responses must carry CORS headers but must NOT have nosniff.
+test('CDN: 404 response has CORS headers but no X-Content-Type-Options nosniff', async ({ request }) => {
+  const res = await request.get(`${CDN}/indie/nonexistent-album-xxxxxx/track.mp3`, {
+    headers: { 'User-Agent': BROWSER_UA, 'Referer': PLAYER_REFERER },
+  });
+  expect(res.status()).toBe(404);
+  // CORS must be present so the browser gets the response (not an opaque error)
+  expect(res.headers()['access-control-allow-origin']).toBe('*');
+  // nosniff on a text/plain 404 body triggers CORB — must be absent on errors
+  expect(res.headers()['x-content-type-options']).toBeUndefined();
+});
+
+// Regression: macOS writes filenames in NFD (decomposed) unicode; S3 keys are
+// stored in NFC (composed). The proxy must normalize the decoded path to NFC
+// so that NFD-encoded URLs resolve to the correct S3 object (37b3d41).
+// 'á' NFC = %C3%A1, NFD = a%CC%81 — sending NFD must still return 200.
+test('CDN: NFD-encoded path normalizes to NFC and serves correctly', async ({ request }) => {
+  // NFC path (normal): 'música' → m%C3%BAsica
+  // NFD path (macOS):  'música' → mu%CC%81sica  (u + combining acute)
+  const nfdPath = 'indie/2026%20-%20Barulhista%20-%20mu%CC%81sica%20para%20dan%C3%A7ar%20sentado/capa-min.jpg';
+  const res = await request.get(`${CDN}/${nfdPath}`, {
+    headers: { 'User-Agent': BROWSER_UA },
+  });
+  // NFD path must resolve — proxy normalizes to NFC before S3 lookup
+  expect(res.status()).toBe(200);
+});
+
+// Regression: Bun's S3Client didn't encode # in keys, treating them as URL
+// fragment delimiters and truncating the S3 request path. Paths with # must
+// be served via the manual AWS-signed fetch fallback (2a7364a + d5fc327).
+test('CDN: path with # (encoded as %23) is served correctly', async ({ request }) => {
+  const hashTrack = 'indie/2026%20-%20Naturezautom%C3%A1tica%20-%20Hominis%20Canidae%20%23191%20-%20Abril/01.%20Naturezautomatica%20-%20VEM!.mp3';
+  const res = await request.head(`${CDN}/${hashTrack}`, {
+    headers: { 'User-Agent': BROWSER_UA, 'Referer': PLAYER_REFERER },
+  });
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('audio/mpeg');
+});

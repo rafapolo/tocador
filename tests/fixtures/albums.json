@@ -126,9 +126,20 @@
       "artist": "Artista Teste",
       "year": 2024,
       "path": "2024 - Artista Teste - Álbum #99",
-      "has_cover": false,
+      "has_cover": true,
       "tracks": [
         { "title": "Faixa Hash", "num": 1, "file": "01 Faixa Hash.mp3", "duration": 150 }
+      ]
+    },
+    {
+      "title": "Álbum com Faixa Duplicada",
+      "artist": "Artista Dup",
+      "year": 2023,
+      "path": "2023 - Artista Dup - Álbum Duplicado",
+      "has_cover": false,
+      "tracks": [
+        { "title": "Faixa Dup", "num": 1, "file": "subdir/01 Faixa Dup.mp3", "duration": 200 },
+        { "title": "Faixa Dup", "num": 1, "file": "01 Faixa Dup.mp3", "duration": 200 }
       ]
     }
   ]
