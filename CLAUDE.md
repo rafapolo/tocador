@@ -25,6 +25,7 @@ The app fetches the acervo `.json.gz` asynchronously on load, decompresses via n
 - **filter-albums-by-s3.js** — Removes albums from the JSON that have no matching S3 folder
 - **find-untagged.js** — Lists MP3s missing ID3 tags
 - **dedup-albums.js** — Detects duplicate albums by track fingerprint
+- **build-genre-index.js** — Reads `../hominiscanidae/data/genres.json`, majority-votes top-3 genre predictions per track → outputs `../hominiscanidae/data/homi-genres.json.gz` (~147 KB)
 
 ## Acervos
 
@@ -91,9 +92,12 @@ Title, subtitle, hours are read from `acervo.json` in the music dir; `base_url` 
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/hominiscanidae/unzips \
   ../hominiscanidae/data/homi-albums.json.gz
+
+# then regenerate the genre index (homi only)
+bun script/build-genre-index.js
 ```
 
-Then commit and push in each repo. CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`) override config when passed.
+Then commit and push in each repo (including `data/homi-genres.json.gz`). CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`) override config when passed.
 
 Build first: `cd script/generate-albums && cargo build --release`
 

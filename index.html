@@ -63,10 +63,33 @@
             </div>
         </header>
 
+        <div class="browse-scrim" id="browse-scrim"></div>
+
         <div class="app-layout">
+            <aside class="browse-panel" id="browse-panel" aria-label="Navegar por artistas e gêneros">
+                <div class="browse-tabs" role="tablist" aria-label="Navegar por">
+                    <button class="browse-tab active" role="tab" data-tab="artists" aria-selected="true">Artistas</button>
+                    <button class="browse-tab" role="tab" data-tab="genres" aria-selected="false" disabled title="Gêneros indisponíveis neste acervo">Gêneros</button>
+                </div>
+                <div class="browse-search-wrap">
+                    <input class="browse-search" id="browse-search" type="text" placeholder="Filtrar lista…" autocomplete="off" spellcheck="false" aria-label="Filtrar a lista" />
+                </div>
+                <div class="browse-list" id="browse-list" role="listbox" aria-label="Artistas" aria-multiselectable="false"></div>
+                <p class="browse-empty" id="browse-empty" hidden>Nenhum resultado</p>
+                <button class="browse-collapse" id="browse-collapse" aria-label="Recolher painel" aria-expanded="true">◀</button>
+            </aside>
+
             <main class="main-content">
                 <div class="filters-section">
+                    <div id="active-filter-chip" class="active-filter-chip" hidden>
+                        <span id="active-filter-label"></span>
+                        <button id="active-filter-clear" class="active-filter-clear" aria-label="Limpar filtro">✕</button>
+                    </div>
                     <div class="search-group">
+                        <button id="btn-browse" class="btn-browse mobile-only" aria-label="Filtrar por artista ou gênero" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/></svg>
+                            <span class="browse-badge" id="browse-badge" hidden></span>
+                        </button>
                         <div class="search-wrapper">
                             <label for="search-input" class="sr-only">Buscar por artista ou álbum</label>
                             <input
