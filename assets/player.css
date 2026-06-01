@@ -1640,6 +1640,7 @@ audio {
 /* Scrollable list — same feel as .track-list */
 .browse-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
