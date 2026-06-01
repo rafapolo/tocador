@@ -400,10 +400,16 @@ _server = Bun.serve({
       }
 
       const file = s3.file(s3Key, { bucket });
+      let stat; // reusable
 
       if (isHead) {
         // §9 — HEAD: one S3 stat call, return headers only
-        const stat = await file.stat();
+        try {
+          stat = await file.stat();
+        } catch (err) {
+          counters.c4xx++;
+          return new Response('Not Found', { status: 404, headers: corsBase });
+        }
         status = 200; body = null;
         extra = {
           'Content-Length': String(stat.size),
@@ -426,7 +432,12 @@ _server = Bun.serve({
           };
         } else {
           // Open range bytes=start-: need total size for Content-Range header
-          const stat = await file.stat();
+          try {
+            stat = await file.stat();
+          } catch (err) {
+            counters.c4xx++;
+            return new Response('Not Found', { status: 404, headers: corsBase });
+          }
           const end = stat.size - 1;
           status = 206; body = file.slice(start).stream();
           extra = {
@@ -438,7 +449,12 @@ _server = Bun.serve({
         }
       } else {
         // Full GET: stat for Content-Length so browser can show scrubber and seek
-        const stat = await file.stat();
+        try {
+          stat = await file.stat();
+        } catch (err) {
+          counters.c4xx++;
+          return new Response('Not Found', { status: 404, headers: corsBase });
+        }
         status = 200; body = file.stream();
         extra = {
           'Content-Length': String(stat.size),
