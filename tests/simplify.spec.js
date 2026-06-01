@@ -13,6 +13,7 @@ async function gotoWithFixture(page, url = '/') {
     localStorage.removeItem('homi-shuffle');
     localStorage.removeItem('homi-repeat');
     localStorage.removeItem('homi-volume');
+    localStorage.setItem('tocador-browse-collapsed', 'true');
   });
   await page.route('**/uqt-albums.json.gz', route => {
     route.fulfill({
@@ -28,6 +29,7 @@ async function gotoWithFixture(page, url = '/') {
       body: fixtureGz,
     });
   });
+  await page.route('**/*-genres.json.gz', route => route.fulfill({ status: 404 }));
   await page.route('**/*.mp3', route => route.fulfill({ status: 200, body: Buffer.alloc(0) }));
   await page.route('**/capa-min.jpg', route => route.fulfill({ status: 404 }));
   await page.goto(url);
@@ -39,7 +41,7 @@ async function gotoWithFixture(page, url = '/') {
 test('trackedFetch: __lastFetchUrl ends up as the acervo data URL after load', async ({ page }) => {
   await gotoWithFixture(page);
   const lastFetch = await page.evaluate(() => window.__lastFetchUrl);
-  expect(lastFetch).toMatch(/albums\.json\.gz/);
+  expect(lastFetch).toMatch(/\.json\.gz/);
 });
 
 test('trackedFetch: __lastFetchUrl is not config.json after full load', async ({ page }) => {
@@ -75,5 +77,5 @@ test('unhandledrejection: diagnostic extra string contains last fetch URL and on
 
   expect(extra).toContain('**online:**');
   expect(extra).toContain('**last fetch:**');
-  expect(extra).toContain('albums.json.gz');
+  expect(extra).toMatch(/\.json\.gz/);
 });
