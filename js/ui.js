@@ -75,7 +75,7 @@ let activeGenre = null;
 let activeArtist = null;
 let browseTab = 'artists';
 let browsePanelQuery = '';
-let browseCollapsed = localStorage.getItem('tocador-browse-collapsed') === 'true';
+let browseCollapsed = localStorage.getItem('tocador-browse-collapsed') !== 'false';
 
 // Browse panel DOM refs (set once after DOMContentLoaded)
 let _browsePanelEl = null, _browseListEl = null, _browseEmptyEl = null;
@@ -489,7 +489,7 @@ class VirtualList {
     new ResizeObserver(this._render).observe(container);
   }
 
-  get _rowHeight() { return isMobile() ? 48 : 40; }
+  get _rowHeight() { return isMobile() ? 44 : 36; }
 
   setItems(items) {
     this.items = items;
