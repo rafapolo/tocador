@@ -70,11 +70,11 @@ let _overlayTrackArtist = null;
 
 const KNOWN_ACERVOS = {
   uqt: {
-    data: 'https://rafapolo.github.io/uqt/js/uqt-albums.json.gz',
+    data: 'https://rafapolo.github.io/uqt/data/uqt-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/uqt',
   },
   homi: {
-    data: 'https://rafapolo.github.io/hominiscanidae/js/homi-albums.json.gz',
+    data: 'https://rafapolo.github.io/hominiscanidae/data/homi-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/indie',
   },
 };

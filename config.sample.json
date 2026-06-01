@@ -1,4 +1,4 @@
 {
   "baseUrl": "https://your-proxy.example.com/uqt",
-  "dataUrl": "js/uqt-albums.json.gz"
+  "dataUrl": "data/uqt-albums.json.gz"
 }
