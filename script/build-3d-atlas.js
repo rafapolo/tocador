@@ -28,11 +28,11 @@ loadEnv();
 
 const KNOWN_ACERVOS = {
   uqt: {
-    dataUrl: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/js/uqt-albums.json.gz',
+    dataUrl: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/data/uqt-albums.json.gz',
     baseUrl: 'https://cdn.tocador.cc/uqt',
   },
   homi: {
-    dataUrl: 'https://raw.githubusercontent.com/rafapolo/hominiscanidae/refs/heads/main/js/homi-albums.json.gz',
+    dataUrl: 'https://raw.githubusercontent.com/rafapolo/hominiscanidae/refs/heads/main/data/homi-albums.json.gz',
     baseUrl: 'https://cdn.tocador.cc/indie',
   },
 };

@@ -21,7 +21,7 @@ loadEnv();
 
 const BUCKET = process.env.S3_BUCKET;
 
-const jsonGzPath = process.env.ACERVO_JSON || path.resolve(__dirname, '../js/uqt-albums.json.gz');
+const jsonGzPath = process.env.ACERVO_JSON || path.resolve(__dirname, '../data/uqt-albums.json.gz');
 const db = JSON.parse(zlib.gunzipSync(fs.readFileSync(jsonGzPath)));
 console.log(`DB loaded: ${db.albums.length} albums`);
 

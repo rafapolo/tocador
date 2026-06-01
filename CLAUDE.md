@@ -32,8 +32,8 @@ Registered in `js/ui.js` → `KNOWN_ACERVOS`. Each entry has only `data` (URL to
 
 | alias | data URL | S3 prefix |
 |---|---|---|
-| `uqt` | `js/uqt-albums.json.gz` (GitHub raw) | `https://cdn.tocador.cc/uqt` |
-| `homi` | `js/homi-albums.json.gz` (GitHub raw) | `https://cdn.tocador.cc/indie` |
+| `uqt` | `data/uqt-albums.json.gz` (GitHub raw) | `https://cdn.tocador.cc/uqt` |
+| `homi` | `data/homi-albums.json.gz` (GitHub raw) | `https://cdn.tocador.cc/indie` |
 
 Player priority for `base_url`: `db.meta.base_url` → `sessionStorage` → `''`.
 
@@ -85,12 +85,12 @@ Title, subtitle, hours are read from `acervo.json` in the music dir; `base_url` 
 # uqt → ../uqt repo
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/bkps/UQT/sambaderaiz \
-  ../uqt/js/uqt-albums.json.gz
+  ../uqt/data/uqt-albums.json.gz
 
 # hominiscanidae → ../hominiscanidae repo
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/hominiscanidae/unzips \
-  ../hominiscanidae/js/homi-albums.json.gz
+  ../hominiscanidae/data/homi-albums.json.gz
 ```
 
 Then commit and push in each repo. CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`) override config when passed.

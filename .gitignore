@@ -2,8 +2,9 @@ node_modules/
 config.json
 unzips/
 js/uqt-albums.js
-js/uqt-albums.json.gz
-js/homi-albums.json.gz
+data/uqt-albums.js
+data/uqt-albums.json.gz
+data/homi-albums.json.gz
 genres.json
 script/models/
 .env

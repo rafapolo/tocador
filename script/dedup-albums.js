@@ -1,6 +1,6 @@
 const zlib = require('zlib'), fs = require('fs');
 
-const data = JSON.parse(zlib.gunzipSync(fs.readFileSync('js/uqt-albums.json.gz')));
+const data = JSON.parse(zlib.gunzipSync(fs.readFileSync('data/uqt-albums.json.gz')));
 let albums = data.albums;
 
 // User-confirmed duplicate: track names differ slightly (3 variants) so fingerprint won't catch it
@@ -36,6 +36,6 @@ Object.values(groups).filter(g => g.length > 1).forEach(group => {
 albums = albums.filter(a => !REMOVE_PATHS.has(a.path));
 
 const jsonStr = JSON.stringify({ albums });
-fs.writeFileSync('js/uqt-albums.json.gz', zlib.gzipSync(Buffer.from(jsonStr)));
-fs.writeFileSync('js/uqt-albums.js', `db = ${JSON.stringify({ albums }, null, 2)}`);
+fs.writeFileSync('data/uqt-albums.json.gz', zlib.gzipSync(Buffer.from(jsonStr)));
+fs.writeFileSync('data/uqt-albums.js', `db = ${JSON.stringify({ albums }, null, 2)}`);
 console.log(`Removed ${REMOVE_PATHS.size} albums. ${albums.length} remaining.`);
