@@ -14,6 +14,7 @@ async function gotoWithFixture(page, url = '/') {
     localStorage.removeItem('homi-shuffle');
     localStorage.removeItem('homi-repeat');
     localStorage.removeItem('homi-volume');
+    localStorage.setItem('tocador-browse-collapsed', 'true');
   });
   await page.route('**/uqt-albums.json.gz', route => {
     route.fulfill({
@@ -29,6 +30,7 @@ async function gotoWithFixture(page, url = '/') {
       body: fixtureGz,
     });
   });
+  await page.route('**/*-genres.json.gz', route => route.fulfill({ status: 404 }));
   // Block audio and image network requests to keep tests fast
   await page.route('**/*.mp3', route => route.fulfill({ status: 200, body: Buffer.alloc(0) }));
   await page.route('**/capa-min.jpg', route => route.fulfill({ status: 404 }));

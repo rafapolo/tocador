@@ -65,6 +65,7 @@ test('CDN: player builds valid audio URL and CDN serves it', async ({ page, requ
   await page.addInitScript(() => {
     localStorage.removeItem('uqt-shuffle');
     localStorage.removeItem('uqt-repeat');
+    localStorage.setItem('tocador-browse-collapsed', 'true');
   });
   await page.route('**/uqt-albums.json.gz', route => route.fulfill({
     status: 200,
@@ -76,6 +77,7 @@ test('CDN: player builds valid audio URL and CDN serves it', async ({ page, requ
     headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' },
     body: fixtureGz,
   }));
+  await page.route('**/*-genres.json.gz', route => route.fulfill({ status: 404 }));
   // Let audio requests pass through to the real CDN
   await page.route('**/capa-min.jpg', route => route.fulfill({ status: 404 }));
 
