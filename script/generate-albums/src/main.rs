@@ -122,8 +122,26 @@ fn read_duration(path: &Path, hint: u32) -> u32 {
     if hint > 0 {
         return hint;
     }
-    mp3_duration::from_path(path)
-        .map(|d| d.as_secs() as u32)
+    use lofty::prelude::AudioFile;
+    use lofty::probe::Probe;
+    if let Some(d) = Probe::open(path)
+        .ok()
+        .and_then(|p| p.guess_file_type().ok())
+        .and_then(|p| p.read().ok())
+        .map(|f| f.properties().duration().as_secs() as u32)
+        .filter(|&d| d > 0)
+    {
+        return d;
+    }
+    // fallback: ffprobe handles edge cases lofty can't (non-standard VBR headers, etc.)
+    std::process::Command::new("ffprobe")
+        .args(["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"])
+        .arg(path)
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .map(|d| d as u32)
         .unwrap_or(0)
 }
 
