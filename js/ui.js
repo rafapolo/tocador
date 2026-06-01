@@ -569,7 +569,6 @@ class VirtualList {
     node.dataset.value = item.name;
     const sel = item.name === this._selectedValue;
     node.classList.toggle('selected', sel);
-    node.classList.toggle('zero', item.count === 0);
     node.setAttribute('aria-selected', String(sel));
     nameEl.textContent = item.name;
     countEl.textContent = item.count;
@@ -716,8 +715,9 @@ function getCurrentBrowseItems() {
     const key = isGenres ? a.genreParent : a.artists;
     if (key) map.set(key, (map.get(key) || 0) + 1);
   }
-  const updated = base.map(item => ({ name: item.name, count: map.get(item.name) || 0 }));
-  return [...updated.filter(i => i.count > 0), ...updated.filter(i => i.count === 0)];
+  return base
+    .map(item => ({ name: item.name, count: map.get(item.name) || 0 }))
+    .filter(i => i.count > 0);
 }
 
 function _applyBrowseItems(items, preserveScroll) {
