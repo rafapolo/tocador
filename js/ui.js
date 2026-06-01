@@ -68,6 +68,20 @@ let _btnPlay = null, _mobileDrawer = null, _drawerCover = null, _overlayTrackTit
 let _playerTitleEl = null, _volumeWave = null, _searchInput = null, _overlayCover = null;
 let _overlayTrackArtist = null;
 
+// Browse panel state
+let genreData = null;
+let genreLoading = false;
+let activeGenre = null;
+let activeArtist = null;
+let browseTab = 'artists';
+let browsePanelQuery = '';
+let browseCollapsed = localStorage.getItem('tocador-browse-collapsed') === 'true';
+
+// Browse panel DOM refs (set once after DOMContentLoaded)
+let _browsePanelEl = null, _browseListEl = null, _browseEmptyEl = null;
+let _browseSearchEl = null, _browseCollapseBtn = null, _browseBadgeEl = null;
+let _activeFilterChip = null, _activeFilterLabel = null;
+
 const KNOWN_ACERVOS = {
   uqt: {
     data: 'https://rafapolo.github.io/uqt/data/uqt-albums.json.gz',
@@ -76,6 +90,7 @@ const KNOWN_ACERVOS = {
   homi: {
     data: 'https://rafapolo.github.io/hominiscanidae/data/homi-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/indie',
+    genres: 'https://rafapolo.github.io/hominiscanidae/data/homi-genres.json.gz',
   },
 };
 const DEFAULT_ACERVO = 'homi';
@@ -189,6 +204,24 @@ function updateYearInUrl(year) {
   const url = `${window.location.pathname}?${params}`;
   const state = selectedAlbum ? { album: selectedAlbum.path } : {};
   window.history.replaceState(state, '', url);
+}
+
+function getGeneroFromUrl() {
+  return new URLSearchParams(window.location.search).get('genero') || null;
+}
+
+function getArtistaFromUrl() {
+  return new URLSearchParams(window.location.search).get('artista') || null;
+}
+
+function updateBrowseFilterInUrl() {
+  const params = new URLSearchParams(window.location.search);
+  params.delete('genero');
+  params.delete('artista');
+  if (activeGenre)  params.set('genero', activeGenre);
+  if (activeArtist) params.set('artista', activeArtist);
+  const state = selectedAlbum ? { album: selectedAlbum.path } : {};
+  window.history.replaceState(state, '', `${window.location.pathname}?${params}`);
 }
 
 function setMeta(attr, key, value) {
@@ -437,6 +470,115 @@ class VirtualGrid {
 
 let virtualGrid = null;
 
+// ── Virtual List (Browse Panel) ───────────────────────────────────────────
+
+class VirtualList {
+  constructor(container) {
+    this.container = container;
+    this.items = [];
+    this._nodes = new Map();
+    this._pool = [];
+    this._selectedValue = null;
+
+    this.inner = document.createElement('div');
+    this.inner.className = 'browse-list-inner';
+    container.appendChild(this.inner);
+
+    this._render = this._render.bind(this);
+    container.addEventListener('scroll', this._render, { passive: true });
+    new ResizeObserver(this._render).observe(container);
+  }
+
+  get _rowHeight() { return isMobile() ? 48 : 40; }
+
+  setItems(items) {
+    this.items = items;
+    this._nodes.clear();
+    this._pool = [];
+    this.inner.replaceChildren();
+    this.container.scrollTop = 0;
+    this._updateHeight();
+    this._render();
+  }
+
+  updateItems(items, preserveScroll) {
+    const saved = this.container.scrollTop;
+    this.items = items;
+    this._nodes.clear();
+    this._pool = [];
+    this.inner.replaceChildren();
+    this._updateHeight();
+    this._render();
+    if (preserveScroll) this.container.scrollTop = saved;
+  }
+
+  refresh(selectedValue) {
+    this._selectedValue = selectedValue ?? null;
+    for (const [idx, node] of this._nodes) {
+      const sel = this.items[idx]?.name === this._selectedValue;
+      node.classList.toggle('selected', sel);
+      node.setAttribute('aria-selected', String(sel));
+    }
+  }
+
+  _updateHeight() {
+    this.inner.style.height = `${this.items.length * this._rowHeight}px`;
+  }
+
+  _render() {
+    const rh = this._rowHeight;
+    const scrollTop = this.container.scrollTop;
+    const viewH = this.container.clientHeight;
+    const BUFFER = 4;
+    const startIdx = Math.max(0, Math.floor(scrollTop / rh) - BUFFER);
+    const endIdx = Math.min(this.items.length, Math.ceil((scrollTop + viewH) / rh) + BUFFER);
+
+    for (const [idx, node] of this._nodes) {
+      if (idx < startIdx || idx >= endIdx) {
+        node.remove();
+        this._nodes.delete(idx);
+        if (this._pool.length < 50) this._pool.push(node);
+      }
+    }
+    for (let i = startIdx; i < endIdx; i++) {
+      if (!this._nodes.has(i)) {
+        const node = this._makeNode(i, this._pool.pop());
+        this._nodes.set(i, node);
+        this.inner.appendChild(node);
+      }
+    }
+  }
+
+  _makeNode(i, recycled) {
+    const item = this.items[i];
+    const rh = this._rowHeight;
+    let node, nameEl, countEl;
+    if (recycled) {
+      node = recycled;
+      nameEl = node.querySelector('.browse-name');
+      countEl = node.querySelector('.browse-count');
+    } else {
+      node = document.createElement('button');
+      node.setAttribute('role', 'option');
+      nameEl = document.createElement('span'); nameEl.className = 'browse-name';
+      countEl = document.createElement('span'); countEl.className = 'browse-count';
+      node.append(nameEl, countEl);
+    }
+    node.className = 'browse-item';
+    node.style.cssText = `top:${i * rh}px`;
+    node.dataset.value = item.name;
+    const sel = item.name === this._selectedValue;
+    node.classList.toggle('selected', sel);
+    node.classList.toggle('zero', item.count === 0);
+    node.setAttribute('aria-selected', String(sel));
+    nameEl.textContent = item.name;
+    countEl.textContent = item.count;
+    return node;
+  }
+}
+
+let virtualBrowseList = null;
+
 // ── Data ──────────────────────────────────────────────────────────────────
 
 function buildAlbums() {
@@ -472,14 +614,19 @@ function buildAlbums() {
         artistsLower: (trackArtist || '').toLowerCase(),
       };
     });
+    const genre = genreData?.[album.path.normalize('NFC')] ?? null;
     return {
       name: album.title, artists: album.artist, year: album.year, path: album.path,
       cover: album.has_cover !== false ? `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg` : null,
       tracks, nameLower, artistsLower, pathLower,
+      genre,
+      genreParent: genre ? genre.split('---')[0] : null,
     };
   });
   albums.sort((a, b) => b.year - a.year);
   _cachedDecades = null;
+  _cachedArtists = null;
+  _cachedGenres  = null;
   return albums;
 }
 
@@ -488,6 +635,9 @@ function buildAlbums() {
 // Perf opt 1: memoized decades — computed once after buildAlbums(), O(1) thereafter.
 // Before: ~0.8ms per call × N filter invocations. After: 0ms after first call.
 let _cachedDecades = null;
+let _cachedArtists = null;
+let _cachedGenres  = null;
+
 function getDecades() {
   if (_cachedDecades) return _cachedDecades;
   const decades = new Set(albums.map(a => Math.floor(a.year / 10) * 10).filter(d => d >= 1950));
@@ -496,10 +646,10 @@ function getDecades() {
 }
 
 function filterAlbums() {
-  // Perf opt 2 (cont.): use pre-lowercased fields; early-exit decade/year path when no search query.
-  // Before: 4+ .toLowerCase() per album per filter call. After: 0 per call (done at buildAlbums time).
   const q = searchQuery.toLowerCase();
   filteredAlbums = albums.filter(album => {
+    if (activeArtist && album.artists !== activeArtist) return false;
+    if (activeGenre  && album.genreParent !== activeGenre) return false;
     const matchesDecade = activeDecade === null ||
       (activeDecade === 'noyear' ? !album.year :
       activeDecade === 'pre1940' ? (album.year > 0 && album.year < 1950) : Math.floor(album.year / 10) * 10 === activeDecade);
@@ -512,18 +662,155 @@ function filterAlbums() {
       album.pathLower.includes(q) ||
       album.tracks.some(t => t.titleLower.includes(q) || t.artistsLower.includes(q));
   });
+
+  const inner = virtualGrid?.inner;
+  if (inner) {
+    inner.classList.add('swapping');
+    requestAnimationFrame(() => requestAnimationFrame(() => inner.classList.remove('swapping')));
+  }
   virtualGrid.setItems(filteredAlbums);
 
   _countEl ??= document.getElementById('search-count');
   _clearBtn ??= document.getElementById('search-clear');
   _emptyState ??= document.getElementById('empty-state');
-  const isFiltered = !!searchQuery || activeDecade !== null || !!activeYear;
+  const isFiltered = !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
   if (_countEl) {
     _countEl.textContent = `${filteredAlbums.length} álbun${filteredAlbums.length !== 1 ? 's' : ''}`;
     _countEl.classList.toggle('visible', isFiltered);
   }
   if (_clearBtn) _clearBtn.classList.toggle('visible', !!searchQuery);
   if (_emptyState) _emptyState.hidden = filteredAlbums.length > 0;
+
+  refreshBrowseCounts();
+  renderActiveFilterChip();
+}
+
+// ── Browse Panel Functions ────────────────────────────────────────────────
+
+function buildArtistList() {
+  if (_cachedArtists) return _cachedArtists;
+  const map = new Map();
+  for (const a of albums) if (a.artists) map.set(a.artists, (map.get(a.artists) || 0) + 1);
+  _cachedArtists = [...map.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  return _cachedArtists;
+}
+
+function buildGenreList() {
+  if (_cachedGenres) return _cachedGenres;
+  const map = new Map();
+  for (const a of albums) if (a.genreParent) map.set(a.genreParent, (map.get(a.genreParent) || 0) + 1);
+  _cachedGenres = [...map.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  return _cachedGenres;
+}
+
+function getCurrentBrowseItems() {
+  const base = browseTab === 'genres' ? buildGenreList() : buildArtistList();
+  if (filteredAlbums.length === albums.length && !activeGenre && !activeArtist) return base;
+  const map = new Map();
+  const isGenres = browseTab === 'genres';
+  for (const a of filteredAlbums) {
+    const key = isGenres ? a.genreParent : a.artists;
+    if (key) map.set(key, (map.get(key) || 0) + 1);
+  }
+  const updated = base.map(item => ({ name: item.name, count: map.get(item.name) || 0 }));
+  return [...updated.filter(i => i.count > 0), ...updated.filter(i => i.count === 0)];
+}
+
+function _applyBrowseItems(items, preserveScroll) {
+  if (!virtualBrowseList) return;
+  let visible = items;
+  if (browsePanelQuery) {
+    const q = browsePanelQuery.toLowerCase();
+    visible = items.filter(i => i.name.toLowerCase().includes(q));
+  }
+  if (_browseEmptyEl) _browseEmptyEl.hidden = visible.length > 0;
+  const activeVal = browseTab === 'genres' ? activeGenre : activeArtist;
+  if (preserveScroll) virtualBrowseList.updateItems(visible, true);
+  else virtualBrowseList.setItems(visible);
+  virtualBrowseList.refresh(activeVal);
+}
+
+function renderBrowsePanel() {
+  _applyBrowseItems(getCurrentBrowseItems(), false);
+}
+
+function refreshBrowseCounts() {
+  if (!virtualBrowseList || !_browsePanelEl) return;
+  if (_browsePanelEl.classList.contains('collapsed')) return;
+  _applyBrowseItems(getCurrentBrowseItems(), true);
+}
+
+function renderActiveFilterChip() {
+  if (!_activeFilterChip || !_activeFilterLabel) return;
+  const active = activeGenre || activeArtist;
+  _activeFilterChip.hidden = !active;
+  if (active) {
+    _activeFilterLabel.textContent = `${activeGenre ? 'Gênero' : 'Artista'}: ${active}`;
+  }
+  if (_browseBadgeEl) _browseBadgeEl.hidden = !active;
+  document.getElementById('btn-browse')?.classList.toggle('active', !!active);
+}
+
+function selectBrowseItem(value) {
+  if (browseTab === 'genres') {
+    activeGenre  = activeGenre === value ? null : value;
+    activeArtist = null;
+  } else {
+    activeArtist  = activeArtist === value ? null : value;
+    activeGenre   = null;
+  }
+  updateBrowseFilterInUrl();
+  filterAlbums();
+  virtualBrowseList?.refresh(browseTab === 'genres' ? activeGenre : activeArtist);
+  if (isMobile()) setTimeout(closeBrowseDrawer, 180);
+}
+
+function updateBrowseSelection() {
+  virtualBrowseList?.refresh(browseTab === 'genres' ? activeGenre : activeArtist);
+}
+
+function switchBrowseTab(tab) {
+  if (browseTab === tab) return;
+  browseTab = tab;
+  browsePanelQuery = '';
+  if (_browseSearchEl) _browseSearchEl.value = '';
+  document.querySelectorAll('.browse-tab').forEach(btn => {
+    const isActive = btn.dataset.tab === tab;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', String(isActive));
+  });
+  _browseListEl?.setAttribute('aria-label', tab === 'genres' ? 'Gêneros' : 'Artistas');
+  renderBrowsePanel();
+}
+
+function openBrowseDrawer() {
+  _browsePanelEl?.classList.add('open');
+  document.getElementById('browse-scrim')?.classList.add('open');
+  document.getElementById('btn-browse')?.setAttribute('aria-expanded', 'true');
+  closeMobileDrawer();
+}
+
+function closeBrowseDrawer() {
+  _browsePanelEl?.classList.remove('open');
+  document.getElementById('browse-scrim')?.classList.remove('open');
+  document.getElementById('btn-browse')?.setAttribute('aria-expanded', 'false');
+}
+
+function toggleBrowsePanel() {
+  if (isMobile()) {
+    if (_browsePanelEl?.classList.contains('open')) closeBrowseDrawer();
+    else openBrowseDrawer();
+  } else {
+    browseCollapsed = !browseCollapsed;
+    _browsePanelEl?.classList.toggle('collapsed', browseCollapsed);
+    _browseCollapseBtn?.setAttribute('aria-expanded', String(!browseCollapsed));
+    localStorage.setItem('tocador-browse-collapsed', browseCollapsed);
+    if (!browseCollapsed) renderBrowsePanel();
+  }
 }
 
 function updateLibraryStats() {
@@ -952,11 +1239,17 @@ u(document).on('DOMContentLoaded', async function () {
   window.addEventListener('popstate', (e) => {
     const q = new URLSearchParams(window.location.search).get('q') ?? '';
     const yr = getYearFromUrl();
-    if (q !== searchQuery || yr !== activeYear) {
+    const newGenero  = getGeneroFromUrl();
+    const newArtista = getArtistaFromUrl();
+    const browseChanged = newGenero !== activeGenre || newArtista !== activeArtist;
+    if (q !== searchQuery || yr !== activeYear || browseChanged) {
       searchQuery = q;
       activeYear = yr;
+      activeGenre  = newGenero;
+      activeArtist = newArtista;
       if (_searchInput) _searchInput.value = q;
       filterAlbums();
+      updateBrowseSelection();
     }
     const path = e.state?.album ?? new URLSearchParams(window.location.search).get('album');
     if (!path) return;
@@ -1019,10 +1312,26 @@ u(document).on('DOMContentLoaded', async function () {
   } catch {}
   const defaultEntry = KNOWN_ACERVOS[defaultKey];
   const dataUrl = sessionStorage.getItem('acervo') || cfg.dataUrl || defaultEntry.data;
-  const json = await new Response(
-    (await trackedFetch(dataUrl)).body.pipeThrough(new DecompressionStream('gzip'))
-  ).text();
+  const activeAcervoKey = (acervoParam && KNOWN_ACERVOS[acervoParam]) ? acervoParam : defaultKey;
+  const genresUrl = KNOWN_ACERVOS[activeAcervoKey]?.genres ?? null;
+
+  async function decompressGzUrl(url) {
+    const resp = await trackedFetch(url);
+    if (!resp.ok) throw new Error(resp.status);
+    return new Response(resp.body.pipeThrough(new DecompressionStream('gzip'))).text();
+  }
+
+  if (genresUrl) genreLoading = true;
+
+  const [json, genresRaw] = await Promise.all([
+    decompressGzUrl(dataUrl),
+    genresUrl
+      ? decompressGzUrl(genresUrl).then(t => JSON.parse(t)).catch(() => null)
+      : Promise.resolve(null),
+  ]);
   db = JSON.parse(json);
+  genreData = genresRaw;
+  genreLoading = false;
   BASE_URL = db.meta?.base_url || cfg.baseUrl || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
   const btn3d = document.getElementById('btn-3d');
   if (btn3d) btn3d.href = `./3d.html?acervo=${encodeURIComponent(acervoParam || defaultKey)}`;
@@ -1039,12 +1348,40 @@ u(document).on('DOMContentLoaded', async function () {
   _overlayTrackArtist = document.getElementById('overlay-track-artist');
   _overlayCover = document.getElementById('overlay-cover');
   _drawerCover = document.getElementById('drawer-cover');
+  _browsePanelEl    = document.getElementById('browse-panel');
+  _browseListEl     = document.getElementById('browse-list');
+  _browseEmptyEl    = document.getElementById('browse-empty');
+  _browseSearchEl   = document.getElementById('browse-search');
+  _browseCollapseBtn = document.getElementById('browse-collapse');
+  _browseBadgeEl    = document.getElementById('browse-badge');
+  _activeFilterChip = document.getElementById('active-filter-chip');
+  _activeFilterLabel = document.getElementById('active-filter-label');
 
   buildAlbums();
   filteredAlbums = [...albums];
   renderDecadeButtons();
   virtualGrid.setItems(filteredAlbums);
   updateLibraryStats();
+
+  // Init browse panel VirtualList and apply initial state
+  if (_browseListEl) {
+    virtualBrowseList = new VirtualList(_browseListEl);
+    if (browseCollapsed && !isMobile()) {
+      _browsePanelEl?.classList.add('collapsed');
+      _browseCollapseBtn?.setAttribute('aria-expanded', 'false');
+    }
+    // Enable/disable Genres tab based on genreData availability
+    const genresTabBtn = document.querySelector('.browse-tab[data-tab="genres"]');
+    if (genresTabBtn) {
+      if (genreData) {
+        genresTabBtn.disabled = false;
+        genresTabBtn.title = '';
+      } else if (genreLoading) {
+        genresTabBtn.classList.add('loading');
+      }
+    }
+    renderBrowsePanel();
+  }
 
   // Restore search query and year filter from URL
   const initialQuery = getQueryFromUrl();
@@ -1055,6 +1392,12 @@ u(document).on('DOMContentLoaded', async function () {
   }
   const initialYear = getYearFromUrl();
   if (initialYear) { activeYear = initialYear; filterAlbums(); }
+
+  // Restore browse filter from URL
+  const initialGenero = getGeneroFromUrl();
+  const initialArtista = getArtistaFromUrl();
+  if (initialGenero && genreData) { activeGenre = initialGenero; filterAlbums(); }
+  else if (initialArtista) { activeArtist = initialArtista; filterAlbums(); }
 
   // Select initial album from URL or first in list
   const albumFromUrl = getAlbumFromUrl();
@@ -1337,9 +1680,88 @@ u(document).on('DOMContentLoaded', async function () {
     _searchInput?.focus();
   };
   document.getElementById('search-clear')?.addEventListener('click', clearSearch);
-  document.getElementById('empty-clear-btn')?.addEventListener('click', clearSearch);
+  document.getElementById('empty-clear-btn')?.addEventListener('click', () => {
+    clearSearch();
+    activeGenre = null; activeArtist = null;
+    updateBrowseFilterInUrl();
+    filterAlbums();
+    updateBrowseSelection();
+  });
+
+  // ── Browse panel events ─────────────────────────────────────────────────
+
+  // Delegated click on list items
+  _browseListEl?.addEventListener('click', e => {
+    const item = e.target.closest('[data-value]');
+    if (item) selectBrowseItem(item.dataset.value);
+  });
+
+  // Keyboard nav in browse list (Up/Down arrows, Enter/Space)
+  _browseListEl?.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const nodes = [..._browseListEl.querySelectorAll('.browse-item')];
+      const cur = document.activeElement;
+      const idx = nodes.indexOf(cur);
+      const next = e.key === 'ArrowDown' ? nodes[idx + 1] : nodes[idx - 1];
+      next?.focus();
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      const item = e.target.closest('[data-value]');
+      if (item) { e.preventDefault(); selectBrowseItem(item.dataset.value); }
+    }
+  });
+
+  // Tab switcher
+  document.querySelectorAll('.browse-tab').forEach(btn => {
+    btn.addEventListener('click', () => { if (!btn.disabled) switchBrowseTab(btn.dataset.tab); });
+    btn.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const tabs = [...document.querySelectorAll('.browse-tab:not([disabled])')];
+        const idx = tabs.indexOf(btn);
+        const next = e.key === 'ArrowRight' ? tabs[idx + 1] : tabs[idx - 1];
+        if (next) { next.focus(); switchBrowseTab(next.dataset.tab); }
+      }
+    });
+  });
+
+  // In-panel search
+  let browseSearchDebounce;
+  _browseSearchEl?.addEventListener('input', () => {
+    browsePanelQuery = _browseSearchEl.value;
+    clearTimeout(browseSearchDebounce);
+    browseSearchDebounce = setTimeout(renderBrowsePanel, 120);
+  });
+
+  // Collapse toggle (desktop)
+  _browseCollapseBtn?.addEventListener('click', toggleBrowsePanel);
+
+  // Mobile trigger button
+  document.getElementById('btn-browse')?.addEventListener('click', openBrowseDrawer);
+
+  // Scrim tap to close
+  document.getElementById('browse-scrim')?.addEventListener('click', closeBrowseDrawer);
+
+  // Active-filter chip clear
+  document.getElementById('active-filter-clear')?.addEventListener('click', () => {
+    activeGenre = null; activeArtist = null;
+    updateBrowseFilterInUrl();
+    filterAlbums();
+    updateBrowseSelection();
+  });
 
   document.addEventListener('keydown', e => {
+    // Escape: close mobile browse drawer OR clear active panel filter
+    if (e.key === 'Escape') {
+      if (isMobile() && _browsePanelEl?.classList.contains('open')) {
+        closeBrowseDrawer(); return;
+      }
+      if (activeGenre || activeArtist) {
+        activeGenre = null; activeArtist = null;
+        updateBrowseFilterInUrl(); filterAlbums(); updateBrowseSelection(); return;
+      }
+    }
     if (e.target.closest('input, textarea, [contenteditable]')) return;
     switch (e.key) {
       case ' ':
@@ -1363,6 +1785,16 @@ u(document).on('DOMContentLoaded', async function () {
       case '/':
         e.preventDefault();
         _searchInput?.focus();
+        break;
+      case 'b':
+        if (!e.metaKey && !e.ctrlKey && !e.altKey) toggleBrowsePanel();
+        break;
+      case 'g':
+        if (!e.metaKey && !e.ctrlKey && !e.altKey && genreData) {
+          if (!isMobile() && browseCollapsed) toggleBrowsePanel();
+          else if (isMobile()) openBrowseDrawer();
+          switchBrowseTab('genres');
+        }
         break;
     }
   });
