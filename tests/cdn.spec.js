@@ -156,15 +156,37 @@ test('CDN: NFD-encoded path normalizes to NFC and serves correctly', async ({ re
   expect(res.status()).toBe(200);
 });
 
-// Regression: Bun's S3Client didn't encode # in keys, treating them as URL
-// fragment delimiters and truncating the S3 request path. Paths with # must
+// Regression: Bun's S3Client doesn't encode # in keys, so paths with # must
 // be served via the manual AWS-signed fetch fallback (2a7364a + d5fc327).
-// TODO: enable once test data with # in album path is uploaded to S3
-test.skip('CDN: path with # (encoded as %23) is served correctly', async ({ request }) => {
-  const hashTrack = 'indie/2026%20-%20Naturezautom%C3%A1tica%20-%20Hominis%20Canidae%20%23191%20-%20Abril/01.%20Naturezautomatica%20-%20VEM!.mp3';
-  const res = await request.head(`${CDN}/${hashTrack}`, {
-    headers: { 'User-Agent': BROWSER_UA, 'Referer': PLAYER_REFERER },
-  });
+// Further regression: sigV4Encode must encode ! ' ( ) * — encodeURIComponent
+// leaves them literal, causing Hetzner S3 to compute a different canonical URI
+// and return 403 SignatureDoesNotMatch (ff33929).
+test('CDN: path with # served correctly (s3GetSigned fallback)', async ({ request }) => {
+  const res = await request.head(
+    `${CDN}/indie/2022%20-%20Jean%20Medeiros%20-%20Hominis%20Canidae%20%23147%20-%20Agosto%20%282022%29/capa-min.jpg`,
+    { headers: { 'User-Agent': BROWSER_UA } },
+  );
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('image/jpeg');
+});
+
+test('CDN: path with # and ! served correctly (sigV4Encode encodes !)', async ({ request }) => {
+  // VICTIM! was returning 403 because encodeURIComponent left ! unencoded;
+  // Hetzner S3 encodes ! → %21 when verifying, causing a signature mismatch.
+  const res = await request.head(
+    `${CDN}/indie/2015%20-%20VICTIM!%20-%20Hominis%20Canidae%20%2360%20-%20Maio/capa-min.jpg`,
+    { headers: { 'User-Agent': BROWSER_UA } },
+  );
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('image/jpeg');
+});
+
+test('CDN: path with # and () served correctly (sigV4Encode encodes parentheses)', async ({ request }) => {
+  // (2022) was returning 403 for the same reason as ! above.
+  const res = await request.head(
+    `${CDN}/indie/2022%20-%20Jean%20Medeiros%20-%20Hominis%20Canidae%20%23147%20-%20Agosto%20%282022%29/03.%20Gorduratrans%20-%20alquimistas.mp3`,
+    { headers: { 'User-Agent': BROWSER_UA, 'Referer': PLAYER_REFERER } },
+  );
   expect(res.status()).toBe(200);
   expect(res.headers()['content-type']).toContain('audio/mpeg');
 });
