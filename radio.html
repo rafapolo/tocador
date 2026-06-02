@@ -409,7 +409,7 @@ function showTrack(album, track) {
   const albumPart = album.title
     ? `<span class="album-link" data-path="${esc(album.path)}">${esc(album.title)}</span>`
     : '';
-  albumEl.innerHTML = [album.year, albumPart].filter(Boolean).join(' - ');
+  albumEl.innerHTML = [albumPart, album.year].filter(Boolean).join(' • ');
   timeCurrentEl.textContent = '00:00';
   timeTotalEl.textContent   = '00:00';
   checkMarquee(titleEl);
