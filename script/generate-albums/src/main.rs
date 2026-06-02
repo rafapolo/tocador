@@ -286,6 +286,25 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         }
     }
 
+    // Sort by track number when any track has one, so the player's array position matches
+    // the intended playback order. Covers two cases:
+    //   - compilations where filenames sort by artist prefix instead of track number
+    //   - albums where an ID3 track number is correct but the file sorts alphabetically wrong
+    // Unnumbered tracks (num=0) go after numbered ones in their original relative order.
+    // Uses indexed drain to avoid pointer aliasing during in-place sort.
+    if tracks.iter().any(|t| t.num.unwrap_or(0) > 0) {
+        let mut indexed: Vec<(usize, Track)> = tracks.drain(..).enumerate().collect();
+        indexed.sort_by(|(ai, a), (bi, b)| {
+            match (a.num.unwrap_or(0), b.num.unwrap_or(0)) {
+                (0, 0) => ai.cmp(bi),
+                (0, _) => std::cmp::Ordering::Greater,
+                (_, 0) => std::cmp::Ordering::Less,
+                (an, bn) => an.cmp(&bn).then(ai.cmp(bi)),
+            }
+        });
+        tracks = indexed.into_iter().map(|(_, t)| t).collect();
+    }
+
     // Omit artists when it duplicates the album artist; omit num when it equals array position
     // or is 0 (no track number in ID3 and filename gave no hint either).
     for (i, t) in tracks.iter_mut().enumerate() {
@@ -422,18 +441,22 @@ fn main() {
 
     // Merge albums split across OS-numbered copies ("Álbum (2)", "Álbum (3)" → "Álbum").
     // Only merges when the base album already exists; preserves original path otherwise.
+    // Only re-sorts tracks for albums that actually absorbed copy-folder tracks; unmerged
+    // albums already have the correct order from process_album's sort-by-num pass.
     let albums = {
         let mut merged: Vec<Album> = Vec::with_capacity(albums.len());
+        let mut absorbed_indices: std::collections::HashSet<usize> = Default::default();
         for mut album in albums {
             let base = RE_COPY_SUFFIX.captures(&album.path).map(|c| c[1].to_string());
             let absorbed = if let Some(ref base_path) = base {
-                if let Some(existing) = merged.iter_mut().find(|a| a.path == *base_path) {
+                if let Some((idx, existing)) = merged.iter_mut().enumerate().find(|(_, a)| a.path == *base_path) {
                     for t in album.tracks.drain(..) {
                         if !existing.tracks.iter().any(|e| e.file == t.file) {
                             existing.tracks.push(t);
                         }
                     }
                     if album.has_cover { existing.has_cover = true; }
+                    absorbed_indices.insert(idx);
                     true
                 } else { false }
             } else { false };
@@ -441,8 +464,10 @@ fn main() {
                 merged.push(album);
             }
         }
-        for a in &mut merged {
-            a.tracks.sort_by(|x, y| natural_cmp(&x.file.to_lowercase(), &y.file.to_lowercase()));
+        for (i, a) in merged.iter_mut().enumerate() {
+            if absorbed_indices.contains(&i) {
+                a.tracks.sort_by(|x, y| natural_cmp(&x.file.to_lowercase(), &y.file.to_lowercase()));
+            }
         }
         merged
     };
