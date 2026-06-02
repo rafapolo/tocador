@@ -30,6 +30,19 @@ static RE_ALBUM_YEAR: Lazy<Regex> = Lazy::new(|| {
 static RE_YEAR_ALBUM: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(\d{4})\s*[-–]\s*(.+)$").unwrap()
 });
+// Track number from filename: "01. Title", "01-Title", "01_Title", "01 Title"
+static RE_TRACK_NUM_START: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(\d{1,3})[\.\-_\s]").unwrap()
+});
+// Track number embedded mid-filename: "Artist - Album - 01 Title", "Artist - Album - 01. Title"
+static RE_TRACK_NUM_MID: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"[-–]\s*(\d{1,3})[\.\s]").unwrap()
+});
+// Slug-style filename: all-lowercase, hyphens only, no spaces — signals a "full album as one MP3"
+// artifact mixed into an extracted archive (e.g. bando-mastodontes-ciranda-celestial-2022.mp3)
+static RE_SLUG_TAIL: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[a-z][a-z0-9\-]+\.mp3$").unwrap()
+});
 
 // Per-directory config file (acervo.json in the music root)
 
@@ -163,6 +176,35 @@ fn has_cover(folder: &Path) -> bool {
         .unwrap_or(false)
 }
 
+// Natural sort: compares digit runs numerically so "10 - Track" sorts after "2 - Track".
+fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    let mut ai = a.chars().peekable();
+    let mut bi = b.chars().peekable();
+    loop {
+        match (ai.peek().copied(), bi.peek().copied()) {
+            (None, None) => return std::cmp::Ordering::Equal,
+            (None, _)    => return std::cmp::Ordering::Less,
+            (_, None)    => return std::cmp::Ordering::Greater,
+            (Some(ac), Some(bc)) => {
+                if ac.is_ascii_digit() && bc.is_ascii_digit() {
+                    let an: u64 = std::iter::from_fn(|| ai.next_if(|c| c.is_ascii_digit()))
+                        .fold(0u64, |n, c| n * 10 + c.to_digit(10).unwrap() as u64);
+                    let bn: u64 = std::iter::from_fn(|| bi.next_if(|c| c.is_ascii_digit()))
+                        .fold(0u64, |n, c| n * 10 + c.to_digit(10).unwrap() as u64);
+                    match an.cmp(&bn) {
+                        std::cmp::Ordering::Equal => continue,
+                        ord => return ord,
+                    }
+                } else {
+                    let ord = ac.to_lowercase().cmp(bc.to_lowercase());
+                    ai.next(); bi.next();
+                    if ord != std::cmp::Ordering::Equal { return ord; }
+                }
+            }
+        }
+    }
+}
+
 fn collect_mp3s(folder: &Path) -> Vec<PathBuf> {
     let mut mp3s: Vec<PathBuf> = fs::read_dir(folder)
         .map(|entries| {
@@ -179,11 +221,10 @@ fn collect_mp3s(folder: &Path) -> Vec<PathBuf> {
         })
         .unwrap_or_default();
     mp3s.sort_by(|a, b| {
-        a.file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_lowercase()
-            .cmp(&b.file_name().unwrap_or_default().to_string_lossy().to_lowercase())
+        natural_cmp(
+            &a.file_name().unwrap_or_default().to_string_lossy().to_lowercase(),
+            &b.file_name().unwrap_or_default().to_string_lossy().to_lowercase(),
+        )
     });
     mp3s
 }
@@ -202,7 +243,15 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
     let mut tracks = Vec::new();
 
     for mp3 in &mp3s {
-        let (title, artist, album, year, track_n, dur_hint) = read_id3(mp3);
+        let (title, artist, album, year, mut track_n, dur_hint) = read_id3(mp3);
+        if track_n == 0 {
+            let fname = mp3.file_name().unwrap_or_default().to_string_lossy();
+            track_n = RE_TRACK_NUM_START.captures(&*fname)
+                .or_else(|| RE_TRACK_NUM_MID.captures(&*fname))
+                .and_then(|c| c.get(1))
+                .and_then(|m| m.as_str().parse::<u32>().ok())
+                .unwrap_or(0);
+        }
         let duration = read_duration(mp3, dur_hint);
 
         if album_artist.is_empty() && !artist.is_empty() { album_artist = artist.clone(); }
@@ -223,12 +272,27 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         tracks.push(Track { title, num: Some(track_n), file, artists: Some(track_artist), duration });
     }
 
-    // Omit artists when it duplicates the album artist; omit num when it equals array position.
+    // Drop slug-tail: a kebab-case single-file artifact (e.g. artist-album-year.mp3) that gets
+    // mixed in when a single-MP3 download lands in the same folder as the extracted archive tracks.
+    if tracks.len() > 1 {
+        let is_slug = tracks.last().map(|t| RE_SLUG_TAIL.is_match(&t.file)).unwrap_or(false);
+        if is_slug {
+            let rest_have_nums = tracks[..tracks.len() - 1].iter().any(|t| {
+                RE_TRACK_NUM_START.is_match(&t.file) || RE_TRACK_NUM_MID.is_match(&t.file)
+            });
+            if rest_have_nums {
+                tracks.pop();
+            }
+        }
+    }
+
+    // Omit artists when it duplicates the album artist; omit num when it equals array position
+    // or is 0 (no track number in ID3 and filename gave no hint either).
     for (i, t) in tracks.iter_mut().enumerate() {
         if t.artists.as_deref() == Some(album_artist.as_str()) {
             t.artists = None;
         }
-        if t.num == Some((i + 1) as u32) {
+        if t.num == Some(0) || t.num == Some((i + 1) as u32) {
             t.num = None;
         }
     }
@@ -378,7 +442,7 @@ fn main() {
             }
         }
         for a in &mut merged {
-            a.tracks.sort_by(|x, y| x.file.cmp(&y.file));
+            a.tracks.sort_by(|x, y| natural_cmp(&x.file.to_lowercase(), &y.file.to_lowercase()));
         }
         merged
     };
