@@ -124,8 +124,8 @@ async function s3GetSigned(bucket, key, rangeHeader) {
   const amzDate  = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const dateStamp = amzDate.slice(0, 8);
   const encodedKey = key.split('/').map(seg => encodeURIComponent(seg)).join('/');
-  const url = `${S3_ENDPOINT}/${bucket}/${encodedKey}`;
-  const host = new URL(S3_ENDPOINT).host;
+  const url = new URL(`/${bucket}/${encodedKey}`, S3_ENDPOINT);
+  const host = url.host;
 
   const payloadHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
   const headers = { host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate };
@@ -134,7 +134,7 @@ async function s3GetSigned(bucket, key, rangeHeader) {
   const signedHeaders = Object.keys(headers).sort().join(';');
   const canonicalHeaders = Object.entries(headers).sort(([a], [b]) => a < b ? -1 : 1)
     .map(([k, v]) => `${k}:${v}\n`).join('');
-  const canonicalUri = `/${bucket}/${encodedKey}`;
+  const canonicalUri = url.pathname;
   const canonicalRequest = `GET\n${canonicalUri}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
   const credScope = `${dateStamp}/${S3_REGION}/s3/aws4_request`;
@@ -147,7 +147,7 @@ async function s3GetSigned(bucket, key, rangeHeader) {
   const sig = Array.from(await hmacSHA256(sigKey, stringToSign)).map(b => b.toString(16).padStart(2, '0')).join('');
 
   const auth = `AWS4-HMAC-SHA256 Credential=${S3_ACCESS_KEY}/${credScope}, SignedHeaders=${signedHeaders}, Signature=${sig}`;
-  return fetch(url, { headers: { ...headers, Authorization: auth } });
+  return fetch(url.href, { headers: { ...headers, Authorization: auth } });
 }
 
 // §1 — path traversal guard: reject .., ., NUL, backslash, empty segments
