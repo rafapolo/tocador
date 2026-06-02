@@ -223,6 +223,7 @@ body {
   flex-direction: column;
   flex-shrink: 0;
   position: relative;
+  overflow: hidden;
   transition: width 0.3s ease;
 }
 
@@ -230,6 +231,18 @@ body {
   width: 0;
   border-left: none;
   overflow: hidden;
+}
+
+.tracks-panel.collapsed {
+  width: 16px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.tracks-panel.collapsed .album-header,
+.tracks-panel.collapsed .track-list {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .filters-section {
@@ -1618,9 +1631,13 @@ audio {
   flex-shrink: 0;
 }
 
+.browse-search-inner {
+  position: relative;
+}
+
 .browse-search {
   width: 100%;
-  padding: 5px 8px;
+  padding: 5px 52px 5px 8px;
   background: var(--color-surface-light);
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -1636,6 +1653,46 @@ audio {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.15);
+}
+
+.browse-count {
+  position: absolute;
+  right: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.63rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  pointer-events: none;
+  display: none;
+}
+
+.browse-count.visible { display: block; }
+
+.browse-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 3px;
+  display: none;
+  border-radius: 50%;
+  transition: var(--transition-fast);
+  align-items: center;
+  justify-content: center;
+}
+
+.browse-clear.visible { display: flex; }
+
+.browse-clear:hover {
+  color: var(--color-text);
+  background: var(--color-surface-light);
 }
 
 /* Scrollable list — same feel as .track-list */
@@ -1722,37 +1779,100 @@ audio {
   margin: 0;
 }
 
-/* Minimal collapse — invisible right-edge strip, accent on hover */
-.browse-collapse {
+/* Panel collapse strips — left (browse) and right (tracks) */
+.browse-collapse,
+.tracks-collapse {
   position: absolute;
-  right: 0;
   top: 0;
   bottom: 0;
-  width: 5px;
+  width: 16px;
   background: transparent;
   border: none;
-  border-left: 1px solid var(--color-border);
   cursor: col-resize;
   transition: background 0.2s, border-color 0.2s;
   z-index: 2;
   padding: 0;
-  transform: none;
   border-radius: 0;
-  font-size: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
 }
 
-.browse-collapse:hover {
+.browse-collapse {
+  right: 0;
+  border-left: 1px solid var(--color-border);
+}
+
+.tracks-collapse {
+  left: 0;
+  border-right: 1px solid var(--color-border);
+}
+
+.browse-collapse::after,
+.tracks-collapse::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  opacity: 0.25;
+  transition: opacity 0.2s;
+}
+
+/* ◀ arrow on right edge of browse panel */
+.browse-collapse::after {
+  border-width: 5px 6px 5px 0;
+  border-color: transparent var(--color-text-muted) transparent transparent;
+}
+
+/* ▶ arrow on left edge of tracks panel */
+.tracks-collapse::after {
+  border-width: 5px 0 5px 6px;
+  border-color: transparent transparent transparent var(--color-text-muted);
+}
+
+.browse-collapse:hover,
+.tracks-collapse:hover {
   background: rgba(212, 165, 116, 0.08);
-  border-left-color: rgba(212, 165, 116, 0.5);
+}
+
+.browse-collapse:hover::after,
+.tracks-collapse:hover::after {
+  opacity: 0.8;
+  border-color: transparent var(--color-accent) transparent transparent;
+}
+
+.tracks-collapse:hover::after {
+  border-color: transparent transparent transparent var(--color-accent);
+}
+
+/* flip arrows when panels are collapsed — more visible to invite clicking */
+.browse-panel.collapsed .browse-collapse::after {
+  border-width: 5px 0 5px 6px;
+  border-color: transparent transparent transparent var(--color-text-muted);
+  opacity: 0.55;
+}
+
+.browse-panel.collapsed .browse-collapse:hover::after {
+  border-color: transparent transparent transparent var(--color-accent);
+  opacity: 1;
+}
+
+.tracks-panel.collapsed .tracks-collapse::after {
+  border-width: 5px 6px 5px 0;
+  border-color: transparent var(--color-text-muted) transparent transparent;
+  opacity: 0.55;
+}
+
+.tracks-panel.collapsed .tracks-collapse:hover::after {
+  border-color: transparent var(--color-accent) transparent transparent;
+  opacity: 1;
 }
 
 .browse-panel.collapsed .browse-collapse {
   border-left: none;
   border-right: 1px solid var(--color-border);
-}
-
-.browse-panel.collapsed .browse-collapse:hover {
-  border-right-color: rgba(212, 165, 116, 0.5);
 }
 
 /* Active-filter chip */
@@ -1819,12 +1939,14 @@ audio {
 
 /* Genre tree items */
 .browse-toggle {
-  font-size: 0.58rem;
   color: var(--color-text-muted);
   flex-shrink: 0;
   width: 14px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+  transition: color 0.15s;
 }
 
 .browse-indent {

@@ -84,6 +84,7 @@ let _cachedGenreTree = null;
 // Browse panel DOM refs (set once after DOMContentLoaded)
 let _browsePanelEl = null, _browseListEl = null, _browseEmptyEl = null;
 let _browseSearchEl = null, _browseCollapseBtn = null, _browseBadgeEl = null;
+let _browseCountEl = null, _browseClearBtn = null;
 let _activeFilterChip = null, _activeFilterLabel = null;
 let _tracksPanelEl = null, _tracksCollapseBtn = null;
 let tracksCollapsed = localStorage.getItem('tocador-tracks-collapsed') === 'true';
@@ -807,6 +808,14 @@ function getCurrentBrowseItems() {
     .filter(i => i.count > 0);
 }
 
+function _updateBrowseCountUI(count) {
+  if (_browseCountEl) {
+    _browseCountEl.textContent = count;
+    _browseCountEl.classList.toggle('visible', !!browsePanelQuery);
+  }
+  if (_browseClearBtn) _browseClearBtn.classList.toggle('visible', !!browsePanelQuery);
+}
+
 function _applyBrowseItems(items, preserveScroll) {
   if (!virtualBrowseList) return;
   let visible = items;
@@ -815,6 +824,7 @@ function _applyBrowseItems(items, preserveScroll) {
     visible = items.filter(i => i.name.toLowerCase().includes(q));
   }
   if (_browseEmptyEl) _browseEmptyEl.hidden = visible.length > 0;
+  _updateBrowseCountUI(visible.length);
   const activeVal = browseTab === 'genres' ? activeGenre : activeArtist;
   if (preserveScroll) virtualBrowseList.updateItems(visible, true);
   else virtualBrowseList.setItems(visible);
@@ -826,6 +836,7 @@ function renderBrowsePanel() {
   if (browseTab === 'genres') {
     const items = getGenreDisplayItems();
     if (_browseEmptyEl) _browseEmptyEl.hidden = items.length > 0;
+    _updateBrowseCountUI(items.length);
     virtualBrowseList.setItems(items);
     virtualBrowseList.refresh(activeGenre);
   } else {
@@ -841,6 +852,7 @@ function refreshBrowseCounts() {
   if (browseTab === 'genres') {
     const items = getGenreDisplayItems(); // respects browsePanelQuery
     if (_browseEmptyEl) _browseEmptyEl.hidden = items.length > 0;
+    _updateBrowseCountUI(items.length);
     virtualBrowseList.updateItems(items, true);
     virtualBrowseList.refresh(activeGenre);
   } else {
@@ -895,6 +907,7 @@ function switchBrowseTab(tab) {
   browseTab = tab;
   browsePanelQuery = '';
   if (_browseSearchEl) _browseSearchEl.value = '';
+  _updateBrowseCountUI(0);
   document.querySelectorAll('.browse-tab').forEach(btn => {
     const isActive = btn.dataset.tab === tab;
     btn.classList.toggle('active', isActive);
@@ -1476,6 +1489,8 @@ u(document).on('DOMContentLoaded', async function () {
   _browseListEl     = document.getElementById('browse-list');
   _browseEmptyEl    = document.getElementById('browse-empty');
   _browseSearchEl   = document.getElementById('browse-search');
+  _browseCountEl    = document.getElementById('browse-count');
+  _browseClearBtn   = document.getElementById('browse-clear');
   _browseCollapseBtn = document.getElementById('browse-collapse');
   _browseBadgeEl    = document.getElementById('browse-badge');
   _activeFilterChip = document.getElementById('active-filter-chip');
@@ -1862,6 +1877,13 @@ u(document).on('DOMContentLoaded', async function () {
     browsePanelQuery = _browseSearchEl.value;
     clearTimeout(browseSearchDebounce);
     browseSearchDebounce = setTimeout(renderBrowsePanel, 120);
+  });
+  _browseClearBtn?.addEventListener('click', () => {
+    browsePanelQuery = '';
+    if (_browseSearchEl) _browseSearchEl.value = '';
+    _updateBrowseCountUI(0);
+    renderBrowsePanel();
+    _browseSearchEl?.focus();
   });
 
   // Collapse toggles (desktop)
