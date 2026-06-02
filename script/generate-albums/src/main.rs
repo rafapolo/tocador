@@ -47,6 +47,11 @@ static RE_SLUG_TAIL: Lazy<Regex> = Lazy::new(|| {
 static RE_TRACK_NUM_STRIP: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^\d{1,3}[\.\-_\s]+").unwrap()
 });
+// Strip compilation-style prefix "Artist - Album - NN Title" → "Title".
+// Requires exactly two " - " separators before a number; avoids "Artist - 17 Steps" false positives.
+static RE_COMPILATION_PREFIX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[^-–]+ - [^-–]+ - \d{1,3}[\.\-_\s]+(.+)$").unwrap()
+});
 
 // Per-directory config file (acervo.json in the music root)
 
@@ -269,10 +274,17 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
             .into_owned();
         let title = if title.is_empty() {
             let stem = mp3.file_stem().unwrap_or_default().to_string_lossy().into_owned();
-            let stripped = RE_TRACK_NUM_STRIP.find(&stem).map(|m| stem[m.end()..].trim()).unwrap_or(&stem);
-            stripped.to_string()
+            // Strip leading "01. " / "01 - " / "01_" prefix
+            let after_num = RE_TRACK_NUM_STRIP.find(&stem).map(|m| stem[m.end()..].trim()).unwrap_or(&stem);
+            // Strip "Artist - Album - NN " compilation prefix from stem-derived titles
+            let cleaned = RE_COMPILATION_PREFIX.captures(after_num)
+                .and_then(|c| c.get(1)).map(|m| m.as_str().trim()).unwrap_or(after_num);
+            cleaned.to_string()
         } else {
-            title
+            // Also strip compilation prefix from ID3 titles that embed it
+            RE_COMPILATION_PREFIX.captures(&title)
+                .and_then(|c| c.get(1)).map(|m| m.as_str().trim().to_string())
+                .unwrap_or(title)
         };
         let track_artist = if artist.is_empty() { album_artist.clone() } else { artist };
         tracks.push(Track { title, num: Some(track_n), file, artists: Some(track_artist), duration });
@@ -311,9 +323,38 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         tracks = indexed.into_iter().map(|(_, t)| t).collect();
     }
 
+    // Infer album_artist from a common "Artist - " prefix shared by all track titles when
+    // neither the folder name nor ID3 tags provided one (e.g. files with no ID3 tags where
+    // filenames are "01. Artist - Track Title.mp3").
+    if album_artist.is_empty() && !tracks.is_empty() {
+        if let Some(dash) = tracks[0].title.find(" - ") {
+            let candidate = tracks[0].title[..dash].to_string();
+            if !candidate.is_empty() {
+                let prefix = format!("{} - ", candidate).to_lowercase();
+                if tracks.iter().all(|t| t.title.to_lowercase().starts_with(&prefix)) {
+                    album_artist = candidate;
+                }
+            }
+        }
+    }
+
+    // Strip album-artist prefix from track title: ID3 tags often encode "Artist - Track Title"
+    // as the title field. Also handles doubled prefix ("Artist - Artist - Track Title").
+    // Applied after album_artist is fully resolved from all tracks.
+    let artist_prefix = if album_artist.is_empty() {
+        String::new()
+    } else {
+        format!("{} - ", album_artist).to_lowercase()
+    };
+
     // Omit artists when it duplicates the album artist; omit num when it equals array position
     // or is 0 (no track number in ID3 and filename gave no hint either).
     for (i, t) in tracks.iter_mut().enumerate() {
+        if !artist_prefix.is_empty() {
+            while t.title.to_lowercase().starts_with(&artist_prefix) {
+                t.title = t.title[album_artist.len() + 3..].trim().to_string();
+            }
+        }
         if t.artists.as_deref() == Some(album_artist.as_str()) {
             t.artists = None;
         }
