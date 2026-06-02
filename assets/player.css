@@ -1719,13 +1719,16 @@ audio {
   color: var(--color-text);
 }
 
-.browse-count {
+.browse-item .browse-count {
+  display: block;
+  position: static;
   font-size: 0.66rem;
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   min-width: 20px;
   text-align: right;
+  transform: none;
 }
 
 .browse-item.selected .browse-count { color: var(--color-accent-dark); }
@@ -1787,6 +1790,19 @@ audio {
     transition: var(--transition-fast);
   }
   .btn-browse:hover, .btn-browse.active { color: var(--color-accent); border-color: var(--color-accent); }
+
+  .browse-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 16px;
+    line-height: 1;
+    padding: 4px 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .browse-close:hover { color: var(--color-text); }
 
   .search-group { flex-direction: row; align-items: center; gap: 6px; }
   .search-wrapper { flex: 1; min-width: 0; }
