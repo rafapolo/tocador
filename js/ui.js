@@ -467,6 +467,10 @@ class VirtualGrid {
       if (!this._nodes.has(i)) {
         const node = this._makeNode(i, this._pool.pop());
         this._nodes.set(i, node);
+        node.classList.remove('appearing');
+        void node.offsetWidth; // restart animation on recycled nodes
+        node.classList.add('appearing');
+        node.addEventListener('animationend', () => node.classList.remove('appearing'), { once: true });
         this.inner.appendChild(node);
       }
     }
