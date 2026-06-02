@@ -1856,6 +1856,7 @@ u(document).on('DOMContentLoaded', async function () {
 
   // Scrim tap to close
   document.getElementById('browse-scrim')?.addEventListener('click', closeBrowseDrawer);
+  document.getElementById('btn-browse-close')?.addEventListener('click', closeBrowseDrawer);
 
   document.addEventListener('keydown', e => {
     // Escape: close mobile browse drawer OR clear active panel filter
