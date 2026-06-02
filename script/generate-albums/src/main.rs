@@ -477,7 +477,33 @@ fn main() {
         }
         merged
     };
-    let mut albums = albums;
+    // Deduplicate: same (artist, title, year) can arise when an archive extracts into
+    // nested subdirectories alongside a properly-named top-level folder. Keep the
+    // shallowest path (fewest '/' components), tie-break by most tracks.
+    let mut albums = {
+        use std::collections::HashMap;
+        let mut seen: HashMap<(String, String, u32), usize> = HashMap::new();
+        let mut deduped: Vec<Album> = Vec::with_capacity(albums.len());
+        for album in albums {
+            let key = (
+                album.artist.to_lowercase(),
+                album.title.to_lowercase(),
+                album.year,
+            );
+            let depth = album.path.chars().filter(|&c| c == '/').count();
+            if let Some(&idx) = seen.get(&key) {
+                let existing = &deduped[idx];
+                let ex_depth = existing.path.chars().filter(|&c| c == '/').count();
+                if depth < ex_depth || (depth == ex_depth && album.tracks.len() > existing.tracks.len()) {
+                    deduped[idx] = album;
+                }
+            } else {
+                seen.insert(key, deduped.len());
+                deduped.push(album);
+            }
+        }
+        deduped
+    };
 
     albums.sort_by(|a, b| b.year.cmp(&a.year));
 
