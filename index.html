@@ -72,11 +72,15 @@
                     <button class="browse-tab" role="tab" data-tab="genres" aria-selected="false" disabled title="Gêneros indisponíveis neste acervo">Gêneros</button>
                 </div>
                 <div class="browse-search-wrap">
-                    <input class="browse-search" id="browse-search" type="text" placeholder="Filtrar lista…" autocomplete="off" spellcheck="false" aria-label="Filtrar a lista" />
+                    <div class="browse-search-inner">
+                        <input class="browse-search" id="browse-search" type="text" placeholder="Filtrar lista…" autocomplete="off" spellcheck="false" aria-label="Filtrar a lista" />
+                        <span id="browse-count" class="browse-count"></span>
+                        <button id="browse-clear" class="browse-clear" aria-label="Limpar filtro">✕</button>
+                    </div>
                 </div>
                 <div class="browse-list" id="browse-list" role="listbox" aria-label="Artistas" aria-multiselectable="false"></div>
                 <p class="browse-empty" id="browse-empty" hidden>Nenhum resultado</p>
-                <button class="browse-collapse" id="browse-collapse" aria-label="Recolher painel" aria-expanded="true">◀</button>
+                <button class="browse-collapse" id="browse-collapse" aria-label="Recolher painel" aria-expanded="true"></button>
             </aside>
 
             <main class="main-content">
@@ -120,7 +124,8 @@
                 </div>
             </main>
 
-            <aside class="tracks-panel" aria-label="Faixas do álbum">
+            <aside class="tracks-panel" id="tracks-panel" aria-label="Faixas do álbum">
+                <button class="tracks-collapse" id="tracks-collapse" aria-label="Recolher painel de faixas" aria-expanded="true"></button>
                 <div class="album-header" id="album-header"></div>
                 <ol class="track-list" id="track-list" aria-label="Lista de faixas"></ol>
             </aside>
