@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "bun proxy.js",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:unit": "bun test tests/proxy.test.js"
   },
   "dependencies": {},
   "devDependencies": {
