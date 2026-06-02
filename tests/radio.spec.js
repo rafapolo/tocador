@@ -153,16 +153,14 @@ test('R15: radio filter selects albums with "hominis canidae" and encodes # corr
 
   // The fixture now includes "Hominis Canidae #42" which the filter should pick.
   // Force playback of that specific album and verify the audio URL.
-  const [request] = await Promise.all([
-    page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 5000 }),
-    page.evaluate(() => {
-      const hcAlbum = albums.find(a => a.path.toLowerCase().includes('hominis canidae #'));
-      if (!hcAlbum) throw new Error('fixture has no Hominis Canidae # album');
-      playTrack(hcAlbum, hcAlbum.tracks[0]);
-    }),
-  ]);
+  await page.evaluate(() => {
+    const hcAlbum = albums.find(a => a.path.toLowerCase().includes('hominis canidae #'));
+    if (!hcAlbum) throw new Error('fixture has no Hominis Canidae # album');
+    audio.src = '';
+    playTrack(hcAlbum, hcAlbum.tracks[0]);
+  });
 
-  const url = request.url();
+  const url = await page.evaluate(() => audio.src);
   expect(url).not.toMatch(/#[^/]/);
   expect(url).toContain('%23');
 });
