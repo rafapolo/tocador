@@ -119,11 +119,19 @@ async function sha256hex(data) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+// SigV4 requires encoding all chars except A-Z a-z 0-9 - _ . ~
+// encodeURIComponent leaves ! ' ( ) * unencoded; add them manually
+function sigV4Encode(str) {
+  return encodeURIComponent(str).replace(/[!'()*]/g, c =>
+    '%' + c.charCodeAt(0).toString(16).toUpperCase()
+  );
+}
+
 async function s3GetSigned(bucket, key, rangeHeader) {
   const now = new Date();
   const amzDate  = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const dateStamp = amzDate.slice(0, 8);
-  const encodedKey = key.split('/').map(seg => encodeURIComponent(seg)).join('/');
+  const encodedKey = key.split('/').map(sigV4Encode).join('/');
   const url = new URL(`/${bucket}/${encodedKey}`, S3_ENDPOINT);
   const host = url.host;
 
