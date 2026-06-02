@@ -24,7 +24,9 @@
 
   window.addEventListener('error', e => {
     const msg = e.message || String(e);
-    const loc = e.filename ? ` @ ${e.filename.replace(/.*\//, '')}:${e.lineno}` : '';
+    if (msg.includes('ResizeObserver')) return; // browser noise, not actionable
+    const filename = e.filename ? e.filename.replace(/^https?:\/\/[^/]+\//, '').replace(/\?.*/, '') : '';
+    const loc = filename ? ` @ ${filename}:${e.lineno}` : '';
     report(`[tocador] JS error: ${msg}${loc}`, e.error?.stack || msg);
   });
 
@@ -83,6 +85,8 @@ let _cachedGenreTree = null;
 let _browsePanelEl = null, _browseListEl = null, _browseEmptyEl = null;
 let _browseSearchEl = null, _browseCollapseBtn = null, _browseBadgeEl = null;
 let _activeFilterChip = null, _activeFilterLabel = null;
+let _tracksPanelEl = null, _tracksCollapseBtn = null;
+let tracksCollapsed = localStorage.getItem('tocador-tracks-collapsed') === 'true';
 
 const KNOWN_ACERVOS = {
   uqt: {
@@ -333,7 +337,8 @@ class VirtualGrid {
     this._layout = this._layout.bind(this);
     this._render = this._render.bind(this);
 
-    new ResizeObserver(this._layout).observe(container);
+    let _layoutTimer;
+    new ResizeObserver(() => { clearTimeout(_layoutTimer); _layoutTimer = setTimeout(this._layout, 50); }).observe(container);
     container.addEventListener('scroll', this._render, { passive: true });
   }
 
@@ -586,7 +591,11 @@ class VirtualList {
     node.dataset.value = item.fullName ?? item.name;
 
     const toggleEl = node.querySelector('.browse-toggle');
-    if (toggleEl) toggleEl.textContent = item.expanded ? '▾' : '▸';
+    if (toggleEl) {
+      toggleEl.innerHTML = item.expanded
+        ? `<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor" aria-hidden="true"><polygon points="1,3 9,3 5,8"/></svg>`
+        : `<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor" aria-hidden="true"><polygon points="3,1 8,5 3,9"/></svg>`;
+    }
 
     const val = item.fullName ?? item.name;
     const sel = val === this._selectedValue;
@@ -749,12 +758,21 @@ function buildGenreTree() {
 
 function getGenreDisplayItems() {
   const tree = buildGenreTree();
+  const q = browsePanelQuery.toLowerCase();
   const items = [];
   for (const [parent, data] of tree) {
-    const expanded = expandedGenres.has(parent);
+    const parentMatch = !q || parent.toLowerCase().includes(q);
+    const matchingSubs = q
+      ? [...data.subs.entries()].filter(([sub]) => sub.toLowerCase().includes(q))
+      : [];
+    if (q && !parentMatch && matchingSubs.length === 0) continue;
+    const expanded = q ? (parentMatch || matchingSubs.length > 0) : expandedGenres.has(parent);
     items.push({ name: parent, fullName: parent, count: data.count, type: 'parent', expanded });
     if (expanded) {
-      for (const [sub, count] of [...data.subs.entries()].sort((a, b) => b[1] - a[1])) {
+      const subsToShow = q && !parentMatch
+        ? matchingSubs.sort((a, b) => b[1] - a[1])
+        : [...data.subs.entries()].sort((a, b) => b[1] - a[1]);
+      for (const [sub, count] of subsToShow) {
         items.push({ name: sub, fullName: `${parent}---${sub}`, count, type: 'child', parentName: parent });
       }
     }
@@ -815,11 +833,13 @@ function renderBrowsePanel() {
   }
 }
 
+
+
 function refreshBrowseCounts() {
   if (!virtualBrowseList || !_browsePanelEl) return;
   if (_browsePanelEl.classList.contains('collapsed')) return;
   if (browseTab === 'genres') {
-    const items = getGenreDisplayItems();
+    const items = getGenreDisplayItems(); // respects browsePanelQuery
     if (_browseEmptyEl) _browseEmptyEl.hidden = items.length > 0;
     virtualBrowseList.updateItems(items, true);
     virtualBrowseList.refresh(activeGenre);
@@ -908,6 +928,13 @@ function toggleBrowsePanel() {
     localStorage.setItem('tocador-browse-collapsed', browseCollapsed);
     if (!browseCollapsed) renderBrowsePanel();
   }
+}
+
+function toggleTracksPanel() {
+  tracksCollapsed = !tracksCollapsed;
+  _tracksPanelEl?.classList.toggle('collapsed', tracksCollapsed);
+  _tracksCollapseBtn?.setAttribute('aria-expanded', String(!tracksCollapsed));
+  localStorage.setItem('tocador-tracks-collapsed', tracksCollapsed);
 }
 
 function updateLibraryStats() {
@@ -1453,6 +1480,12 @@ u(document).on('DOMContentLoaded', async function () {
   _browseBadgeEl    = document.getElementById('browse-badge');
   _activeFilterChip = document.getElementById('active-filter-chip');
   _activeFilterLabel = document.getElementById('active-filter-label');
+  _tracksPanelEl    = document.getElementById('tracks-panel');
+  _tracksCollapseBtn = document.getElementById('tracks-collapse');
+  if (tracksCollapsed) {
+    _tracksPanelEl?.classList.add('collapsed');
+    _tracksCollapseBtn?.setAttribute('aria-expanded', 'false');
+  }
 
   buildAlbums();
   filteredAlbums = [...albums];
@@ -1618,7 +1651,7 @@ u(document).on('DOMContentLoaded', async function () {
 
   // Singleton player across tabs: pause this tab when another tab starts playing
   if (typeof BroadcastChannel !== 'undefined') {
-    const TAB_ID = crypto.randomUUID();
+    const TAB_ID = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
     const playerChannel = new BroadcastChannel('tocador-player');
     audio.addEventListener('play', () => playerChannel.postMessage({ tabId: TAB_ID }));
     playerChannel.onmessage = ({ data }) => {
@@ -1831,8 +1864,9 @@ u(document).on('DOMContentLoaded', async function () {
     browseSearchDebounce = setTimeout(renderBrowsePanel, 120);
   });
 
-  // Collapse toggle (desktop)
+  // Collapse toggles (desktop)
   _browseCollapseBtn?.addEventListener('click', toggleBrowsePanel);
+  _tracksCollapseBtn?.addEventListener('click', toggleTracksPanel);
 
   // Mobile trigger button
   document.getElementById('btn-browse')?.addEventListener('click', openBrowseDrawer);

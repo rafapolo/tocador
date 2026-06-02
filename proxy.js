@@ -281,16 +281,36 @@ _server = Bun.serve({
         counters.c4xx++;
         return new Response('Bad Request', { status: 400, headers: corsBase });
       }
+      const ghHeaders = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'tocador-proxy',
+      };
+      const normalizedTitle = title.slice(0, 200);
       try {
+        // Deduplicate: comment on existing open issue instead of creating a new one
+        let existingNumber = null;
+        try {
+          const q = encodeURIComponent(`repo:rafapolo/tocador is:issue is:open "${normalizedTitle}"`);
+          const sr = await fetch(`https://api.github.com/search/issues?q=${q}&per_page=5`, { headers: ghHeaders });
+          if (sr.ok) {
+            const sd = await sr.json();
+            existingNumber = sd.items?.find(i => i.title === normalizedTitle)?.number ?? null;
+          }
+        } catch {}
+
+        if (existingNumber != null) {
+          const cr = await fetch(`https://api.github.com/repos/rafapolo/tocador/issues/${existingNumber}/comments`, {
+            method: 'POST', headers: ghHeaders, body: JSON.stringify({ body }),
+          });
+          if (cr.ok) counters.ok++; else counters.c5xx++;
+          return new Response(cr.ok ? 'Commented' : 'GitHub error', { status: cr.ok ? 200 : cr.status, headers: corsBase });
+        }
+
         const gh = await fetch('https://api.github.com/repos/rafapolo/tocador/issues', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github+json',
-            'Content-Type': 'application/json',
-            'User-Agent': 'tocador-proxy',
-          },
-          body: JSON.stringify({ title: title.slice(0, 200), body, labels: ['bug'] }),
+          method: 'POST', headers: ghHeaders,
+          body: JSON.stringify({ title: normalizedTitle, body, labels: ['bug'] }),
         });
         if (gh.ok) counters.ok++; else counters.c5xx++;
         return new Response(gh.ok ? 'Created' : 'GitHub error', { status: gh.ok ? 201 : gh.status, headers: corsBase });
