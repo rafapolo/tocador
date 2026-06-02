@@ -1101,6 +1101,8 @@ audio {
 .mobile-track-drawer { display: none; }
 
 @media (max-width: 768px) {
+  #mobile-stat-albums { display: none; }
+
   /* Header: compact single row ~44px */
   .app-header {
     padding: 0 var(--spacing-sm);
