@@ -43,6 +43,10 @@ static RE_TRACK_NUM_MID: Lazy<Regex> = Lazy::new(|| {
 static RE_SLUG_TAIL: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^[a-z][a-z0-9\-]+\.mp3$").unwrap()
 });
+// Strip leading track-number prefix from filename-derived titles ("01. ", "02 - ", "03_", etc.)
+static RE_TRACK_NUM_STRIP: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\d{1,3}[\.\-_\s]+").unwrap()
+});
 
 // Per-directory config file (acervo.json in the music root)
 
@@ -264,7 +268,9 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
             .to_string_lossy()
             .into_owned();
         let title = if title.is_empty() {
-            mp3.file_stem().unwrap_or_default().to_string_lossy().into_owned()
+            let stem = mp3.file_stem().unwrap_or_default().to_string_lossy().into_owned();
+            let stripped = RE_TRACK_NUM_STRIP.find(&stem).map(|m| stem[m.end()..].trim()).unwrap_or(&stem);
+            stripped.to_string()
         } else {
             title
         };
