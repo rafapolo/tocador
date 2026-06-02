@@ -708,10 +708,23 @@ function buildGenreList() {
 
 function getCurrentBrowseItems() {
   const base = browseTab === 'genres' ? buildGenreList() : buildArtistList();
-  if (filteredAlbums.length === albums.length && !activeGenre && !activeArtist) return base;
+  const hasExternalFilter = !!searchQuery || activeDecade !== null || !!activeYear;
+  // No external filter → show full list so the user can always switch artist/genre
+  if (!hasExternalFilter) return base;
+  // External filter active → recount using only decade/search/year (not the panel selection)
+  // so the list stays full and just reflects which artists/genres survive those filters.
   const map = new Map();
   const isGenres = browseTab === 'genres';
-  for (const a of filteredAlbums) {
+  const q = searchQuery.toLowerCase();
+  for (const a of albums) {
+    const matchesDecade = activeDecade === null ||
+      (activeDecade === 'noyear' ? !a.year :
+       activeDecade === 'pre1940' ? (a.year > 0 && a.year < 1950) :
+       Math.floor(a.year / 10) * 10 === activeDecade);
+    if (!matchesDecade) continue;
+    if (activeYear && a.year !== activeYear) continue;
+    if (searchQuery && !(a.nameLower.includes(q) || a.artistsLower.includes(q) ||
+        a.pathLower.includes(q) || a.tracks.some(t => t.titleLower.includes(q) || t.artistsLower.includes(q)))) continue;
     const key = isGenres ? a.genreParent : a.artists;
     if (key) map.set(key, (map.get(key) || 0) + 1);
   }

@@ -1699,6 +1699,7 @@ audio {
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
+  color: var(--color-text);
 }
 
 .browse-count {
@@ -1725,14 +1726,14 @@ audio {
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 44px;
+  width: 12px;
+  height: 32px;
   background: var(--color-surface-light);
   border: 1px solid var(--color-border);
   border-right: none;
-  border-radius: 4px 0 0 4px;
+  border-radius: 3px 0 0 3px;
   color: var(--color-text-muted);
-  font-size: 0.55rem;
+  font-size: 0.45rem;
   cursor: pointer;
   display: flex;
   align-items: center;
