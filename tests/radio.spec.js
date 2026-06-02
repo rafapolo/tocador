@@ -119,19 +119,16 @@ test('R12: radio widget renders correctly on mobile (375px)', async ({ page }) =
 test('R13: audio src encodes # as %23 for albums with # in path', async ({ page }) => {
   await gotoRadio(page, '?all=1');
 
-  // Force the radio to play the album whose path contains #
-  const [request] = await Promise.all([
-    page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 5000 }),
-    page.evaluate(() => {
-      const hashAlbum = albums.find(a => a.path.includes('#'));
-      if (!hashAlbum) throw new Error('fixture has no album with # in path');
-      playTrack(hashAlbum, hashAlbum.tracks[0]);
-    }),
-  ]);
+  await page.evaluate(() => {
+    const hashAlbum = albums.find(a => a.path.includes('#'));
+    if (!hashAlbum) throw new Error('fixture has no album with # in path');
+    audio.src = '';
+    playTrack(hashAlbum, hashAlbum.tracks[0]);
+  });
 
-  const url = request.url();
-  expect(url).not.toMatch(/#[^/]/);   // bare # must not appear in path
-  expect(url).toContain('%23');        // must be percent-encoded
+  const src = await page.evaluate(() => audio.src);
+  expect(src).not.toMatch(/#[^/]/);   // bare # must not appear in path
+  expect(src).toContain('%23');        // must be percent-encoded
 });
 
 test('R14: cover src encodes # as %23 for albums with # in path', async ({ page }) => {
