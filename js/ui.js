@@ -947,7 +947,7 @@ function applyArchiveMeta() {
     const totalSeconds = db.albums.reduce((s, a) => s + (a.tracks || []).reduce((ts, t) => ts + (t.duration || 0), 0), 0);
     if (totalSeconds > 0) hours = Math.round(totalSeconds / 3600).toString();
   }
-  const displayTitle = title !== 'Tocador' ? `Tocador / ${title} ♪` : 'Tocador';
+  const displayTitle = title !== 'Tocador' ? `Tocador ♪ ${title}` : 'Tocador';
   document.title = displayTitle;
   const titleEl = document.getElementById('app-title');
   const subtitleEl = document.getElementById('app-subtitle');
@@ -1326,7 +1326,7 @@ u(document).on('DOMContentLoaded', async function () {
     const item = e.target.closest('[data-album-idx]');
     if (!item) return;
     const album = filteredAlbums[parseInt(item.dataset.albumIdx)];
-    if (!album || selectedAlbum === album) return;
+    if (!album || (selectedAlbum === album && currentTrack != null)) return;
 
     albumsList.querySelector('.album-item.active')?.classList.remove('active');
     item.classList.add('active');
