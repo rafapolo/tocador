@@ -91,8 +91,6 @@ body {
 }
 
 .header-content {
-  max-width: 1600px;
-  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -227,23 +225,6 @@ body {
   transition: width 0.3s ease;
 }
 
-.tracks-panel.hidden {
-  width: 0;
-  border-left: none;
-  overflow: hidden;
-}
-
-.tracks-panel.collapsed {
-  width: 16px;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.tracks-panel.collapsed .album-header,
-.tracks-panel.collapsed .track-list {
-  opacity: 0;
-  pointer-events: none;
-}
 
 .filters-section {
   padding: var(--spacing-md) var(--spacing-lg);
@@ -1556,28 +1537,6 @@ audio {
   transition: width 0.3s ease;
 }
 
-.browse-panel.collapsed {
-  width: 36px;
-}
-
-.browse-panel.collapsed .browse-tabs,
-.browse-panel.collapsed .browse-search-wrap,
-.browse-panel.collapsed .browse-list,
-.browse-panel.collapsed .browse-empty {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.browse-panel.collapsed::after {
-  content: '≡';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 1rem;
-  color: var(--color-text-muted);
-  pointer-events: none;
-}
 
 .browse-tabs {
   display: flex;
@@ -1779,108 +1738,6 @@ audio {
   margin: 0;
 }
 
-/* Panel collapse strips — left (browse) and right (tracks) */
-.browse-collapse,
-.tracks-collapse {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 16px;
-  background: transparent;
-  border: none;
-  cursor: col-resize;
-  transition: background 0.2s, border-color 0.2s;
-  z-index: 2;
-  padding: 0;
-  border-radius: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: transparent;
-}
-
-.browse-collapse {
-  right: 0;
-  border-left: 1px solid var(--color-border);
-}
-
-.tracks-collapse {
-  left: 0;
-  border-right: 1px solid var(--color-border);
-}
-
-.browse-collapse::after,
-.tracks-collapse::after {
-  content: '';
-  display: block;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  opacity: 0.25;
-  transition: opacity 0.2s;
-}
-
-/* ◀ arrow on right edge of browse panel */
-.browse-collapse::after {
-  border-width: 5px 6px 5px 0;
-  border-color: transparent var(--color-text-muted) transparent transparent;
-}
-
-/* ▶ arrow on left edge of tracks panel */
-.tracks-collapse::after {
-  border-width: 5px 0 5px 6px;
-  border-color: transparent transparent transparent var(--color-text-muted);
-}
-
-.browse-collapse:hover,
-.tracks-collapse:hover {
-  background: rgba(212, 165, 116, 0.08);
-}
-
-.browse-collapse:hover::after,
-.tracks-collapse:hover::after {
-  opacity: 0.8;
-  border-color: transparent var(--color-accent) transparent transparent;
-}
-
-.tracks-collapse:hover::after {
-  border-color: transparent transparent transparent var(--color-accent);
-}
-
-/* flip arrows when panels are collapsed — more visible to invite clicking */
-.browse-panel.collapsed .browse-collapse::after {
-  border-width: 5px 0 5px 6px;
-  border-color: transparent transparent transparent var(--color-text-muted);
-  opacity: 0.55;
-}
-
-.browse-panel.collapsed .browse-collapse:hover::after {
-  border-color: transparent transparent transparent var(--color-accent);
-  opacity: 1;
-}
-
-.tracks-panel.collapsed .tracks-collapse::after {
-  border-width: 5px 6px 5px 0;
-  border-color: transparent var(--color-text-muted) transparent transparent;
-  opacity: 0.55;
-}
-
-.tracks-panel.collapsed .tracks-collapse:hover::after {
-  border-color: transparent var(--color-accent) transparent transparent;
-  opacity: 1;
-}
-
-.browse-panel.collapsed .browse-collapse {
-  border-left: none;
-  border-right: 1px solid var(--color-border);
-}
-
-/* Active-filter chip */
-.active-filter-chip { align-items: center; gap: 6px; padding: 3px 10px; background: var(--color-accent); color: var(--color-bg); border-radius: 20px; font-size: 0.75rem; font-weight: 600; align-self: flex-start; box-shadow: 0 3px 10px rgba(212,165,116,0.3); }
-.active-filter-chip:not([hidden]) { display: flex; }
-.active-filter-clear { background: none; border: none; color: var(--color-bg); cursor: pointer; font-size: 0.7rem; padding: 0 0 0 2px; opacity: 0.7; transition: opacity 0.15s; }
-.active-filter-clear:hover { opacity: 1; }
-
 /* Browse badge dot (mobile) */
 .browse-badge { display: none; }
 .browse-badge:not([hidden]) { display: block; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; background: var(--color-accent); border-radius: 50%; border: 1.5px solid var(--color-bg); }
@@ -1912,7 +1769,6 @@ audio {
   }
   .browse-panel.open { transform: translateX(0); }
   .browse-scrim { display: block; }
-  .browse-collapse { display: none; }
   .browse-item { height: 44px; }
 
   .btn-browse {
@@ -1934,7 +1790,6 @@ audio {
 
   .search-group { flex-direction: row; align-items: center; gap: 6px; }
   .search-wrapper { flex: 1; min-width: 0; }
-  .active-filter-chip { font-size: 0.7rem; padding: 3px 8px; }
 }
 
 /* Genre tree items */
@@ -1954,10 +1809,16 @@ audio {
   width: 14px;
 }
 
+@keyframes browse-child-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
 .browse-item--child {
   height: 32px;
   padding-left: 28px;
   border-left: 3px solid transparent;
+  animation: browse-child-in 0.15s ease;
 }
 
 .browse-item--child .browse-name {

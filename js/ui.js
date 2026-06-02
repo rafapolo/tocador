@@ -77,17 +77,14 @@ let activeGenre = null;
 let activeArtist = null;
 let browseTab = 'artists';
 let browsePanelQuery = '';
-let browseCollapsed = localStorage.getItem('tocador-browse-collapsed') !== 'false';
 let expandedGenres = new Set();
 let _cachedGenreTree = null;
 
 // Browse panel DOM refs (set once after DOMContentLoaded)
 let _browsePanelEl = null, _browseListEl = null, _browseEmptyEl = null;
-let _browseSearchEl = null, _browseCollapseBtn = null, _browseBadgeEl = null;
+let _browseSearchEl = null, _browseBadgeEl = null;
 let _browseCountEl = null, _browseClearBtn = null;
-let _activeFilterChip = null, _activeFilterLabel = null;
-let _tracksPanelEl = null, _tracksCollapseBtn = null;
-let tracksCollapsed = localStorage.getItem('tocador-tracks-collapsed') === 'true';
+let _tracksPanelEl = null;
 
 const KNOWN_ACERVOS = {
   uqt: {
@@ -837,7 +834,7 @@ function renderBrowsePanel() {
     const items = getGenreDisplayItems();
     if (_browseEmptyEl) _browseEmptyEl.hidden = items.length > 0;
     _updateBrowseCountUI(items.length);
-    virtualBrowseList.setItems(items);
+    virtualBrowseList.updateItems(items, true);
     virtualBrowseList.refresh(activeGenre);
   } else {
     _applyBrowseItems(getCurrentBrowseItems(), false);
@@ -861,14 +858,9 @@ function refreshBrowseCounts() {
 }
 
 function renderActiveFilterChip() {
-  if (!_activeFilterChip || !_activeFilterLabel) return;
-  const active = activeGenre || activeArtist;
-  _activeFilterChip.hidden = !active;
-  if (active) {
-    _activeFilterLabel.textContent = `${activeGenre ? 'Gênero' : 'Artista'}: ${active}`;
-  }
+  const active = !!(activeGenre || activeArtist);
   if (_browseBadgeEl) _browseBadgeEl.hidden = !active;
-  document.getElementById('btn-browse')?.classList.toggle('active', !!active);
+  document.getElementById('btn-browse')?.classList.toggle('active', active);
 }
 
 function selectBrowseItem(value, itemType) {
@@ -931,23 +923,8 @@ function closeBrowseDrawer() {
 }
 
 function toggleBrowsePanel() {
-  if (isMobile()) {
-    if (_browsePanelEl?.classList.contains('open')) closeBrowseDrawer();
-    else openBrowseDrawer();
-  } else {
-    browseCollapsed = !browseCollapsed;
-    _browsePanelEl?.classList.toggle('collapsed', browseCollapsed);
-    _browseCollapseBtn?.setAttribute('aria-expanded', String(!browseCollapsed));
-    localStorage.setItem('tocador-browse-collapsed', browseCollapsed);
-    if (!browseCollapsed) renderBrowsePanel();
-  }
-}
-
-function toggleTracksPanel() {
-  tracksCollapsed = !tracksCollapsed;
-  _tracksPanelEl?.classList.toggle('collapsed', tracksCollapsed);
-  _tracksCollapseBtn?.setAttribute('aria-expanded', String(!tracksCollapsed));
-  localStorage.setItem('tocador-tracks-collapsed', tracksCollapsed);
+  if (_browsePanelEl?.classList.contains('open')) closeBrowseDrawer();
+  else openBrowseDrawer();
 }
 
 function updateLibraryStats() {
@@ -1491,16 +1468,8 @@ u(document).on('DOMContentLoaded', async function () {
   _browseSearchEl   = document.getElementById('browse-search');
   _browseCountEl    = document.getElementById('browse-count');
   _browseClearBtn   = document.getElementById('browse-clear');
-  _browseCollapseBtn = document.getElementById('browse-collapse');
   _browseBadgeEl    = document.getElementById('browse-badge');
-  _activeFilterChip = document.getElementById('active-filter-chip');
-  _activeFilterLabel = document.getElementById('active-filter-label');
   _tracksPanelEl    = document.getElementById('tracks-panel');
-  _tracksCollapseBtn = document.getElementById('tracks-collapse');
-  if (tracksCollapsed) {
-    _tracksPanelEl?.classList.add('collapsed');
-    _tracksCollapseBtn?.setAttribute('aria-expanded', 'false');
-  }
 
   buildAlbums();
   filteredAlbums = [...albums];
@@ -1511,10 +1480,6 @@ u(document).on('DOMContentLoaded', async function () {
   // Init browse panel VirtualList and apply initial state
   if (_browseListEl) {
     virtualBrowseList = new VirtualList(_browseListEl);
-    if (browseCollapsed && !isMobile()) {
-      _browsePanelEl?.classList.add('collapsed');
-      _browseCollapseBtn?.setAttribute('aria-expanded', 'false');
-    }
     // Enable/disable Genres tab based on genreData availability
     const genresTabBtn = document.querySelector('.browse-tab[data-tab="genres"]');
     if (genresTabBtn) {
@@ -1886,23 +1851,11 @@ u(document).on('DOMContentLoaded', async function () {
     _browseSearchEl?.focus();
   });
 
-  // Collapse toggles (desktop)
-  _browseCollapseBtn?.addEventListener('click', toggleBrowsePanel);
-  _tracksCollapseBtn?.addEventListener('click', toggleTracksPanel);
-
   // Mobile trigger button
   document.getElementById('btn-browse')?.addEventListener('click', openBrowseDrawer);
 
   // Scrim tap to close
   document.getElementById('browse-scrim')?.addEventListener('click', closeBrowseDrawer);
-
-  // Active-filter chip clear
-  document.getElementById('active-filter-clear')?.addEventListener('click', () => {
-    activeGenre = null; activeArtist = null;
-    updateBrowseFilterInUrl();
-    filterAlbums();
-    updateBrowseSelection();
-  });
 
   document.addEventListener('keydown', e => {
     // Escape: close mobile browse drawer OR clear active panel filter
@@ -1944,8 +1897,7 @@ u(document).on('DOMContentLoaded', async function () {
         break;
       case 'g':
         if (!e.metaKey && !e.ctrlKey && !e.altKey && genreData) {
-          if (!isMobile() && browseCollapsed) toggleBrowsePanel();
-          else if (isMobile()) openBrowseDrawer();
+          if (isMobile()) openBrowseDrawer();
           switchBrowseTab('genres');
         }
         break;
