@@ -1255,6 +1255,7 @@ audio {
     scrollbar-width: none;
     justify-content: flex-start;
     gap: 4px;
+    padding-top: 5px;
   }
 
   .decade-buttons::-webkit-scrollbar {
@@ -1525,7 +1526,6 @@ audio {
     flex-wrap: nowrap;
     overflow-x: auto;
     gap: 4px;
-    margin-top: 7px;
   }
 
   .decade-btn {
