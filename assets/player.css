@@ -503,8 +503,9 @@ body {
 .album-item-info {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 2px;
   min-width: 0;
+  text-align: center;
 }
 
 .album-item-title {
@@ -1721,29 +1722,38 @@ audio {
   margin: 0;
 }
 
+/* Minimal collapse — invisible right-edge strip, accent on hover */
 .browse-collapse {
   position: absolute;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 32px;
-  background: var(--color-surface-light);
-  border: 1px solid var(--color-border);
-  border-right: none;
-  border-radius: 3px 0 0 3px;
-  color: var(--color-text-muted);
-  font-size: 0.45rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s, background 0.2s;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  cursor: col-resize;
+  transition: background 0.2s, border-color 0.2s;
   z-index: 2;
+  padding: 0;
+  transform: none;
+  border-radius: 0;
+  font-size: 0;
 }
 
-.browse-collapse:hover { color: var(--color-accent); background: var(--color-border); }
-.browse-panel.collapsed .browse-collapse { transform: translateY(-50%) rotate(180deg); }
+.browse-collapse:hover {
+  background: rgba(212, 165, 116, 0.08);
+  border-left-color: rgba(212, 165, 116, 0.5);
+}
+
+.browse-panel.collapsed .browse-collapse {
+  border-left: none;
+  border-right: 1px solid var(--color-border);
+}
+
+.browse-panel.collapsed .browse-collapse:hover {
+  border-right-color: rgba(212, 165, 116, 0.5);
+}
 
 /* Active-filter chip */
 .active-filter-chip { align-items: center; gap: 6px; padding: 3px 10px; background: var(--color-accent); color: var(--color-bg); border-radius: 20px; font-size: 0.75rem; font-weight: 600; align-self: flex-start; box-shadow: 0 3px 10px rgba(212,165,116,0.3); }
@@ -1805,4 +1815,38 @@ audio {
   .search-group { flex-direction: row; align-items: center; gap: 6px; }
   .search-wrapper { flex: 1; min-width: 0; }
   .active-filter-chip { font-size: 0.7rem; padding: 3px 8px; }
+}
+
+/* Genre tree items */
+.browse-toggle {
+  font-size: 0.58rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+  line-height: 1;
+}
+
+.browse-indent {
+  flex-shrink: 0;
+  width: 14px;
+}
+
+.browse-item--child {
+  height: 32px;
+  padding-left: 28px;
+  border-left: 3px solid transparent;
+}
+
+.browse-item--child .browse-name {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.browse-item--child.selected .browse-name {
+  color: var(--color-accent);
+}
+
+.browse-item.selected .browse-toggle {
+  color: var(--color-accent);
 }
