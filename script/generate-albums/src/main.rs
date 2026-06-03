@@ -346,6 +346,13 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
     } else {
         format!("{} - ", album_artist).to_lowercase()
     };
+    // Strip album-title prefix from track title: some tags encode "Album - Track Title"
+    // in the title field (e.g. "Nordeste Oculto - Faixa X" inside album "Nordeste Oculto").
+    let album_prefix = if album_title.is_empty() {
+        String::new()
+    } else {
+        format!("{} - ", album_title).to_lowercase()
+    };
 
     // Omit artists when it duplicates the album artist; omit num when it equals array position
     // or is 0 (no track number in ID3 and filename gave no hint either).
@@ -353,6 +360,11 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         if !artist_prefix.is_empty() {
             while t.title.to_lowercase().starts_with(&artist_prefix) {
                 t.title = t.title[album_artist.len() + 3..].trim().to_string();
+            }
+        }
+        if !album_prefix.is_empty() {
+            while t.title.to_lowercase().starts_with(&album_prefix) {
+                t.title = t.title[album_title.len() + 3..].trim().to_string();
             }
         }
         if t.artists.as_deref() == Some(album_artist.as_str()) {
