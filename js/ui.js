@@ -638,7 +638,8 @@ function buildAlbums() {
     const tracks = dedupedTracks.map((track, i) => {
       const file = `${encodeURIComponent(album.path)}/${encodeURIComponent(track.file)}`;
       if (track.duration) durationCache.set(file, track.duration);
-      const trackArtist = track.artists || album.artist;
+      const rawTrackArtist = track.artists ? track.artists.replace(/\x00/g, '; ') : null;
+      const trackArtist = rawTrackArtist || album.artist;
       return {
         title: track.title, num: track.num ?? (i + 1), file,
         album: album.title, artists: trackArtist, year: album.year,
@@ -681,7 +682,8 @@ function getDecades() {
 function filterAlbums() {
   const q = searchQuery.toLowerCase();
   filteredAlbums = albums.filter(album => {
-    if (activeArtist && album.artists !== activeArtist) return false;
+    if (activeArtist && album.artists !== activeArtist &&
+        !album.tracks.some(t => t.artists === activeArtist)) return false;
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
       else { if (album.genreParent !== activeGenre) return false; }
@@ -725,10 +727,23 @@ function filterAlbums() {
 
 function buildArtistList() {
   if (_cachedArtists) return _cachedArtists;
-  const map = new Map();
-  for (const a of albums) if (a.artists) map.set(a.artists, (map.get(a.artists) || 0) + 1);
+  // Count albums per artist using a Set to avoid double-counting when an artist
+  // appears both as album artist and track artist on the same album.
+  const map = new Map(); // artist → Set<album.path>
+  for (const a of albums) {
+    if (a.artists) {
+      if (!map.has(a.artists)) map.set(a.artists, new Set());
+      map.get(a.artists).add(a.path);
+    }
+    for (const t of a.tracks) {
+      if (t.artists && t.artists !== a.artists) {
+        if (!map.has(t.artists)) map.set(t.artists, new Set());
+        map.get(t.artists).add(a.path);
+      }
+    }
+  }
   _cachedArtists = [...map.entries()]
-    .map(([name, count]) => ({ name, count }))
+    .map(([name, set]) => ({ name, count: set.size }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   return _cachedArtists;
 }
@@ -801,8 +816,14 @@ function getCurrentBrowseItems() {
     if (activeYear && a.year !== activeYear) continue;
     if (searchQuery && !(a.nameLower.includes(q) || a.artistsLower.includes(q) ||
         a.pathLower.includes(q) || a.tracks.some(t => t.titleLower.includes(q) || t.artistsLower.includes(q)))) continue;
-    const key = isGenres ? a.genreParent : a.artists;
-    if (key) map.set(key, (map.get(key) || 0) + 1);
+    if (isGenres) {
+      if (a.genreParent) map.set(a.genreParent, (map.get(a.genreParent) || 0) + 1);
+    } else {
+      const seen = new Set();
+      if (a.artists) seen.add(a.artists);
+      for (const t of a.tracks) if (t.artists && t.artists !== a.artists) seen.add(t.artists);
+      for (const key of seen) map.set(key, (map.get(key) || 0) + 1);
+    }
   }
   return base
     .map(item => ({ name: item.name, count: map.get(item.name) || 0 }))
