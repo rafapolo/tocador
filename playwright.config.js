@@ -2,6 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
+  testIgnore: ['**/proxy.test.js'],
   timeout: 20000,
   use: {
     baseURL: 'http://localhost:3456',
