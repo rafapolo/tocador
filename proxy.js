@@ -279,6 +279,11 @@ _server = Bun.serve({
 
     // POST /report-error — body size already capped by maxRequestBodySize: 8192
     if (req.method === 'POST' && url.pathname === '/report-error') {
+      const reportUa = req.headers.get('user-agent') ?? '';
+      if (/bot|crawl|spider/i.test(reportUa)) {
+        counters.c4xx++;
+        return new Response('Forbidden', { status: 403, headers: corsBase });
+      }
       const token = process.env.GITHUB_TOKEN;
       if (!token) return new Response('Not configured', { status: 503, headers: corsBase });
       let payload;
