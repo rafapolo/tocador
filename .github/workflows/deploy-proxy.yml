@@ -38,3 +38,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
