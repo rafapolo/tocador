@@ -219,7 +219,7 @@ const botRegex = new RegExp([
   'bot\\s*engine', 'crawler\\s*engine', 'spider\\s*engine',
   'auto\\s*fetch', 'auto\\s*scrape', 'auto\\s*crawl',
   // search engines
-  'googlebot', 'adsbot-google', 'mediapartners-google', 'google-read-aloud', 'google-inspectiontool',
+  'googlebot', 'googleother', 'google-extended', 'adsbot-google', 'mediapartners-google', 'google-read-aloud', 'google-inspectiontool',
   'bingbot', 'msnbot', 'adidxbot', 'bingpreview',
   'slurp', 'duckduckbot', 'baiduspider', 'yandexbot', 'sogou', 'exabot',
   'applebot', 'petalbot', 'bytespider', 'seznambot', 'qwantify', 'mojeek', 'neevabot',
