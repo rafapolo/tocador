@@ -319,6 +319,7 @@ const REPORT_URL = 'https://cdn.tocador.cc/report-error';
   });
   window.addEventListener('unhandledrejection', e => {
     const reason = e.reason;
+    if (reason?.name === 'NotAllowedError') { e.preventDefault(); return; }
     const msg = reason?.message || String(reason);
     report(`[radio] Unhandled rejection: ${msg}`, reason?.stack || new Error().stack || msg);
   });
@@ -494,7 +495,7 @@ function playTrack(album, track) {
   setLoading(true);
   clearLoadTimer();
   loadTimer = setTimeout(onLoadTimeout, 6000);
-  audio.play().catch(() => {});
+  audio.play().catch(err => { if (err?.name === 'NotAllowedError') { clearLoadTimer(); setLoading(false); } });
 }
 
 function pushHist() {
@@ -509,7 +510,7 @@ function prev() { if (hist.length) { const p = hist.pop(); playTrack(p.album, p.
 btnPlay.addEventListener('click', e => {
   e.currentTarget.blur();
   if (!curTrack) return;
-  audio.paused ? audio.play().catch(() => {}) : audio.pause();
+  audio.paused ? audio.play().catch(err => { if (err?.name === 'NotAllowedError') { clearLoadTimer(); setLoading(false); } }) : audio.pause();
 });
 $('btn-next').addEventListener('click', e => { e.currentTarget.blur(); next(); });
 $('btn-prev').addEventListener('click', e => { e.currentTarget.blur(); prev(); });
@@ -528,7 +529,7 @@ albumEl.addEventListener('click', e => {
 
 // Pause radio when main player starts (and vice-versa)
 if (typeof BroadcastChannel !== 'undefined') {
-  const TAB_ID = crypto.randomUUID();
+  const TAB_ID = crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36));
   const ch = new BroadcastChannel('tocador-player');
   audio.addEventListener('play', () => ch.postMessage({ tabId: TAB_ID }));
   ch.onmessage = ({ data }) => { if (data?.tabId !== TAB_ID) audio.pause(); };
