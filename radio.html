@@ -301,8 +301,9 @@
 <audio id="audio" preload="auto"></audio>
 
 <script>
+const REPORT_URL = 'https://cdn.tocador.cc/report-error';
+
 (function () {
-  const REPORT_URL = 'https://cdn.tocador.cc/report-error';
   const seen = new Set();
   let count = 0;
   function report(title, detail) {
@@ -322,6 +323,29 @@
     report(`[radio] Unhandled rejection: ${msg}`, reason?.stack || new Error().stack || msg);
   });
 })();
+
+// Report unplayable tracks to GitHub issues via the proxy
+const _reportedTracks = new Set();
+function reportPlayback(reason) {
+  if (!curAlbum || !curTrack) return;
+  const key = `${curAlbum.path}/${curTrack.file}`;
+  if (_reportedTracks.has(key)) return;
+  _reportedTracks.add(key);
+  const errCode = audio.error ? `MediaError ${audio.error.code}: ${audio.error.message}` : 'none';
+  const body = [
+    `**[radio] Track not playable — ${reason}**`,
+    '',
+    `- **Acervo:** ${acervoParam}`,
+    `- **Album:** ${curAlbum.title || curAlbum.path}`,
+    `- **Path:** \`${curAlbum.path}\``,
+    `- **Track:** ${curTrack.title} (\`${curTrack.file}\`)`,
+    `- **Audio src:** \`${curSrc || audio.src}\``,
+    `- **Media error:** ${errCode}`,
+    `- **UA:** ${navigator.userAgent}`,
+    `- **Time:** ${new Date().toISOString()}`,
+  ].join('\n');
+  fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: `[radio] not playable: ${curAlbum.path}`, body }), keepalive: true, credentials: 'omit' }).catch(() => {});
+}
 
 const ACERVOS = {
   uqt:  { data: 'https://rafapolo.github.io/uqt/data/uqt-albums.json.gz',             base_url: 'https://cdn.tocador.cc/uqt' },
@@ -442,6 +466,7 @@ function clearLoadTimer() {
 
 function onLoadTimeout() {
   loadTimer = null;
+  reportPlayback('load timeout (6s)');
   curSrc = '';
   timeoutStreak++;
   if (timeoutStreak >= 5) {
@@ -519,6 +544,7 @@ audio.addEventListener('ended',   next);
 audio.addEventListener('error',   () => {
   clearLoadTimer();
   setLoading(false);
+  reportPlayback(`audio error (MediaError ${audio.error?.code ?? '?'})`);
   curSrc = '';
   timeoutStreak++;
   if (timeoutStreak >= 5) fatalError();
