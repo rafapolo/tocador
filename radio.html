@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>♪ Tocador / Rádio</title>
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="9fad9893-55da-4e20-abbf-b79b12bf3146"></script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%232a2620;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%231a1814;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23grad)' width='200' height='200'/%3E%3Ccircle cx='100' cy='100' r='40' fill='none' stroke='%23d4a574' stroke-width='8'/%3E%3Ccircle cx='100' cy='100' r='15' fill='none' stroke='%23d4a574' stroke-width='2'/%3E%3Cpath d='M 100 60 Q 120 80 120 100 Q 120 125 100 140 Q 80 125 80 100 Q 80 80 100 60' fill='none' stroke='%23d4a574' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <style>
     :root {
@@ -173,8 +174,8 @@
       letter-spacing: .02em;
       min-width: 32px;
     }
-    #time-total   { text-align: left; }
-    #time-current { text-align: right; }
+    #time-total   { text-align: right; }
+    #time-current { text-align: left; }
 
     .btn-group {
       display: flex;
@@ -263,7 +264,7 @@
   </div>
 
   <div class="controls" id="controls">
-    <span class="time" id="time-total" aria-hidden="true">—</span>
+    <span class="time" id="time-current" aria-hidden="true">—</span>
 
     <div class="btn-group">
       <button class="btn" id="btn-prev" aria-label="Anterior">
@@ -291,7 +292,7 @@
       </button>
     </div>
 
-    <span class="time" id="time-current" aria-hidden="true">—</span>
+    <span class="time" id="time-total" aria-hidden="true">—</span>
   </div>
 
   <div id="offline-msg" aria-live="polite"></div>
@@ -330,7 +331,7 @@ const ACERVOS = {
 const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" viewBox%3D"0 0 200 200"%3E%3Cdefs%3E%3ClinearGradient id%3D"grad" x1%3D"0%25" y1%3D"0%25" x2%3D"100%25" y2%3D"100%25"%3E%3Cstop offset%3D"0%25" style%3D"stop-color%3A%232a2620%3Bstop-opacity%3A1" %2F%3E%3Cstop offset%3D"100%25" style%3D"stop-color%3A%231a1814%3Bstop-opacity%3A1" %2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect fill%3D"url(%23grad)" width%3D"200" height%3D"200"%2F%3E%3Ccircle cx%3D"100" cy%3D"100" r%3D"40" fill%3D"none" stroke%3D"%23d4a574" stroke-width%3D"8"%2F%3E%3Ccircle cx%3D"100" cy%3D"100" r%3D"15" fill%3D"none" stroke%3D"%23d4a574" stroke-width%3D"2"%2F%3E%3Cpath d%3D"M 100 60 Q 120 80 120 100 Q 120 125 100 140 Q 80 125 80 100 Q 80 80 100 60" fill%3D"none" stroke%3D"%23d4a574" stroke-width%3D"3" stroke-linecap%3D"round"%2F%3E%3C%2Fsvg%3E';
 
 let albums = [], BASE_URL = '', acervoParam = 'homi', hist = [];
-let curAlbum = null, curTrack = null;
+let curAlbum = null, curTrack = null, curSrc = '';
 const failed = new Set();
 
 const $ = id => document.getElementById(id);
@@ -441,6 +442,7 @@ function clearLoadTimer() {
 
 function onLoadTimeout() {
   loadTimer = null;
+  curSrc = '';
   timeoutStreak++;
   if (timeoutStreak >= 5) {
     fatalError();
@@ -463,7 +465,7 @@ function fatalError() {
 function playTrack(album, track) {
   showTrack(album, track);
   const src = `${BASE_URL}/${encodeURIComponent(album.path)}/${encodeURIComponent(track.file)}`;
-  if (audio.src !== src) { audio.src = src; audio.load(); }
+  if (curSrc !== src) { curSrc = src; audio.src = src; audio.load(); }
   setLoading(true);
   clearLoadTimer();
   loadTimer = setTimeout(onLoadTimeout, 6000);
@@ -517,6 +519,7 @@ audio.addEventListener('ended',   next);
 audio.addEventListener('error',   () => {
   clearLoadTimer();
   setLoading(false);
+  curSrc = '';
   timeoutStreak++;
   if (timeoutStreak >= 5) fatalError();
   else if (albums.length) setTimeout(next, 500);
@@ -565,18 +568,7 @@ async function load() {
   BASE_URL      = db.meta?.base_url || entry?.base_url || '';
   const all     = db.albums.filter(a => a.tracks?.length);
 
-  if (showAll) {
-    albums = all;
-  } else {
-    const q = 'hominis canidae';
-    const filtered = all.filter(a =>
-      (a.title  || '').toLowerCase().includes(q) ||
-      (a.artist || '').toLowerCase().includes(q) ||
-      (a.path   || '').toLowerCase().includes(q) ||
-      a.tracks.some(t => (t.title || '').toLowerCase().includes(q) || (t.artists || '').toLowerCase().includes(q))
-    );
-    albums = filtered.length ? filtered : all;
-  }
+  albums = all;
 
   widget.classList.remove('loading');
 
