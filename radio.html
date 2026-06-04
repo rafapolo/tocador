@@ -302,12 +302,13 @@
 
 <script>
 const REPORT_URL = 'https://cdn.tocador.cc/report-error';
+const IS_BOT = /bot|crawl|spider/i.test(navigator.userAgent);
 
 (function () {
   const seen = new Set();
   let count = 0;
   function report(title, detail) {
-    if (count >= 3 || seen.has(title)) return;
+    if (IS_BOT || count >= 3 || seen.has(title)) return;
     seen.add(title); count++;
     const body = [`**${title}**`, '', '```', detail, '```', '', `**URL:** ${location.href}`, `**UA:** ${navigator.userAgent}`, `**Time:** ${new Date().toISOString()}`].join('\n');
     fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, body }), keepalive: true, credentials: 'omit' }).catch(() => {});
@@ -328,7 +329,7 @@ const REPORT_URL = 'https://cdn.tocador.cc/report-error';
 // Report unplayable tracks to GitHub issues via the proxy
 const _reportedTracks = new Set();
 function reportPlayback(reason) {
-  if (!curAlbum || !curTrack) return;
+  if (IS_BOT || !curAlbum || !curTrack) return;
   const key = `${curAlbum.path}/${curTrack.file}`;
   if (_reportedTracks.has(key)) return;
   _reportedTracks.add(key);
