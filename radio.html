@@ -468,7 +468,6 @@ function clearLoadTimer() {
 
 function onLoadTimeout() {
   loadTimer = null;
-  reportPlayback('load timeout (6s)');
   curSrc = '';
   timeoutStreak++;
   if (timeoutStreak >= 5) {

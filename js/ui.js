@@ -32,7 +32,9 @@
 
   window.addEventListener('unhandledrejection', e => {
     const reason = e.reason;
+    if (reason?.name === 'NotAllowedError') { e.preventDefault(); return; }
     const msg = reason?.message || String(reason);
+    if (/failed to fetch|network error|load failed/i.test(msg)) { e.preventDefault(); return; }
     const syntheticStack = new Error().stack || '';
     const stack = (reason?.stack && reason.stack !== msg) ? reason.stack : syntheticStack;
     const conn = navigator.connection;
