@@ -568,7 +568,18 @@ async function load() {
   BASE_URL      = db.meta?.base_url || entry?.base_url || '';
   const all     = db.albums.filter(a => a.tracks?.length);
 
-  albums = all;
+  if (showAll) {
+    albums = all;
+  } else {
+    const q = 'hominis canidae';
+    const filtered = all.filter(a =>
+      (a.title  || '').toLowerCase().includes(q) ||
+      (a.artist || '').toLowerCase().includes(q) ||
+      (a.path   || '').toLowerCase().includes(q) ||
+      a.tracks.some(t => (t.title || '').toLowerCase().includes(q) || (t.artists || '').toLowerCase().includes(q))
+    );
+    albums = filtered.length ? filtered : all;
+  }
 
   widget.classList.remove('loading');
 
