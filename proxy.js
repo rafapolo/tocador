@@ -201,7 +201,47 @@ function refererAllowed(req) {
   } catch { return true; }
 }
 
-const botRegex = /scrapy|selenium(?:-webdriver)?|puppeteer|playwright|phantomjs|casperjs|headless\s*(chrome|browser)?|headlesschrome|automation\s*tool|automated\s*browser|bot\s*automation|httpclient|http\s*client|axios\/\d+|node-fetch|got\/\d+|mechanize|urllib|requests\/\d+|okhttp|retrofit|wget\/|httrack|aria2|lftp|webcopy|web\s*scraper|data\s*scraper|content\s*scraper|mass\s*(crawl|scrape|download)|bulk\s*(crawl|download|fetch)|site\s*crawler|link\s*crawler|botkit|dialogflow|rasa|botpress|datacenter\s*proxy|residential\s*proxy|rotating\s*proxy|proxy\s*rotation|proxy\s*pool|tor\s*exit|tor\s+network|jsdom|cheerio|aws\s*lambda|google\s*cloud\s*functions|azure\s*functions|python-requests|python\s*urllib|aiohttp|go-http-client|java\/\d+\.\d+|bot\s*engine|crawler\s*engine|spider\s*engine|auto\s*fetch|auto\s*scrape|auto\s*crawl/i;
+const botRegex = new RegExp([
+  // automation & headless browsers
+  'scrapy', 'selenium(?:-webdriver)?', 'puppeteer', 'playwright', 'phantomjs', 'casperjs',
+  'headless\\s*(?:chrome|browser)?', 'headlesschrome',
+  'automation\\s*tool', 'automated\\s*browser', 'bot\\s*automation',
+  'httpclient', 'http\\s*client', 'axios\\/\\d+', 'node-fetch', 'got\\/\\d+',
+  'mechanize', 'urllib', 'requests\\/\\d+', 'okhttp', 'retrofit', 'wget\\/', 'httrack', 'aria2', 'lftp', 'webcopy',
+  'web\\s*scraper', 'data\\s*scraper', 'content\\s*scraper',
+  'mass\\s*(?:crawl|scrape|download)', 'bulk\\s*(?:crawl|download|fetch)',
+  'site\\s*crawler', 'link\\s*crawler',
+  'botkit', 'dialogflow', 'rasa', 'botpress',
+  'datacenter\\s*proxy', 'residential\\s*proxy', 'rotating\\s*proxy', 'proxy\\s*(?:rotation|pool)',
+  'tor\\s*exit', 'tor\\s+network',
+  'jsdom', 'cheerio', 'python-requests', 'python\\s*urllib', 'aiohttp', 'go-http-client', 'java\\/\\d+\\.\\d+',
+  'aws\\s*lambda', 'google\\s*cloud\\s*functions', 'azure\\s*functions',
+  'bot\\s*engine', 'crawler\\s*engine', 'spider\\s*engine',
+  'auto\\s*fetch', 'auto\\s*scrape', 'auto\\s*crawl',
+  // search engines
+  'googlebot', 'adsbot-google', 'mediapartners-google', 'google-read-aloud', 'google-inspectiontool',
+  'bingbot', 'msnbot', 'adidxbot', 'bingpreview',
+  'slurp', 'duckduckbot', 'baiduspider', 'yandexbot', 'sogou', 'exabot',
+  'applebot', 'petalbot', 'bytespider', 'seznambot', 'qwantify', 'mojeek', 'neevabot',
+  '360spider', 'haosouspider', 'sosospider',
+  // archive
+  'ia_archiver', 'archive\\.org_bot',
+  // social media crawlers
+  'facebookexternalhit', 'facebookcatalog',
+  'twitterbot', 'linkedinbot', 'discordbot', 'pinterestbot', 'slackbot', 'telegrambot', 'whatsapp',
+  // SEO / analytics tools
+  'semrushbot', 'ahrefsbot', 'mj12bot', 'dotbot', 'rogerbot',
+  'screaming\\s*frog', 'sistrix', 'serpstat', 'similarweb', 'netcraft', 'dataforseo', 'netsystemsresearch',
+  // AI / LLM crawlers
+  'gptbot', 'chatgpt-user', 'openai-searchbot', 'claudebot', 'claude-web', 'anthropic-ai', 'cohere-ai', 'ccbot', 'amazonbot', 'diffbot',
+  // security scanners
+  'censys', 'shodan', 'masscan', 'zgrab', 'nuclei', 'nikto', 'sqlmap', 'wfuzz', 'dirbuster', 'gobuster', 'ffuf', 'nmap\\s*scripting',
+  'openvas', 'qualys', 'tenable', 'acunetix', 'burpsuite', 'zap(?:\\s*proxy)?',
+  // feed readers
+  'feedfetcher', 'feedly', 'inoreader', 'newsblur',
+  // generic catch-all
+  'bot', 'crawler', 'spider',
+].join('|'), 'i');
 
 const BUCKET = process.env.S3_BUCKET;
 const BUCKET_MAP = Object.fromEntries(
@@ -273,17 +313,20 @@ _server = Bun.serve({
       return new Response(metricsBody(), { headers: { 'Content-Type': 'text/plain; version=0.0.4' } });
     }
 
+    // block all bots globally — /health and /metrics above are exempt (internal use)
+    const ua = req.headers.get('user-agent') ?? '';
+    if (botRegex.test(ua)) {
+      console.log(`[BLOCKED] bot: ${ua.slice(0, 120)}`);
+      counters.c4xx++;
+      return new Response('Forbidden', { status: 403, headers: corsBase });
+    }
+
     if (req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: { ...corsHeaders, 'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS' } });
     }
 
     // POST /report-error — body size already capped by maxRequestBodySize: 8192
     if (req.method === 'POST' && url.pathname === '/report-error') {
-      const reportUa = req.headers.get('user-agent') ?? '';
-      if (/bot|crawl|spider/i.test(reportUa)) {
-        counters.c4xx++;
-        return new Response('Forbidden', { status: 403, headers: corsBase });
-      }
       const token = process.env.GITHUB_TOKEN;
       if (!token) return new Response('Not configured', { status: 503, headers: corsBase });
       let payload;
@@ -337,13 +380,6 @@ _server = Bun.serve({
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       counters.c4xx++;
       return new Response('Method Not Allowed', { status: 405, headers: corsBase });
-    }
-
-    const ua = req.headers.get('user-agent') ?? '';
-    if (botRegex.test(ua)) {
-      console.log(`[BLOCKED] bot: ${ua.slice(0, 100)}`);
-      counters.c4xx++;
-      return new Response('Forbidden', { status: 403, headers: corsBase });
     }
 
     // §1 — decode path with try/catch; malformed percent-sequences return 400 instead of crashing
