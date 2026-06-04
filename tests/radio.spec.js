@@ -13,6 +13,7 @@ async function gotoRadio(page, params = '') {
   );
   await page.route('**/*.mp3', route => route.fulfill({ status: 200, body: Buffer.alloc(0) }));
   await page.route('**/capa-min.jpg', route => route.fulfill({ status: 404 }));
+  await page.route('**/report-error', route => route.fulfill({ status: 204 }));
   await page.goto(`/radio.html${params}`);
   await page.waitForSelector('.widget:not(.loading)', { timeout: 8000 });
 }
