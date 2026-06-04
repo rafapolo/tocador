@@ -437,7 +437,9 @@ class VirtualGrid {
     cover.setAttribute('aria-hidden', 'true');
     loadCoverImage(cover, album.cover);
     title.textContent = album.name;
-    meta.textContent = `${album.artists} • ${album.year || '∞'}`;
+    meta.textContent = (activeArtist && album.artists === activeArtist)
+      ? `${album.year || '∞'}`
+      : `${album.artists} • ${album.year || '∞'}`;
 
     return item;
   }
