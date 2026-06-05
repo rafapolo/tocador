@@ -11,8 +11,21 @@ Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` com
 O Tocador tem um modo rádio standalone em [`radio.html`](radio.html) — um widget minimalista que toca faixas aleatórias de qualquer acervo, sem a interface completa do player.
 
 ```
-https://rafapolo.github.io/tocador/radio.html?acervo=homi
-https://rafapolo.github.io/tocador/radio.html?acervo=uqt
+https://tocador.cc/radio?acervo=homi
+https://tocador.cc/radio?acervo=uqt
+```
+
+### Embed
+
+Cole em qualquer página para incorporar a rádio:
+
+```html
+<iframe
+  src="https://tocador.cc/radio"
+  width="328"
+  height="355"
+  frameborder="0"
+></iframe>
 ```
 
 - Toca aleatoriamente por todo o acervo — álbuns e faixas
@@ -21,6 +34,17 @@ https://rafapolo.github.io/tocador/radio.html?acervo=uqt
 - Capa do álbum, artista, álbum e ano exibidos em tempo real com marquee animado
 - Barra de progresso clicável
 - Clique no artista ou álbum para abrir no player principal
+
+## 🆕 Novidades recentes
+
+- **Painel de navegação (Browse)**: filtre por gênero (árvore com expand/collapse) ou por artista — contagem em tempo real e botão de limpar
+- **Rádio com relatório de erros**: faixas que falham são reportadas automaticamente como issues no GitHub
+- **Ordenação de artistas**: ordem alfabética por locale pt-BR — letras antes de números e símbolos
+- **Animação de entrada**: cards de álbum expandem ao entrar no viewport
+- **Ocultar artista no card**: ao filtrar por artista, o nome some dos cards para reduzir ruído visual
+- **Sitemap.xml**: gerado automaticamente pelo `generate-albums` para indexação por buscadores
+- **Scripts de enriquecimento**: `enrich-singles-audd` (reconhecimento de áudio via AudD) e `fix-singles-itunes` (metadados de singles via iTunes)
+- **Cache .gz com ETag**: invalidação instantânea do catálogo ao fazer deploy sem quebrar cache do browser
 
 ## ✨ Características
 
@@ -65,7 +89,7 @@ https://rafapolo.github.io/tocador/radio.html?acervo=uqt
 O Tocador usa `?acervo=` para saber qual catálogo carregar:
 
 ```
-https://rafapolo.github.io/tocador/?acervo=<alias_ou_url>
+https://tocador.cc/?acervo=<alias_ou_url>
 ```
 
 Pode ser um **alias pré-configurado** ou uma **URL direta** para qualquer `.json.gz` compatível. Uma vez carregado, o acervo persiste na sessão — recarregar sem o parâmetro mantém o mesmo.
@@ -194,4 +218,4 @@ Para sugerir melhorias ou adicionar suporte a novos acervos:
 
 **Feito para tocar** ♪
 
-[Demo ao vivo →](https://rafapolo.github.io/tocador/)
+[Demo ao vivo →](https://tocador.cc/)
