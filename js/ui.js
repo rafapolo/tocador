@@ -748,7 +748,12 @@ function buildArtistList() {
   }
   _cachedArtists = [...map.entries()]
     .map(([name, set]) => ({ name, count: set.size }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }));
+    .sort((a, b) => {
+      const aLetter = /^\p{L}/u.test(a.name);
+      const bLetter = /^\p{L}/u.test(b.name);
+      if (aLetter !== bLetter) return aLetter ? -1 : 1;
+      return a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' });
+    });
   return _cachedArtists;
 }
 
