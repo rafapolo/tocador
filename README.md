@@ -4,6 +4,12 @@ Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` com
 
 > **Tocador é uma plataforma** — o mesmo player reproduz muitos acervos diferentes. Cada acervo é um catálogo independente apontado via `?acervo=`.
 
+<p align="center">
+  <a href="https://tocador.cc/">
+    <img src="docs/player-demo.png" alt="Tocador — demo" width="100%">
+  </a>
+</p>
+
 [![Rádio ao vivo](https://img.shields.io/badge/📻_Rádio-ao_vivo-d4a574?style=for-the-badge)](https://tocador.cc/radio?acervo=homi)
 
 ## 📻 Rádio
