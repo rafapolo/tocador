@@ -748,7 +748,7 @@ function buildArtistList() {
   }
   _cachedArtists = [...map.entries()]
     .map(([name, set]) => ({ name, count: set.size }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }));
   return _cachedArtists;
 }
 
