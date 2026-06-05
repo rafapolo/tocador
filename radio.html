@@ -494,7 +494,7 @@ function playTrack(album, track) {
   if (curSrc !== src) { curSrc = src; audio.src = src; audio.load(); }
   setLoading(true);
   clearLoadTimer();
-  loadTimer = setTimeout(onLoadTimeout, 6000);
+  loadTimer = setTimeout(onLoadTimeout, 15000);
   audio.play().catch(err => { if (err?.name === 'NotAllowedError') { clearLoadTimer(); setLoading(false); } });
 }
 
@@ -540,7 +540,7 @@ audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); 
 audio.addEventListener('playing', () => { clearLoadTimer(); timeoutStreak = 0; setLoading(false); });
 audio.addEventListener('waiting', () => setLoading(true));
 audio.addEventListener('stalled', () => setLoading(true));
-audio.addEventListener('canplay', () => setLoading(false));
+audio.addEventListener('canplay', () => { clearLoadTimer(); setLoading(false); });
 audio.addEventListener('ended',   next);
 audio.addEventListener('error',   () => {
   clearLoadTimer();
