@@ -14,7 +14,7 @@ Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` com
 
 ## 📻 Rádio
 
-O Tocador tem um modo rádio standalone em [`radio.html`](radio.html) — um widget minimalista que toca faixas aleatórias de qualquer acervo, sem a interface completa do player.
+O Tocador tem um modo rádio standalone em [`https://radio.tocador.cc`](radio.html) — um widget minimalista que toca faixas aleatórias de qualquer acervo, sem a interface completa do player.
 
 ```
 https://tocador.cc/radio?acervo=homi
