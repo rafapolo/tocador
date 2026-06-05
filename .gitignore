@@ -12,5 +12,7 @@ test-results/
 dist/
 sync-to-bucket.log
 tmp-atlas-homi/
+plans/
+plan/
 *.bak
 *.bak2
