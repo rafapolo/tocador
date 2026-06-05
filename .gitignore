@@ -11,3 +11,6 @@ script/models/
 test-results/
 dist/
 sync-to-bucket.log
+tmp-atlas-homi/
+*.bak
+*.bak2
