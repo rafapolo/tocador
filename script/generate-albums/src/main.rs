@@ -57,8 +57,9 @@ static RE_COMPILATION_PREFIX: Lazy<Regex> = Lazy::new(|| {
 
 #[derive(serde::Deserialize, Default)]
 struct DirConfig {
-    title:    Option<String>,
-    subtitle: Option<String>,
+    title:       Option<String>,
+    subtitle:    Option<String>,
+    sitemap_url: Option<String>,
 }
 
 // Tocador-compatible schema
@@ -393,7 +394,8 @@ struct Config {
     meta_hours: Option<String>,
     meta_base_url: Option<String>,
     meta_s3_prefix: Option<String>,
-    meta_sitemap_url: Option<String>, // overrides base_url for sitemap <loc>
+    meta_sitemap_url: Option<String>,
+    meta_sitemap_out: Option<String>,
 }
 
 fn parse_args() -> Config {
@@ -402,7 +404,7 @@ fn parse_args() -> Config {
         eprintln!("Uso: generate-albums <pasta-de-musicas> [saida.json.gz]");
         eprintln!("     [--title \"Nome do Acervo\"] [--subtitle \"Subtítulo\"]");
         eprintln!("     [--hours \"42\"] [--base-url \"https://cdn.exemplo.com/musicas\"] [--s3-prefix \"indie/\"]");
-        eprintln!("     [--sitemap-url \"https://exemplo.com/player\"]");
+        eprintln!("     [--sitemap-url \"https://exemplo.com/player\"] [--sitemap-out sitemap.xml]");
         std::process::exit(if args.is_empty() { 1 } else { 0 });
     }
 
@@ -413,16 +415,18 @@ fn parse_args() -> Config {
     let mut meta_base_url = None;
     let mut meta_s3_prefix = None;
     let mut meta_sitemap_url = None;
+    let mut meta_sitemap_out = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--title"       => { i += 1; meta_title       = args.get(i).cloned(); }
-            "--subtitle"    => { i += 1; meta_subtitle    = args.get(i).cloned(); }
-            "--hours"       => { i += 1; meta_hours       = args.get(i).cloned(); }
-            "--base-url"    => { i += 1; meta_base_url    = args.get(i).cloned(); }
-            "--s3-prefix"   => { i += 1; meta_s3_prefix   = args.get(i).cloned(); }
-            "--sitemap-url" => { i += 1; meta_sitemap_url = args.get(i).cloned(); }
-            other           => positional.push(other.to_string()),
+            "--title"        => { i += 1; meta_title        = args.get(i).cloned(); }
+            "--subtitle"     => { i += 1; meta_subtitle     = args.get(i).cloned(); }
+            "--hours"        => { i += 1; meta_hours        = args.get(i).cloned(); }
+            "--base-url"     => { i += 1; meta_base_url     = args.get(i).cloned(); }
+            "--s3-prefix"    => { i += 1; meta_s3_prefix    = args.get(i).cloned(); }
+            "--sitemap-url"  => { i += 1; meta_sitemap_url  = args.get(i).cloned(); }
+            "--sitemap-out"  => { i += 1; meta_sitemap_out  = args.get(i).cloned(); }
+            other            => positional.push(other.to_string()),
         }
         i += 1;
     }
@@ -432,7 +436,7 @@ fn parse_args() -> Config {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("acervo.json.gz"));
 
-    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix, meta_sitemap_url }
+    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix, meta_sitemap_url, meta_sitemap_out }
 }
 
 fn main() {
@@ -448,20 +452,21 @@ fn main() {
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
 
-    // base_url: CLI flag → .env in music dir → BASE_URL env var
-    let env_base_url = fs::read_to_string(cfg.music_dir.join(".env")).ok()
-        .and_then(|s| {
-            s.lines()
-                .filter(|l| !l.starts_with('#'))
-                .find(|l| l.trim_start().starts_with("BASE_URL="))
-                .map(|l| l.splitn(2, '=').nth(1).unwrap_or("").trim().to_string())
-        })
-        .filter(|s| !s.is_empty())
-        .or_else(|| std::env::var("BASE_URL").ok());
+    // base_url / sitemap_url: CLI flag → acervo.json → .env in music dir → env var
+    let dot_env = fs::read_to_string(cfg.music_dir.join(".env")).ok().unwrap_or_default();
+    let env_val = |key: &str| -> Option<String> {
+        dot_env.lines()
+            .filter(|l| !l.starts_with('#'))
+            .find(|l| l.trim_start().starts_with(&format!("{}=", key)))
+            .map(|l| l.splitn(2, '=').nth(1).unwrap_or("").trim().to_string())
+            .filter(|s| !s.is_empty())
+            .or_else(|| std::env::var(key).ok())
+    };
 
-    let meta_title    = cfg.meta_title   .or(dir_cfg.title);
-    let meta_subtitle = cfg.meta_subtitle.or(dir_cfg.subtitle);
-    let meta_base_url = cfg.meta_base_url.or(env_base_url);
+    let meta_title       = cfg.meta_title      .or(dir_cfg.title);
+    let meta_subtitle    = cfg.meta_subtitle   .or(dir_cfg.subtitle);
+    let meta_base_url    = cfg.meta_base_url   .or_else(|| env_val("BASE_URL"));
+    let meta_sitemap_url = cfg.meta_sitemap_url.or(dir_cfg.sitemap_url).or_else(|| env_val("SITEMAP_URL"));
 
     let mut folders: Vec<PathBuf> = WalkDir::new(&cfg.music_dir)
         .min_depth(1)
@@ -596,11 +601,15 @@ fn main() {
     let size_gz = fs::metadata(&out_gz).map(|m| m.len() / 1024).unwrap_or(0);
     println!("{} álbuns  →  {} ({size_gz} KB)", n_albums, out_gz.display());
 
-    if let Some(ref sitemap_url) = cfg.meta_sitemap_url {
-        let sitemap_out = out_gz.parent()
-            .and_then(|p| p.parent())
-            .map(|p| p.join("sitemap.xml"))
-            .unwrap_or_else(|| PathBuf::from("sitemap.xml"));
+    if let Some(ref sitemap_url) = meta_sitemap_url {
+        let sitemap_out = cfg.meta_sitemap_out
+            .as_deref()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                out_gz.parent()
+                    .map(|p| p.join("sitemap.xml"))
+                    .unwrap_or_else(|| PathBuf::from("sitemap.xml"))
+            });
         write_sitemap(&output.albums, sitemap_url, &sitemap_out);
     }
 }

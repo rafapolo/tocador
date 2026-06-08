@@ -88,16 +88,17 @@ Title, subtitle, hours are read from `acervo.json` in the music dir; `base_url` 
   /Volumes/EXTRA/bkps/UQT/sambaderaiz \
   ../uqt/data/uqt-albums.json.gz
 
-# hominiscanidae → ../hominiscanidae repo
+# hominiscanidae → ../hominiscanidae repo (also writes sitemap.xml here)
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/hominiscanidae/unzips \
-  ../hominiscanidae/data/homi-albums.json.gz
+  ../hominiscanidae/data/homi-albums.json.gz \
+  --sitemap-out sitemap.xml
 
 # then regenerate the genre index (homi only)
 bun script/build-genre-index.js
 ```
 
-Then commit and push in each repo (including `data/homi-genres.json.gz`). CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`) override config when passed.
+Then commit and push in each repo (including `data/homi-genres.json.gz`). CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`, `--sitemap-url`, `--sitemap-out`) override config when passed.
 
 Build first: `cd script/generate-albums && cargo build --release`
 
