@@ -551,6 +551,13 @@ body {
   display: none;
 }
 
+.album-not-found {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 12px 0;
+}
+
 .album-cover-large {
   width: 160px;
   height: 160px;
