@@ -2,6 +2,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use unicode_normalization::UnicodeNormalization;
 
 use flate2::{write::GzEncoder, Compression};
 use id3::{Tag, TagLike};
@@ -246,7 +247,7 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
     }
 
     let folder_name = folder.file_name()?.to_string_lossy().into_owned();
-    let rel_path = folder.strip_prefix(music_dir).ok()?.to_string_lossy().replace('\\', "/");
+    let rel_path = folder.strip_prefix(music_dir).ok()?.to_string_lossy().replace('\\', "/").nfc().collect::<String>();
     // Folder name is the authoritative source for album-level metadata; ID3 fills gaps only.
     let (fa, ft, fy) = parse_folder_name(&folder_name);
     let (mut album_artist, mut album_title, mut album_year) = (fa, ft, fy);
@@ -272,7 +273,8 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
             .strip_prefix(folder)
             .ok()?
             .to_string_lossy()
-            .into_owned();
+            .nfc()
+            .collect::<String>();
         let title = if title.is_empty() {
             let stem = mp3.file_stem().unwrap_or_default().to_string_lossy().into_owned();
             // Strip leading "01. " / "01 - " / "01_" prefix
