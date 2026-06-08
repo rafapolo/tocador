@@ -1546,9 +1546,13 @@ u(document).on('DOMContentLoaded', async function () {
   // Select initial album from URL or first in list
   const albumFromUrl = getAlbumFromUrl();
   let albumToSelect = albumFromUrl ? albums.find(a => a.path.normalize('NFC') === albumFromUrl.normalize('NFC')) : null;
-  if (!albumToSelect && filteredAlbums.length > 0) albumToSelect = filteredAlbums[0];
+  if (!albumToSelect && !albumFromUrl && filteredAlbums.length > 0) albumToSelect = filteredAlbums[0];
 
-  if (albumToSelect) {
+  if (albumFromUrl && !albumToSelect) {
+    virtualGrid.setItems(filteredAlbums);
+    const container = u('#album-header').first();
+    container.innerHTML = `<p class="album-not-found">Álbum não existe</p>`;
+  } else if (albumToSelect) {
     selectedAlbum = albumToSelect;
     virtualGrid.setItems(filteredAlbums);
     virtualGrid.scrollToSelected();
