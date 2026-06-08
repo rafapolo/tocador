@@ -359,6 +359,7 @@ const PLACEHOLDER = 'data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%
 let albums = [], BASE_URL = '', acervoParam = 'homi', hist = [];
 let curAlbum = null, curTrack = null, curSrc = '';
 const failed = new Set();
+const failedTracks = new Set();
 
 const $ = id => document.getElementById(id);
 const audio         = $('audio');
@@ -404,7 +405,15 @@ function checkMarquee(el) {
 }
 
 const rand       = n => Math.floor(Math.random() * n);
-const pickRandom = () => { const a = albums[rand(albums.length)]; return { album: a, track: a.tracks[rand(a.tracks.length)] }; };
+function pickRandom() {
+  for (let i = 0; i < 20; i++) {
+    const a = albums[rand(albums.length)];
+    const t = a.tracks[rand(a.tracks.length)];
+    if (!failedTracks.has(`${a.path}/${t.file}`)) return { album: a, track: t };
+  }
+  const a = albums[rand(albums.length)];
+  return { album: a, track: a.tracks[rand(a.tracks.length)] };
+}
 
 function coverURL(album) {
   return (album.has_cover === false || failed.has(album.path))
@@ -546,6 +555,7 @@ audio.addEventListener('error',   () => {
   clearLoadTimer();
   setLoading(false);
   reportPlayback(`audio error (MediaError ${audio.error?.code ?? '?'})`);
+  if (audio.error?.code === 4 && curAlbum && curTrack) failedTracks.add(`${curAlbum.path}/${curTrack.file}`);
   curSrc = '';
   timeoutStreak++;
   if (timeoutStreak >= 5) fatalError();
