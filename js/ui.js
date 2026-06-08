@@ -250,6 +250,33 @@ function updateMetaTags(album) {
   setMeta('name', 'twitter:title', title);
   setMeta('name', 'twitter:description', desc);
   setMeta('name', 'twitter:image', image);
+  setMeta('name', 'description', desc);
+
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
+  canonical.href = url;
+
+  const secsToIso = s => { const m = Math.floor(s / 60), sc = s % 60; return `PT${m}M${sc}S`; };
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'MusicAlbum',
+    name: album.name,
+    byArtist: { '@type': 'MusicGroup', name: album.artists },
+    datePublished: String(album.year || ''),
+    numTracks: album.tracks.length,
+    image,
+    url,
+    track: album.tracks.map((t, i) => ({
+      '@type': 'MusicRecording',
+      name: t.title,
+      position: t.num ?? (i + 1),
+      ...(t.duration > 0 && { duration: secsToIso(t.duration) }),
+      ...(t.artists && t.artists !== album.artists && { byArtist: { '@type': 'Person', name: t.artists } }),
+    })),
+  };
+  let ldEl = document.querySelector('script[type="application/ld+json"]');
+  if (!ldEl) { ldEl = document.createElement('script'); ldEl.type = 'application/ld+json'; document.head.appendChild(ldEl); }
+  ldEl.textContent = JSON.stringify(ld);
 }
 
 function formatTime(seconds) {
