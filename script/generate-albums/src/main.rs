@@ -663,11 +663,18 @@ fn write_sitemap(albums: &[Album], base_url: &str, sitemap_path: &Path) {
     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
 
+    // homepage
+    xml.push_str(&format!(
+        "  <url>\n    <loc>{}/</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n",
+        base, today
+    ));
+
+    // one entry per album
     for album in albums {
         let album_param = form_encode(&album.path);
         let mut loc = format!("{}/?album={}", base, album_param);
         if !album.artist.is_empty() {
-            loc.push_str(&format!("&amp;artist={}", form_encode(&album.artist)));
+            loc.push_str(&format!("&amp;artista={}", form_encode(&album.artist)));
         }
         let priority = if album.year >= 2020 { "0.9" } else if album.year >= 2010 { "0.7" } else { "0.5" };
         xml.push_str(&format!(
@@ -676,8 +683,23 @@ fn write_sitemap(albums: &[Album], base_url: &str, sitemap_path: &Path) {
         ));
     }
 
+    // one entry per unique artist
+    let mut artists: Vec<&str> = albums.iter()
+        .map(|a| a.artist.as_str())
+        .filter(|a| !a.is_empty())
+        .collect();
+    artists.sort_unstable();
+    artists.dedup();
+    for artist in &artists {
+        let loc = format!("{}/?artista={}", base, form_encode(artist));
+        xml.push_str(&format!(
+            "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n",
+            loc, today
+        ));
+    }
+
     xml.push_str("</urlset>\n");
     fs::write(&sitemap_path, xml).expect("Falha ao escrever sitemap.xml");
     let size = fs::metadata(&sitemap_path).map(|m| m.len() / 1024).unwrap_or(0);
-    println!("sitemap.xml  →  {} ({} KB, {} URLs)", sitemap_path.display(), size, albums.len());
+    println!("sitemap.xml  →  {} ({} KB, {} album URLs + {} artist URLs + 1 home)", sitemap_path.display(), size, albums.len(), artists.len());
 }
