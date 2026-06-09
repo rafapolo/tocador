@@ -54,6 +54,15 @@ static RE_COMPILATION_PREFIX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^[^-–]+ - [^-–]+ - \d{1,3}[\.\-_\s]+(.+)$").unwrap()
 });
 
+fn primary_artist(s: &str) -> &str {
+    s.split([';', ',']).next().map(str::trim).unwrap_or(s)
+}
+
+fn normalize_artists(s: &str) -> String {
+    let parts: Vec<&str> = s.split([';', ',']).map(str::trim).filter(|p| !p.is_empty()).collect();
+    parts.join("; ")
+}
+
 // Per-directory config file (acervo.json in the music root)
 
 #[derive(serde::Deserialize, Default)]
@@ -251,6 +260,9 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
     // Folder name is the authoritative source for album-level metadata; ID3 fills gaps only.
     let (fa, ft, fy) = parse_folder_name(&folder_name);
     let (mut album_artist, mut album_title, mut album_year) = (fa, ft, fy);
+    if !album_artist.is_empty() {
+        album_artist = normalize_artists(&album_artist);
+    }
     let mut tracks = Vec::new();
 
     for mp3 in &mp3s {
@@ -265,7 +277,7 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         }
         let duration = read_duration(mp3, dur_hint);
 
-        if album_artist.is_empty() && !artist.is_empty() { album_artist = artist.clone(); }
+        if album_artist.is_empty() && !artist.is_empty() { album_artist = primary_artist(&artist).to_string(); }
         if album_title.is_empty()  && !album.is_empty()  { album_title  = album; }
         if album_year  == 0        && year > 0            { album_year   = year; }
 
@@ -289,7 +301,8 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
                 .and_then(|c| c.get(1)).map(|m| m.as_str().trim().to_string())
                 .unwrap_or(title)
         };
-        let track_artist = if artist.is_empty() { album_artist.clone() } else { artist };
+        let raw_artist = if artist.is_empty() { album_artist.clone() } else { artist };
+        let track_artist = normalize_artists(&raw_artist);
         tracks.push(Track { title, num: Some(track_n), file, artists: Some(track_artist), duration });
     }
 
