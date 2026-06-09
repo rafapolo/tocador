@@ -108,7 +108,7 @@ const PLACEHOLDER_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/20
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function artistLinksHTML(str) {
-  const parts = str.split(/(, | e | & |&)/);
+  const parts = str.split(/(; |, | e | & |&)/);
   return parts.map((p, i) =>
     i % 2 === 0
       ? `<span class="artist-link" data-artist="${p.replace(/"/g, '&quot;')}" role="button" tabindex="0" aria-label="Buscar por ${p.replace(/"/g, '&quot;')}">${p}</span>`
