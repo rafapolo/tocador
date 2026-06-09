@@ -187,6 +187,8 @@ function getPlayFromUrl() {
 
 function generateAlbumUrl(album, trackNum) {
   const params = new URLSearchParams(window.location.search);
+  params.delete('artista');
+  params.delete('genero');
   params.set('album', album.path);
   if (trackNum) params.set('t', trackNum); else params.delete('t');
   return `${window.location.pathname}?${params}`;
