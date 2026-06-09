@@ -124,10 +124,14 @@ function attachArtistHandlers(container) {
       if (_searchInput) { _searchInput.value = name; }
       searchQuery = name;
       activeDecade = null;
+      activeArtist = null;
+      activeGenre  = null;
       document.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
       document.querySelector('.decade-btn[data-decade="all"]')?.classList.add('active');
       filterAlbums();
       updateQueryInUrl(name, true);
+      updateBrowseFilterInUrl();
+      virtualBrowseList?.refresh(null);
       closeMobileDrawer();
       _searchInput?.focus();
     };
