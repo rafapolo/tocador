@@ -717,8 +717,8 @@ function getDecades() {
 function filterAlbums() {
   const q = searchQuery.toLowerCase();
   filteredAlbums = albums.filter(album => {
-    if (activeArtist && album.artists !== activeArtist &&
-        !album.tracks.some(t => t.artists === activeArtist)) return false;
+    if (activeArtist && !album.artists?.split('; ').includes(activeArtist) &&
+        !album.tracks.some(t => t.artists?.split('; ').includes(activeArtist))) return false;
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
       else { if (album.genreParent !== activeGenre) return false; }
@@ -762,20 +762,13 @@ function filterAlbums() {
 
 function buildArtistList() {
   if (_cachedArtists) return _cachedArtists;
-  // Count albums per artist using a Set to avoid double-counting when an artist
-  // appears both as album artist and track artist on the same album.
+  // Count albums per individual artist. Artist strings may be "; "-separated.
+  // Set-based deduplication prevents double-counting the same album.
   const map = new Map(); // artist → Set<album.path>
+  const add = (name, path) => { if (!map.has(name)) map.set(name, new Set()); map.get(name).add(path); };
   for (const a of albums) {
-    if (a.artists) {
-      if (!map.has(a.artists)) map.set(a.artists, new Set());
-      map.get(a.artists).add(a.path);
-    }
-    for (const t of a.tracks) {
-      if (t.artists && t.artists !== a.artists) {
-        if (!map.has(t.artists)) map.set(t.artists, new Set());
-        map.get(t.artists).add(a.path);
-      }
-    }
+    if (a.artists) for (const ar of a.artists.split('; ')) add(ar, a.path);
+    for (const t of a.tracks) if (t.artists) for (const ar of t.artists.split('; ')) add(ar, a.path);
   }
   _cachedArtists = [...map.entries()]
     .map(([name, set]) => ({ name, count: set.size }))
@@ -860,8 +853,8 @@ function getCurrentBrowseItems() {
       if (a.genreParent) map.set(a.genreParent, (map.get(a.genreParent) || 0) + 1);
     } else {
       const seen = new Set();
-      if (a.artists) seen.add(a.artists);
-      for (const t of a.tracks) if (t.artists && t.artists !== a.artists) seen.add(t.artists);
+      if (a.artists) for (const ar of a.artists.split('; ')) seen.add(ar);
+      for (const t of a.tracks) if (t.artists) for (const ar of t.artists.split('; ')) seen.add(ar);
       for (const key of seen) map.set(key, (map.get(key) || 0) + 1);
     }
   }
