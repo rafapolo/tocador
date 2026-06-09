@@ -1575,6 +1575,10 @@ u(document).on('DOMContentLoaded', async function () {
   if (!albumToSelect && !albumFromUrl && filteredAlbums.length > 0) albumToSelect = filteredAlbums[0];
 
   if (albumFromUrl && !albumToSelect) {
+    const cleanParams = new URLSearchParams(window.location.search);
+    cleanParams.delete('album'); cleanParams.delete('t'); cleanParams.delete('artista'); cleanParams.delete('genero');
+    const cleanUrl = `${window.location.pathname}${cleanParams.toString() ? '?' + cleanParams : ''}`;
+    window.history.replaceState({}, '', cleanUrl);
     virtualGrid.setItems(filteredAlbums);
     const container = u('#album-header').first();
     container.innerHTML = `<p class="album-not-found">Álbum não existe</p>`;
