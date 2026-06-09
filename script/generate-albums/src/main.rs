@@ -55,11 +55,13 @@ static RE_COMPILATION_PREFIX: Lazy<Regex> = Lazy::new(|| {
 });
 
 fn primary_artist(s: &str) -> &str {
-    s.split([';', ',']).next().map(str::trim).unwrap_or(s)
+    s.split("; ").next().and_then(|p| p.split(", ").next()).map(str::trim).unwrap_or(s)
 }
 
 fn normalize_artists(s: &str) -> String {
-    let parts: Vec<&str> = s.split([';', ',']).map(str::trim).filter(|p| !p.is_empty()).collect();
+    // Split only on "; " or ", " (separator + space) — bare ";" without a space is part of the
+    // name (e.g. "S/A" stored as "S;A" in some taggers) and must not be treated as a separator
+    let parts: Vec<&str> = s.split("; ").flat_map(|p| p.split(", ")).map(str::trim).filter(|p| !p.is_empty()).collect();
     parts.join("; ")
 }
 
