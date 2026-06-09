@@ -107,13 +107,22 @@ const PLACEHOLDER_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/20
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+function parseArtists(str) {
+  if (!str) return [];
+  const raw = str.split(/; |, | e | & |&/).map(s => s.trim()).filter(Boolean);
+  const merged = [];
+  for (const p of raw) {
+    // Single uppercase letter after a separator = abbreviation fragment (e.g. "S; A" → "S/A")
+    if (/^[A-Z]$/.test(p) && merged.length > 0) merged[merged.length - 1] += '/' + p;
+    else merged.push(p.replace(/;(?! )/g, '/'));
+  }
+  return merged;
+}
+
 function artistLinksHTML(str) {
-  const parts = str.split(/(; |, | e | & |&)/);
-  return parts.map((p, i) =>
-    i % 2 === 0
-      ? `<span class="artist-link" data-artist="${p.replace(/"/g, '&quot;')}" role="button" tabindex="0" aria-label="Buscar por ${p.replace(/"/g, '&quot;')}">${p}</span>`
-      : p
-  ).join('');
+  return parseArtists(str).map(p =>
+    `<span class="artist-link" data-artist="${p.replace(/"/g, '&quot;')}" role="button" tabindex="0" aria-label="Buscar por ${p.replace(/"/g, '&quot;')}">${p}</span>`
+  ).join(', ');
 }
 
 function attachArtistHandlers(container) {
@@ -719,8 +728,8 @@ function getDecades() {
 function filterAlbums() {
   const q = searchQuery.toLowerCase();
   filteredAlbums = albums.filter(album => {
-    if (activeArtist && !album.artists?.split('; ').includes(activeArtist) &&
-        !album.tracks.some(t => t.artists?.split('; ').includes(activeArtist))) return false;
+    if (activeArtist && !parseArtists(album.artists).includes(activeArtist) &&
+        !album.tracks.some(t => parseArtists(t.artists).includes(activeArtist))) return false;
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
       else { if (album.genreParent !== activeGenre) return false; }
@@ -769,8 +778,8 @@ function buildArtistList() {
   const map = new Map(); // artist → Set<album.path>
   const add = (name, path) => { if (!map.has(name)) map.set(name, new Set()); map.get(name).add(path); };
   for (const a of albums) {
-    if (a.artists) for (const ar of a.artists.split('; ')) add(ar, a.path);
-    for (const t of a.tracks) if (t.artists) for (const ar of t.artists.split('; ')) add(ar, a.path);
+    if (a.artists) for (const ar of parseArtists(a.artists)) add(ar, a.path);
+    for (const t of a.tracks) if (t.artists) for (const ar of parseArtists(t.artists)) add(ar, a.path);
   }
   _cachedArtists = [...map.entries()]
     .map(([name, set]) => ({ name, count: set.size }))
@@ -855,8 +864,8 @@ function getCurrentBrowseItems() {
       if (a.genreParent) map.set(a.genreParent, (map.get(a.genreParent) || 0) + 1);
     } else {
       const seen = new Set();
-      if (a.artists) for (const ar of a.artists.split('; ')) seen.add(ar);
-      for (const t of a.tracks) if (t.artists) for (const ar of t.artists.split('; ')) seen.add(ar);
+      if (a.artists) for (const ar of parseArtists(a.artists)) seen.add(ar);
+      for (const t of a.tracks) if (t.artists) for (const ar of parseArtists(t.artists)) seen.add(ar);
       for (const key of seen) map.set(key, (map.get(key) || 0) + 1);
     }
   }
