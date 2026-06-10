@@ -481,7 +481,8 @@ class VirtualGrid {
     cover.setAttribute('aria-hidden', 'true');
     loadCoverImage(cover, album.cover);
     title.textContent = album.name;
-    meta.textContent = (activeArtist && album.artists === activeArtist)
+    const normLC = s => (s || '').normalize('NFC').toLocaleLowerCase('pt');
+    meta.textContent = (activeArtist && normLC(album.artists) === normLC(activeArtist))
       ? `${album.year || '∞'}`
       : `${album.artists} • ${album.year || '∞'}`;
 
@@ -728,8 +729,12 @@ function getDecades() {
 function filterAlbums() {
   const q = searchQuery.toLowerCase();
   filteredAlbums = albums.filter(album => {
-    if (activeArtist && !parseArtists(album.artists).includes(activeArtist) &&
-        !album.tracks.some(t => parseArtists(t.artists).includes(activeArtist))) return false;
+    if (activeArtist) {
+      const norm = s => (s || '').normalize('NFC').toLocaleLowerCase('pt');
+      const ak = norm(activeArtist);
+      if (!parseArtists(album.artists).some(a => norm(a) === ak) &&
+          !album.tracks.some(t => parseArtists(t.artists).some(a => norm(a) === ak))) return false;
+    }
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
       else { if (album.genreParent !== activeGenre) return false; }
@@ -775,15 +780,23 @@ function buildArtistList() {
   if (_cachedArtists) return _cachedArtists;
   // Count albums per individual artist. Artist strings may be "; "-separated.
   // Set-based deduplication prevents double-counting the same album.
-  const map = new Map(); // artist → Set<album.path>
-  const isValid = name => /^[\p{L}\p{N}]/u.test(name) && !/-\d{4}$/.test(name);
-  const add = (name, path) => { if (!isValid(name)) return; if (!map.has(name)) map.set(name, new Set()); map.get(name).add(path); };
+  const key = name => name.normalize('NFC').toLocaleLowerCase('pt');
+  // map: fold-key → { canonical name (mixed-case preferred), Set<album.path> }
+  const map = new Map();
+  const add = (name, path) => {
+    const k = key(name);
+    if (!map.has(k)) map.set(k, { name, paths: new Set() });
+    const entry = map.get(k);
+    // prefer mixed-case over all-uppercase
+    if (entry.name === entry.name.toUpperCase() && name !== name.toUpperCase()) entry.name = name;
+    entry.paths.add(path);
+  };
   for (const a of albums) {
     if (a.artists) for (const ar of parseArtists(a.artists)) add(ar, a.path);
     for (const t of a.tracks) if (t.artists) for (const ar of parseArtists(t.artists)) add(ar, a.path);
   }
-  _cachedArtists = [...map.entries()]
-    .map(([name, set]) => ({ name, count: set.size }))
+  _cachedArtists = [...map.values()]
+    .map(({ name, paths }) => ({ name, count: paths.size }))
     .sort((a, b) => {
       const aLetter = /^\p{L}/u.test(a.name);
       const bLetter = /^\p{L}/u.test(b.name);
