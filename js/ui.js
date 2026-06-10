@@ -776,7 +776,8 @@ function buildArtistList() {
   // Count albums per individual artist. Artist strings may be "; "-separated.
   // Set-based deduplication prevents double-counting the same album.
   const map = new Map(); // artist → Set<album.path>
-  const add = (name, path) => { if (!map.has(name)) map.set(name, new Set()); map.get(name).add(path); };
+  const isValid = name => /^[\p{L}\p{N}]/u.test(name) && !/-\d{4}$/.test(name);
+  const add = (name, path) => { if (!isValid(name)) return; if (!map.has(name)) map.set(name, new Set()); map.get(name).add(path); };
   for (const a of albums) {
     if (a.artists) for (const ar of parseArtists(a.artists)) add(ar, a.path);
     for (const t of a.tracks) if (t.artists) for (const ar of parseArtists(t.artists)) add(ar, a.path);
