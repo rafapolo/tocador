@@ -856,36 +856,7 @@ function getGenreDisplayItems() {
 }
 
 function getCurrentBrowseItems() {
-  const base = browseTab === 'genres' ? buildGenreList() : buildArtistList();
-  const hasExternalFilter = !!searchQuery || activeDecade !== null || !!activeYear;
-  // No external filter → show full list so the user can always switch artist/genre
-  if (!hasExternalFilter) return base;
-  // External filter active → recount using only decade/search/year (not the panel selection)
-  // so the list stays full and just reflects which artists/genres survive those filters.
-  const map = new Map();
-  const isGenres = browseTab === 'genres';
-  const q = searchQuery.toLowerCase();
-  for (const a of albums) {
-    const matchesDecade = activeDecade === null ||
-      (activeDecade === 'noyear' ? !a.year :
-       activeDecade === 'pre1940' ? (a.year > 0 && a.year < 1950) :
-       Math.floor(a.year / 10) * 10 === activeDecade);
-    if (!matchesDecade) continue;
-    if (activeYear && a.year !== activeYear) continue;
-    if (searchQuery && !(a.nameLower.includes(q) || a.artistsLower.includes(q) ||
-        a.pathLower.includes(q) || a.tracks.some(t => t.titleLower.includes(q) || t.artistsLower.includes(q)))) continue;
-    if (isGenres) {
-      if (a.genreParent) map.set(a.genreParent, (map.get(a.genreParent) || 0) + 1);
-    } else {
-      const seen = new Set();
-      if (a.artists) for (const ar of parseArtists(a.artists)) seen.add(ar);
-      for (const t of a.tracks) if (t.artists) for (const ar of parseArtists(t.artists)) seen.add(ar);
-      for (const key of seen) map.set(key, (map.get(key) || 0) + 1);
-    }
-  }
-  return base
-    .map(item => ({ name: item.name, count: map.get(item.name) || 0 }))
-    .filter(i => i.count > 0);
+  return browseTab === 'genres' ? buildGenreList() : buildArtistList();
 }
 
 function _updateBrowseCountUI(count) {
