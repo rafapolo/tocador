@@ -127,12 +127,12 @@ function sigV4Encode(str) {
   );
 }
 
-async function s3GetSigned(key, rangeHeader) {
+async function s3GetSigned(bucket, key, rangeHeader) {
   const now = new Date();
   const amzDate  = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const dateStamp = amzDate.slice(0, 8);
   const encodedKey = key.split('/').map(sigV4Encode).join('/');
-  const url = new URL(`/${encodedKey}`, S3_ENDPOINT);
+  const url = new URL(`/${bucket}/${encodedKey}`, S3_ENDPOINT);
   const host = url.host;
 
   const payloadHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
@@ -451,7 +451,7 @@ _server = Bun.serve({
       // For those keys we bypass it and use a manually-signed fetch instead.
       if (path.includes('#') || path.includes('?')) {
         const fetchRange = isHead ? null : rangeHeader;
-        const r = await s3GetSigned(path, fetchRange);
+        const r = await s3GetSigned(bucket, path, fetchRange);
         if (!r.ok && r.status !== 206) {
           const code = r.status >= 500 ? 500 : r.status;
           if (code >= 500) counters.c5xx++; else counters.c4xx++;

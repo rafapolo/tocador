@@ -39,6 +39,7 @@
       padding: 14px 16px 14px;
       border: 1px solid var(--accent);
       border-radius: 6px;
+      position: relative;
     }
 
     /* ── Cover ─────────────────────────────────────────── */
@@ -244,6 +245,28 @@
       line-height: 1.5;
     }
     #offline-msg.visible { display: block; }
+
+    /* ── Tap-to-play overlay (autoplay blocked) ──────── */
+    #tap-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      border-radius: 6px;
+      background: rgba(15,14,12,.72);
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #tap-overlay.visible { display: flex; }
+    #tap-overlay svg { color: var(--accent); }
+    #tap-overlay span {
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: .04em;
+    }
   </style>
 </head>
 <body>
@@ -296,6 +319,11 @@
   </div>
 
   <div id="offline-msg" aria-live="polite"></div>
+
+  <div id="tap-overlay" role="button" tabindex="0" aria-label="Clique para ouvir">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    <span>clique para ouvir</span>
+  </div>
 </div>
 
 <audio id="audio" preload="auto"></audio>
@@ -468,6 +496,7 @@ function showTrack(album, track) {
 
 const controlsEl  = $('controls');
 const offlineEl   = $('offline-msg');
+const tapOverlay  = $('tap-overlay');
 let loadTimer     = null;
 let timeoutStreak = 0;
 
@@ -504,7 +533,7 @@ function playTrack(album, track) {
   setLoading(true);
   clearLoadTimer();
   loadTimer = setTimeout(onLoadTimeout, 15000);
-  audio.play().catch(err => { if (err?.name === 'NotAllowedError') { clearLoadTimer(); setLoading(false); } });
+  audio.play().catch(err => { if (err?.name === 'NotAllowedError') { clearLoadTimer(); setLoading(false); tapOverlay.classList.add('visible'); } });
 }
 
 function pushHist() {
@@ -516,11 +545,14 @@ function pushHist() {
 function next() { pushHist(); const p = pickRandom(); playTrack(p.album, p.track); }
 function prev() { if (hist.length) { const p = hist.pop(); playTrack(p.album, p.track); } }
 
-btnPlay.addEventListener('click', e => {
-  e.currentTarget.blur();
+function startPlay() {
   if (!curTrack) return;
-  audio.paused ? audio.play().catch(err => { if (err?.name === 'NotAllowedError') { clearLoadTimer(); setLoading(false); } }) : audio.pause();
-});
+  tapOverlay.classList.remove('visible');
+  audio.paused ? audio.play().catch(() => {}) : audio.pause();
+}
+btnPlay.addEventListener('click', e => { e.currentTarget.blur(); startPlay(); });
+tapOverlay.addEventListener('click', startPlay);
+tapOverlay.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startPlay(); } });
 $('btn-next').addEventListener('click', e => { e.currentTarget.blur(); next(); });
 $('btn-prev').addEventListener('click', e => { e.currentTarget.blur(); prev(); });
 
@@ -544,7 +576,7 @@ if (typeof BroadcastChannel !== 'undefined') {
   ch.onmessage = ({ data }) => { if (data?.tabId !== TAB_ID) audio.pause(); };
 }
 
-audio.addEventListener('play',    () => setPlaying(true));
+audio.addEventListener('play',    () => { setPlaying(true); tapOverlay.classList.remove('visible'); });
 audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); });
 audio.addEventListener('playing', () => { clearLoadTimer(); timeoutStreak = 0; setLoading(false); });
 audio.addEventListener('waiting', () => setLoading(true));
@@ -593,7 +625,6 @@ coverImg.addEventListener('error', () => {
 async function load() {
   const params  = new URLSearchParams(location.search);
   acervoParam   = params.get('acervo') || 'homi';
-  const showAll = params.get('all') === '1';
   const param   = acervoParam;
   const entry   = ACERVOS[param];
   const url     = entry?.data ?? param;
@@ -604,19 +635,14 @@ async function load() {
 
   BASE_URL      = db.meta?.base_url || entry?.base_url || '';
   const all     = db.albums.filter(a => a.tracks?.length);
-
-  if (showAll) {
-    albums = all;
-  } else {
-    const q = 'hominis canidae';
-    const filtered = all.filter(a =>
-      (a.title  || '').toLowerCase().includes(q) ||
-      (a.artist || '').toLowerCase().includes(q) ||
-      (a.path   || '').toLowerCase().includes(q) ||
-      a.tracks.some(t => (t.title || '').toLowerCase().includes(q) || (t.artists || '').toLowerCase().includes(q))
-    );
-    albums = filtered.length ? filtered : all;
-  }
+  const q       = 'hominis canidae';
+  const filtered = all.filter(a =>
+    (a.title  || '').toLowerCase().includes(q) ||
+    (a.artist || '').toLowerCase().includes(q) ||
+    (a.path   || '').toLowerCase().includes(q) ||
+    a.tracks.some(t => (t.title || '').toLowerCase().includes(q) || (t.artists || '').toLowerCase().includes(q))
+  );
+  albums = filtered.length ? filtered : all;
 
   widget.classList.remove('loading');
 
