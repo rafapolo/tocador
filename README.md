@@ -185,6 +185,59 @@ ARCHIVE_DIR=/path/to/musicas bun script/resize-cover-images.js
 - Placeholder de capa embutido como data-URI (nenhum round-trip extra)
 - Delegação de eventos: 3 listeners no total para álbuns, faixas e drawer mobile
 
+## 📡 API Subsonic
+
+O proxy expõe uma API compatível com o protocolo [Subsonic](https://www.subsonic.org/pages/api.jsp) (v1.16.1) e com o [OpenSubsonic](https://opensubsonic.netlify.app/), permitindo conectar qualquer cliente Subsonic aos acervos.
+
+### Clientes compatíveis
+
+| Plataforma | Apps |
+|---|---|
+| Android | DSub, Ultrasonic, Symfonium, Substreamer |
+| iOS | play:Sub, Substreamer |
+| Desktop | Sonixd, Sublime Music, Feishin |
+
+### Configuração
+
+```
+URL do servidor: https://cdn.tocador.cc
+Usuário: qualquer (não verificado)
+Senha:   Liga o Tocador!
+```
+
+### Endpoints implementados
+
+| Método | Descrição |
+|---|---|
+| `ping` | Verifica conectividade |
+| `getLicense` | Licença sempre válida |
+| `getMusicFolders` | Lista acervos (uqt, homi, …) |
+| `getIndexes` | Artistas agrupados por letra |
+| `getArtists` | Modo ID3 — artistas |
+| `getArtist` | Artista com seus álbuns |
+| `getAlbum` | Álbum com faixas |
+| `getSong` | Metadados de uma faixa |
+| `getAlbumList` / `getAlbumList2` | Lista de álbuns (paginada, com ordenação) |
+| `search2` / `search3` | Busca por artista, álbum e faixa |
+| `getMusicDirectory` | Navegação hierárquica pasta→artista→álbum |
+| `stream` / `download` | Streaming de áudio via S3 proxy |
+| `getCoverArt` | Capa do álbum via S3 proxy |
+| `getPlaylists` | Lista vazia (sem playlists) |
+| `getStarred2` | Lista vazia (sem favoritos) |
+| `getScanStatus` | Sempre `scanning=false` |
+
+Os dados vêm diretamente dos `.json.gz` existentes — sem banco de dados extra. O índice é recarregado automaticamente a cada hora.
+
+### Testando
+
+```bash
+# Testes unitários
+bun run test:subsonic
+
+# Verificar manualmente
+curl "https://cdn.tocador.cc/rest/ping.view?u=tocador&p=Liga%20o%20Tocador!&v=1.16.1&c=curl"
+```
+
 ## 💡 Dicas de Uso
 
 ### Exploração Rápida
