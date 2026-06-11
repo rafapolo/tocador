@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+const { createSubsonicHandler } = require('./subsonic');
 
 // §8 — ip concurrency tracking with hard cap
 const IP_MAP_HARD_CAP = 50_000;
@@ -282,6 +283,39 @@ process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 process.on('uncaughtException',  (err) => { console.error('uncaughtException:', err);  gracefulShutdown('uncaughtException'); });
 process.on('unhandledRejection', (r)   => { console.error('unhandledRejection:', r); });
 
+// §14 — Subsonic REST API: minimal S3 proxy for /rest/ routes (no rate limiting, no hotlink guard)
+async function serveS3(req, s3Key) {
+  if (!isSafeKey(s3Key)) return new Response('Bad Request', { status: 400, headers: corsBase });
+  const rangeHeader = req.headers.get('range');
+  if (rangeHeader && (rangeHeader.length > 128 || !RANGE_RE.test(rangeHeader)))
+    return new Response('Bad Request', { status: 400, headers: corsBase });
+  const bucket = bucketFor(s3Key);
+  if (s3Key.includes('#') || s3Key.includes('?')) {
+    const r = await s3GetSigned(s3Key, rangeHeader);
+    if (!r.ok && r.status !== 206) return new Response('Error', { status: r.status >= 500 ? 500 : r.status, headers: corsBase });
+    const fwdHeaders = { ...corsHeaders, 'Content-Type': mimeFor(s3Key), 'Cache-Control': cacheControlFor(s3Key), 'Accept-Ranges': 'bytes' };
+    for (const h of ['content-length', 'content-range', 'etag', 'last-modified']) { const v = r.headers.get(h); if (v) fwdHeaders[h] = v; }
+    return new Response(r.body, { status: r.status, headers: fwdHeaders });
+  }
+  const file = s3.file(s3Key, { bucket });
+  if (rangeHeader) {
+    const m = RANGE_RE.exec(rangeHeader);
+    const start = Number(m[1]);
+    const endStr = m[2];
+    if (endStr !== '') {
+      const end = Number(endStr);
+      return new Response(file.slice(start, end + 1).stream(), { status: 206, headers: { ...corsHeaders, 'Content-Type': mimeFor(s3Key), 'Cache-Control': cacheControlFor(s3Key), 'Content-Range': `bytes ${start}-${end}/*`, 'Content-Length': String(end - start + 1), 'Accept-Ranges': 'bytes' } });
+    }
+    let stat; try { stat = await file.stat(); } catch { return new Response('Not Found', { status: 404, headers: corsBase }); }
+    const end = stat.size - 1;
+    return new Response(file.slice(start).stream(), { status: 206, headers: { ...corsHeaders, 'Content-Type': mimeFor(s3Key), 'Cache-Control': cacheControlFor(s3Key), 'Content-Range': `bytes ${start}-${end}/${stat.size}`, 'Content-Length': String(stat.size - start), 'Accept-Ranges': 'bytes', 'ETag': stat.etag } });
+  }
+  let stat; try { stat = await file.stat(); } catch { return new Response('Not Found', { status: 404, headers: corsBase }); }
+  return new Response(file.stream(), { status: 200, headers: { ...corsHeaders, 'Content-Type': mimeFor(s3Key), 'Cache-Control': cacheControlFor(s3Key), 'Content-Length': String(stat.size), 'Accept-Ranges': 'bytes', 'ETag': stat.etag, 'Last-Modified': stat.lastModified?.toUTCString() } });
+}
+
+const handleSubsonic = createSubsonicHandler(serveS3);
+
 _server = Bun.serve({
   port: PORT,
   hostname: '127.0.0.1',   // §3 — never 0.0.0.0; only nginx on loopback connects here
@@ -294,6 +328,9 @@ _server = Bun.serve({
     if (req.url.length > 1200) { counters.c4xx++; return new Response('URI Too Long', { status: 414, headers: corsBase }); }
 
     const url = new URL(req.url);
+
+    // §14 — Subsonic REST API: handle before bot/hotlink/rate checks
+    if (url.pathname.startsWith('/rest/')) return handleSubsonic(req, url);
 
     if (req.headers.get('host') === 'radio.tocador.cc')
       return Response.redirect('https://rafapolo.github.io/tocador/radio.html', 301);
