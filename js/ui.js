@@ -107,7 +107,7 @@ const PLACEHOLDER_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/20
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const foldArtist = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt');
+const fold = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt');
 
 function parseArtists(str) {
   if (!str) return [];
@@ -482,7 +482,7 @@ class VirtualGrid {
     cover.setAttribute('aria-hidden', 'true');
     loadCoverImage(cover, album.cover);
     title.textContent = album.name;
-    meta.textContent = (activeArtist && foldArtist(album.artists) === foldArtist(activeArtist))
+    meta.textContent = (activeArtist && fold(album.artists) === fold(activeArtist))
       ? `${album.year || '∞'}`
       : `${album.artists} • ${album.year || '∞'}`;
 
@@ -665,9 +665,9 @@ function buildAlbums() {
   // Before: filterAlbums with search query = ~4 .toLowerCase() calls × N albums per filter.
   // After: 0 .toLowerCase() calls per filter (done once at load time).
   albums = db.albums.map(album => {
-    const nameLower    = (album.title  || '').toLowerCase();
-    const artistsLower = (album.artist || '').toLowerCase();
-    const pathLower    = (album.path   || '').toLowerCase();
+    const nameLower    = fold(album.title);
+    const artistsLower = fold(album.artist);
+    const pathLower    = fold(album.path);
     // Dedup: generator sometimes finds same track at two paths (direct + subfolder).
     // Prefer the direct-path variant (no '/' in file field).
     const seenTitles = new Map();
@@ -690,8 +690,8 @@ function buildAlbums() {
       return {
         title: track.title, num: track.num ?? (i + 1), file,
         album: album.title, artists: trackArtist, year: album.year,
-        titleLower: (track.title   || '').toLowerCase(),
-        artistsLower: (trackArtist || '').toLowerCase(),
+        titleLower: fold(track.title),
+        artistsLower: fold(trackArtist),
       };
     });
     const genre = genreData?.[album.path.normalize('NFC')] ?? null;
@@ -727,12 +727,12 @@ function getDecades() {
 }
 
 function filterAlbums() {
-  const q = searchQuery.toLowerCase();
+  const q = fold(searchQuery);
   filteredAlbums = albums.filter(album => {
     if (activeArtist) {
-      const ak = foldArtist(activeArtist);
-      if (!parseArtists(album.artists).some(a => foldArtist(a) === ak) &&
-          !album.tracks.some(t => parseArtists(t.artists).some(a => foldArtist(a) === ak))) return false;
+      const ak = fold(activeArtist);
+      if (!parseArtists(album.artists).some(a => fold(a) === ak) &&
+          !album.tracks.some(t => parseArtists(t.artists).some(a => fold(a) === ak))) return false;
     }
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
@@ -779,15 +779,17 @@ function buildArtistList() {
   if (_cachedArtists) return _cachedArtists;
   // Count albums per individual artist. Artist strings may be "; "-separated.
   // Set-based deduplication prevents double-counting the same album.
-  const key = foldArtist;
+  const key = fold;
   // map: fold-key → { canonical name (mixed-case preferred), Set<album.path> }
   const map = new Map();
   const add = (name, path) => {
     const k = key(name);
     if (!map.has(k)) map.set(k, { name, paths: new Set() });
     const entry = map.get(k);
-    // prefer mixed-case over all-uppercase
+    const hasDiacritics = s => s !== fold(s);
+    // prefer mixed-case over all-uppercase, then accented over plain ASCII
     if (entry.name === entry.name.toUpperCase() && name !== name.toUpperCase()) entry.name = name;
+    else if (!hasDiacritics(entry.name) && hasDiacritics(name)) entry.name = name;
     entry.paths.add(path);
   };
   for (const a of albums) {
@@ -832,12 +834,12 @@ function buildGenreTree() {
 
 function getGenreDisplayItems() {
   const tree = buildGenreTree();
-  const q = browsePanelQuery.toLowerCase();
+  const q = fold(browsePanelQuery);
   const items = [];
   for (const [parent, data] of tree) {
-    const parentMatch = !q || parent.toLowerCase().includes(q);
+    const parentMatch = !q || fold(parent).includes(q);
     const matchingSubs = q
-      ? [...data.subs.entries()].filter(([sub]) => sub.toLowerCase().includes(q))
+      ? [...data.subs.entries()].filter(([sub]) => fold(sub).includes(q))
       : [];
     if (q && !parentMatch && matchingSubs.length === 0) continue;
     const expanded = q ? (parentMatch || matchingSubs.length > 0) : expandedGenres.has(parent);
@@ -870,8 +872,8 @@ function _applyBrowseItems(items, preserveScroll) {
   if (!virtualBrowseList) return;
   let visible = items;
   if (browsePanelQuery) {
-    const q = browsePanelQuery.toLowerCase();
-    visible = items.filter(i => i.name.toLowerCase().includes(q));
+    const q = fold(browsePanelQuery);
+    visible = items.filter(i => fold(i.name).includes(q));
   }
   if (_browseEmptyEl) _browseEmptyEl.hidden = visible.length > 0;
   _updateBrowseCountUI(visible.length);
