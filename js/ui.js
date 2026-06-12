@@ -107,6 +107,8 @@ const PLACEHOLDER_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/20
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+const foldArtist = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt');
+
 function parseArtists(str) {
   if (!str) return [];
   const raw = str.split(/; |, | e | & |&/).map(s => s.trim()).filter(Boolean);
@@ -481,8 +483,7 @@ class VirtualGrid {
     cover.setAttribute('aria-hidden', 'true');
     loadCoverImage(cover, album.cover);
     title.textContent = album.name;
-    const normLC = s => (s || '').normalize('NFC').toLocaleLowerCase('pt');
-    meta.textContent = (activeArtist && normLC(album.artists) === normLC(activeArtist))
+    meta.textContent = (activeArtist && foldArtist(album.artists) === foldArtist(activeArtist))
       ? `${album.year || '∞'}`
       : `${album.artists} • ${album.year || '∞'}`;
 
@@ -730,10 +731,9 @@ function filterAlbums() {
   const q = searchQuery.toLowerCase();
   filteredAlbums = albums.filter(album => {
     if (activeArtist) {
-      const norm = s => (s || '').normalize('NFC').toLocaleLowerCase('pt');
-      const ak = norm(activeArtist);
-      if (!parseArtists(album.artists).some(a => norm(a) === ak) &&
-          !album.tracks.some(t => parseArtists(t.artists).some(a => norm(a) === ak))) return false;
+      const ak = foldArtist(activeArtist);
+      if (!parseArtists(album.artists).some(a => foldArtist(a) === ak) &&
+          !album.tracks.some(t => parseArtists(t.artists).some(a => foldArtist(a) === ak))) return false;
     }
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
@@ -780,7 +780,7 @@ function buildArtistList() {
   if (_cachedArtists) return _cachedArtists;
   // Count albums per individual artist. Artist strings may be "; "-separated.
   // Set-based deduplication prevents double-counting the same album.
-  const key = name => name.normalize('NFC').toLocaleLowerCase('pt');
+  const key = foldArtist;
   // map: fold-key → { canonical name (mixed-case preferred), Set<album.path> }
   const map = new Map();
   const add = (name, path) => {
