@@ -452,7 +452,7 @@ class VirtualGrid {
       title = item.querySelector('.album-item-title');
       meta  = item.querySelector('.album-item-meta');
     } else {
-      item  = document.createElement('div');
+      item  = document.createElement('a');
       const info = document.createElement('div');
       info.className = 'album-item-info';
       cover = document.createElement('img');
@@ -468,9 +468,8 @@ class VirtualGrid {
     item.className = 'album-item';
     if (selectedAlbum === album) item.classList.add('active');
     item.dataset.albumIdx = i;
+    item.href = generateAlbumUrl(album);
     item.style.cssText = `position:absolute;width:${this.itemWidth}px;top:${pad + row * this.rowHeight}px;left:${pad + col * (this.itemWidth + gap)}px`;
-    item.setAttribute('role', 'listitem');
-    item.setAttribute('tabindex', '0');
     item.setAttribute('aria-label', `${album.name}, ${album.artists}, ${album.year || 'sem data'}`);
     if (!item._keydownBound) {
       item.addEventListener('keydown', e => {
@@ -1375,6 +1374,7 @@ u(document).on('DOMContentLoaded', async function () {
   albumsList.addEventListener('click', e => {
     const item = e.target.closest('[data-album-idx]');
     if (!item) return;
+    e.preventDefault();
     const album = filteredAlbums[parseInt(item.dataset.albumIdx)];
     if (!album || (selectedAlbum === album && currentTrack != null)) return;
 
