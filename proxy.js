@@ -201,6 +201,9 @@ function refererAllowed(req) {
   } catch { return true; }
 }
 
+// Legitimate crawlers we want to let through — Google indexing + og:image rendering
+const goodBotRegex = /googlebot|google-inspectiontool|google-extended|adsbot-google|mediapartners-google|google-read-aloud/i;
+
 const botRegex = new RegExp([
   // automation & headless browsers
   'scrapy', 'selenium(?:-webdriver)?', 'puppeteer', 'playwright', 'phantomjs', 'casperjs',
@@ -317,8 +320,9 @@ _server = Bun.serve({
     }
 
     // block all bots globally — /health and /metrics above are exempt (internal use)
+    // goodBotRegex exceptions are let through (Google indexing + og:image crawling)
     const ua = req.headers.get('user-agent') ?? '';
-    if (botRegex.test(ua)) {
+    if (botRegex.test(ua) && !goodBotRegex.test(ua)) {
       console.log(`[BLOCKED] bot: ${ua.slice(0, 120)}`);
       counters.c4xx++;
       return new Response('Forbidden', { status: 403, headers: corsBase });
