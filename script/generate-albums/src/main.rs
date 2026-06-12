@@ -627,7 +627,7 @@ fn main() {
                     .map(|p| p.join("sitemap.xml"))
                     .unwrap_or_else(|| PathBuf::from("sitemap.xml"))
             });
-        write_sitemap(&output.albums, sitemap_url, &sitemap_out);
+        write_sitemap(&output.albums, sitemap_url, output.meta.base_url.as_deref(), &sitemap_out);
     }
 }
 
@@ -671,16 +671,36 @@ fn form_encode(s: &str) -> String {
     out
 }
 
-fn write_sitemap(albums: &[Album], base_url: &str, sitemap_path: &Path) {
+// Percent-encode a URL path segment (spaces → %20, not +)
+fn path_segment_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() * 3);
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' |
+            b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            _ => { out.push('%'); out.push_str(&format!("{:02X}", b)); }
+        }
+    }
+    out
+}
+
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+}
+
+fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitemap_path: &Path) {
     let today = today_iso();
     let base = base_url.trim_end_matches('/');
+    let cdn = cdn_base.map(|s| s.trim_end_matches('/'));
     let dir = sitemap_path.parent().unwrap_or(Path::new("."));
     let albums_path = dir.join("sitemap-albums.xml");
     let artists_path = dir.join("sitemap-artists.xml");
 
     // sitemap-albums.xml
     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    xml.push_str("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+    xml.push_str("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"");
+    if cdn.is_some() { xml.push_str(" xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\""); }
+    xml.push_str(">\n");
     xml.push_str(&format!(
         "  <url>\n    <loc>{}/</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n",
         base, today
@@ -693,10 +713,22 @@ fn write_sitemap(albums: &[Album], base_url: &str, sitemap_path: &Path) {
         }
         let lastmod = if album.year > 0 { format!("{}-01-01", album.year) } else { today.clone() };
         let priority = if album.year >= 2020 { "0.9" } else if album.year >= 2010 { "0.7" } else { "0.5" };
-        xml.push_str(&format!(
-            "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>{}</priority>\n  </url>\n",
+        let mut entry = format!(
+            "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>{}</priority>\n",
             loc, lastmod, priority
-        ));
+        );
+        if album.has_cover {
+            if let Some(cdn_base) = cdn {
+                let img_loc = format!("{}/{}/capa-min.jpg", cdn_base, path_segment_encode(&album.path));
+                let img_title = xml_escape(&format!("{} — {} ({})", album.title, album.artist, album.year));
+                entry.push_str(&format!(
+                    "    <image:image>\n      <image:loc>{}</image:loc>\n      <image:title>{}</image:title>\n    </image:image>\n",
+                    img_loc, img_title
+                ));
+            }
+        }
+        entry.push_str("  </url>\n");
+        xml.push_str(&entry);
     }
     xml.push_str("</urlset>\n");
     fs::write(&albums_path, &xml).expect("Falha ao escrever sitemap-albums.xml");
