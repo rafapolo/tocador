@@ -1598,8 +1598,10 @@ u(document).on('DOMContentLoaded', async function () {
     renderTrackList();
     renderMobileDrawer(albumToSelect);
     if (albumFromUrl && isMobile()) openMobileDrawer();
-    updateMetaTags(albumToSelect);
-    window.history.replaceState({ album: albumToSelect.path, t: trackNumFromUrl || null }, '', generateAlbumUrl(albumToSelect, trackNumFromUrl || null));
+    if (albumFromUrl) {
+      updateMetaTags(albumToSelect);
+      window.history.replaceState({ album: albumToSelect.path, t: trackNumFromUrl || null }, '', generateAlbumUrl(albumToSelect, trackNumFromUrl || null));
+    }
   }
 
   const playerCover = u('#player-cover').first();
