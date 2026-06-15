@@ -202,7 +202,7 @@ function refererAllowed(req) {
 }
 
 // Legitimate crawlers we want to let through — Google indexing + og:image rendering
-const goodBotRegex = /googlebot|google-inspectiontool|google-extended|adsbot-google|mediapartners-google|google-read-aloud/i;
+const goodBotRegex = /googlebot|googleother|google-inspectiontool|google-extended|adsbot-google|mediapartners-google|google-read-aloud|apis-google/i;
 
 const botRegex = new RegExp([
   // automation & headless browsers

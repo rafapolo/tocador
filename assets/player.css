@@ -450,6 +450,12 @@ body {
   align-items: stretch;
   position: relative;
   contain: content;
+  color: inherit;
+  text-decoration: none;
+}
+.album-item:any-link {
+  color: inherit;
+  text-decoration: none;
 }
 
 .album-item:hover .album-cover-thumb {

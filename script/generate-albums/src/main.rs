@@ -714,7 +714,7 @@ fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitem
         let lastmod = if album.year > 0 { format!("{}-01-01", album.year) } else { today.clone() };
         let priority = if album.year >= 2020 { "0.9" } else if album.year >= 2010 { "0.7" } else { "0.5" };
         let mut entry = format!(
-            "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>{}</priority>\n",
+            "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>{}</priority>\n",
             loc, lastmod, priority
         );
         if album.has_cover {
