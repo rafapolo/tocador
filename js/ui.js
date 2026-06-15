@@ -457,6 +457,7 @@ class VirtualGrid {
       info.className = 'album-item-info';
       cover = document.createElement('img');
       cover.className = 'album-cover-thumb';
+      cover.decoding = 'async';
       title = document.createElement('div');
       title.className = 'album-item-title';
       meta  = document.createElement('div');
