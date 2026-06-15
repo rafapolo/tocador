@@ -1540,10 +1540,8 @@ u(document).on('DOMContentLoaded', async function () {
     const genresTabBtn = document.querySelector('.browse-tab[data-tab="genres"]');
     if (genresTabBtn) {
       if (genreData) {
+        genresTabBtn.hidden = false;
         genresTabBtn.disabled = false;
-        genresTabBtn.title = '';
-      } else if (genreLoading) {
-        genresTabBtn.classList.add('loading');
       }
     }
     renderBrowsePanel();
