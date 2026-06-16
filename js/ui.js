@@ -1664,15 +1664,24 @@ u(document).on('DOMContentLoaded', async function () {
   const overlayProgressFill = document.getElementById('overlay-progress-fill');
   const overlayTimeCurrent = document.getElementById('overlay-time-current');
   const overlayTimeDuration = document.getElementById('overlay-time-duration');
+  const timeCurrentEl = document.getElementById('time-current');
 
+  // timeupdate fires ~4–60×/s. Only the progress-bar width needs that resolution;
+  // the time label and mediaSession position change at most once per second, so gate
+  // those on the integer-second boundary to skip the per-tick text writes and DOM query.
+  let _lastWholeSecond = -1;
   audio.addEventListener('timeupdate', () => {
     const percent = (audio.currentTime / audio.duration) * 100 || 0;
-    const cur = formatTime(audio.currentTime);
     progressFill.style.width = percent + '%';
     mainProgressBar.classList.toggle('has-progress', percent > 0);
     mainProgressBar.setAttribute('aria-valuenow', Math.round(percent));
-    u('#time-current').text(cur);
     if (overlayProgressFill) overlayProgressFill.style.width = percent + '%';
+
+    const whole = Math.floor(audio.currentTime);
+    if (whole === _lastWholeSecond) return;
+    _lastWholeSecond = whole;
+    const cur = formatTime(audio.currentTime);
+    if (timeCurrentEl) timeCurrentEl.textContent = cur;
     if (overlayTimeCurrent) overlayTimeCurrent.textContent = cur;
     if ('mediaSession' in navigator && audio.duration && !isNaN(audio.duration)) {
       try { navigator.mediaSession.setPositionState({ duration: audio.duration, playbackRate: audio.playbackRate, position: audio.currentTime }); } catch (_) {}
