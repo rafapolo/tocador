@@ -1,165 +1,192 @@
 #!/usr/bin/env node
 /**
- * Create resized covers and upload directly to S3 via AWS SDK.
- * Usage: node js/resize-cover-images.js
+ * Resize and upload album covers to S3.
+ * Usage:
+ *   bun script/resize-cover-images.js --acervo homi
+ *   bun script/resize-cover-images.js --acervo uqt
+ *   bun script/resize-cover-images.js --acervo homi --force   # skip exists check
  */
 
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const sharp = require('sharp');
 const { S3Client, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 
-const S3_BUCKET = process.env.S3_BUCKET;
 const S3_REGION = 'hel1';
 const TARGET_WIDTH = 200;
-const SOURCE_DIR = process.env.ARCHIVE_DIR || path.join(__dirname, '..', 'unzips');
+const CONCURRENCY = 20;
+
+const ACERVOS = {
+  uqt: {
+    dataFile: path.resolve(__dirname, '../../uqt/data/uqt-albums.json.gz'),
+    sourceDir: process.env.ARCHIVE_DIR || path.resolve(__dirname, '../unzips'),
+    s3Prefix: 'uqt',
+  },
+  homi: {
+    dataFile: path.resolve(__dirname, '../../hominiscanidae/data/homi-albums.json.gz'),
+    sourceDir: process.env.ARCHIVE_DIR || '/Volumes/EXTRA/hominiscanidae/unzips',
+    s3Prefix: 'indie',
+  },
+};
 
 function loadEnv(file = '.env') {
   const envPath = path.resolve(__dirname, '..', file);
   if (fs.existsSync(envPath)) {
-    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-    for (const line of lines) {
+    for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
       const m = line.match(/^\s*([\w]+)\s*=\s*"?([^"]*)"?\s*$/);
       if (m) process.env[m[1]] = m[2];
     }
   }
 }
-loadEnv();
 
-const ak = process.env.AWS_ACCESS_KEY_ID;
-const sk = process.env.AWS_SECRET_ACCESS_KEY;
-if (!ak || !sk) throw new Error('AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY not set in .env');
+function loadAlbums(dataFile) {
+  const buf = fs.readFileSync(dataFile);
+  const json = zlib.gunzipSync(buf).toString('utf8');
+  return JSON.parse(json).albums;
+}
 
-const s3 = new S3Client({
-  endpoint: `https://${S3_REGION}.your-objectstorage.com`,
-  region: S3_REGION,
-  credentials: { accessKeyId: ak, secretAccessKey: sk },
-  forcePathStyle: true,
-});
+function findCover(albumDir) {
+  const capaMin = path.join(albumDir, 'capa-min.jpg');
+  if (fs.existsSync(capaMin)) return { path: capaMin, preresized: true };
 
-function findJpgFiles(dir) {
-  const covers = [];
-  if (!fs.existsSync(dir)) return covers;
-  for (const item of fs.readdirSync(dir)) {
-    const fullPath = path.join(dir, item);
-    const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) covers.push(...findJpgFiles(fullPath));
-    else if (['.jpg', '.jpeg'].includes(path.extname(item).toLowerCase()))
-      covers.push({ path: fullPath, size: stat.size });
+  let best = null;
+  if (!fs.existsSync(albumDir)) return null;
+  for (const item of fs.readdirSync(albumDir)) {
+    const full = path.join(albumDir, item);
+    const stat = fs.statSync(full);
+    if (stat.isFile() && ['.jpg', '.jpeg'].includes(path.extname(item).toLowerCase())) {
+      if (!best || stat.size > best.size) best = { path: full, size: stat.size, preresized: false };
+    }
   }
-  return covers;
+  return best;
 }
 
-function findBestCover(albumDir) {
-  const files = findJpgFiles(albumDir);
-  if (files.length === 0) return null;
-  files.sort((a, b) => b.size - a.size);
-  return files[0].path;
+function albumSourceDir(sourceDir, albumPath) {
+  for (const form of ['NFC', 'NFD']) {
+    const p = path.join(sourceDir, albumPath.normalize(form));
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
 }
 
-function normalizeAlbumPath(folderName) {
-  return folderName.replace(/_/g, ' ');
-}
-
-async function s3Exists(key) {
+async function s3Exists(s3, bucket, key) {
   try {
-    await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+    await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
     return true;
   } catch { return false; }
 }
 
-async function uploadToS3(buffer, key) {
+async function processAlbum(s3, S3_BUCKET, config, album, force) {
+  if (album.has_cover === false) return 'skipped';
+
+  const s3Key = `${config.s3Prefix}/${album.path}/capa-min.jpg`;
+
+  if (!force && await s3Exists(s3, S3_BUCKET, s3Key)) return 'existed';
+
+  const albumDir = albumSourceDir(config.sourceDir, album.path);
+  const cover = albumDir ? findCover(albumDir) : null;
+  if (!cover) return 'skipped';
+
+  const originalSize = fs.statSync(cover.path).size;
+
+  let buffer;
+  if (cover.preresized) {
+    buffer = fs.readFileSync(cover.path);
+  } else {
+    buffer = await sharp(cover.path)
+      .resize(TARGET_WIDTH, null, { withoutEnlargement: true, fit: 'inside' })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+  }
+
   await s3.send(new PutObjectCommand({
     Bucket: S3_BUCKET,
-    Key: key,
+    Key: s3Key,
     Body: buffer,
     ContentType: 'image/jpeg',
   }));
+
+  return { status: 'uploaded', originalSize, finalSize: buffer.length, path: album.path };
 }
 
 async function main() {
-  console.log('Loading album database...');
-  const dbPath = path.resolve(__dirname, '..', 'js', 'uqt-albums.js');
-  const content = fs.readFileSync(dbPath, 'utf8');
-  const db = eval('(' + content.replace(/^db\s*=\s*/, '') + ')');
-  const albums = db.albums;
-  console.log(`Found ${albums.length} albums in database\n`);
+  loadEnv();
 
-  console.log('Scanning source for covers...');
-  const coverMap = new Map();
-  function scanForCovers(dir) {
-    for (const item of fs.readdirSync(dir)) {
-      const fullPath = path.join(dir, item);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        const normalizedFolder = normalizeAlbumPath(path.basename(fullPath));
-        if (!coverMap.has(normalizedFolder) || stat.size > coverMap.get(normalizedFolder).size)
-          coverMap.set(normalizedFolder, { path: fullPath, size: stat.size });
-        scanForCovers(fullPath);
-      }
-    }
+  const args = process.argv.slice(2);
+  const acervoArg = args[args.indexOf('--acervo') + 1] || 'uqt';
+  const force = args.includes('--force');
+
+  const config = ACERVOS[acervoArg];
+  if (!config) {
+    console.error(`Unknown acervo: ${acervoArg}. Valid: ${Object.keys(ACERVOS).join(', ')}`);
+    process.exit(1);
   }
-  scanForCovers(SOURCE_DIR);
-  console.log(`Found ${coverMap.size} album folders with covers\n`);
 
-  let processed = 0, skipped = 0, alreadyExists = 0, errors = 0;
-  let totalOriginal = 0, totalResized = 0;
+  const S3_BUCKET = process.env.S3_BUCKET;
+  const ak = process.env.AWS_ACCESS_KEY_ID;
+  const sk = process.env.AWS_SECRET_ACCESS_KEY;
+  if (!S3_BUCKET || !ak || !sk) throw new Error('S3_BUCKET / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY not set');
 
-  for (const album of albums) {
-    const s3Path = album.path;
-    const s3Key = `uqt/${s3Path}/capa-min.jpg`;
-    let coverDir = null;
+  const s3 = new S3Client({
+    endpoint: `https://${S3_REGION}.your-objectstorage.com`,
+    region: S3_REGION,
+    credentials: { accessKeyId: ak, secretAccessKey: sk },
+    forcePathStyle: true,
+  });
 
-    if (coverMap.has(s3Path)) {
-      coverDir = coverMap.get(s3Path).path;
-    } else {
-      const s3Words = s3Path.toLowerCase().split(/\s+/);
-      for (const [srcPath, coverInfo] of coverMap) {
-        const srcWords = srcPath.toLowerCase().split(/\s+/);
-        const matches = s3Words.filter(w => w.length > 2 && srcWords.includes(w)).length;
-        if (matches >= 2) { coverDir = coverInfo.path; break; }
+  console.log(`Acervo: ${acervoArg}${force ? ' (--force, skipping exists check)' : ''}`);
+  console.log(`Data:   ${config.dataFile}`);
+  console.log(`Source: ${config.sourceDir}`);
+  console.log(`Prefix: ${config.s3Prefix}/\n`);
+
+  const albums = loadAlbums(config.dataFile);
+  console.log(`Albums: ${albums.length} | Concurrency: ${CONCURRENCY}\n`);
+
+  let uploaded = 0, skipped = 0, existed = 0, errors = 0;
+  let totalOriginal = 0, totalFinal = 0;
+
+  // Process in parallel batches
+  for (let i = 0; i < albums.length; i += CONCURRENCY) {
+    const batch = albums.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map(album => processAlbum(s3, S3_BUCKET, config, album, force))
+    );
+
+    for (let j = 0; j < results.length; j++) {
+      const r = results[j];
+      if (r.status === 'rejected') {
+        console.error(`  ERROR: ${batch[j].path}: ${r.reason?.message}`);
+        errors++;
+      } else {
+        const v = r.value;
+        if (v === 'skipped') { skipped++; }
+        else if (v === 'existed') { existed++; }
+        else {
+          totalOriginal += v.originalSize;
+          totalFinal += v.finalSize;
+          uploaded++;
+          if (uploaded <= 30)
+            console.log(`  OK: ${v.path} (${(v.originalSize / 1024).toFixed(1)}KB → ${(v.finalSize / 1024).toFixed(1)}KB)`);
+          else if (uploaded === 31)
+            console.log('  ... (showing first 30)');
+        }
       }
     }
 
-    if (!coverDir) { skipped++; continue; }
-
-    const jpgPath = findBestCover(coverDir);
-    if (!jpgPath) { skipped++; continue; }
-
-    // Skip if already uploaded
-    if (await s3Exists(s3Key)) { alreadyExists++; continue; }
-
-    const originalSize = fs.statSync(jpgPath).size;
-    totalOriginal += originalSize;
-
-    try {
-      const buffer = await sharp(jpgPath)
-        .resize(TARGET_WIDTH, null, { withoutEnlargement: true, fit: 'inside' })
-        .jpeg({ quality: 80 })
-        .toBuffer();
-
-      await uploadToS3(buffer, s3Key);
-      totalResized += buffer.length;
-      processed++;
-      if (processed <= 30)
-        console.log(`  OK: ${s3Path} (${(originalSize/1024).toFixed(1)}KB → ${(buffer.length/1024).toFixed(1)}KB)`);
-      else if (processed === 31)
-        console.log(`  ... (showing first 30)`);
-    } catch (e) {
-      console.error(`  ERROR: ${s3Path}: ${e.name} ${e.message}`);
-      errors++;
+    if ((i + CONCURRENCY) % 500 === 0 || i + CONCURRENCY >= albums.length) {
+      process.stdout.write(`\r  Progress: ${Math.min(i + CONCURRENCY, albums.length)}/${albums.length} (↑${uploaded} ✓${existed} -${skipped} ✗${errors})`);
     }
   }
 
-  console.log(`\n=== Summary ===`);
-  console.log(`Uploaded:      ${processed}`);
-  console.log(`Already exist: ${alreadyExists}`);
-  console.log(`Skipped:       ${skipped} (no source cover found)`);
+  console.log('\n\n=== Summary ===');
+  console.log(`Uploaded:      ${uploaded}`);
+  console.log(`Already exist: ${existed}`);
+  console.log(`Skipped:       ${skipped}`);
   console.log(`Errors:        ${errors}`);
-  if (processed > 0) {
-    console.log(`Original:      ${(totalOriginal/1024/1024).toFixed(1)} MB`);
-    console.log(`Resized:       ${(totalResized/1024/1024).toFixed(1)} MB`);
-    console.log(`Saved:         ${((totalOriginal-totalResized)/1024/1024).toFixed(1)} MB`);
+  if (uploaded > 0) {
+    console.log(`Source total:  ${(totalOriginal / 1024 / 1024).toFixed(1)} MB`);
+    console.log(`Uploaded:      ${(totalFinal / 1024 / 1024).toFixed(1)} MB`);
   }
 }
 
