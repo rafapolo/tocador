@@ -59,6 +59,7 @@ test('R5: next button changes track title', async ({ page }) => {
 });
 
 test('R6: prev button navigates to a previous track from history', async ({ page }) => {
+  await page.clock.install(); // freeze page JS timers so audio-error auto-skip can't race the test
   await gotoRadio(page);
   const title1 = await page.locator('#track-title').textContent();
   await page.click('#btn-next');
