@@ -733,10 +733,9 @@ fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitem
     ));
     for album in albums {
         let album_param = form_encode(&album.path);
-        let mut loc = format!("{}/?album={}", base, album_param);
-        if !album.artist.is_empty() {
-            loc.push_str(&format!("&amp;artista={}", form_encode(&album.artist)));
-        }
+        // Must match the page's self-declared canonical (?album=X only). Appending
+        // &artista= makes every sitemap URL non-canonical → "Page with redirect".
+        let loc = format!("{}/?album={}", base, album_param);
         let lastmod = if album.year > 0 { format!("{}-01-01", album.year) } else { today.clone() };
         let priority = if album.year >= 2020 { "0.9" } else if album.year >= 2010 { "0.7" } else { "0.5" };
         let mut entry = format!(
