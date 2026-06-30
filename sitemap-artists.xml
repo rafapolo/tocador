@@ -31,7 +31,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=30+DB%2C+Samba+de+M%C3%A1quina</loc>
+    <loc>https://tocador.cc/?artista=30+DB%3B+Samba+de+M%C3%A1quina</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -181,7 +181,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=A+Travestis%2C+Danny+Bond</loc>
+    <loc>https://tocador.cc/?artista=A+Travestis%3B+Danny+Bond</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -235,7 +235,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=ABC+Love%2C+Gab+Ferreira%2C+Viktor+Murer</loc>
+    <loc>https://tocador.cc/?artista=ABC+Love%3B+Gab+Ferreira%3B+Viktor+Murer</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -355,7 +355,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=ATR%2C+Donatinho</loc>
+    <loc>https://tocador.cc/?artista=ATR%3B+Donatinho</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -529,6 +529,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Afreekassia</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Afreekassia%3B+Mello+Santana</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -679,7 +685,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Alan+James%2C+R</loc>
+    <loc>https://tocador.cc/?artista=Alan+James%3B+R</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -877,7 +883,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Alfredo+Dias+Gomes%2C+Widor+Santiago</loc>
+    <loc>https://tocador.cc/?artista=Alfredo+Dias+Gomes%3B+Widor+Santiago</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -979,13 +985,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Alphayatch%2C+Bernardo+Pacheco</loc>
+    <loc>https://tocador.cc/?artista=Alphayatch%3B+Bernardo+Pacheco</loc>
     <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Alquifonia%2C+Michel+de+Moura</loc>
+    <loc>https://tocador.cc/?artista=Alquifonia%3B+Michel+de+Moura</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1191,6 +1197,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Ana+Clara+%2B+Meio+Amargo</loc>
     <lastmod>2021-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Ana+Frango+Ele%CC%81trico</loc>
+    <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -1561,6 +1573,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Antiga+Roll%3B+Dpeids</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Antiporcos</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -1651,7 +1669,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Aphorism%2C+Rabujos</loc>
+    <loc>https://tocador.cc/?artista=Aphorism%3B+Rabujos</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1669,7 +1687,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Applegate%2C+Orelha+Muda</loc>
+    <loc>https://tocador.cc/?artista=Applegate%3B+Orelha+Muda</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1699,7 +1717,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Aquarius+Orb%2C+Mad+Goblins</loc>
+    <loc>https://tocador.cc/?artista=Aquarius+Orb%3B+Mad+Goblins</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1791,6 +1809,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Arquivo+Morto+Power+Tosco</loc>
     <lastmod>2019-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Arraial+do+Pavulagem</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -2179,7 +2203,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Aya+Oficial%2C+Dj+Will</loc>
+    <loc>https://tocador.cc/?artista=Aya+Oficial%3B+Dj+Will</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -2335,7 +2359,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Baboon+Ha%2C+Pedro+Domicio</loc>
+    <loc>https://tocador.cc/?artista=Baboon+Ha%3B+Pedro+Domicio</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -2407,25 +2431,25 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=BaianaSystem%2C+Antonio+Carlos%2C+Jocafi%2C+Orquestra+Afrosinf%C3%B4nica</loc>
+    <loc>https://tocador.cc/?artista=BaianaSystem%3B+Antonio+Carlos%3B+Jocafi%3B+Orquestra+Afrosinf%C3%B4nica</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=BaianaSystem%2C+BNeg%C3%A3o</loc>
+    <loc>https://tocador.cc/?artista=BaianaSystem%3B+BNeg%C3%A3o</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=BaianaSystem%2C+Buguinha+Dub%2C+Antonio+Carlos%2C+Jocafi%2C+Orquestra+Afrosinf%C3%B4nica</loc>
+    <loc>https://tocador.cc/?artista=BaianaSystem%3B+Buguinha+Dub%3B+Antonio+Carlos%3B+Jocafi%3B+Orquestra+Afrosinf%C3%B4nica</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=BaianaSystem%2C+Liz+Reis</loc>
+    <loc>https://tocador.cc/?artista=BaianaSystem%3B+Liz+Reis</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -2779,7 +2803,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Bel+Medula%2C+Luczan+e+Betamaxers</loc>
+    <loc>https://tocador.cc/?artista=Bel+Medula%3B+Luczan+e+Betamaxers</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -2833,7 +2857,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Beli+Remour%2C+Lucas+Romero%2C+Marcelo+Andrade+%26+Mateus+Romero</loc>
+    <loc>https://tocador.cc/?artista=Beli+Remour%3B+Lucas+Romero%3B+Marcelo+Andrade+%26+Mateus+Romero</loc>
     <lastmod>2016-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -3217,14 +3241,14 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Bixarte%2C+FurmigaDub</loc>
-    <lastmod>2020-01-01</lastmod>
+    <loc>https://tocador.cc/?artista=Bixarte%3B+Ay%C3%B4+Tupinamb%C3%A1</loc>
+    <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Bixarte%3B+Ay%C3%B4+Tupinamb%C3%A1</loc>
-    <lastmod>2025-01-01</lastmod>
+    <loc>https://tocador.cc/?artista=Bixarte%3B+FurmigaDub</loc>
+    <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -3235,7 +3259,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Bixiga+70%2C+Victor+Rice</loc>
+    <loc>https://tocador.cc/?artista=Bixiga+70%3B+Victor+Rice</loc>
     <lastmod>2016-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -3337,7 +3361,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Bloco+Agora+Vai%2C+Jonathan+Silva%2C+Eduardo+Alves</loc>
+    <loc>https://tocador.cc/?artista=Bloco+Agora+Vai%3B+Jonathan+Silva%3B+Eduardo+Alves</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -3601,13 +3625,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Brisa+Flow%2C+B.Art</loc>
+    <loc>https://tocador.cc/?artista=Brisa+Flow%3B+B.Art</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Brisa+Flow%2C+Franscisco+Schuller%2C+Vitor+Ciosaki%2C+Philipi+Santos+de+Lima</loc>
+    <loc>https://tocador.cc/?artista=Brisa+Flow%3B+Franscisco+Schuller%3B+Vitor+Ciosaki%3B+Philipi+Santos+de+Lima</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -3847,7 +3871,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=B%C3%A1rbara+Eug%C3%AAnia%2C+Bloco+Pagu</loc>
+    <loc>https://tocador.cc/?artista=B%C3%A1rbara+Eug%C3%AAnia%3B+Bloco+Pagu</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -4009,7 +4033,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Cachalote+Fuzz%2C+Tagore</loc>
+    <loc>https://tocador.cc/?artista=Cachalote+Fuzz%3B+Tagore</loc>
     <lastmod>2017-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -4039,7 +4063,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Cac%C3%A1+Machado%2C+Mateus+Aleluia</loc>
+    <loc>https://tocador.cc/?artista=Cac%C3%A1+Machado%3B+Mateus+Aleluia</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -4069,6 +4093,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Cadu+Teno%CC%81rio</loc>
+    <lastmod>2019-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Cadu+Ten%C3%B3rio</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -4087,7 +4117,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Caetano+Veloso%2C+Ivan+Sacerdote</loc>
+    <loc>https://tocador.cc/?artista=Caetano+Veloso%3B+Ivan+Sacerdote</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -4297,7 +4327,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Cam%C3%B5es%2C+Jo%C3%A3o+Ribeiro</loc>
+    <loc>https://tocador.cc/?artista=Cam%C3%B5es%3B+Jo%C3%A3o+Ribeiro</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -4693,7 +4723,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Cayo+Carig%2C+Dr.+Drumah</loc>
+    <loc>https://tocador.cc/?artista=Cayo+Carig%3B+Dr.+Drumah</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -4729,7 +4759,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Cellardoor%2C+Serenn</loc>
+    <loc>https://tocador.cc/?artista=Cellardoor%3B+Serenn</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -4873,7 +4903,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Chico+Chico%2C+Jo%C3%A3o+Mantuano</loc>
+    <loc>https://tocador.cc/?artista=Chico+Chico%3B+Jo%C3%A3o+Mantuano</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -5025,6 +5055,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Cicero</loc>
     <lastmod>2017-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Cidada%CC%83o+Instigado</loc>
+    <lastmod>2015-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -5185,13 +5221,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Clara+Lima%2C+Go+Dassisti</loc>
+    <loc>https://tocador.cc/?artista=Clara+Lima%3B+Go+Dassisti</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Clara+Lima%2C+Go+Dassisti%2C+Gee+Rocha</loc>
+    <loc>https://tocador.cc/?artista=Clara+Lima%3B+Go+Dassisti%3B+Gee+Rocha</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -5211,6 +5247,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Clarissa+Bruns</loc>
     <lastmod>2022-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Clau+Aniz</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -5253,6 +5295,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Cleiton+Rolo</loc>
     <lastmod>2019-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Clem+Snide</loc>
+    <lastmod>2009-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -5449,7 +5497,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Condor%2C+Matheus+de+Bezerra</loc>
+    <loc>https://tocador.cc/?artista=Condor%3B+Matheus+de+Bezerra</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -5635,7 +5683,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Coyote+Beatz%2C+Djonga</loc>
+    <loc>https://tocador.cc/?artista=Coyote+Beatz%3B+Djonga</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -5647,7 +5695,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Craca+e+Dani+Nega%2C+Clarianas</loc>
+    <loc>https://tocador.cc/?artista=Craca+e+Dani+Nega%3B+Clarianas</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -5773,7 +5821,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Cronixta%2C+DJ+Kl+Jay</loc>
+    <loc>https://tocador.cc/?artista=Cronixta%3B+DJ+Kl+Jay</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -5881,7 +5929,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=C%C3%B4co+de+Oy%C3%A1%2C+Orito+Cantora%2C+Jenn+del+Tamb%C3%B3</loc>
+    <loc>https://tocador.cc/?artista=C%C3%B4co+de+Oy%C3%A1%3B+Orito+Cantora%3B+Jenn+del+Tamb%C3%B3</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -5905,7 +5953,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=D+Mingus%2C+German+Ra</loc>
+    <loc>https://tocador.cc/?artista=D+Mingus%3B+German+Ra</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -6001,13 +6049,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=DJ+Buck%2C+ManoWill</loc>
+    <loc>https://tocador.cc/?artista=DJ+Buck%3B+ManoWill</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=DJ+Buck%2C+Nikito%2C+Cab%2C+CAB</loc>
+    <loc>https://tocador.cc/?artista=DJ+Buck%3B+Nikito%3B+Cab%3B+CAB</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -6019,7 +6067,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=DJ+Caique%2C+Edi+Rock%2C+Derek%2C+Pedro+Qualy%2C+MC+Guim%C3%AA%2C+Leal%2C+Luccas+Carlos%2C+PK</loc>
+    <loc>https://tocador.cc/?artista=DJ+Caique%3B+Edi+Rock%3B+Derek%3B+Pedro+Qualy%3B+MC+Guim%C3%AA%3B+Leal%3B+Luccas+Carlos%3B+PK</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -6295,8 +6343,14 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Daniel+Filipe%2C+Savina+Alves%2C+Pamela+Cristiana%2C+Andr%C3%A9+Oliveira%2C+F%C3%A1bio+Christian%2C+Fabio+Christian</loc>
+    <loc>https://tocador.cc/?artista=Daniel+Filipe%3B+Savina+Alves%3B+Pamela+Cristiana%3B+Andr%C3%A9+Oliveira%3B+F%C3%A1bio+Christian%3B+Fabio+Christian</loc>
     <lastmod>2018-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Daniel+Gnatali</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -6463,7 +6517,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Davi+Valois%2C+Isaac+Magalh%C3%A3es</loc>
+    <loc>https://tocador.cc/?artista=Davi+Valois%3B+Isaac+Magalh%C3%A3es</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -6571,13 +6625,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=De+repente%2C+vivo</loc>
+    <loc>https://tocador.cc/?artista=De+repente%3B+vivo</loc>
     <lastmod>2015-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=De+um+Filho%2C+De+um+Cego</loc>
+    <loc>https://tocador.cc/?artista=De+um+Filho%3B+De+um+Cego</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7033,7 +7087,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Dieguito+Reis%2C+Lau+e+Eu+%26+Martin+Mendon%C3%A7a</loc>
+    <loc>https://tocador.cc/?artista=Dieguito+Reis%3B+Lau+e+Eu+%26+Martin+Mendon%C3%A7a</loc>
     <lastmod>2022-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7099,7 +7153,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Diogo+Sili%2C+Ilessi</loc>
+    <loc>https://tocador.cc/?artista=Diogo+Sili%3B+Ilessi</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7117,7 +7171,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Diogo+Strausz%2C+Thiago+Pethit</loc>
+    <loc>https://tocador.cc/?artista=Diogo+Strausz%3B+Thiago+Pethit</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7153,7 +7207,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Diomedes+Chinaski%2C+Cacife+Clandestino%2C+Don+L</loc>
+    <loc>https://tocador.cc/?artista=Diomedes+Chinaski%3B+Cacife+Clandestino%3B+Don+L</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7165,7 +7219,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Dirimb%C3%B3%2C+Guilherme+Assis</loc>
+    <loc>https://tocador.cc/?artista=Dirimb%C3%B3%3B+Guilherme+Assis</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7237,7 +7291,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Djonga%2C+Bia+Nogueira</loc>
+    <loc>https://tocador.cc/?artista=Djonga%3B+Bia+Nogueira</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7369,7 +7423,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Dona+Militana%2C+Antonio+N%C3%B3brega</loc>
+    <loc>https://tocador.cc/?artista=Dona+Militana%3B+Antonio+N%C3%B3brega</loc>
     <lastmod>2002-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7423,7 +7477,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Douglas+Scalioni+Domingues%2C+Nathan+Morais%2C+Estevan+Barbosa%2C+Lucca+Noacco%2C+Lucas+Bortolucci%2C+Jackson+Ganga%2C+Lucas+Nascimento%2C+Marlon+Rissatto</loc>
+    <loc>https://tocador.cc/?artista=Douglas+Scalioni+Domingues%3B+Nathan+Morais%3B+Estevan+Barbosa%3B+Lucca+Noacco%3B+Lucas+Bortolucci%3B+Jackson+Ganga%3B+Lucas+Nascimento%3B+Marlon+Rissatto</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7459,19 +7513,25 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Dramo%CC%81n</loc>
+    <lastmod>2021-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Drapula</loc>
     <lastmod>2023-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Drik+Barbosa%2C+Anna+Trea</loc>
+    <loc>https://tocador.cc/?artista=Drik+Barbosa%3B+Anna+Trea</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Drik+Barbosa%2C+Stefanie</loc>
+    <loc>https://tocador.cc/?artista=Drik+Barbosa%3B+Stefanie</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7591,6 +7651,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Duo+Violeta</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Duquesa+Go+Dassisti</loc>
     <lastmod>2023-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -7603,7 +7669,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Duvo%2C+OLHO</loc>
+    <loc>https://tocador.cc/?artista=Duvo%3B+OLHO</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7663,7 +7729,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Ebony+Reigns%2C+Yunk+Vino%2C+Celo1st</loc>
+    <loc>https://tocador.cc/?artista=Ebony+Reigns%3B+Yunk+Vino%3B+Celo1st</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7729,7 +7795,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Edi+Rock%2C+Hodari</loc>
+    <loc>https://tocador.cc/?artista=Edi+Rock%3B+Hodari</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7743,6 +7809,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Edson+Gomes</loc>
     <lastmod>1988-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Edssada</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -7927,13 +7999,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Elza+Soares%2C+BaianaSystem%2C+Virginia+Rodrigues</loc>
+    <loc>https://tocador.cc/?artista=Elza+Soares%3B+BaianaSystem%3B+Virginia+Rodrigues</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Elza+Soares%2C+Oswaldo+Borba</loc>
+    <loc>https://tocador.cc/?artista=Elza+Soares%3B+Oswaldo+Borba</loc>
     <lastmod>1960-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -7963,7 +8035,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Ema+Stoned%2C+Yantra%2C+Makoto+Kawabata</loc>
+    <loc>https://tocador.cc/?artista=Ema+Stoned%3B+Yantra%3B+Makoto+Kawabata</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -8119,7 +8191,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Erickson+Grillo%2C+Nael+Lima%2C+Bruno+C%C3%A9sar%2C+Diego+Brasil%2C+Ricardo+Baya</loc>
+    <loc>https://tocador.cc/?artista=Erickson+Grillo%3B+Nael+Lima%3B+Bruno+C%C3%A9sar%3B+Diego+Brasil%3B+Ricardo+Baya</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -8389,37 +8461,37 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=FBC%2C+Chris+MC</loc>
+    <loc>https://tocador.cc/?artista=FBC%3B+Chris+MC</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=FBC%2C+Coyote+Beatz</loc>
+    <loc>https://tocador.cc/?artista=FBC%3B+Coyote+Beatz</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=FBC%2C+Go+Dassisti</loc>
+    <loc>https://tocador.cc/?artista=FBC%3B+Go+Dassisti</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=FBC%2C+Go+Dassisti%2C+L7nnon%2C+BK%2C+BK%27</loc>
+    <loc>https://tocador.cc/?artista=FBC%3B+Go+Dassisti%3B+L7nnon%3B+BK%3B+BK%27</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=FBC%2C+Iza+Sabino%2C+Smu</loc>
+    <loc>https://tocador.cc/?artista=FBC%3B+Iza+Sabino%3B+Smu</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=FBC%2C+Vhoor%2C+WRM</loc>
+    <loc>https://tocador.cc/?artista=FBC%3B+Vhoor%3B+WRM</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -8473,7 +8545,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Fabio+Leal%2C+Yaniel+Matos%2C+Lucy+Brand%2C+Sidiel+Vieira%2C+Cuca+Teixeira</loc>
+    <loc>https://tocador.cc/?artista=Fabio+Leal%3B+Yaniel+Matos%3B+Lucy+Brand%3B+Sidiel+Vieira%3B+Cuca+Teixeira</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -8497,7 +8569,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Fabr%C3%ADcio+Beck%2C+Bando+Alabama</loc>
+    <loc>https://tocador.cc/?artista=Fabr%C3%ADcio+Beck%3B+Bando+Alabama</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -8611,6 +8683,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Farol+Cego</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Farrapho</loc>
     <lastmod>2023-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -8623,7 +8701,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Fatel%2C+Alvin+Soares%2C+Iago+Guimar%C3%A3es%2C+La%C3%A9cio+Calixto</loc>
+    <loc>https://tocador.cc/?artista=Fatel%3B+Alvin+Soares%3B+Iago+Guimar%C3%A3es%3B+La%C3%A9cio+Calixto</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -8641,19 +8719,19 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Febem%2C+Ashira</loc>
+    <loc>https://tocador.cc/?artista=Febem%3B+Ashira</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Febem%2C+CESRV%2C+Smile</loc>
+    <loc>https://tocador.cc/?artista=Febem%3B+CESRV%3B+Smile</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Febem%2C+Fleezus%2C+CESRV</loc>
+    <loc>https://tocador.cc/?artista=Febem%3B+Fleezus%3B+CESRV</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -8899,7 +8977,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Fernando+Motta%2C+eliminadorzinho</loc>
+    <loc>https://tocador.cc/?artista=Fernando+Motta%3B+eliminadorzinho</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -8953,7 +9031,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Ferve%2C+Sebastianismos</loc>
+    <loc>https://tocador.cc/?artista=Ferve%3B+Sebastianismos</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -9031,13 +9109,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Filipe+Ret%2C+Dallass</loc>
+    <loc>https://tocador.cc/?artista=Filipe+Ret%3B+Dallass</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Filipe+Ret%2C+Rick+Beatz%2C+MC+Deise</loc>
+    <loc>https://tocador.cc/?artista=Filipe+Ret%3B+Rick+Beatz%3B+MC+Deise</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -9049,7 +9127,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Filosofino%2C+Mariana+Santana</loc>
+    <loc>https://tocador.cc/?artista=Filosofino%3B+Mariana+Santana</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -9277,7 +9355,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Fontes%2C+Ptsh%2C+Guirraiz</loc>
+    <loc>https://tocador.cc/?artista=Fontes%3B+Ptsh%3B+Guirraiz</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -9355,13 +9433,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Francisco+Okabe%2C+Thain%C3%A1+Borges</loc>
+    <loc>https://tocador.cc/?artista=Francisco+Okabe%3B+Thain%C3%A1+Borges</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Francisco%2C+el+Hombre</loc>
+    <loc>https://tocador.cc/?artista=Francisco%3B+el+Hombre</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -9373,7 +9451,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Frank+Jorge%2C+Kassin</loc>
+    <loc>https://tocador.cc/?artista=Frank+Jorge%3B+Kassin</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -9433,13 +9511,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Froid%2C+Cynthia+Luz</loc>
+    <loc>https://tocador.cc/?artista=Froid%3B+Cynthia+Luz</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Froid%2C+Santzu</loc>
+    <loc>https://tocador.cc/?artista=Froid%3B+Santzu</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -9781,7 +9859,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Gal+Costa%2C+Rodrigo+Amarante</loc>
+    <loc>https://tocador.cc/?artista=Gal+Costa%3B+Rodrigo+Amarante</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -10021,7 +10099,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Gil%C3%BA+Amaral%2C+Hugo+Lins%2C+Erica+Natuza</loc>
+    <loc>https://tocador.cc/?artista=Gil%C3%BA+Amaral%3B+Hugo+Lins%3B+Erica+Natuza</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -10041,6 +10119,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Giovani+Cidreira</loc>
     <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Giovani+Cidreira+%26+Mahal+Pita</loc>
+    <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -10303,7 +10387,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Grupo+Porco%2C+Jo%C3%A3o+Kombi</loc>
+    <loc>https://tocador.cc/?artista=Grupo+Porco%3B+Jo%C3%A3o+Kombi</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -10417,7 +10501,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Gui+Hargreaves%2C+Gui+Hargreaves+remixed+by+S</loc>
+    <loc>https://tocador.cc/?artista=Gui+Hargreaves%3B+Gui+Hargreaves+remixed+by+S</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -10447,7 +10531,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Guilherme+Coutinho%2C+Grupo+Stalo</loc>
+    <loc>https://tocador.cc/?artista=Guilherme+Coutinho%3B+Grupo+Stalo</loc>
     <lastmod>1978-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -10471,19 +10555,19 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Guilherme+Held%2C+Maria+Gad%C3%BA%2C+R%C3%B4mulo+Fr%C3%B3es</loc>
+    <loc>https://tocador.cc/?artista=Guilherme+Held%3B+Maria+Gad%C3%BA%3B+R%C3%B4mulo+Fr%C3%B3es</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Guilherme+Kaf%C3%A9%2C+Caetano+Ribeiro</loc>
+    <loc>https://tocador.cc/?artista=Guilherme+Kaf%C3%A9%3B+Caetano+Ribeiro</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Guilherme+Kaf%C3%A9%2C+Flor%2C+Fran%C3%A7ois+Muleka</loc>
+    <loc>https://tocador.cc/?artista=Guilherme+Kaf%C3%A9%3B+Flor%3B+Fran%C3%A7ois+Muleka</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -10537,7 +10621,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Guizado%2C+Negro+Leo%2C+Sandra+Coutinho%2C+Negro+L%C3%A9o</loc>
+    <loc>https://tocador.cc/?artista=Guizado%3B+Negro+Leo%3B+Sandra+Coutinho%3B+Negro+L%C3%A9o</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -10682,7 +10766,7 @@
   </url>
   <url>
     <loc>https://tocador.cc/?artista=Guto+Bellucco</loc>
-    <lastmod>2025-01-01</lastmod>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -10759,7 +10843,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Hamilton+De+Holanda%2C+Daniel+Santiago%2C+Edu+Ribeiro%2C+Thiago+Esp%C3%ADrito+Santo</loc>
+    <loc>https://tocador.cc/?artista=Hamilton+De+Holanda%3B+Daniel+Santiago%3B+Edu+Ribeiro%3B+Thiago+Esp%C3%ADrito+Santo</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -10813,7 +10897,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Heavy+Baile%2C+Mc+Carol</loc>
+    <loc>https://tocador.cc/?artista=Heavy+Baile%3B+Mc+Carol</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11071,13 +11155,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Hot+e+Oreia%2C+Deryck+Cabrera</loc>
+    <loc>https://tocador.cc/?artista=Hot+e+Oreia%3B+Deryck+Cabrera</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Hot+e+Oreia%2C+Rafael+Fantini</loc>
+    <loc>https://tocador.cc/?artista=Hot+e+Oreia%3B+Rafael+Fantini</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11191,7 +11275,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=H%C3%A9loa%2C+DJ+Raiz</loc>
+    <loc>https://tocador.cc/?artista=H%C3%A9loa%3B+DJ+Raiz</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11293,7 +11377,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=IZA%2C+Rincon+Sapi%C3%AAncia</loc>
+    <loc>https://tocador.cc/?artista=IZA%3B+Rincon+Sapi%C3%AAncia</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11317,7 +11401,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Iara+Renn%C3%B3%2C+Tet%C3%AA+Esp%C3%ADndola%2C+Ava+Rocha%2C+Negro+L%C3%A9o</loc>
+    <loc>https://tocador.cc/?artista=Iara+Renn%C3%B3%3B+Tet%C3%AA+Esp%C3%ADndola%3B+Ava+Rocha%3B+Negro+L%C3%A9o</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11329,13 +11413,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Iconili%2C+Paulo+Sergio+dos+Santos</loc>
+    <loc>https://tocador.cc/?artista=Iconili%3B+Paulo+Sergio+dos+Santos</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Ideias%2C+etc</loc>
+    <loc>https://tocador.cc/?artista=Ideias%3B+etc</loc>
     <lastmod>2017-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11401,7 +11485,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Illy%2C+Geronimo+Santana</loc>
+    <loc>https://tocador.cc/?artista=Illy%3B+Geronimo+Santana</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11445,6 +11529,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Im%C3%A3</loc>
     <lastmod>2021-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=In+Venus</loc>
+    <lastmod>2017-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -11503,7 +11593,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Inqu%C3%A9rito%2C+Pop+Black</loc>
+    <loc>https://tocador.cc/?artista=Inqu%C3%A9rito%3B+Pop+Black</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11517,6 +11607,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Instinto+Animal</loc>
     <lastmod>2016-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Institution</loc>
+    <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -11605,7 +11701,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Isaackito%2C+Charel</loc>
+    <loc>https://tocador.cc/?artista=Isaackito%3B+Charel</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11731,7 +11827,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=JXNV%24%2C+Mc+Sabrina</loc>
+    <loc>https://tocador.cc/?artista=JXNV%24%3B+Mc+Sabrina</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11845,7 +11941,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Jaloo%2C+Karol+Conka%2C+Pedrowl</loc>
+    <loc>https://tocador.cc/?artista=Jaloo%3B+Karol+Conka%3B+Pedrowl</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -11983,6 +12079,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Jefferson+Placido</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Jeh+Preto</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -12019,7 +12121,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Jeza+da+Pedra%2C+Kassin</loc>
+    <loc>https://tocador.cc/?artista=Jeza+da+Pedra+%26+MEXITAPI</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Jeza+da+Pedra%3B+Kassin</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -12253,7 +12361,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Josyara%2C+Giovani+Cidreira</loc>
+    <loc>https://tocador.cc/?artista=Josyara%3B+Giovani+Cidreira</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -12283,7 +12391,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Jotaerre%2C+Biriba</loc>
+    <loc>https://tocador.cc/?artista=Jotaerre%3B+Biriba</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -12548,7 +12656,7 @@
   </url>
   <url>
     <loc>https://tocador.cc/?artista=Juliano+Gauche</loc>
-    <lastmod>2023-01-01</lastmod>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -12583,7 +12691,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Julien+Desprez%2C+Thiago+Nassif%2C+Bernardo+Pacheco+e+Victor+Vieira</loc>
+    <loc>https://tocador.cc/?artista=Julien+Desprez%3B+Thiago+Nassif%3B+Bernardo+Pacheco+e+Victor+Vieira</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -12715,13 +12823,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=J%C3%A9+Santiago%2C+MC+Igu</loc>
+    <loc>https://tocador.cc/?artista=J%C3%A9+Santiago%3B+MC+Igu</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=J%C3%A9ssica+Caitano%2C+Jessica+Caitano%2C+Guirraiz</loc>
+    <loc>https://tocador.cc/?artista=J%C3%A9ssica+Caitano%3B+Jessica+Caitano%3B+Guirraiz</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -12853,13 +12961,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Karol+Conka%2C+Boss+in+Drama</loc>
+    <loc>https://tocador.cc/?artista=Karol+Conka%3B+Boss+in+Drama</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Karol+de+Souza%2C+Mayra+Maldjian</loc>
+    <loc>https://tocador.cc/?artista=Karol+de+Souza%3B+Mayra+Maldjian</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -12967,7 +13075,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Kbrum%2C+Brasil+Grime+Show%2C+Diniboy</loc>
+    <loc>https://tocador.cc/?artista=Kbrum%3B+Brasil+Grime+Show%3B+Diniboy</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13111,7 +13219,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Klisman%2C+NADAMAL</loc>
+    <loc>https://tocador.cc/?artista=Klisman%3B+NADAMAL</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13129,7 +13237,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Komka%2C+Nina+Mess</loc>
+    <loc>https://tocador.cc/?artista=Komka%3B+Nina+Mess</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13159,7 +13267,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Kovtun%2C+Umbilichaos</loc>
+    <loc>https://tocador.cc/?artista=Kovtun%3B+Umbilichaos</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13201,7 +13309,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Kurt+Sutil%2C+Keys+Carvalho+%26+B%C3%AAonin</loc>
+    <loc>https://tocador.cc/?artista=Kurt+Sutil%3B+Keys+Carvalho+%26+B%C3%AAonin</loc>
     <lastmod>2023-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13261,7 +13369,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=LEALL%2C+Luna</loc>
+    <loc>https://tocador.cc/?artista=LEALL%3B+Luna</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13351,7 +13459,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Lagambiaja%2C+La+Gambiaja</loc>
+    <loc>https://tocador.cc/?artista=Lagambiaja%3B+La+Gambiaja</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13363,7 +13471,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Lai%C3%B4%2C+Jo%C3%A3o+Mer%C3%ADn+%26+YAAN</loc>
+    <loc>https://tocador.cc/?artista=Lai%C3%B4%3B+Jo%C3%A3o+Mer%C3%ADn+%26+YAAN</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13405,7 +13513,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Lari+Finocchiaro%2C+Vanessa+Moreno</loc>
+    <loc>https://tocador.cc/?artista=Lari+Finocchiaro%3B+Vanessa+Moreno</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13453,7 +13561,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Lau+e+Eu%2C+Alex+Santa%27Anna</loc>
+    <loc>https://tocador.cc/?artista=Lau+e+Eu%3B+Alex+Santa%27Anna</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13531,7 +13639,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Leandro+Neko%2C+Scatolove</loc>
+    <loc>https://tocador.cc/?artista=Leandro+Neko%3B+Scatolove</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13861,7 +13969,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Linn+da+Quebrada%2C+Kelman+Duran</loc>
+    <loc>https://tocador.cc/?artista=Linn+da+Quebrada%3B+Kelman+Duran</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -13927,7 +14035,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Lobo+Temporal%2C+MusikoramaMusic</loc>
+    <loc>https://tocador.cc/?artista=Lobo+Temporal%3B+MusikoramaMusic</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14143,8 +14251,14 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Lucas+Telles%2C+Alexandre+Andr%C3%A9s%2C+Gabriel+Bruce%2C+Breno+Mendon%C3%A7a%2C+Lu%C3%ADsa+Mitre%2C+Bruno+Vellozo</loc>
+    <loc>https://tocador.cc/?artista=Lucas+Telles%3B+Alexandre+Andr%C3%A9s%3B+Gabriel+Bruce%3B+Breno+Mendon%C3%A7a%3B+Lu%C3%ADsa+Mitre%3B+Bruno+Vellozo</loc>
     <lastmod>2019-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Lucas+Vale%CC%81rio</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -14167,7 +14281,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Luccas+Carlos%2C+Clara+Lima%2C+Paiva+Prod</loc>
+    <loc>https://tocador.cc/?artista=Luccas+Carlos%3B+Clara+Lima%3B+Paiva+Prod</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14233,7 +14347,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Luedji+Luna%2C+Dj+Nyack</loc>
+    <loc>https://tocador.cc/?artista=Luedji+Luna%3B+Dj+Nyack</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14353,7 +14467,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Luiza%2C+Pedro</loc>
+    <loc>https://tocador.cc/?artista=Luiza%3B+Pedro</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14383,7 +14497,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Lulina%2C+Hurso</loc>
+    <loc>https://tocador.cc/?artista=Lulina%3B+Hurso</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14467,6 +14581,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Luquimia</loc>
+    <lastmod>2020-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Lurdez+Da+Luz</loc>
     <lastmod>2015-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -14521,7 +14641,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Lu%C3%ADsa+e+os+Alquimistas%2C+J%C3%A9ssica+Caitano</loc>
+    <loc>https://tocador.cc/?artista=Lu%C3%ADsa+e+os+Alquimistas%3B+J%C3%A9ssica+Caitano</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14545,7 +14665,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=L%C3%A9o+Soma%2C+Nbeatz%2C+Pedro+Tie</loc>
+    <loc>https://tocador.cc/?artista=L%C3%A9o+Soma%3B+Nbeatz%3B+Pedro+Tie</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14611,7 +14731,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=L%C3%B4+Borges%2C+Paulinho+Moska</loc>
+    <loc>https://tocador.cc/?artista=L%C3%B4+Borges%3B+Paulinho+Moska</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14629,7 +14749,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=M.TAKARA%2C+CARLA+BOREGAS</loc>
+    <loc>https://tocador.cc/?artista=M.TAKARA%3B+CARLA+BOREGAS</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14701,7 +14821,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=MC+Kevin+o+Chris%2C+Dkvpz</loc>
+    <loc>https://tocador.cc/?artista=MC+Kevin+o+Chris%3B+Dkvpz</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14719,7 +14839,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=MC+Rasmi%2C+Raul+Coca</loc>
+    <loc>https://tocador.cc/?artista=MC+Rasmi%3B+Raul+Coca</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14851,7 +14971,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Machete+Bomb%2C+Duayer%2C+Luciano+Nunes</loc>
+    <loc>https://tocador.cc/?artista=Machete+Bomb%3B+Duayer%3B+Luciano+Nunes</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -14959,7 +15079,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Maestro+Tiquinho%2C+Andr%C3%A9+Abujamra</loc>
+    <loc>https://tocador.cc/?artista=Maestro+Tiquinho%3B+Andr%C3%A9+Abujamra</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15031,7 +15151,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Mahmundi%2C+Paulo+Nazareth</loc>
+    <loc>https://tocador.cc/?artista=Mahmundi%3B+Paulo+Nazareth</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15067,13 +15187,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Makalister%2C+Beli+Remour</loc>
+    <loc>https://tocador.cc/?artista=Makalister%3B+Beli+Remour</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Makalister%2C+DJ+Tuna13</loc>
+    <loc>https://tocador.cc/?artista=Makalister%3B+DJ+Tuna13</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15241,7 +15361,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=ManoWill%2C+Galena</loc>
+    <loc>https://tocador.cc/?artista=ManoWill%3B+Galena</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15385,7 +15505,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Marcelo+D2%2C+Sant%2C+Orochi</loc>
+    <loc>https://tocador.cc/?artista=Marcelo+D2%3B+Sant%3B+Orochi</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15415,7 +15535,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Marcelo+Quintanilha%2C+Luca+Raele%2C+Camilo+Carrara</loc>
+    <loc>https://tocador.cc/?artista=Marcelo+Quintanilha%3B+Luca+Raele%3B+Camilo+Carrara</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15469,7 +15589,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Marcola%2C+Marcola+remixed+by+Aquahertz</loc>
+    <loc>https://tocador.cc/?artista=Marcola%3B+Marcola+remixed+by+Aquahertz</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15511,7 +15631,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Marcus+Alves%2C+C%C3%A2mara+de+Ecos</loc>
+    <loc>https://tocador.cc/?artista=Marcus+Alves%3B+C%C3%A2mara+de+Ecos</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15571,7 +15691,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Mariana+Degani%2C+Renata+Espoz%2C+Luana+Baptista</loc>
+    <loc>https://tocador.cc/?artista=Mariana+Degani%3B+Renata+Espoz%3B+Luana+Baptista</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15781,6 +15901,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Marujinhos+Pataxo%CC%81</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Marujos+Patax%C3%B3</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -15877,7 +16003,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Materia+Prima%2C+Dario+Beats</loc>
+    <loc>https://tocador.cc/?artista=Materia+Prima%3B+Dario+Beats</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15901,13 +16027,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Mateus+Alves%2C+Caio+Lima</loc>
+    <loc>https://tocador.cc/?artista=Mateus+Alves%3B+Caio+Lima</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Mateus+Alves%2C+Piero+Bianchi+e+Sami+Bordokan</loc>
+    <loc>https://tocador.cc/?artista=Mateus+Alves%3B+Piero+Bianchi+e+Sami+Bordokan</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -15943,7 +16069,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Mateus+Porto%2C+Tatiana+Parra%2C+Neymar+Dias</loc>
+    <loc>https://tocador.cc/?artista=Mateus+Porto%3B+Tatiana+Parra%3B+Neymar+Dias</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -16069,7 +16195,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Mat%C3%A9ria+Prima%2C+Jonas+Pheer</loc>
+    <loc>https://tocador.cc/?artista=Mat%C3%A9ria+Prima%3B+Jonas+Pheer</loc>
     <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -16099,7 +16225,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Maur%C3%ADcio+Tagliari%2C+Luca+Raele%2C+Danilo+Penteado%2C+Carlinhos+Mazzoni%2C+Mauricio+Tagliari</loc>
+    <loc>https://tocador.cc/?artista=Maur%C3%ADcio+Tagliari%3B+Luca+Raele%3B+Danilo+Penteado%3B+Carlinhos+Mazzoni%3B+Mauricio+Tagliari</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -16261,7 +16387,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Mel+Duarte%2C+Dia</loc>
+    <loc>https://tocador.cc/?artista=Mel+Duarte%3B+Dia</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -16375,7 +16501,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Mestre+Anderson+Miguel%2C+Ju%C3%A7ara+Mar%C3%A7al</loc>
+    <loc>https://tocador.cc/?artista=Mestre+Anderson+Miguel%3B+Ju%C3%A7ara+Mar%C3%A7al</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -16531,7 +16657,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Milton+Nascimento%2C+Criolo%2C+Amaro+Freitas</loc>
+    <loc>https://tocador.cc/?artista=Milton+Nascimento%3B+Criolo%3B+Amaro+Freitas</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -16645,7 +16771,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Momboj%C3%B3%2C+General+Elektriks</loc>
+    <loc>https://tocador.cc/?artista=Momboj%C3%B3%3B+General+Elektriks</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -16669,7 +16795,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Monkey+Jhayam%2C+Victor+Rice</loc>
+    <loc>https://tocador.cc/?artista=Monkey+Jhayam%3B+Victor+Rice</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -16909,13 +17035,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Ms%C3%A1rio%2C+Daniel+Yorub%C3%A1</loc>
+    <loc>https://tocador.cc/?artista=Ms%C3%A1rio%3B+Daniel+Yorub%C3%A1</loc>
     <lastmod>2017-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Ms%C3%A1rio%2C+Ms%C3%A1rio+featuring+Daniel+Yorub%C3%A1+%26+Bocato%2C+Daniel+Yorub%C3%A1%2C+Bocato</loc>
+    <loc>https://tocador.cc/?artista=Ms%C3%A1rio%3B+Ms%C3%A1rio+featuring+Daniel+Yorub%C3%A1+%26+Bocato%3B+Daniel+Yorub%C3%A1%3B+Bocato</loc>
     <lastmod>2017-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -17029,7 +17155,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Murica%2C+BEATDOMK</loc>
+    <loc>https://tocador.cc/?artista=Murica%3B+BEATDOMK</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -17155,7 +17281,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=M%C3%A3olee%2C+BK%2C+Filipe+Ret%2C+Bk</loc>
+    <loc>https://tocador.cc/?artista=M%C3%A3olee%3B+BK%3B+Filipe+Ret%3B+Bk</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -17263,19 +17389,19 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Nabru%2C+cjr+beatz</loc>
+    <loc>https://tocador.cc/?artista=Nabru%3B+cjr+beatz</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Nabru%2C+nabru+%26+gvtx%2C+Gvtx</loc>
+    <loc>https://tocador.cc/?artista=Nabru%3B+nabru+%26+gvtx%3B+Gvtx</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Nabru%2C+nabru%2C+teo%2C+lessa+gustavo%2C+Teo%2C+Lessa+Gustavo</loc>
+    <loc>https://tocador.cc/?artista=Nabru%3B+nabru%3B+teo%3B+lessa+gustavo%3B+Teo%3B+Lessa+Gustavo</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -17575,13 +17701,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Nevi+Lunes%2C+Brisa</loc>
+    <loc>https://tocador.cc/?artista=Nevi+Lunes%3B+Brisa</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Nevi+Lunes%2C+Lucas+Silva</loc>
+    <loc>https://tocador.cc/?artista=Nevi+Lunes%3B+Lucas+Silva</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -17647,19 +17773,19 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Nill%2C+O+Adotado</loc>
+    <loc>https://tocador.cc/?artista=Nill%3B+O+Adotado</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Nill%2C+O+Adotado%2C+Alt+Niss</loc>
+    <loc>https://tocador.cc/?artista=Nill%3B+O+Adotado%3B+Alt+Niss</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Nill%2C+ocram42</loc>
+    <loc>https://tocador.cc/?artista=Nill%3B+ocram42</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -17667,6 +17793,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Nilo+Arruda</loc>
     <lastmod>2025-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Nilson+Chaves</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -17685,6 +17817,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Ninawa+Pai+da+Mata</loc>
     <lastmod>2023-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Ninguem</loc>
+    <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -18013,7 +18151,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=O+Janus%2C+Victor+Souza%2C+Heber+Lemos</loc>
+    <loc>https://tocador.cc/?artista=O+Janus%3B+Victor+Souza%3B+Heber+Lemos</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -18349,6 +18487,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Onga+Rupestre%3B+Laika+Na%CC%83o+Morreu%21</loc>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Ontem+%C3%A9+muito+longe+daqui</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -18361,7 +18505,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=On%C3%A7a+Combo%2C+Thomas+Rohrer%2C+Julian+Sanchez</loc>
+    <loc>https://tocador.cc/?artista=On%C3%A7a+Combo%3B+Thomas+Rohrer%3B+Julian+Sanchez</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -18643,6 +18787,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Outros+Ba%CC%81rbaros</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=OvelhaNegra+Pamelloza</loc>
     <lastmod>2023-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -18763,13 +18913,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Pabllo+Vittar%2C+POCAH</loc>
+    <loc>https://tocador.cc/?artista=Pabllo+Vittar%3B+POCAH</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Pabllo+Vittar%2C+Psirico</loc>
+    <loc>https://tocador.cc/?artista=Pabllo+Vittar%3B+Psirico</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -18919,7 +19069,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Passarinho%2C+O+Sistema+Brega+de+Som</loc>
+    <loc>https://tocador.cc/?artista=Passarinho%3B+O+Sistema+Brega+de+Som</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -19075,7 +19225,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Pedestre%2C+Andr%C3%A9+Garcia%2C+Andre+Garcia</loc>
+    <loc>https://tocador.cc/?artista=Pedestre%3B+Andr%C3%A9+Garcia%3B+Andre+Garcia</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -19129,7 +19279,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Pedro+Mendes+Brasileiro%2C+Khrystal</loc>
+    <loc>https://tocador.cc/?artista=Pedro+Lanches</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Pedro+Mendes+Brasileiro%3B+Khrystal</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -19189,7 +19345,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Pedro+kief%2C+Pedro+Kief%2C+Sergio+Estranho%2C+Matheus+Coringa</loc>
+    <loc>https://tocador.cc/?artista=Pedro+Volta</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Pedro+kief%3B+Pedro+Kief%3B+Sergio+Estranho%3B+Matheus+Coringa</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -19237,7 +19399,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Pel%C3%A9+do+Manifesto%2C+Lu%C3%AA</loc>
+    <loc>https://tocador.cc/?artista=Pel%C3%A9+do+Manifesto%3B+Lu%C3%AA</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -19621,7 +19783,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Poss%2C+Jonathan+Ferr%2C+Concei%C3%A7%C3%A3o+Evaristo%2C+Theo+Zagrae%2C+MangoLab%2C+Aur</loc>
+    <loc>https://tocador.cc/?artista=Poss%3B+Jonathan+Ferr%3B+Concei%C3%A7%C3%A3o+Evaristo%3B+Theo+Zagrae%3B+MangoLab%3B+Aur</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -19699,7 +19861,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Preto%2C+Wagner+Mendes</loc>
+    <loc>https://tocador.cc/?artista=Preto%3B+Wagner+Mendes</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -19747,7 +19909,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Projeto+Ganesha%2C+Ugo+Barra+Limpa</loc>
+    <loc>https://tocador.cc/?artista=Projeto+Ganesha%3B+Ugo+Barra+Limpa</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -19839,6 +20001,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Pug+Records</loc>
     <lastmod>2018-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Pulsar+HM</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -19939,6 +20107,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Quartabe%CC%82</loc>
+    <lastmod>2018-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Quartab%C3%AA</loc>
     <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -19993,7 +20167,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Quatro+Por+Dois%2C+Wagner+Padilha%2C+Lia+Farias%2C+Ra%C3%AD+Tamarindo</loc>
+    <loc>https://tocador.cc/?artista=Quatro+Por+Dois%3B+Wagner+Padilha%3B+Lia+Farias%3B+Ra%C3%AD+Tamarindo</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -20035,7 +20209,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Qx%C3%B3%2C+Sain%2C+Papatinho</loc>
+    <loc>https://tocador.cc/?artista=Qx%C3%B3%3B+Sain%3B+Papatinho</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -20059,7 +20233,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=RAP+NOVA+ERA%2C+Rap+Nova+Era%2C+Dj+Cia%2C+Yzal%C3%BA%2C+DJ+CIA</loc>
+    <loc>https://tocador.cc/?artista=RAP+NOVA+ERA%3B+Rap+Nova+Era%3B+Dj+Cia%3B+Yzal%C3%BA%3B+DJ+CIA</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -20299,6 +20473,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Rakta+%2B+Deafkids</loc>
+    <lastmod>2020-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Rama+Om</loc>
     <lastmod>2023-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -20311,7 +20491,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Rap+Plus+Size%2C+Luz+Ribeiro</loc>
+    <loc>https://tocador.cc/?artista=Rap+Plus+Size%3B+Luz+Ribeiro</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -20397,6 +20577,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Ratos+De+Por%C3%A3o</loc>
     <lastmod>1992-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Ratos+do+Pora%CC%83o</loc>
+    <lastmod>2014-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -20671,7 +20857,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Resp%2C+3x%2C+Niko</loc>
+    <loc>https://tocador.cc/?artista=Resp%3B+3x%3B+Niko</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -20773,7 +20959,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Rico+Dalasam%2C+Dinho</loc>
+    <loc>https://tocador.cc/?artista=Rico+Dalasam%3B+Dinho</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -20845,7 +21031,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Riviera%2C+Andre+Ribeiro</loc>
+    <loc>https://tocador.cc/?artista=Riviera%3B+Andre+Ribeiro</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -20917,7 +21103,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Rodrigo+Bragan%C3%A7a%2C+Benjamim+Taubkin</loc>
+    <loc>https://tocador.cc/?artista=Rodrigo+Bragan%C3%A7a%3B+Benjamim+Taubkin</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -20989,7 +21175,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Roger+Deff%2C+Celton+Oliveira</loc>
+    <loc>https://tocador.cc/?artista=Roger+Deff%3B+Celton+Oliveira</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21007,7 +21193,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Rohmanelli%2C+Os+Anomalous</loc>
+    <loc>https://tocador.cc/?artista=Rohmanelli%3B+Os+Anomalous</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21145,7 +21331,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Rua+do+Absurdo%2C+Alessandra+Le%C3%A3o</loc>
+    <loc>https://tocador.cc/?artista=Rua+do+Absurdo%3B+Alessandra+Le%C3%A3o</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21199,7 +21385,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Rush+Puppy%2C+Scorsi</loc>
+    <loc>https://tocador.cc/?artista=Rush+Puppy%3B+Scorsi</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21337,6 +21523,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=SONIKA</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=SOX</loc>
     <lastmod>2017-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -21351,6 +21543,12 @@
   <url>
     <loc>https://tocador.cc/?artista=SPIO+%28S%C3%A3o+Paulo+Improvisers+in+Orchestra%29</loc>
     <lastmod>2017-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=SUNSHRD</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -21397,6 +21595,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://tocador.cc/?artista=Saga+Hc</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?artista=Sain</loc>
     <lastmod>2023-01-01</lastmod>
     <changefreq>monthly</changefreq>
@@ -21415,7 +21619,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Salom%C3%A3o+Soares%2C+Vanessa+Moreno</loc>
+    <loc>https://tocador.cc/?artista=Salom%C3%A3o+Soares%3B+Vanessa+Moreno</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21469,7 +21673,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Samba+de+Coco+Ra%C3%ADzes+de+Arcoverde%2C+DJ+Tahira</loc>
+    <loc>https://tocador.cc/?artista=Samba+de+Coco+Ra%C3%ADzes+de+Arcoverde%3B+DJ+Tahira</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21529,7 +21733,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Sandro%2C+Keops%2C+Raony</loc>
+    <loc>https://tocador.cc/?artista=Sandro%3B+Keops%3B+Raony</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21543,6 +21747,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Sant+Lp+Beatzz</loc>
     <lastmod>2023-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Santa+Harpia</loc>
+    <lastmod>2024-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -21595,7 +21805,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Sarga%C3%A7o+Nightclub%2C+Farroyo</loc>
+    <loc>https://tocador.cc/?artista=Sarga%C3%A7o+Nightclub%3B+Farroyo</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21619,7 +21829,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Saskia%2C+Paal+Nilssen</loc>
+    <loc>https://tocador.cc/?artista=Saskia%3B+Paal+Nilssen</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21673,7 +21883,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Scalene%2C+Hamilton+De+Holanda</loc>
+    <loc>https://tocador.cc/?artista=Scalene%3B+Hamilton+De+Holanda</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21703,7 +21913,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Schnneider%2C+BEX%2C+Makalister</loc>
+    <loc>https://tocador.cc/?artista=Schnneider%3B+BEX%3B+Makalister</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21793,7 +22003,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Senndy%2C+Salve+Crazy</loc>
+    <loc>https://tocador.cc/?artista=Senndy%3B+Salve+Crazy</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21907,7 +22117,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Sexteto+Sucupira%2C+Nicolas+Krassik</loc>
+    <loc>https://tocador.cc/?artista=Sexteto+Sucupira%3B+Nicolas+Krassik</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21919,7 +22129,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Sh1ft%2C+l+v+k+s</loc>
+    <loc>https://tocador.cc/?artista=Sh1ft%3B+l+v+k+s</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21943,7 +22153,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Shirley+Casa+Verde%2C+Yzal%C3%BA</loc>
+    <loc>https://tocador.cc/?artista=Shirley+Casa+Verde%3B+Yzal%C3%BA</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -21985,7 +22195,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Siba%2C+Chico+C%C3%A9sar</loc>
+    <loc>https://tocador.cc/?artista=Siba%3B+Chico+C%C3%A9sar</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -22009,7 +22219,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Sidoka%2C+Pexande</loc>
+    <loc>https://tocador.cc/?artista=Sidoka%3B+Pexande</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -22207,7 +22417,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Slim+Rimografia%2C+Dj+Gio+Marx</loc>
+    <loc>https://tocador.cc/?artista=Slim+Rimografia%3B+Dj+Gio+Marx</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -22369,7 +22579,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=SonoTWS%2C+Fernando+Kep</loc>
+    <loc>https://tocador.cc/?artista=SonoTWS</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=SonoTWS%3B+Fernando+Kep</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -22441,7 +22657,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Sotam%2C+Rob</loc>
+    <loc>https://tocador.cc/?artista=Sotam%3B+Rob</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -22477,7 +22693,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Sound+Food+Gang%2C+Yung+Buda%2C+niLL%2C+Ch%C3%A1bazz%2C+O+Adotado%2C+Nill%2C+Chabazz</loc>
+    <loc>https://tocador.cc/?artista=Sound+Food+Gang%3B+Yung+Buda%3B+niLL%3B+Ch%C3%A1bazz%3B+O+Adotado%3B+Nill%3B+Chabazz</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -22513,7 +22729,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=SoutoMC%2C+Pedro+Neto</loc>
+    <loc>https://tocador.cc/?artista=SoutoMC%3B+Pedro+Neto</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -22921,7 +23137,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=S%C3%A1vio%2C+Laranjha</loc>
+    <loc>https://tocador.cc/?artista=S%C3%A1vio%3B+Laranjha</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -23125,7 +23341,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Talma%2C+Gadelha</loc>
+    <loc>https://tocador.cc/?artista=Talma%3B+Gadelha</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -23419,7 +23635,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Text%C3%ADculos+de+Mary%2C+A+Banda+D%27as+Cachorra</loc>
+    <loc>https://tocador.cc/?artista=Text%C3%ADculos+de+Mary%3B+A+Banda+D%27as+Cachorra</loc>
     <lastmod>2002-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -23437,7 +23653,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Thais+Aguiar%2C+Tha%C3%ADs+Aguiar+remixed+by+Pedro+Simples%2C+Beto+Malffati</loc>
+    <loc>https://tocador.cc/?artista=Thais+Aguiar%3B+Tha%C3%ADs+Aguiar+remixed+by+Pedro+Simples%3B+Beto+Malffati</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -23481,6 +23697,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Thamires+Tannous</loc>
     <lastmod>2019-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=That+Gum+U+Like</loc>
+    <lastmod>2017-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -23749,7 +23971,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Thiago+David%2C+Heitor+Dantas</loc>
+    <loc>https://tocador.cc/?artista=Thiago+David%3B+Heitor+Dantas</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -23761,7 +23983,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Thiago+Elni%C3%B1o%2C+Natache</loc>
+    <loc>https://tocador.cc/?artista=Thiago+Elni%C3%B1o%3B+Natache</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -23779,7 +24001,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Thiago+Nassif%2C+Arto+Lindsay%2C+Vin%C3%ADcius+Cantu%C3%A1ria%2C+Gabriela+Riley</loc>
+    <loc>https://tocador.cc/?artista=Thiago+Nassif%3B+Arto+Lindsay%3B+Vin%C3%ADcius+Cantu%C3%A1ria%3B+Gabriela+Riley</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -23947,7 +24169,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Tigan%C3%A1+Santana%2C+Sebastian+Notini%2C+Ldson+Galter</loc>
+    <loc>https://tocador.cc/?artista=Tigan%C3%A1+Santana%3B+Sebastian+Notini%3B+Ldson+Galter</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -24091,7 +24313,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Toni+Silva%2C+Rinah</loc>
+    <loc>https://tocador.cc/?artista=Toni+Silva%3B+Rinah</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -24223,7 +24445,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=TrapFunk%2C+Alivio</loc>
+    <loc>https://tocador.cc/?artista=TrapFunk%3B+Alivio</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -24487,7 +24709,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Tuyo%2C+Kel</loc>
+    <loc>https://tocador.cc/?artista=Tuyo%3B+Kel</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -24619,7 +24841,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Umaduna%2C+EdaLuiza</loc>
+    <loc>https://tocador.cc/?artista=Umaduna%3B+EdaLuiza</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -24859,7 +25081,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Varios%2C+Maria+Gad%C3%BA%2C+Xenia+Fran%C3%A7a%2C+Letrux%2C+Luedji+Luna%2C+Liniker</loc>
+    <loc>https://tocador.cc/?artista=Varios%3B+Maria+Gad%C3%BA%3B+Xenia+Fran%C3%A7a%3B+Letrux%3B+Luedji+Luna%3B+Liniker</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -24997,7 +25219,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Veross%C3%ADmio%2C+Luciane+Dom</loc>
+    <loc>https://tocador.cc/?artista=Veross%C3%ADmio%3B+Luciane+Dom</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25039,7 +25261,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vertin%2C+Vertin+featuring+Giovanna+Colucci%2C+Rafaela+Romam%2C+Giovanna+Colucci</loc>
+    <loc>https://tocador.cc/?artista=Vertin%3B+Vertin+featuring+Giovanna+Colucci%3B+Rafaela+Romam%3B+Giovanna+Colucci</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25063,7 +25285,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vhoor%2C+Enzo+Di+Carlo</loc>
+    <loc>https://tocador.cc/?artista=Vhoor%3B+Enzo+Di+Carlo</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25141,7 +25363,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Victor+Rodrigues%2C+Bratislava</loc>
+    <loc>https://tocador.cc/?artista=Victor+Rodrigues%3B+Bratislava</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25159,7 +25381,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Victor+Xam%C3%A3%2C+Nic+Dias</loc>
+    <loc>https://tocador.cc/?artista=Victor+Xam%C3%A3%3B+Nic+Dias</loc>
     <lastmod>2021-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25207,7 +25429,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vinicius+Bertozzi%2C+Yasmin+Larissa</loc>
+    <loc>https://tocador.cc/?artista=Vinicius+Bertozzi%3B+Yasmin+Larissa</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25231,7 +25453,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vinicius+Preto%2C+Blues+in+Vain</loc>
+    <loc>https://tocador.cc/?artista=Vinicius+Preto%3B+Blues+in+Vain</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25245,6 +25467,12 @@
   <url>
     <loc>https://tocador.cc/?artista=Vinil+Vagabundo</loc>
     <lastmod>2024-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=Vini%CC%81cius+Tavares</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -25357,7 +25585,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vitor+Arau%CC%81jo%2C+Metropole+Orkest%2C+Jacomo+Bairos</loc>
+    <loc>https://tocador.cc/?artista=Vitor+Arau%CC%81jo%3B+Metropole+Orkest%3B+Jacomo+Bairos</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25381,7 +25609,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vitor+Brauer+Alcyr+Vergetti+Ca%C3%ADque%2C+o+Jorg</loc>
+    <loc>https://tocador.cc/?artista=Vitor+Brauer+Alcyr+Vergetti+Ca%C3%ADque%3B+o+Jorg</loc>
     <lastmod>2023-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25399,13 +25627,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vitor+Brauer%3B+lento%2C+distante</loc>
+    <loc>https://tocador.cc/?artista=Vitor+Brauer%3B+lento%3B+distante</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vitor+Pirralho%2C+U.N.I.D.A.D.E</loc>
+    <loc>https://tocador.cc/?artista=Vitor+Pirralho%3B+U.N.I.D.A.D.E</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25453,7 +25681,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Vivian+Kuczynski%2C+Francisco</loc>
+    <loc>https://tocador.cc/?artista=Vivian+Kuczynski%3B+Francisco</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25615,7 +25843,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Wado%2C+FLORA</loc>
+    <loc>https://tocador.cc/?artista=Wado%3B+FLORA</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25867,7 +26095,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Xaga%2C+Ghetto+ZN</loc>
+    <loc>https://tocador.cc/?artista=Xaga%3B+Ghetto+ZN</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25879,7 +26107,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Xama%2C+Cmk</loc>
+    <loc>https://tocador.cc/?artista=Xama%3B+Cmk</loc>
     <lastmod>2018-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25939,7 +26167,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Y3ll%2C+Sloope</loc>
+    <loc>https://tocador.cc/?artista=Y3ll%3B+Sloope</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -25969,7 +26197,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Yannick+Hara%2C+Rafael+Carnevalli</loc>
+    <loc>https://tocador.cc/?artista=Yannick+Hara%3B+Rafael+Carnevalli</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -26053,7 +26281,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Yung+Buda%2C+Baby+Gengar</loc>
+    <loc>https://tocador.cc/?artista=Yung+Buda%3B+Baby+Gengar</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -26215,7 +26443,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=Zudizilla%2C+Kiai</loc>
+    <loc>https://tocador.cc/?artista=Zudizilla%3B+Kiai</loc>
     <lastmod>2019-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -26425,7 +26653,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=akaStefani%2C+ELVI</loc>
+    <loc>https://tocador.cc/?artista=akaStefani%3B+ELVI</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -26601,6 +26829,12 @@
   <url>
     <loc>https://tocador.cc/?artista=arquivo</loc>
     <lastmod>2018-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?artista=arthur+victor</loc>
+    <lastmod>2026-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -27025,7 +27259,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=carol+panesi%2C+F%C3%A1bio+Leal</loc>
+    <loc>https://tocador.cc/?artista=carol+panesi%3B+F%C3%A1bio+Leal</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -28429,7 +28663,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=kolx%2C+Keith</loc>
+    <loc>https://tocador.cc/?artista=kolx%3B+Keith</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -30331,7 +30565,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tocador.cc/?artista=u7r33m%2C+MC+Rugal</loc>
+    <loc>https://tocador.cc/?artista=u7r33m%3B+MC+Rugal</loc>
     <lastmod>2020-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

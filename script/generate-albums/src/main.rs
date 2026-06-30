@@ -138,12 +138,27 @@ fn parse_folder_name(name: &str) -> (String, String, u32) {
     (String::new(), name.to_string(), 0)
 }
 
+// ID3 text frames may pack multiple values separated by NUL (0x00); replace with the
+// "; " separator normalize_artists understands, and drop any other C0 control char that
+// would be invalid (and unescapable) in XML 1.0 output.
+fn clean_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\0' => out.push_str("; "),
+            c if (c as u32) < 0x20 && c != '\t' && c != '\n' && c != '\r' => {}
+            c => out.push(c),
+        }
+    }
+    out
+}
+
 fn read_id3(path: &Path) -> (String, String, String, u32, u32, u32) {
     match Tag::read_from_path(path) {
         Ok(tag) => {
-            let title  = tag.title().unwrap_or("").trim().to_string();
-            let artist = tag.artist().unwrap_or("").trim().to_string();
-            let album  = tag.album().unwrap_or("").trim().to_string();
+            let title  = clean_text(tag.title().unwrap_or("")).trim().to_string();
+            let artist = clean_text(tag.artist().unwrap_or("")).trim().to_string();
+            let album  = clean_text(tag.album().unwrap_or("")).trim().to_string();
             let year   = tag.year().map(|y| y as u32).unwrap_or(0);
             let track  = tag.track().unwrap_or(0);
             let dur_hint = tag.duration().unwrap_or(0) / 1000;
@@ -685,7 +700,18 @@ fn path_segment_encode(s: &str) -> String {
 }
 
 fn xml_escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            // strip control chars invalid in XML 1.0 (tab/CR/LF allowed)
+            c if (c as u32) < 0x20 && c != '\t' && c != '\n' && c != '\r' => {}
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitemap_path: &Path) {
