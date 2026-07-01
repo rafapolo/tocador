@@ -327,6 +327,10 @@ function loadCoverImage(imgElement, primaryUrl) {
   imgElement.classList.remove('placeholder');
   imgElement.src = primaryUrl;
   imgElement.onerror = () => {
+    // Virtual grid recycles <img> nodes: guard against a stale error for a
+    // previously-assigned URL firing after this node was reused for another
+    // album, which would blacklist the wrong (valid) cover permanently.
+    if (imgElement.src !== primaryUrl) return;
     failedCovers.add(primaryUrl);
     imgElement.src = PLACEHOLDER_COVER;
     imgElement.classList.add('placeholder');
