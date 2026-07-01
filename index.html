@@ -72,6 +72,13 @@
                             <path d="M14 9 L18 4" stroke-linecap="round"/>
                         </svg>
                     </a>
+                    <button id="btn-shortcuts" title="Atalhos de teclado" class="btn-shortcuts" aria-label="Ver atalhos de teclado">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2-2.4 3.7" stroke-linecap="round"/>
+                            <circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </header>
@@ -125,6 +132,7 @@
                         </div>
                     </div>
                     <nav class="decade-buttons" id="decade-buttons" aria-label="Filtrar por década"></nav>
+                    <button id="clear-all-filters" class="clear-all-filters" hidden aria-label="Limpar todos os filtros">Limpar filtros</button>
                 </div>
                 <div class="albums-grid" id="albums-list" role="list" aria-label="Álbuns"></div>
                 <div id="empty-state" hidden>
@@ -471,5 +479,25 @@
                 </div>
             </div>
         </footer>
+
+        <div class="shortcuts-scrim" id="shortcuts-scrim"></div>
+        <div class="shortcuts-modal" id="shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+            <div class="shortcuts-modal-header">
+                <h2 id="shortcuts-title">Atalhos de teclado</h2>
+                <button id="shortcuts-close" class="shortcuts-close" aria-label="Fechar">✕</button>
+            </div>
+            <ul class="shortcuts-list">
+                <li><kbd>Espaço</kbd><span>Play / Pausar</span></li>
+                <li><kbd>→</kbd><span>Avançar 10s</span></li>
+                <li><kbd>←</kbd><span>Voltar 10s</span></li>
+                <li><kbd>N</kbd><span>Próxima faixa</span></li>
+                <li><kbd>P</kbd><span>Faixa anterior / reiniciar</span></li>
+                <li><kbd>/</kbd><span>Buscar</span></li>
+                <li><kbd>B</kbd><span>Painel artistas/gêneros</span></li>
+                <li><kbd>G</kbd><span>Aba de gêneros</span></li>
+                <li><kbd>Esc</kbd><span>Fechar painel / limpar filtro</span></li>
+                <li><kbd>?</kbd><span>Esta ajuda</span></li>
+            </ul>
+        </div>
     </body>
 </html>

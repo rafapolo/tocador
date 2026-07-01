@@ -65,8 +65,9 @@ let searchQuery = '';
 let shuffleOn = false;
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
 let renderedAlbum = null;
+let _consecutiveErrors = 0;
 const durationCache = new Map();
-let _toastEl = null, _countEl = null, _clearBtn = null, _emptyState = null;
+let _toastEl = null, _countEl = null, _clearBtn = null, _emptyState = null, _clearAllBtn = null;
 // Cached DOM references for hot-path elements (set once after DOMContentLoaded)
 let _btnPlay = null, _mobileDrawer = null, _drawerCover = null, _overlayTrackTitle = null;
 let _playerTitleEl = null, _volumeWave = null, _searchInput = null, _overlayCover = null;
@@ -301,6 +302,29 @@ function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Resume-playback-position persistence: remembers only the most recently
+// playing track, so a reload/restored session can continue where it left off
+// instead of always restarting a restored track at 0:00.
+const PLAYBACK_POSITION_KEY = 'tocador-position';
+
+function savePlaybackPosition(track, audio) {
+  if (!track) return;
+  try {
+    localStorage.setItem(PLAYBACK_POSITION_KEY, JSON.stringify({ file: track.file, time: audio.currentTime }));
+  } catch {}
+}
+
+function restorePlaybackPosition(track, audio) {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(PLAYBACK_POSITION_KEY) || 'null'); } catch { return; }
+  if (!saved || saved.file !== track.file || !(saved.time > 3)) return;
+  const apply = () => {
+    if (isFinite(audio.duration) && saved.time < audio.duration) audio.currentTime = saved.time;
+    audio.removeEventListener('loadedmetadata', apply);
+  };
+  audio.addEventListener('loadedmetadata', apply);
 }
 
 let _toastTimer = null;
@@ -766,6 +790,7 @@ function filterAlbums() {
   _countEl ??= document.getElementById('search-count');
   _clearBtn ??= document.getElementById('search-clear');
   _emptyState ??= document.getElementById('empty-state');
+  _clearAllBtn ??= document.getElementById('clear-all-filters');
   const isFiltered = !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
   if (_countEl) {
     _countEl.textContent = `${filteredAlbums.length} álbun${filteredAlbums.length !== 1 ? 's' : ''}`;
@@ -773,6 +798,7 @@ function filterAlbums() {
   }
   if (_clearBtn) _clearBtn.classList.toggle('visible', !!searchQuery);
   if (_emptyState) _emptyState.hidden = filteredAlbums.length > 0;
+  if (_clearAllBtn) _clearAllBtn.hidden = !isFiltered;
 
   refreshBrowseCounts();
   renderActiveFilterChip();
@@ -923,6 +949,25 @@ function renderActiveFilterChip() {
   document.getElementById('btn-browse')?.classList.toggle('active', active);
 }
 
+// Resets every filter facet at once (search, decade/year, genre/artist) — used
+// by both the empty-state clear button and the always-visible "clear all" chip,
+// since search/decade and genre/artist are otherwise independent facets that
+// each only clear themselves.
+function clearAllFilters() {
+  searchQuery = '';
+  activeDecade = null;
+  activeYear = 0; updateYearInUrl(0);
+  activeGenre = null;
+  activeArtist = null;
+  if (_searchInput) _searchInput.value = '';
+  document.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.decade-btn[data-decade="all"]')?.classList.add('active');
+  updateBrowseFilterInUrl();
+  updateQueryInUrl('', false);
+  filterAlbums();
+  updateBrowseSelection();
+}
+
 function selectBrowseItem(value, itemType) {
   if (browseTab === 'genres') {
     if (itemType === 'parent') {
@@ -985,6 +1030,20 @@ function closeBrowseDrawer() {
 function toggleBrowsePanel() {
   if (_browsePanelEl?.classList.contains('open')) closeBrowseDrawer();
   else openBrowseDrawer();
+}
+
+function openShortcutsModal() {
+  document.getElementById('shortcuts-modal')?.classList.add('open');
+  document.getElementById('shortcuts-scrim')?.classList.add('open');
+}
+
+function closeShortcutsModal() {
+  document.getElementById('shortcuts-modal')?.classList.remove('open');
+  document.getElementById('shortcuts-scrim')?.classList.remove('open');
+}
+
+function isShortcutsModalOpen() {
+  return !!document.getElementById('shortcuts-modal')?.classList.contains('open');
 }
 
 function updateLibraryStats() {
@@ -1140,33 +1199,11 @@ function updateDurationInDOM(track, idx) {
   document.querySelector(`#drawer-track-list [data-track-idx="${idx}"] .track-duration`)?.replaceChildren(document.createTextNode(formatted));
 }
 
-function renderTrackList() {
-  const container = document.querySelector('#track-list');
-  const tracksPanel = u('.tracks-panel').first();
-
-  if (!selectedAlbum) {
-    tracksPanel.classList.add('hidden');
-    container.replaceChildren();
-    renderedAlbum = null;
-    return;
-  }
-
-  tracksPanel.classList.remove('hidden');
-
-  if (renderedAlbum === selectedAlbum) {
-    container.querySelectorAll('[data-track-idx]').forEach(item => {
-      const isPlaying = selectedAlbum.tracks[parseInt(item.dataset.trackIdx)] === currentTrack;
-      item.classList.toggle('playing', isPlaying);
-      item.setAttribute('aria-current', isPlaying ? 'true' : 'false');
-    });
-    container.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    return;
-  }
-
-  tracksPanel.scrollTop = 0;
+// Shared by the desktop track list and the mobile drawer track list — both render
+// the same row markup for a given track set, differing only in target container.
+function buildTrackItemsFragment(tracks, albumArtists) {
   const frag = document.createDocumentFragment();
-
-  selectedAlbum.tracks.forEach((track, idx) => {
+  tracks.forEach((track, idx) => {
     const item = document.createElement('li');
     item.className = 'track-item';
     item.dataset.trackIdx = idx;
@@ -1174,7 +1211,7 @@ function renderTrackList() {
     item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title}`);
     if (currentTrack === track) { item.classList.add('playing'); item.setAttribute('aria-current', 'true'); }
 
-    const artistName = track.artists && track.artists !== selectedAlbum.artists ? track.artists : '';
+    const artistName = track.artists && track.artists !== albumArtists ? track.artists : '';
     const artistLabel = artistName ? `<div class="track-artist">${artistLinksHTML(artistName)}</div>` : '';
     const dur = durationCache.has(track.file) ? formatTime(durationCache.get(track.file)) : '-';
     item.innerHTML = `
@@ -1191,8 +1228,38 @@ function renderTrackList() {
     if (artistName) attachArtistHandlers(item);
     frag.append(item);
   });
+  return frag;
+}
 
-  container.replaceChildren(frag);
+function syncTrackPlayingState(container, tracks) {
+  container.querySelectorAll('[data-track-idx]').forEach(item => {
+    const isPlaying = tracks[parseInt(item.dataset.trackIdx)] === currentTrack;
+    item.classList.toggle('playing', isPlaying);
+    item.setAttribute('aria-current', isPlaying ? 'true' : 'false');
+  });
+}
+
+function renderTrackList() {
+  const container = document.querySelector('#track-list');
+  const tracksPanel = u('.tracks-panel').first();
+
+  if (!selectedAlbum) {
+    tracksPanel.classList.add('hidden');
+    container.replaceChildren();
+    renderedAlbum = null;
+    return;
+  }
+
+  tracksPanel.classList.remove('hidden');
+
+  if (renderedAlbum === selectedAlbum) {
+    syncTrackPlayingState(container, selectedAlbum.tracks);
+    container.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return;
+  }
+
+  tracksPanel.scrollTop = 0;
+  container.replaceChildren(buildTrackItemsFragment(selectedAlbum.tracks, selectedAlbum.artists));
   renderedAlbum = selectedAlbum;
   container.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
@@ -1247,44 +1314,14 @@ function renderMobileDrawer(album) {
   if (coverEl) loadCoverImage(coverEl, album.cover);
   if (!listEl) return;
 
-  const frag = document.createDocumentFragment();
-  album.tracks.forEach((track, idx) => {
-    const item = document.createElement('li');
-    item.className = 'track-item';
-    item.dataset.trackIdx = idx;
-    item.setAttribute('tabindex', '0');
-    item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title}`);
-    if (currentTrack === track) { item.classList.add('playing'); item.setAttribute('aria-current', 'true'); }
-
-    const artistName = track.artists && track.artists !== album.artists ? track.artists : '';
-    const artistLabel = artistName ? `<div class="track-artist">${artistLinksHTML(artistName)}</div>` : '';
-    const dur = durationCache.has(track.file) ? formatTime(durationCache.get(track.file)) : '-';
-    item.innerHTML = `
-      <span class="track-num" aria-hidden="true">${track.num}</span>
-      <div class="track-details">
-        <div class="track-title">${track.title}</div>
-        ${artistLabel}
-      </div>
-      <span class="track-duration" aria-label="Duração: ${dur}">${dur}</span>
-    `;
-    item.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
-    });
-    if (artistName) attachArtistHandlers(item);
-    frag.append(item);
-  });
-
-  listEl.replaceChildren(frag);
+  listEl.replaceChildren(buildTrackItemsFragment(album.tracks, album.artists));
 }
 
 function syncDrawerPlayingState() {
   const listEl = document.getElementById('drawer-track-list');
   if (!listEl || !selectedAlbum) return;
-  listEl.querySelectorAll('[data-track-idx]').forEach(item => {
-    const track = selectedAlbum.tracks[parseInt(item.dataset.trackIdx)];
-    item.classList.toggle('playing', track === currentTrack);
-    if (track === currentTrack) item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  });
+  syncTrackPlayingState(listEl, selectedAlbum.tracks);
+  listEl.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function updateNowPlaying() {
@@ -1370,8 +1407,16 @@ function playNext() {
 
 function playPrevious() {
   if (!selectedAlbum || !currentTrack) return;
+  // Match standard player convention: restart the current track if meaningfully
+  // into it, only step back to the prior track when near the start.
+  const audio = u('#audio').first();
+  if (audio && audio.currentTime > 3) {
+    audio.currentTime = 0;
+    return;
+  }
   const idx = selectedAlbum.tracks.indexOf(currentTrack);
   if (idx > 0) playTrack(selectedAlbum.tracks[idx - 1]);
+  else if (audio) audio.currentTime = 0;
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
@@ -1597,6 +1642,7 @@ u(document).on('DOMContentLoaded', async function () {
         const audio = u('#audio').first();
         const newSrc = `${BASE_URL}/${t.file}`;
         if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
+        restorePlaybackPosition(t, audio);
         if (getPlayFromUrl()) safePlay(audio);
       }
     } else if (getPlayFromUrl() && albumToSelect.tracks.length > 0) {
@@ -1652,15 +1698,26 @@ u(document).on('DOMContentLoaded', async function () {
     overlayBtnPlay?.classList.remove('playing');
     _btnPlay?.setAttribute('aria-label', 'Reproduzir');
     overlayBtnPlay?.setAttribute('aria-label', 'Reproduzir');
+    savePlaybackPosition(currentTrack, audio);
   });
   audio.addEventListener('waiting',  () => setLoading(true));
   audio.addEventListener('stalled',  () => setLoading(true));
   audio.addEventListener('canplay',  () => setLoading(false));
-  audio.addEventListener('playing',  () => setLoading(false));
+  audio.addEventListener('playing',  () => { setLoading(false); _consecutiveErrors = 0; });
+  const MAX_CONSECUTIVE_ERRORS = 3;
   audio.addEventListener('error', () => {
     setLoading(false);
     if (currentTrack) {
       const errored = currentTrack;
+      _consecutiveErrors++;
+      // Several tracks failing in a row usually means the proxy/network is down,
+      // not that individual files are broken — stop thrashing through the whole
+      // library and tell the user instead of silently skipping forever.
+      if (_consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        showToast('Vários erros de reprodução seguidos — reprodução pausada.', 6000);
+        audio.pause();
+        return;
+      }
       showToast('Erro ao carregar áudio — pulando...');
       // Only auto-skip if the user hasn't already moved on (manually picked another
       // track) and this track's error is still the audio element's current state —
@@ -1698,6 +1755,7 @@ u(document).on('DOMContentLoaded', async function () {
     if ('mediaSession' in navigator && audio.duration && !isNaN(audio.duration)) {
       try { navigator.mediaSession.setPositionState({ duration: audio.duration, playbackRate: audio.playbackRate, position: audio.currentTime }); } catch (_) {}
     }
+    savePlaybackPosition(currentTrack, audio);
   });
 
   audio.addEventListener('loadedmetadata', () => {
@@ -1879,13 +1937,8 @@ u(document).on('DOMContentLoaded', async function () {
     _searchInput?.focus();
   };
   document.getElementById('search-clear')?.addEventListener('click', clearSearch);
-  document.getElementById('empty-clear-btn')?.addEventListener('click', () => {
-    clearSearch();
-    activeGenre = null; activeArtist = null;
-    updateBrowseFilterInUrl();
-    filterAlbums();
-    updateBrowseSelection();
-  });
+  document.getElementById('empty-clear-btn')?.addEventListener('click', clearAllFilters);
+  document.getElementById('clear-all-filters')?.addEventListener('click', clearAllFilters);
 
   // ── Browse panel events ─────────────────────────────────────────────────
 
@@ -1947,9 +2000,15 @@ u(document).on('DOMContentLoaded', async function () {
   document.getElementById('browse-scrim')?.addEventListener('click', closeBrowseDrawer);
   document.getElementById('btn-browse-close')?.addEventListener('click', closeBrowseDrawer);
 
+  // Keyboard shortcuts help modal
+  document.getElementById('btn-shortcuts')?.addEventListener('click', openShortcutsModal);
+  document.getElementById('shortcuts-close')?.addEventListener('click', closeShortcutsModal);
+  document.getElementById('shortcuts-scrim')?.addEventListener('click', closeShortcutsModal);
+
   document.addEventListener('keydown', e => {
-    // Escape: close mobile browse drawer OR clear active panel filter
+    // Escape: close shortcuts modal OR mobile browse drawer OR clear active panel filter
     if (e.key === 'Escape') {
+      if (isShortcutsModalOpen()) { closeShortcutsModal(); return; }
       if (isMobile() && _browsePanelEl?.classList.contains('open')) {
         closeBrowseDrawer(); return;
       }
@@ -1960,6 +2019,10 @@ u(document).on('DOMContentLoaded', async function () {
     }
     if (e.target.closest('input, textarea, [contenteditable]')) return;
     switch (e.key) {
+      case '?':
+        e.preventDefault();
+        openShortcutsModal();
+        break;
       case ' ':
         e.preventDefault();
         _btnPlay?.click();
