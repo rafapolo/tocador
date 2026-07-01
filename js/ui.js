@@ -1692,7 +1692,10 @@ u(document).on('DOMContentLoaded', async function () {
     const dur = formatTime(audio.duration);
     u('#time-duration').text(dur);
     if (overlayTimeDuration) overlayTimeDuration.textContent = dur;
-    if (currentTrack) {
+    // Guard against stale/aborted loads (rapid track switching): only trust this
+    // event if it matches the track currently loaded and reports a real duration,
+    // otherwise a race can zero out a good ID3-derived duration in the cache.
+    if (currentTrack && audio.src === `${BASE_URL}/${currentTrack.file}` && isFinite(audio.duration) && audio.duration > 0) {
       durationCache.set(currentTrack.file, audio.duration);
       if (selectedAlbum) {
         const idx = selectedAlbum.tracks.indexOf(currentTrack);
