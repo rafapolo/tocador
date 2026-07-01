@@ -1218,7 +1218,9 @@ function playTrack(track) {
   updateNowPlaying();
   const audio = u('#audio').first();
   const newSrc = `${BASE_URL}/${track.file}`;
-  if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
+  // Also reload when audio.error is set: retrying the same src after a failed
+  // load needs a fresh load() call, otherwise play() just re-rejects the stuck resource.
+  if (audio.src !== newSrc || audio.error) { audio.src = newSrc; audio.load(); }
   safePlay(audio);
   u('#btn-play').addClass('playing');
   renderTrackList();
@@ -1658,8 +1660,14 @@ u(document).on('DOMContentLoaded', async function () {
   audio.addEventListener('error', () => {
     setLoading(false);
     if (currentTrack) {
+      const errored = currentTrack;
       showToast('Erro ao carregar áudio — pulando...');
-      setTimeout(playNext, 1500);
+      // Only auto-skip if the user hasn't already moved on (manually picked another
+      // track) and this track's error is still the audio element's current state —
+      // otherwise a stale timeout can yank the user off a track they just chose.
+      setTimeout(() => {
+        if (currentTrack === errored && audio.error) playNext();
+      }, 1500);
     }
   });
 
