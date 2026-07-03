@@ -720,7 +720,6 @@ fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitem
     let cdn = cdn_base.map(|s| s.trim_end_matches('/'));
     let dir = sitemap_path.parent().unwrap_or(Path::new("."));
     let albums_path = dir.join("sitemap-albums.xml");
-    let artists_path = dir.join("sitemap-artists.xml");
 
     // sitemap-albums.xml
     let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -733,9 +732,13 @@ fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitem
     ));
     for album in albums {
         let album_param = form_encode(&album.path);
-        // Must match the page's self-declared canonical (?album=X only). Appending
-        // &artista= makes every sitemap URL non-canonical → "Page with redirect".
-        let loc = format!("{}/?album={}", base, album_param);
+        // Page canonical now keeps both params when present (see index.html),
+        // so the sitemap loc must match exactly: ?album=X&artista=Y.
+        let loc = if !album.artist.is_empty() {
+            format!("{}/?album={}&amp;artista={}", base, album_param, form_encode(&album.artist))
+        } else {
+            format!("{}/?album={}", base, album_param)
+        };
         let lastmod = if album.year > 0 { format!("{}-01-01", album.year) } else { today.clone() };
         let priority = if album.year >= 2020 { "0.9" } else if album.year >= 2010 { "0.7" } else { "0.5" };
         let mut entry = format!(
@@ -758,40 +761,14 @@ fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitem
     xml.push_str("</urlset>\n");
     fs::write(&albums_path, &xml).expect("Falha ao escrever sitemap-albums.xml");
 
-    // sitemap-artists.xml (one per unique artist, lastmod = latest album year)
-    let mut artist_map: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
-    for album in albums {
-        if !album.artist.is_empty() {
-            let e = artist_map.entry(album.artist.as_str()).or_insert(0);
-            if album.year > *e { *e = album.year; }
-        }
-    }
-    let mut artist_list: Vec<(&str, u32)> = artist_map.into_iter().collect();
-    artist_list.sort_by(|a, b| a.0.cmp(b.0));
-
-    let mut xml2 = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    xml2.push_str("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
-    for (artist, latest_year) in &artist_list {
-        let loc = format!("{}/?artista={}", base, form_encode(artist));
-        let lastmod = if *latest_year > 0 { format!("{}-01-01", latest_year) } else { today.clone() };
-        xml2.push_str(&format!(
-            "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n",
-            loc, lastmod
-        ));
-    }
-    xml2.push_str("</urlset>\n");
-    fs::write(&artists_path, &xml2).expect("Falha ao escrever sitemap-artists.xml");
-
-    // sitemap.xml = index
+    // sitemap.xml = index (albums only — artist pages are covered via ?album=&artista= above)
     let mut index = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     index.push_str("<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
     index.push_str(&format!("  <sitemap>\n    <loc>{}/sitemap-albums.xml</loc>\n    <lastmod>{}</lastmod>\n  </sitemap>\n", base, today));
-    index.push_str(&format!("  <sitemap>\n    <loc>{}/sitemap-artists.xml</loc>\n    <lastmod>{}</lastmod>\n  </sitemap>\n", base, today));
     index.push_str("</sitemapindex>\n");
     fs::write(sitemap_path, &index).expect("Falha ao escrever sitemap.xml");
 
     let sz_a = fs::metadata(&albums_path).map(|m| m.len() / 1024).unwrap_or(0);
-    let sz_b = fs::metadata(&artists_path).map(|m| m.len() / 1024).unwrap_or(0);
-    println!("sitemap.xml  →  index → sitemap-albums.xml ({} KB, {} URLs) + sitemap-artists.xml ({} KB, {} URLs)",
-             sz_a, albums.len() + 1, sz_b, artist_list.len());
+    println!("sitemap.xml  →  index → sitemap-albums.xml ({} KB, {} URLs)",
+             sz_a, albums.len() + 1);
 }
