@@ -1,37 +1,66 @@
 #!/usr/bin/env bun
 
-// §8 — ip concurrency tracking with hard cap
-const IP_MAP_HARD_CAP = 50_000;
-const ipCounts = new Map();
-const ipLastSeen = new Map();
+// §8 — concurrency tracking with hard caps, two tiers.
+// Mobile carriers put many distinct users behind one CGNAT IP, so limiting by
+// raw IP alone conflates them — a handful of people listening from the same
+// carrier trips a limit sized for one person. We fingerprint by IP + User-Agent
+// (already sent by every browser, no client changes needed) to give each real
+// listener their own budget, and keep a much looser raw-IP ceiling underneath
+// as a backstop against genuine abuse (e.g. UA spoofing from a single address).
+const MAP_HARD_CAP = 50_000;
 
-function incIp(ip) {
-  if (ipCounts.size >= IP_MAP_HARD_CAP && !ipCounts.has(ip)) return false;
-  ipCounts.set(ip, (ipCounts.get(ip) ?? 0) + 1);
-  ipLastSeen.set(ip, Date.now());
+const deviceCounts = new Map();
+const deviceLastSeen = new Map();
+function incDevice(key) {
+  if (deviceCounts.size >= MAP_HARD_CAP && !deviceCounts.has(key)) return false;
+  deviceCounts.set(key, (deviceCounts.get(key) ?? 0) + 1);
+  deviceLastSeen.set(key, Date.now());
   return true;
 }
-function decIp(ip) {
-  const n = (ipCounts.get(ip) ?? 1) - 1;
-  if (n <= 0) { ipCounts.delete(ip); ipLastSeen.delete(ip); }
-  else ipCounts.set(ip, n);
+function decDevice(key) {
+  const n = (deviceCounts.get(key) ?? 1) - 1;
+  if (n <= 0) { deviceCounts.delete(key); deviceLastSeen.delete(key); }
+  else deviceCounts.set(key, n);
+}
+
+const rawIpCounts = new Map();
+const rawIpLastSeen = new Map();
+function incRawIp(ip) {
+  if (rawIpCounts.size >= MAP_HARD_CAP && !rawIpCounts.has(ip)) return false;
+  rawIpCounts.set(ip, (rawIpCounts.get(ip) ?? 0) + 1);
+  rawIpLastSeen.set(ip, Date.now());
+  return true;
+}
+function decRawIp(ip) {
+  const n = (rawIpCounts.get(ip) ?? 1) - 1;
+  if (n <= 0) { rawIpCounts.delete(ip); rawIpLastSeen.delete(ip); }
+  else rawIpCounts.set(ip, n);
 }
 setInterval(() => {
   const cutoff = Date.now() - 5 * 60_000;
-  for (const [ip, ts] of ipLastSeen) if (ts < cutoff) { ipCounts.delete(ip); ipLastSeen.delete(ip); }
+  for (const [k, ts] of deviceLastSeen) if (ts < cutoff) { deviceCounts.delete(k); deviceLastSeen.delete(k); }
+  for (const [k, ts] of rawIpLastSeen) if (ts < cutoff) { rawIpCounts.delete(k); rawIpLastSeen.delete(k); }
 }, 60_000).unref();
 
-// §4 — token bucket rate limit (audio only, 30 req cap, 0.5 tokens/s refill)
+// §4 — token bucket rate limit (audio only).
+// Per-device: 30 req burst, 0.5 tokens/s refill (~30/min) — sized for one real
+// listener, same numbers as before this now applies per-device instead of per-IP.
+// Per-raw-IP backstop: far looser, only there to bound one address regardless
+// of how many (possibly spoofed) UAs it presents.
 const BUCKET_CAP = 30;
 const BUCKET_REFILL = 0.5;
-const tokenBuckets = new Map();
+const deviceTokenBuckets = new Map();
+const RAW_BUCKET_CAP = 300;
+const RAW_BUCKET_REFILL = 5;
+const rawIpTokenBuckets = new Map();
+const RAW_CONCURRENCY_CAP = 50;
 
-function take(ip) {
+function takeFrom(map, key, cap, refill) {
   const now = Date.now();
-  const b = tokenBuckets.get(ip);
-  if (!b) { tokenBuckets.set(ip, { tokens: BUCKET_CAP - 1, last: now }); return true; }
+  const b = map.get(key);
+  if (!b) { map.set(key, { tokens: cap - 1, last: now }); return true; }
   const elapsed = (now - b.last) / 1000;
-  b.tokens = Math.min(BUCKET_CAP, b.tokens + elapsed * BUCKET_REFILL);
+  b.tokens = Math.min(cap, b.tokens + elapsed * refill);
   b.last = now;
   if (b.tokens < 1) return false;
   b.tokens -= 1;
@@ -39,8 +68,25 @@ function take(ip) {
 }
 setInterval(() => {
   const cutoff = Date.now() - 10 * 60_000;
-  for (const [ip, b] of tokenBuckets) if (b.last < cutoff) tokenBuckets.delete(ip);
+  for (const [k, b] of deviceTokenBuckets) if (b.last < cutoff) deviceTokenBuckets.delete(k);
+  for (const [k, b] of rawIpTokenBuckets) if (b.last < cutoff) rawIpTokenBuckets.delete(k);
 }, 5 * 60_000).unref();
+
+// FNV-1a 32-bit — cheap, fixed-size fingerprint derived from the User-Agent.
+// Only needs to separate concurrent listeners sharing a CGNAT IP, not resist
+// deliberate forgery; the raw-IP backstop above covers that case.
+function hashString(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36);
+}
+function deviceKey(ip, req) {
+  const ua = req.headers.get('user-agent') ?? '';
+  return `${ip}#${hashString(ua.slice(0, 256))}`;
+}
 
 // §13 — observability: event-loop lag + aggregate counters
 let activeRequests = 0;
@@ -54,7 +100,7 @@ setInterval(() => {
 
 setInterval(() => {
   if (counters.ok + counters.c4xx + counters.c5xx > 0) {
-    console.log(`[stats] active=${activeRequests} 2xx=${counters.ok} 4xx=${counters.c4xx} 5xx=${counters.c5xx} lag=${eventLoopLag}ms ipmap=${ipCounts.size}`);
+    console.log(`[stats] active=${activeRequests} 2xx=${counters.ok} 4xx=${counters.c4xx} 5xx=${counters.c5xx} lag=${eventLoopLag}ms devices=${deviceCounts.size} ips=${rawIpCounts.size}`);
     counters.ok = counters.c4xx = counters.c5xx = 0;
   }
 }, 10_000).unref();
@@ -64,7 +110,8 @@ function metricsBody() {
   return [
     `# TYPE tocador_active_requests gauge`,
     `tocador_active_requests ${activeRequests}`,
-    `tocador_ip_map_size ${ipCounts.size}`,
+    `tocador_ip_map_size ${rawIpCounts.size}`,
+    `tocador_device_map_size ${deviceCounts.size}`,
     `tocador_event_loop_lag_ms ${eventLoopLag}`,
     `tocador_memory_rss_bytes ${m.rss}`,
     `tocador_memory_heap_used_bytes ${m.heapUsed}`,
@@ -158,6 +205,31 @@ async function s3GetSigned(bucket, key, rangeHeader) {
   return fetch(url.href, { headers: { ...headers, Authorization: auth } });
 }
 
+// Forward a request to S3 via one signed fetch, passing S3's own headers
+// (Content-Range with total size, Content-Length, ETag) straight through.
+// Used for keys Bun's S3Client mishandles (# ?) and for open-ended Range
+// requests, where it saves the separate stat() round trip.
+async function signedPassthrough(bucket, path, rangeHeader, isHead) {
+  const r = await s3GetSigned(bucket, path, isHead ? null : rangeHeader);
+  if (!r.ok && r.status !== 206) {
+    const code = r.status >= 500 ? 500 : r.status;
+    if (code >= 500) counters.c5xx++; else counters.c4xx++;
+    return new Response(code === 404 ? 'Not Found' : 'Error', { status: code, headers: corsBase });
+  }
+  const fwdHeaders = {
+    ...corsHeaders,
+    'Content-Type': mimeFor(path),
+    'Cache-Control': cacheControlFor(path),
+    'Accept-Ranges': 'bytes',
+  };
+  for (const h of ['content-length', 'content-range', 'etag', 'last-modified']) {
+    const v = r.headers.get(h);
+    if (v) fwdHeaders[h] = v;
+  }
+  counters.ok++;
+  return new Response(isHead ? null : r.body, { status: isHead ? 200 : r.status, headers: fwdHeaders });
+}
+
 // §1 — path traversal guard: reject .., ., NUL, backslash, empty segments
 function isSafeKey(key) {
   if (key.length === 0 || key.length > 1024) return false;
@@ -221,8 +293,8 @@ const botRegex = new RegExp([
   'aws\\s*lambda', 'google\\s*cloud\\s*functions', 'azure\\s*functions',
   'bot\\s*engine', 'crawler\\s*engine', 'spider\\s*engine',
   'auto\\s*fetch', 'auto\\s*scrape', 'auto\\s*crawl',
-  // search engines
-  'googlebot', 'googleother', 'google-extended', 'adsbot-google', 'mediapartners-google', 'google-read-aloud', 'google-inspectiontool',
+  // search engines (Google crawlers intentionally absent — we want sitemap indexing;
+  // goodBotRegex still exempts them from the generic 'bot' catch-all below)
   'bingbot', 'msnbot', 'adidxbot', 'bingpreview',
   'slurp', 'duckduckbot', 'baiduspider', 'yandexbot', 'sogou', 'exabot',
   'applebot', 'petalbot', 'bytespider', 'seznambot', 'qwantify', 'mojeek', 'neevabot',
@@ -420,28 +492,37 @@ _server = Bun.serve({
       return new Response('Forbidden', { status: 403, headers: corsBase });
     }
 
-    // §3 — resolve client IP only for audio (images are unrestricted)
+    // §3 — resolve client IP + device fingerprint only for audio (images are unrestricted)
     const ip = isAudio ? realIp(req, server) : null;
+    const device = ip ? deviceKey(ip, req) : null;
 
-    // §4 — token bucket: 30 req burst, 0.5 tokens/s sustained (30/min)
-    if (ip && !take(ip)) {
+    // §4 — token bucket: per-device (30 req burst, 0.5 tokens/s ≈ 30/min) plus a
+    // looser per-raw-IP backstop so one address can't evade the limit with spoofed UAs.
+    if (device && (!takeFrom(deviceTokenBuckets, device, BUCKET_CAP, BUCKET_REFILL)
+                || !takeFrom(rawIpTokenBuckets, ip, RAW_BUCKET_CAP, RAW_BUCKET_REFILL))) {
       counters.c4xx++;
       return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '60' } });
     }
 
-    // Per-IP concurrency limit (5 simultaneous audio streams per IP)
-    if (ip) {
-      const ipActive = ipCounts.get(ip) ?? 0;
-      if (ipActive >= 5) {
+    // Concurrency limits: 5 simultaneous audio streams per device, 50 per raw IP
+    // (the raw-IP ceiling only matters when many devices share one CGNAT address).
+    if (device) {
+      const deviceActive = deviceCounts.get(device) ?? 0;
+      if (deviceActive >= 5) {
         counters.c4xx++;
         return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '5' } });
       }
-      if (!incIp(ip)) { counters.c5xx++; return new Response('Service Unavailable', { status: 503, headers: corsBase }); }
+      const rawActive = rawIpCounts.get(ip) ?? 0;
+      if (rawActive >= RAW_CONCURRENCY_CAP) {
+        counters.c4xx++;
+        return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '5' } });
+      }
+      if (!incDevice(device) || !incRawIp(ip)) { counters.c5xx++; return new Response('Service Unavailable', { status: 503, headers: corsBase }); }
     }
 
     // Global concurrency ceiling
     if (activeRequests >= MAX_CONCURRENT) {
-      if (ip) decIp(ip);
+      if (device) { decDevice(device); decRawIp(ip); }
       counters.c5xx++;
       return new Response('Too Many Requests', { status: 503, headers: corsBase });
     }
@@ -454,25 +535,7 @@ _server = Bun.serve({
       // Bun's S3Client doesn't encode # or ? in keys, causing URL fragment/query truncation.
       // For those keys we bypass it and use a manually-signed fetch instead.
       if (path.includes('#') || path.includes('?')) {
-        const fetchRange = isHead ? null : rangeHeader;
-        const r = await s3GetSigned(bucket, path, fetchRange);
-        if (!r.ok && r.status !== 206) {
-          const code = r.status >= 500 ? 500 : r.status;
-          if (code >= 500) counters.c5xx++; else counters.c4xx++;
-          return new Response('Error', { status: code, headers: corsBase });
-        }
-        const fwdHeaders = {
-          ...corsHeaders,
-          'Content-Type': mimeFor(path),
-          'Cache-Control': cacheControlFor(path),
-          'Accept-Ranges': 'bytes',
-        };
-        for (const h of ['content-length', 'content-range', 'etag', 'last-modified']) {
-          const v = r.headers.get(h);
-          if (v) fwdHeaders[h] = v;
-        }
-        counters.ok++;
-        return new Response(isHead ? null : r.body, { status: isHead ? 200 : r.status, headers: fwdHeaders });
+        return await signedPassthrough(bucket, path, rangeHeader, isHead);
       }
 
       const file = s3.file(s3Key, { bucket });
@@ -507,21 +570,9 @@ _server = Bun.serve({
             'Accept-Ranges': 'bytes',
           };
         } else {
-          // Open range bytes=start-: need total size for Content-Range header
-          try {
-            stat = await file.stat();
-          } catch (err) {
-            counters.c4xx++;
-            return new Response('Not Found', { status: 404, headers: corsBase });
-          }
-          const end = stat.size - 1;
-          status = 206; body = file.slice(start).stream();
-          extra = {
-            'Content-Range': `bytes ${start}-${end}/${stat.size}`,
-            'Content-Length': String(stat.size - start),
-            'Accept-Ranges': 'bytes',
-            'ETag': stat.etag,
-          };
+          // Open range bytes=start-: forward to S3 in one signed request — its 206
+          // Content-Range already carries the total size, so no separate stat() needed.
+          return await signedPassthrough(bucket, path, rangeHeader, false);
         }
       } else {
         // Full GET: stat for Content-Length so browser can show scrubber and seek
@@ -557,7 +608,7 @@ _server = Bun.serve({
       return new Response(err?.name ?? 'Error', { status: code, headers: corsBase });
     } finally {
       activeRequests--;
-      if (ip) decIp(ip);
+      if (device) { decDevice(device); decRawIp(ip); }
     }
   },
 
