@@ -38,7 +38,9 @@
             />
         </noscript>
         <link href="assets/player.css" rel="stylesheet" />
-        <script src="https://cdn.jsdelivr.net/npm/umbrellajs" defer></script>
+        <link rel="manifest" href="manifest.json" />
+        <meta name="theme-color" content="#1a1814" />
+        <link rel="apple-touch-icon" href="assets/capa.jpg" />
         <script src="js/ui.js" defer></script>
         <script defer src="https://cloud.umami.is/script.js" data-website-id="9fad9893-55da-4e20-abbf-b79b12bf3146"></script>
     </head>
@@ -47,7 +49,7 @@
         <header class="app-header">
             <div class="header-content">
                 <div class="header-title">
-                    <h1 class="app-title" id="app-title"><span style="font-size:1.2rem;animation:samba-bounce 1.2s ease-in-out infinite;display:inline-block;margin-right:8px">♪</span>Tocador</h1>
+                    <h1 class="app-title" id="app-title"><span class="title-note">♪</span>Tocador</h1>
                     <p class="app-subtitle" id="app-subtitle"></p>
                 </div>
                 <div class="header-stats">
@@ -456,7 +458,11 @@
                             stroke-width="2"
                             width="16"
                             height="16"
+                            role="button"
+                            tabindex="0"
+                            aria-label="Silenciar"
                         >
+                            <title>Silenciar / ativar som</title>
                             <polygon
                                 points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"
                             />
