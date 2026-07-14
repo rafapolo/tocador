@@ -7,6 +7,7 @@ Shared music player platform — the same player hosts multiple independent arch
 ### Frontend
 - **index.html** — Main web app; no build step, served from GitHub Pages or any static CDN
 - **js/ui.js** — All app logic: virtual grid, album/track rendering, playback, search/filter, acervo loading
+- **sw.js** / **manifest.json** — PWA: service worker (stale-while-revalidate for same-origin assets and `.json.gz` catalogs; never intercepts cdn.tocador.cc audio/covers so Range requests pass through) + installable app manifest
 - **assets/player.css** / **assets/uqt.css** — Styling
 - **assets/capa.jpg** — SVG placeholder cover (data-URI embedded in `ui.js`)
 

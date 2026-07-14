@@ -72,6 +72,8 @@ let _toastEl = null, _countEl = null, _clearBtn = null, _emptyState = null, _cle
 let _btnPlay = null, _mobileDrawer = null, _drawerCover = null, _overlayTrackTitle = null;
 let _playerTitleEl = null, _volumeWave = null, _searchInput = null, _overlayCover = null;
 let _overlayTrackArtist = null;
+let _progressFillEl = null, _mainProgressBarEl = null, _overlayProgressFillEl = null;
+let _timeCurrentLbl = null, _timeDurationLbl = null, _overlayTimeCurrentLbl = null, _overlayTimeDurationLbl = null;
 
 // Browse panel state
 let genreData = null;
@@ -401,6 +403,9 @@ class VirtualGrid {
     // Cap = 2 * colCount, refreshed after _layout(). Measured: ~65% fewer _makeNode calls on scroll.
     this._pool = [];
     this._poolCap = 8;
+    // Animate the "appearing" entrance only on content changes (setItems), not on
+    // scroll recycling — avoids a forced reflow per node and flicker while scrolling.
+    this._animateNext = false;
 
     this.inner = document.createElement('div');
     this.inner.className = 'albums-grid-inner';
@@ -420,6 +425,7 @@ class VirtualGrid {
     this._pool = [];
     this.inner.replaceChildren();
     this.container.scrollTop = 0;
+    this._animateNext = true;
     this._layout();
   }
 
@@ -519,6 +525,8 @@ class VirtualGrid {
   }
 
   _render() {
+    const animate = this._animateNext;
+    this._animateNext = false;
     const { _padding: pad, _gap: gap } = this;
     const scrollTop = this.container.scrollTop;
     const viewH = this.container.clientHeight;
@@ -543,10 +551,12 @@ class VirtualGrid {
       if (!this._nodes.has(i)) {
         const node = this._makeNode(i, this._pool.pop());
         this._nodes.set(i, node);
-        node.classList.remove('appearing');
-        void node.offsetWidth; // restart animation on recycled nodes
-        node.classList.add('appearing');
-        node.addEventListener('animationend', () => node.classList.remove('appearing'), { once: true });
+        if (animate) {
+          node.classList.add('appearing');
+          node.addEventListener('animationend', () => node.classList.remove('appearing'), { once: true });
+        } else {
+          node.classList.remove('appearing');
+        }
         this.inner.appendChild(node);
       }
     }
@@ -724,10 +734,15 @@ function buildAlbums() {
       };
     });
     const genre = genreData?.[album.path.normalize('NFC')] ?? null;
+    // Folded keys of every artist on the album (album-level + per-track), so the
+    // activeArtist filter is a Set lookup instead of re-running parseArtists()
+    // over every album and track on each filter pass.
+    const artistKeys = new Set(parseArtists(album.artist).map(fold));
+    for (const t of tracks) for (const a of parseArtists(t.artists)) artistKeys.add(fold(a));
     return {
       name: album.title, artists: album.artist, year: album.year, path: album.path,
       cover: album.has_cover !== false ? `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg` : null,
-      tracks, nameLower, artistsLower, pathLower,
+      tracks, nameLower, artistsLower, pathLower, artistKeys,
       genre,
       genreParent: genre ? genre.split('---')[0] : null,
     };
@@ -757,12 +772,9 @@ function getDecades() {
 
 function filterAlbums() {
   const q = fold(searchQuery);
+  const ak = activeArtist ? fold(activeArtist) : null;
   filteredAlbums = albums.filter(album => {
-    if (activeArtist) {
-      const ak = fold(activeArtist);
-      if (!parseArtists(album.artists).some(a => fold(a) === ak) &&
-          !album.tracks.some(t => parseArtists(t.artists).some(a => fold(a) === ak))) return false;
-    }
+    if (ak && !album.artistKeys.has(ak)) return false;
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
       else { if (album.genreParent !== activeGenre) return false; }
@@ -1049,8 +1061,10 @@ function isShortcutsModalOpen() {
 function updateLibraryStats() {
   const totalAlbums = filteredAlbums.length;
   const totalArtists = new Set(filteredAlbums.map(a => a.artists).filter(Boolean)).size;
-  u('#mobile-stat-albums').text(`${totalAlbums} álbun${totalAlbums !== 1 ? 's' : ''}`);
-  u('#mobile-stat-artists').text(`${totalArtists} artista${totalArtists !== 1 ? 's' : ''}`);
+  const albumsStatEl = document.getElementById('mobile-stat-albums');
+  const artistsStatEl = document.getElementById('mobile-stat-artists');
+  if (albumsStatEl) albumsStatEl.textContent = `${totalAlbums} álbun${totalAlbums !== 1 ? 's' : ''}`;
+  if (artistsStatEl) artistsStatEl.textContent = `${totalArtists} artista${totalArtists !== 1 ? 's' : ''}`;
 }
 
 function applyArchiveMeta() {
@@ -1154,7 +1168,7 @@ function renderDecadeButtons() {
 // ── Track & Album Header Rendering ───────────────────────────────────────
 
 function renderAlbumHeader() {
-  const container = u('#album-header').first();
+  const container = document.getElementById('album-header');
   if (!selectedAlbum) { container.innerHTML = ''; return; }
 
   const cover = document.createElement('img');
@@ -1241,7 +1255,7 @@ function syncTrackPlayingState(container, tracks) {
 
 function renderTrackList() {
   const container = document.querySelector('#track-list');
-  const tracksPanel = u('.tracks-panel').first();
+  const tracksPanel = (_tracksPanelEl ??= document.getElementById('tracks-panel'));
 
   if (!selectedAlbum) {
     tracksPanel.classList.add('hidden');
@@ -1280,16 +1294,43 @@ function safePlay(audio) {
   });
 }
 
+// Zero the progress UI immediately on track change — before any media event
+// fires — so the previous track's bar/labels never linger through a slow load.
+function resetProgressUI(track) {
+  _progressFillEl ??= document.getElementById('progress-fill');
+  _mainProgressBarEl ??= document.getElementById('main-progress-bar');
+  _overlayProgressFillEl ??= document.getElementById('overlay-progress-fill');
+  _timeCurrentLbl ??= document.getElementById('time-current');
+  _timeDurationLbl ??= document.getElementById('time-duration');
+  _overlayTimeCurrentLbl ??= document.getElementById('overlay-time-current');
+  _overlayTimeDurationLbl ??= document.getElementById('overlay-time-duration');
+  if (_progressFillEl) _progressFillEl.style.width = '0%';
+  if (_overlayProgressFillEl) _overlayProgressFillEl.style.width = '0%';
+  if (_mainProgressBarEl) {
+    _mainProgressBarEl.classList.remove('has-progress');
+    _mainProgressBarEl.setAttribute('aria-valuenow', 0);
+  }
+  const dur = formatTime(durationCache.get(track?.file) ?? track?.duration);
+  if (_timeCurrentLbl) _timeCurrentLbl.textContent = '0:00';
+  if (_overlayTimeCurrentLbl) _overlayTimeCurrentLbl.textContent = '0:00';
+  if (_timeDurationLbl) _timeDurationLbl.textContent = dur;
+  if (_overlayTimeDurationLbl) _overlayTimeDurationLbl.textContent = dur;
+}
+
 function playTrack(track) {
   currentTrack = track;
   updateNowPlaying();
-  const audio = u('#audio').first();
+  const audio = document.getElementById('audio');
   const newSrc = `${BASE_URL}/${track.file}`;
   // Also reload when audio.error is set: retrying the same src after a failed
   // load needs a fresh load() call, otherwise play() just re-rejects the stuck resource.
-  if (audio.src !== newSrc || audio.error) { audio.src = newSrc; audio.load(); }
+  if (audio.src !== newSrc || audio.error) {
+    resetProgressUI(track);
+    audio.src = newSrc;
+    audio.load();
+  }
   safePlay(audio);
-  u('#btn-play').addClass('playing');
+  (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('playing');
   renderTrackList();
   syncDrawerPlayingState();
   updateTrackInUrl(track.num);
@@ -1326,11 +1367,12 @@ function syncDrawerPlayingState() {
 
 function updateNowPlaying() {
   if (!currentTrack) return;
-  u('#player-title').text(currentTrack.title);
-  u('#player-artist').text(currentTrack.artists);
+  (_playerTitleEl ??= document.getElementById('player-title')).textContent = currentTrack.title;
+  const playerArtistEl = document.getElementById('player-artist');
+  if (playerArtistEl) playerArtistEl.textContent = currentTrack.artists;
   const folder = currentTrack.file.split('/')[0];
   const coverUrl = `${BASE_URL}/${folder}/capa-min.jpg`;
-  const coverImg = u('#player-cover').first();
+  const coverImg = document.getElementById('player-cover');
   const coverAlt = currentTrack.album ? `Capa do álbum ${currentTrack.album}` : 'Capa do álbum';
   if (coverImg) { coverImg.loading = 'lazy'; coverImg.alt = coverAlt; loadCoverImage(coverImg, coverUrl); }
   _drawerCover ??= document.getElementById('drawer-cover');
@@ -1409,7 +1451,7 @@ function playPrevious() {
   if (!selectedAlbum || !currentTrack) return;
   // Match standard player convention: restart the current track if meaningfully
   // into it, only step back to the prior track when near the start.
-  const audio = u('#audio').first();
+  const audio = document.getElementById('audio');
   if (audio && audio.currentTime > 3) {
     audio.currentTime = 0;
     return;
@@ -1421,7 +1463,7 @@ function playPrevious() {
 
 // ── Init ──────────────────────────────────────────────────────────────────
 
-u(document).on('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', async function () {
   const albumsList = document.querySelector('#albums-list');
 
   // Delegated click: album grid
@@ -1443,7 +1485,7 @@ u(document).on('DOMContentLoaded', async function () {
     if (isMobile()) openMobileDrawer();
 
     if (album.tracks.length > 0) {
-      const audio = u('#audio').first();
+      const audio = document.getElementById('audio');
       if (audio.paused) {
         currentTrack = album.tracks[0];
         updateNowPlaying();
@@ -1626,7 +1668,7 @@ u(document).on('DOMContentLoaded', async function () {
     const cleanUrl = `${window.location.pathname}${cleanParams.toString() ? '?' + cleanParams : ''}`;
     window.history.replaceState({}, '', cleanUrl);
     virtualGrid.setItems(filteredAlbums);
-    const container = u('#album-header').first();
+    const container = document.getElementById('album-header');
     container.innerHTML = `<p class="album-not-found">Álbum não existe</p>`;
   } else if (albumToSelect) {
     selectedAlbum = albumToSelect;
@@ -1639,7 +1681,7 @@ u(document).on('DOMContentLoaded', async function () {
       if (t) {
         currentTrack = t;
         updateNowPlaying();
-        const audio = u('#audio').first();
+        const audio = document.getElementById('audio');
         const newSrc = `${BASE_URL}/${t.file}`;
         if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
         restorePlaybackPosition(t, audio);
@@ -1657,7 +1699,7 @@ u(document).on('DOMContentLoaded', async function () {
     }
   }
 
-  const playerCover = u('#player-cover').first();
+  const playerCover = document.getElementById('player-cover');
   if (playerCover && !playerCover.src) {
     playerCover.src = PLACEHOLDER_COVER;
     playerCover.classList.add('placeholder');
@@ -1678,7 +1720,7 @@ u(document).on('DOMContentLoaded', async function () {
     }
   });
 
-  const audio = u('#audio').first();
+  const audio = document.getElementById('audio');
 
   const overlayBtnPlay = document.getElementById('overlay-btn-play');
   const setLoading = on => {
@@ -1687,14 +1729,14 @@ u(document).on('DOMContentLoaded', async function () {
   };
 
   audio.addEventListener('play',     () => {
-    u('#btn-play').addClass('playing');
+    (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('playing');
     overlayBtnPlay?.classList.add('playing');
     _btnPlay?.classList.remove('autoplay-blocked');
     _btnPlay?.setAttribute('aria-label', 'Pausar');
     overlayBtnPlay?.setAttribute('aria-label', 'Pausar');
   });
   audio.addEventListener('pause',    () => {
-    u('#btn-play').removeClass('playing');
+    (_btnPlay ??= document.getElementById('btn-play'))?.classList.remove('playing');
     overlayBtnPlay?.classList.remove('playing');
     _btnPlay?.setAttribute('aria-label', 'Reproduzir');
     overlayBtnPlay?.setAttribute('aria-label', 'Reproduzir');
@@ -1755,12 +1797,16 @@ u(document).on('DOMContentLoaded', async function () {
     if ('mediaSession' in navigator && audio.duration && !isNaN(audio.duration)) {
       try { navigator.mediaSession.setPositionState({ duration: audio.duration, playbackRate: audio.playbackRate, position: audio.currentTime }); } catch (_) {}
     }
-    savePlaybackPosition(currentTrack, audio);
+    // localStorage writes are synchronous main-thread work — every 5s is plenty;
+    // pause and pagehide handlers cover the exact position on stop/close.
+    if (whole % 5 === 0) savePlaybackPosition(currentTrack, audio);
   });
+
+  window.addEventListener('pagehide', () => savePlaybackPosition(currentTrack, audio));
 
   audio.addEventListener('loadedmetadata', () => {
     const dur = formatTime(audio.duration);
-    u('#time-duration').text(dur);
+    (_timeDurationLbl ??= document.getElementById('time-duration')).textContent = dur;
     if (overlayTimeDuration) overlayTimeDuration.textContent = dur;
     // Guard against stale/aborted loads (rapid track switching): only trust this
     // event if it matches the track currently loaded and reports a real duration,
@@ -1786,7 +1832,7 @@ u(document).on('DOMContentLoaded', async function () {
     };
   }
 
-  u('#btn-play').on('click', function () {
+  _btnPlay?.addEventListener('click', function () {
     if (audio.paused) {
       if (!currentTrack) {
         if (selectedAlbum?.tracks.length > 0) {
@@ -1800,7 +1846,7 @@ u(document).on('DOMContentLoaded', async function () {
         }
       } else {
         safePlay(audio);
-        u('#btn-play').addClass('playing');
+        (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('playing');
       }
     } else {
       if (selectedAlbum && currentTrack && !selectedAlbum.tracks.includes(currentTrack)) {
@@ -1811,8 +1857,8 @@ u(document).on('DOMContentLoaded', async function () {
     }
   });
 
-  u('#btn-prev').on('click', playPrevious);
-  u('#btn-next').on('click', playNext);
+  document.getElementById('btn-prev')?.addEventListener('click', playPrevious);
+  document.getElementById('btn-next')?.addEventListener('click', playNext);
 
   // Mobile now-playing overlay
   const overlay = document.getElementById('now-playing-overlay');
@@ -1874,13 +1920,23 @@ u(document).on('DOMContentLoaded', async function () {
     localStorage.setItem('tocador-shuffle', shuffleOn);
   }
 
+  const volumeIcon = document.getElementById('volume-icon');
+  let _preMuteVolume = 1;
+
+  function setVolume(vol) {
+    audio.volume = vol;
+    if (volumeSlider) volumeSlider.value = vol;
+    if (_volumeWave) _volumeWave.style.display = vol === 0 ? 'none' : '';
+    volumeIcon?.setAttribute('aria-label', vol === 0 ? 'Ativar som' : 'Silenciar');
+    localStorage.setItem('tocador-volume', vol);
+  }
+
   // Restore persisted state
   applyShuffle(localStorage.getItem('tocador-shuffle') === 'true');
   applyRepeatMode(localStorage.getItem('tocador-repeat') || 'off');
   const savedVolume = parseFloat(localStorage.getItem('tocador-volume') ?? '1');
-  if (volumeSlider) volumeSlider.value = savedVolume;
-  audio.volume = savedVolume;
-  if (savedVolume === 0 && _volumeWave) _volumeWave.style.display = 'none';
+  if (savedVolume > 0) _preMuteVolume = savedVolume;
+  setVolume(savedVolume);
 
   btnShuffle?.addEventListener('click', () => applyShuffle(!shuffleOn));
   btnShuffleMobile?.addEventListener('click', () => applyShuffle(!shuffleOn));
@@ -1891,9 +1947,15 @@ u(document).on('DOMContentLoaded', async function () {
 
   volumeSlider?.addEventListener('input', () => {
     const vol = parseFloat(volumeSlider.value);
-    audio.volume = vol;
-    if (_volumeWave) _volumeWave.style.display = vol === 0 ? 'none' : '';
-    localStorage.setItem('tocador-volume', vol);
+    if (vol > 0) _preMuteVolume = vol;
+    setVolume(vol);
+  });
+
+  // Clicking the volume icon toggles mute, restoring the previous level on unmute
+  const toggleMute = () => setVolume(audio.volume > 0 ? 0 : _preMuteVolume);
+  volumeIcon?.addEventListener('click', toggleMute);
+  volumeIcon?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMute(); }
   });
 
   function seekFromClient(clientX, barEl) {
@@ -1916,7 +1978,7 @@ u(document).on('DOMContentLoaded', async function () {
   }
 
   let searchDebounce;
-  u('#search-input').on('input', function () {
+  _searchInput?.addEventListener('input', function () {
     searchQuery = this.value;
     if (searchQuery) {
       activeDecade = null;
@@ -2057,3 +2119,11 @@ u(document).on('DOMContentLoaded', async function () {
     }
   });
 });
+
+// ── Service Worker (PWA) ──────────────────────────────────────────────────
+// Registered after load so it never competes with the initial catalog fetch.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}

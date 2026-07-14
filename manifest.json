@@ -1,0 +1,15 @@
+{
+  "name": "Tocador",
+  "short_name": "Tocador",
+  "description": "Player de acervos musicais",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1814",
+  "theme_color": "#1a1814",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/capa.jpg", "sizes": "400x400", "type": "image/jpeg", "purpose": "any" }
+  ]
+}
