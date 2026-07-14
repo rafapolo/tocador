@@ -16,3 +16,4 @@ plans/
 plan/
 *.bak
 *.bak2
+.claude/

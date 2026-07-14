@@ -125,6 +125,13 @@ body {
   }
 }
 
+.title-note {
+  font-size: 1.2rem;
+  display: inline-block;
+  margin-right: 8px;
+  animation: samba-bounce 1.2s ease-in-out infinite;
+}
+
 .app-subtitle {
   font-size: 0.75rem;
   color: var(--color-text-secondary);
@@ -924,6 +931,10 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .marquee-active .marquee-inner { animation: none; }
+  .title-note { animation: none; }
+  .album-item.appearing { animation: none; }
+  .skeleton-card { animation: none; }
+  .btn-play.autoplay-blocked { animation: none; }
 }
 
 .btn-play:hover {
@@ -1043,6 +1054,20 @@ body {
   gap: 6px;
   margin-left: 4px;
   color: var(--color-text-muted);
+}
+
+#volume-icon {
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+#volume-icon:hover {
+  color: var(--color-accent);
+}
+
+#volume-icon:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .volume-slider {
