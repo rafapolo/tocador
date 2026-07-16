@@ -55,6 +55,13 @@ const RAW_BUCKET_REFILL = 5;
 const rawIpTokenBuckets = new Map();
 const RAW_CONCURRENCY_CAP = 50;
 
+// /report-error rate limit: client already caps itself to 3 reports per page
+// load, but a misbehaving or malicious client could otherwise spam GitHub
+// issue creation indefinitely — cap per raw IP regardless.
+const REPORT_BUCKET_CAP = 5;
+const REPORT_BUCKET_REFILL = 1 / 60; // 1 token/min after the initial burst
+const reportTokenBuckets = new Map();
+
 function takeFrom(map, key, cap, refill) {
   const now = Date.now();
   const b = map.get(key);
@@ -70,6 +77,7 @@ setInterval(() => {
   const cutoff = Date.now() - 10 * 60_000;
   for (const [k, b] of deviceTokenBuckets) if (b.last < cutoff) deviceTokenBuckets.delete(k);
   for (const [k, b] of rawIpTokenBuckets) if (b.last < cutoff) rawIpTokenBuckets.delete(k);
+  for (const [k, b] of reportTokenBuckets) if (b.last < cutoff) reportTokenBuckets.delete(k);
 }, 5 * 60_000).unref();
 
 // FNV-1a 32-bit — cheap, fixed-size fingerprint derived from the User-Agent.
@@ -406,6 +414,11 @@ _server = Bun.serve({
 
     // POST /report-error — body size already capped by maxRequestBodySize: 8192
     if (req.method === 'POST' && url.pathname === '/report-error') {
+      const reportIp = realIp(req, server);
+      if (!takeFrom(reportTokenBuckets, reportIp, REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL)) {
+        counters.c4xx++;
+        return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '60' } });
+      }
       const token = process.env.GITHUB_TOKEN;
       if (!token) return new Response('Not configured', { status: 503, headers: corsBase });
       let payload;

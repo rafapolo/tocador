@@ -330,7 +330,7 @@
 
 <script>
 const REPORT_URL = 'https://cdn.tocador.cc/report-error';
-const IS_BOT = /bot|crawl|spider|headless|googleother|google-extended/i.test(navigator.userAgent);
+const IS_BOT = /bot|crawl|spider|headless|googleother|google-extended|read-aloud|inspectiontool|apis-google/i.test(navigator.userAgent);
 
 (function () {
   const seen = new Set();
@@ -586,7 +586,10 @@ audio.addEventListener('ended',   next);
 audio.addEventListener('error',   () => {
   clearLoadTimer();
   setLoading(false);
-  reportPlayback(`audio error (MediaError ${audio.error?.code ?? '?'})`);
+  // Only report the first error in a streak: once rate-limited or offline,
+  // every subsequent random track fails too, and it's the same root cause,
+  // not N distinct broken tracks — reporting all of them is just noise.
+  if (timeoutStreak === 0) reportPlayback(`audio error (MediaError ${audio.error?.code ?? '?'})`);
   if (audio.error?.code === 4 && curAlbum && curTrack) failedTracks.add(`${curAlbum.path}/${curTrack.file}`);
   curSrc = '';
   timeoutStreak++;
