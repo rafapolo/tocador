@@ -586,15 +586,31 @@ audio.addEventListener('ended',   next);
 audio.addEventListener('error',   () => {
   clearLoadTimer();
   setLoading(false);
+  const failedSrc = curSrc || audio.src;
+  const errCode = audio.error?.code ?? null;
   // Only report the first error in a streak: once rate-limited or offline,
   // every subsequent random track fails too, and it's the same root cause,
   // not N distinct broken tracks — reporting all of them is just noise.
-  if (timeoutStreak === 0) reportPlayback(`audio error (MediaError ${audio.error?.code ?? '?'})`);
-  if (audio.error?.code === 4 && curAlbum && curTrack) failedTracks.add(`${curAlbum.path}/${curTrack.file}`);
+  const shouldReport = timeoutStreak === 0;
+  if (errCode === 4 && curAlbum && curTrack) failedTracks.add(`${curAlbum.path}/${curTrack.file}`);
   curSrc = '';
   timeoutStreak++;
-  if (timeoutStreak >= 5) fatalError();
-  else if (albums.length) setTimeout(next, 500);
+  if (timeoutStreak >= 5) { fatalError(); return; }
+  if (!albums.length) return;
+  // Verify with a HEAD request before reporting or retrying: a 429 here means
+  // we're rate-limited, not that this track is actually broken — retrying
+  // immediately would just hit the same limit on the next random track, so
+  // don't report (it'd blame an innocent file) and back off per Retry-After
+  // instead of hammering the bucket every 500ms.
+  fetch(failedSrc, { method: 'HEAD' }).then(r => {
+    if (r.status === 429) {
+      const retryAfter = Math.min(10, Number(r.headers.get('retry-after')) || 2) * 1000;
+      setTimeout(next, retryAfter);
+      return;
+    }
+    if (shouldReport) reportPlayback(`audio error (MediaError ${errCode ?? '?'})`);
+    setTimeout(next, 500);
+  }).catch(() => setTimeout(next, 500));
 });
 
 audio.addEventListener('durationchange', () => {
