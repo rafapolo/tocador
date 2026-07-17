@@ -414,6 +414,10 @@ _server = Bun.serve({
 
     // POST /report-error — body size already capped by maxRequestBodySize: 8192
     if (req.method === 'POST' && url.pathname === '/report-error') {
+      // goodBotRegex UAs (Google indexing/read-aloud etc.) are let through the
+      // proxy above to fetch pages/audio, but they're not real listeners — a
+      // crawler hitting a decode quirk in its own renderer isn't a bug report.
+      if (goodBotRegex.test(ua)) return new Response('OK', { status: 200, headers: corsBase });
       const reportIp = realIp(req, server);
       if (!takeFrom(reportTokenBuckets, reportIp, REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL)) {
         counters.c4xx++;
