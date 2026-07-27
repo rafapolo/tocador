@@ -139,6 +139,22 @@ const corsBase = {
 };
 const corsHeaders = { ...corsBase, 'X-Content-Type-Options': 'nosniff' };
 
+// Single-hop 301 to the canonical domain, with CORS so a redirected fetch() still works
+function redirect301(location) {
+  return new Response(null, { status: 301, headers: { ...corsBase, Location: location, 'Cache-Control': 'public, max-age=3600' } });
+}
+
+// robots.txt for the proxy hosts (cdn./radio.). Covers and catalogs stay crawlable
+// for image indexing; audio and the error endpoint are pure crawl-budget waste.
+// No Sitemap: directive here — the sitemaps belong to https://tocador.cc.
+const ROBOTS_TXT = `User-agent: *
+Allow: /
+Disallow: /report-error
+Disallow: /*.mp3$
+Disallow: /*.m4a$
+Disallow: /*.mp4$
+`;
+
 function mimeFor(key) {
   const k = key.toLowerCase();
   if (k.endsWith('.mp3')) return 'audio/mpeg';
@@ -378,11 +394,25 @@ _server = Bun.serve({
 
     const url = new URL(req.url);
 
+    // robots.txt must be served on every host, never redirected — a crawler that
+    // gets a cross-host redirect for robots.txt treats the whole host as unreadable
+    // ("Erro de redirecionamento" in Search Console). Covers stay crawlable so the
+    // <image:image> entries in sitemap-albums.xml can still be indexed.
+    if (url.pathname === '/robots.txt') {
+      counters.ok++;
+      return new Response(ROBOTS_TXT, {
+        headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=86400' },
+      });
+    }
+
+    // Host redirects always land on the canonical domain in a single hop; chaining
+    // through rafapolo.github.io (which itself 301s back to tocador.cc via CNAME)
+    // made Google see a redirect chain and drop the URL.
     if (req.headers.get('host') === 'radio.tocador.cc')
-      return Response.redirect('https://rafapolo.github.io/tocador/radio.html', 301);
+      return redirect301('https://tocador.cc/radio.html');
 
     if (req.headers.get('host') === 'uqt.xn--2dk.xyz')
-      return Response.redirect('https://tocador.cc/', 301);
+      return redirect301('https://tocador.cc/');
 
     // §13 — enriched health: reports saturation and event-loop lag; haloy removes node before it becomes a black hole
     if (url.pathname === '/health') {
@@ -483,7 +513,7 @@ _server = Bun.serve({
     try { path = decodeURIComponent(url.pathname.replace(/^\/+/, '')).normalize('NFC'); }
     catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
 
-    if (!path) return Response.redirect('https://rafapolo.github.io/uqt/3d', 301);
+    if (!path) return redirect301('https://tocador.cc/3d.html');
 
     // §1 — path traversal: reject .., empty segments, NUL, backslash
     if (!isSafeKey(path)) { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
