@@ -102,6 +102,15 @@ let eventLoopLag = 0;
 let _lastTick = Date.now();
 const counters = { ok: 0, c4xx: 0, c5xx: 0 };
 
+// §13 — upstream reachability. A 404 from S3 still proves the link is alive, so
+// only connection-level failures count. Tracked as a streak because a single
+// blip is noise; a sustained run means every request is a black hole and the
+// node must be pulled from rotation.
+const UPSTREAM_FAIL_THRESHOLD = 5;
+let upstreamFailStreak = 0;
+const markUpstreamOk = () => { upstreamFailStreak = 0; };
+const markUpstreamFail = () => { upstreamFailStreak++; };
+
 setInterval(() => {
   const now = Date.now(); eventLoopLag = now - _lastTick - 1000; _lastTick = now;
 }, 1000).unref();
@@ -121,6 +130,7 @@ function metricsBody() {
     `tocador_ip_map_size ${rawIpCounts.size}`,
     `tocador_device_map_size ${deviceCounts.size}`,
     `tocador_event_loop_lag_ms ${eventLoopLag}`,
+    `tocador_upstream_fail_streak ${upstreamFailStreak}`,
     `tocador_memory_rss_bytes ${m.rss}`,
     `tocador_memory_heap_used_bytes ${m.heapUsed}`,
     `tocador_requests_total{code="2xx"} ${counters.ok}`,
@@ -138,6 +148,24 @@ const corsBase = {
   'Cross-Origin-Resource-Policy': 'cross-origin',
 };
 const corsHeaders = { ...corsBase, 'X-Content-Type-Options': 'nosniff' };
+
+// A failed stat() is a genuine 404 only when S3 actually answered. Connection
+// errors used to fall through to the same 404, which made an upstream outage
+// look like thousands of missing tracks: the player blamed each file, the
+// error reporter filed them, and the real fault stayed invisible. Default to
+// 503 and require proof of absence before saying Not Found.
+function statFailureResponse(err, method, path) {
+  const status = err?.status ?? err?.statusCode;
+  if (status === 404 || err?.code === 'NoSuchKey' || err?.name === 'NoSuchKey') {
+    markUpstreamOk();
+    counters.c4xx++;
+    return new Response('Not Found', { status: 404, headers: corsBase });
+  }
+  markUpstreamFail();
+  counters.c5xx++;
+  console.error(`[503] ${method} ${path}: upstream unreachable: ${err?.message ?? err}`);
+  return new Response('Service Unavailable', { status: 503, headers: { ...corsBase, 'Retry-After': '10' } });
+}
 
 // Single-hop 301 to the canonical domain, with CORS so a redirected fetch() still works
 function redirect301(location) {
@@ -235,6 +263,7 @@ async function s3GetSigned(bucket, key, rangeHeader) {
 // requests, where it saves the separate stat() round trip.
 async function signedPassthrough(bucket, path, rangeHeader, isHead) {
   const r = await s3GetSigned(bucket, path, isHead ? null : rangeHeader);
+  markUpstreamOk(); // S3 answered at all — the link is up, whatever the status
   if (!r.ok && r.status !== 206) {
     const code = r.status >= 500 ? 500 : r.status;
     if (code >= 500) counters.c5xx++; else counters.c4xx++;
@@ -416,10 +445,11 @@ _server = Bun.serve({
 
     // §13 — enriched health: reports saturation and event-loop lag; haloy removes node before it becomes a black hole
     if (url.pathname === '/health') {
-      const degraded = shuttingDown || activeRequests >= MAX_CONCURRENT * 0.9 || eventLoopLag > 500;
+      const upstreamDown = upstreamFailStreak >= UPSTREAM_FAIL_THRESHOLD;
+      const degraded = shuttingDown || activeRequests >= MAX_CONCURRENT * 0.9 || eventLoopLag > 500 || upstreamDown;
       counters.ok++;
       return new Response(
-        JSON.stringify({ status: degraded ? 'degraded' : 'ok', activeRequests, eventLoopLag }),
+        JSON.stringify({ status: degraded ? 'degraded' : 'ok', activeRequests, eventLoopLag, upstreamFailStreak }),
         { status: degraded ? 503 : 200, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } }
       );
     }
@@ -593,8 +623,7 @@ _server = Bun.serve({
         try {
           stat = await file.stat();
         } catch (err) {
-          counters.c4xx++;
-          return new Response('Not Found', { status: 404, headers: corsBase });
+          return statFailureResponse(err, 'HEAD', path);
         }
         status = 200; body = null;
         extra = {
@@ -626,8 +655,7 @@ _server = Bun.serve({
         try {
           stat = await file.stat();
         } catch (err) {
-          counters.c4xx++;
-          return new Response('Not Found', { status: 404, headers: corsBase });
+          return statFailureResponse(err, 'GET', path);
         }
         status = 200; body = file.stream();
         extra = {
@@ -647,11 +675,12 @@ _server = Bun.serve({
       for (const k of Object.keys(headers)) if (headers[k] == null) delete headers[k];
 
       counters.ok++;
+      markUpstreamOk();
       return new Response(body, { status, headers });
     } catch (err) {
       const code = err?.status ?? err?.statusCode ?? 500;
       console.error(`[${code}] ${req.method} ${path}: ${err?.message ?? err}`);
-      if (code >= 500) counters.c5xx++; else counters.c4xx++;
+      if (code >= 500) { counters.c5xx++; markUpstreamFail(); } else counters.c4xx++;
       return new Response(err?.name ?? 'Error', { status: code, headers: corsBase });
     } finally {
       activeRequests--;
