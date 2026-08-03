@@ -325,13 +325,18 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
 
     // Drop slug-tail: a kebab-case single-file artifact (e.g. artist-album-year.mp3) that gets
     // mixed in when a single-MP3 download lands in the same folder as the extracted archive tracks.
-    if tracks.len() > 1 {
+    // Requires at least two numbered tracks beside it, because the whole justification for
+    // hiding the file is that the album it duplicates is already here in full. Beside a *single*
+    // numbered track there is no album to be redundant against: that pairing comes from a rescue
+    // that recovered one track, and the slug file is then a different recording that exists
+    // nowhere else — dropping it deletes it from the catalog outright.
+    if tracks.len() > 2 {
         let is_slug = tracks.last().map(|t| RE_SLUG_TAIL.is_match(&t.file)).unwrap_or(false);
         if is_slug {
-            let rest_have_nums = tracks[..tracks.len() - 1].iter().any(|t| {
+            let numbered = tracks[..tracks.len() - 1].iter().filter(|t| {
                 RE_TRACK_NUM_START.is_match(&t.file) || RE_TRACK_NUM_MID.is_match(&t.file)
-            });
-            if rest_have_nums {
+            }).count();
+            if numbered >= 2 {
                 tracks.pop();
             }
         }
