@@ -568,12 +568,18 @@ albumEl.addEventListener('click', e => {
   window.open(`/?acervo=${encodeURIComponent(acervoParam)}&album=${encodeURIComponent(link.dataset.path)}`, '_blank');
 });
 
-// Pause radio when main player starts (and vice-versa)
+// Pause radio when main player starts (and vice-versa).
+// BroadcastChannel's constructor can throw SecurityError in Firefox when
+// storage access is restricted (private browsing, strict tracking
+// protection, storage disabled) — this is an optional convenience, so
+// degrade silently instead of surfacing an uncaught error.
 if (typeof BroadcastChannel !== 'undefined') {
-  const TAB_ID = crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36));
-  const ch = new BroadcastChannel('tocador-player');
-  audio.addEventListener('play', () => ch.postMessage({ tabId: TAB_ID }));
-  ch.onmessage = ({ data }) => { if (data?.tabId !== TAB_ID) audio.pause(); };
+  try {
+    const TAB_ID = crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36));
+    const ch = new BroadcastChannel('tocador-player');
+    audio.addEventListener('play', () => ch.postMessage({ tabId: TAB_ID }));
+    ch.onmessage = ({ data }) => { if (data?.tabId !== TAB_ID) audio.pause(); };
+  } catch (_) {}
 }
 
 audio.addEventListener('play',    () => { setPlaying(true); tapOverlay.classList.remove('visible'); });
