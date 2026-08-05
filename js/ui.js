@@ -1822,14 +1822,20 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   audio.addEventListener('ended', playNext);
 
-  // Singleton player across tabs: pause this tab when another tab starts playing
+  // Singleton player across tabs: pause this tab when another tab starts playing.
+  // BroadcastChannel's constructor can throw SecurityError in Firefox when
+  // storage access is restricted (private browsing, strict tracking
+  // protection, storage disabled) — this is an optional convenience, so
+  // degrade silently instead of surfacing an uncaught error.
   if (typeof BroadcastChannel !== 'undefined') {
-    const TAB_ID = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
-    const playerChannel = new BroadcastChannel('tocador-player');
-    audio.addEventListener('play', () => playerChannel.postMessage({ tabId: TAB_ID }));
-    playerChannel.onmessage = ({ data }) => {
-      if (data?.tabId !== TAB_ID) audio.pause();
-    };
+    try {
+      const TAB_ID = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+      const playerChannel = new BroadcastChannel('tocador-player');
+      audio.addEventListener('play', () => playerChannel.postMessage({ tabId: TAB_ID }));
+      playerChannel.onmessage = ({ data }) => {
+        if (data?.tabId !== TAB_ID) audio.pause();
+      };
+    } catch (_) {}
   }
 
   _btnPlay?.addEventListener('click', function () {
