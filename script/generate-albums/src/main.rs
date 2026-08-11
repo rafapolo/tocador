@@ -118,6 +118,107 @@ struct Output {
     albums: Vec<Album>,
 }
 
+// ── v2 (columnar) payload ────────────────────────────────────────────────────
+//
+// Same data as Output, transposed: one array per field, with every album's
+// tracks flattened into shared arrays and sliced apart again via `a.n`. Repeating
+// the key names once per track is ~40% of the raw bytes, so dropping them cuts
+// what the browser's JSON.parse has to walk by roughly that much. Transfer size
+// moves far less (gzip already collapses repeated keys); the real transfer win
+// comes from `p` being empty whenever the folder name follows the convention and
+// from sorting albums by artist so gzip's 32KB window sees repeated names.
+//
+// Decoded by js/acervo-format.js. Keep the two in step.
+
+#[derive(Serialize)]
+struct AlbumCols {
+    t: Vec<String>, // title
+    r: Vec<String>, // artist
+    y: Vec<u32>,    // year
+    p: Vec<String>, // path, empty when == "<year> - <artist> - <title>"
+    c: Vec<u8>,     // has_cover
+    n: Vec<u32>,    // track count, slices the track columns
+}
+
+#[derive(Serialize)]
+struct TrackCols {
+    t: Vec<String>, // title
+    f: Vec<String>, // file, empty unless kind is Literal
+    k: Vec<u8>,     // filename kind
+    d: Vec<u32>,    // duration
+    r: Vec<String>, // artist, empty when same as the album artist
+    n: Vec<u32>,    // track number; 0 means the source had none
+}
+
+#[derive(Serialize)]
+struct OutputV2 {
+    meta: Meta,
+    v: u8,
+    a: AlbumCols,
+    t: TrackCols,
+}
+
+const FK_LITERAL: u8 = 0; // stored verbatim in t.f
+const FK_DASH: u8 = 1;    // "NN - <title>.mp3"
+const FK_PLAIN: u8 = 2;   // "NN <title>.mp3"
+
+fn to_v2(meta: Meta, mut albums: Vec<Album>) -> OutputV2 {
+    // gzip's window is 32KB, so an artist's albums only compress against each
+    // other when they sit close together. The player re-sorts by year on load,
+    // so the on-disk order is ours to choose.
+    albums.sort_by(|a, b| a.artist.cmp(&b.artist).then(a.year.cmp(&b.year)));
+
+    let ntracks: usize = albums.iter().map(|a| a.tracks.len()).sum();
+    let mut ac = AlbumCols {
+        t: Vec::with_capacity(albums.len()), r: Vec::with_capacity(albums.len()),
+        y: Vec::with_capacity(albums.len()), p: Vec::with_capacity(albums.len()),
+        c: Vec::with_capacity(albums.len()), n: Vec::with_capacity(albums.len()),
+    };
+    let mut tc = TrackCols {
+        t: Vec::with_capacity(ntracks), f: Vec::with_capacity(ntracks),
+        k: Vec::with_capacity(ntracks), d: Vec::with_capacity(ntracks),
+        r: Vec::with_capacity(ntracks), n: Vec::with_capacity(ntracks),
+    };
+
+    for album in albums {
+        let conventional = format!("{} - {} - {}", album.year, album.artist, album.title);
+        ac.p.push(if album.path == conventional { String::new() } else { album.path.clone() });
+        ac.c.push(if album.has_cover { 1 } else { 0 });
+        ac.n.push(album.tracks.len() as u32);
+
+        for (i, track) in album.tracks.iter().enumerate() {
+            let nn = format!("{:02}", i + 1);
+            let kind = if track.file == format!("{nn} - {}.mp3", track.title) {
+                FK_DASH
+            } else if track.file == format!("{nn} {}.mp3", track.title) {
+                FK_PLAIN
+            } else {
+                FK_LITERAL
+            };
+            tc.t.push(track.title.clone());
+            tc.f.push(if kind == FK_LITERAL { track.file.clone() } else { String::new() });
+            tc.k.push(kind);
+            tc.d.push(track.duration);
+            // Store only the exceptions; the album artist is the common case.
+            tc.r.push(match &track.artists {
+                Some(a) if a != &album.artist => a.clone(),
+                _ => String::new(),
+            });
+            // 0 means "no track number in the source". It must not mean
+            // "sequential": the player numbers un-numbered tracks by their
+            // position after it drops duplicates, so a number invented here
+            // would shift every track that follows a duplicate.
+            tc.n.push(track.num.unwrap_or(0));
+        }
+
+        ac.t.push(album.title);
+        ac.r.push(album.artist);
+        ac.y.push(album.year);
+    }
+
+    OutputV2 { meta, v: 2, a: ac, t: tc }
+}
+
 fn parse_folder_name(name: &str) -> (String, String, u32) {
     if let Some(caps) = RE_YEAR_ARTIST_ALBUM.captures(name) {
         let year = caps[1].parse().unwrap_or(0);
@@ -433,6 +534,7 @@ struct Config {
     meta_s3_prefix: Option<String>,
     meta_sitemap_url: Option<String>,
     meta_sitemap_out: Option<String>,
+    format_v2: bool,
 }
 
 fn parse_args() -> Config {
@@ -442,6 +544,8 @@ fn parse_args() -> Config {
         eprintln!("     [--title \"Nome do Acervo\"] [--subtitle \"Subtítulo\"]");
         eprintln!("     [--hours \"42\"] [--base-url \"https://cdn.exemplo.com/musicas\"] [--s3-prefix \"indie/\"]");
         eprintln!("     [--sitemap-url \"https://exemplo.com/player\"] [--sitemap-out sitemap.xml]");
+        eprintln!("     [--v2]  formato colunar (menor e mais rápido de parsear).");
+        eprintln!("             Publique o player antes do catálogo v2 — players antigos não o leem.");
         std::process::exit(if args.is_empty() { 1 } else { 0 });
     }
 
@@ -453,6 +557,7 @@ fn parse_args() -> Config {
     let mut meta_s3_prefix = None;
     let mut meta_sitemap_url = None;
     let mut meta_sitemap_out = None;
+    let mut format_v2 = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -463,6 +568,7 @@ fn parse_args() -> Config {
             "--s3-prefix"    => { i += 1; meta_s3_prefix    = args.get(i).cloned(); }
             "--sitemap-url"  => { i += 1; meta_sitemap_url  = args.get(i).cloned(); }
             "--sitemap-out"  => { i += 1; meta_sitemap_out  = args.get(i).cloned(); }
+            "--v2"           => { format_v2 = true; }
             other            => positional.push(other.to_string()),
         }
         i += 1;
@@ -473,7 +579,7 @@ fn parse_args() -> Config {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("acervo.json.gz"));
 
-    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix, meta_sitemap_url, meta_sitemap_out }
+    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix, meta_sitemap_url, meta_sitemap_out, format_v2 }
 }
 
 fn main() {
@@ -621,23 +727,15 @@ fn main() {
         albums,
     };
 
-    let json = serde_json::to_string(&output).expect("Falha na serialização JSON");
-
     let out_gz = if cfg.output.extension().map(|e| e == "gz").unwrap_or(false) {
         cfg.output.clone()
     } else {
         cfg.output.with_extension("json.gz")
     };
 
-    let gz_file = fs::File::create(&out_gz).expect("Não foi possível criar o arquivo .gz");
-    let mut gz = GzEncoder::new(gz_file, Compression::default());
-    gz.write_all(json.as_bytes()).expect("Falha ao escrever");
-    gz.finish().expect("Falha ao finalizar gzip");
-
     let n_albums = output.albums.len();
-    let size_gz = fs::metadata(&out_gz).map(|m| m.len() / 1024).unwrap_or(0);
-    println!("{} álbuns  →  {} ({size_gz} KB)", n_albums, out_gz.display());
 
+    // Written before the payload: the v2 conversion consumes the album list.
     if let Some(ref sitemap_url) = meta_sitemap_url {
         let sitemap_out = cfg.meta_sitemap_out
             .as_deref()
@@ -649,6 +747,24 @@ fn main() {
             });
         write_sitemap(&output.albums, sitemap_url, output.meta.base_url.as_deref(), &sitemap_out);
     }
+
+    let json = if cfg.format_v2 {
+        serde_json::to_string(&to_v2(output.meta, output.albums))
+    } else {
+        serde_json::to_string(&output)
+    }
+    .expect("Falha na serialização JSON");
+
+    let gz_file = fs::File::create(&out_gz).expect("Não foi possível criar o arquivo .gz");
+    // best() over default(): a few seconds once at generation time, saved on
+    // every visitor's download forever.
+    let mut gz = GzEncoder::new(gz_file, Compression::best());
+    gz.write_all(json.as_bytes()).expect("Falha ao escrever");
+    gz.finish().expect("Falha ao finalizar gzip");
+
+    let size_gz = fs::metadata(&out_gz).map(|m| m.len() / 1024).unwrap_or(0);
+    let fmt = if cfg.format_v2 { "v2" } else { "v1" };
+    println!("{} álbuns  →  {} ({size_gz} KB, formato {fmt})", n_albums, out_gz.display());
 }
 
 fn is_leap(y: u32) -> bool {
