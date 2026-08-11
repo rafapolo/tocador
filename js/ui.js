@@ -413,10 +413,19 @@ class VirtualGrid {
 
     this._layout = this._layout.bind(this);
     this._render = this._render.bind(this);
+    // Scroll fires far more often than the display refreshes (trackpads and
+    // smooth-scroll emit well above 60Hz). Coalesce to one _render per frame so
+    // a fast flick does the recycling work once per paint, not once per event.
+    // _render itself stays synchronous — _layout/setItems/refresh depend on that.
+    this._scrollRaf = 0;
+    this._onScroll = () => {
+      if (this._scrollRaf) return;
+      this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = 0; this._render(); });
+    };
 
     let _layoutTimer;
     new ResizeObserver(() => { clearTimeout(_layoutTimer); _layoutTimer = setTimeout(this._layout, 50); }).observe(container);
-    container.addEventListener('scroll', this._render, { passive: true });
+    container.addEventListener('scroll', this._onScroll, { passive: true });
   }
 
   setItems(items) {
@@ -580,7 +589,13 @@ class VirtualList {
     container.appendChild(this.inner);
 
     this._render = this._render.bind(this);
-    container.addEventListener('scroll', this._render, { passive: true });
+    // Same per-frame coalescing as VirtualGrid — see the note there.
+    this._scrollRaf = 0;
+    this._onScroll = () => {
+      if (this._scrollRaf) return;
+      this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = 0; this._render(); });
+    };
+    container.addEventListener('scroll', this._onScroll, { passive: true });
     new ResizeObserver(this._render).observe(container);
   }
 
