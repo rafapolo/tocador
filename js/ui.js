@@ -1059,14 +1059,46 @@ function toggleBrowsePanel() {
   else openBrowseDrawer();
 }
 
+// The modal declares aria-modal="true", which promises the rest of the page is
+// inert while it is up. Without focus handling that promise is false: Tab walks
+// straight out into the album grid behind the scrim. Move focus in on open, keep
+// it inside, and hand it back to whatever opened the modal on close.
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+let _shortcutsReturnFocus = null;
+
+function _trapShortcutsTab(e) {
+  if (e.key !== 'Tab') return;
+  const modal = document.getElementById('shortcuts-modal');
+  if (!modal) return;
+  const items = [...modal.querySelectorAll(FOCUSABLE)].filter(el => !el.disabled && el.offsetParent !== null);
+  if (!items.length) return;
+  const first = items[0];
+  const last = items[items.length - 1];
+  // activeElement can sit outside the modal if focus was moved programmatically;
+  // wrapping on both edges keeps it corralled either way.
+  if (e.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
+    e.preventDefault(); last.focus();
+  } else if (!e.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+    e.preventDefault(); first.focus();
+  }
+}
+
 function openShortcutsModal() {
-  document.getElementById('shortcuts-modal')?.classList.add('open');
+  const modal = document.getElementById('shortcuts-modal');
+  _shortcutsReturnFocus = document.activeElement;
+  modal?.classList.add('open');
   document.getElementById('shortcuts-scrim')?.classList.add('open');
+  document.getElementById('shortcuts-close')?.focus();
+  document.addEventListener('keydown', _trapShortcutsTab, true);
 }
 
 function closeShortcutsModal() {
   document.getElementById('shortcuts-modal')?.classList.remove('open');
   document.getElementById('shortcuts-scrim')?.classList.remove('open');
+  document.removeEventListener('keydown', _trapShortcutsTab, true);
+  // Only restore if the opener is still in the document and focusable.
+  if (_shortcutsReturnFocus?.isConnected) _shortcutsReturnFocus.focus();
+  _shortcutsReturnFocus = null;
 }
 
 function isShortcutsModalOpen() {

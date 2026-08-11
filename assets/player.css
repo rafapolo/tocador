@@ -42,6 +42,31 @@
   outline-offset: 2px;
 }
 
+/* Skip link — off-screen until focused, so keyboard users can jump past the
+   header and filter bar straight into the album grid. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-surface-light);
+  color: var(--color-text);
+  border: 2px solid var(--color-accent);
+  border-radius: 0 0 6px 0;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* The grid is scrolled programmatically; suppress the outline it would get from
+   the tabindex="-1" that makes it a skip-link target. */
+.main-content:focus {
+  outline: none;
+}
+
 /* Reset & Base */
 * {
   margin: 0;
