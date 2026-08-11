@@ -60,11 +60,21 @@ test('R5: next button changes track title', async ({ page }) => {
 
 test('R6: prev button navigates to a previous track from history', async ({ page }) => {
   await gotoRadio(page);
+  // Headless Chromium blocks the initial autoplay attempt, which shows the
+  // tap-to-play overlay. Left up, it intercepts clicks on #btn-next/#btn-prev,
+  // stalling them long enough for the mocked (always-erroring) mp3 route to
+  // auto-advance the track underneath us. Dismiss it first, like a real user
+  // would, so the manual next/prev clicks land immediately.
+  const overlay = page.locator('#tap-overlay');
+  if (await overlay.evaluate(el => el.classList.contains('visible'))) {
+    await overlay.click();
+  }
   const title1 = await page.locator('#track-title').textContent();
+  // showTrack() updates #track-title synchronously within the click handler,
+  // before any async playback/error handling runs — no need to (and, per
+  // above, safer not to) wait between clicks.
   await page.click('#btn-next');
-  await page.waitForTimeout(200);
   await page.click('#btn-prev');
-  await page.waitForTimeout(200);
   const titleBack = await page.locator('#track-title').textContent();
   expect(titleBack?.trim()).toBe(title1?.trim());
 });
