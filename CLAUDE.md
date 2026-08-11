@@ -7,8 +7,9 @@ Shared music player platform — the same player hosts multiple independent arch
 ### Frontend
 - **index.html** — Main web app; no build step, served from GitHub Pages or any static CDN
 - **js/ui.js** — All app logic: virtual grid, album/track rendering, playback, search/filter, acervo loading
+- **js/acervo-format.js** — `decodeAcervo()`: accepts the v1 or v2 payload, always returns the v1 shape. Loaded before `ui.js`, and also by `radio.html` / `3d.html`
 - **sw.js** / **manifest.json** — PWA: service worker (stale-while-revalidate for same-origin assets and `.json.gz` catalogs; never intercepts cdn.tocador.cc audio/covers so Range requests pass through) + installable app manifest
-- **assets/player.css** / **assets/uqt.css** — Styling
+- **assets/player.css** — Styling
 - **assets/capa.jpg** — SVG placeholder cover (data-URI embedded in `ui.js`)
 
 The app fetches the acervo `.json.gz` asynchronously on load, decompresses via native `DecompressionStream`, then renders into a virtual scrolling grid (~30 DOM nodes regardless of library size).
@@ -26,6 +27,7 @@ The app fetches the acervo `.json.gz` asynchronously on load, decompresses via n
 - **filter-albums-by-s3.js** — Removes albums from the JSON that have no matching S3 folder
 - **find-untagged.js** — Lists MP3s missing ID3 tags
 - **dedup-albums.js** — Detects duplicate albums by track fingerprint
+- **convert-acervo-v2.js** — Rewrites a published `.json.gz` from the v1 to the v2 columnar payload, verifying the round-trip before writing
 - **build-genre-index.js** — Reads `../hominiscanidae/data/genres.json`, majority-votes top-3 genre predictions per track → outputs `../hominiscanidae/data/homi-genres.json.gz` (~147 KB)
 
 ## Acervos
@@ -69,6 +71,42 @@ External acervos work too: `?acervo=https://example.com/my-archive.json.gz`
 `base_url + "/" + path + "/" + file` → audio URL  
 `base_url + "/" + path + "/capa-min.jpg"` → cover URL
 
+### v2 (columnar) payload
+
+Marked by a top-level `"v": 2`. Same data transposed into one array per field, with
+every album's tracks flattened into shared arrays and sliced apart via `a.n`:
+
+```json
+{
+  "meta": { "...": "unchanged" },
+  "v": 2,
+  "a": { "t": ["título"], "r": ["artista"], "y": [1975], "p": [""], "c": [1], "n": [12] },
+  "t": { "t": ["faixa"], "f": [""], "k": [1], "d": [214], "r": [""], "n": [0] }
+}
+```
+
+Three things are elided and rebuilt on decode:
+
+- `a.p` (path) — empty means it equals `"<year> - <artist> - <title>"`
+- `t.f` (file) — empty unless `t.k` is `0`; `1` means `"NN - <title>.mp3"`, `2` means `"NN <title>.mp3"`
+- `t.r` (track artist) — empty means "same as the album artist"
+
+**`t.n` = 0 means the source had no track number — not "sequential".** The player
+numbers un-numbered tracks by their position *after* deduplicating repeated titles,
+so materialising a number at decode time shifts every track that follows a
+duplicate (it hit 22 of 2306 uqt albums). `decodeAcervo()` leaves `num` absent for 0.
+
+Measured: **−37% raw bytes** to `JSON.parse` on both acervos; transfer −24% on uqt,
+−3% on homi (gzip already collapses repeated keys, so this is mostly a parse win —
+the transfer gain comes from artist-sorted album order, which pays off only when an
+archive has several albums per artist).
+
+`decodeAcervo()` in `js/acervo-format.js` reads both versions, so v1 files and
+third-party acervos keep working with no migration.
+
+**Deploy order matters**: publish the player before publishing a v2 catalog. A
+cached older `ui.js` cannot read v2 and will render an empty grid.
+
 ## Data Flow
 
 1. Browser loads `index.html` from GitHub Pages
@@ -101,7 +139,20 @@ bun script/build-genre-index.js
 
 Then commit and push in each repo (including `data/homi-genres.json.gz`). CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`, `--sitemap-url`, `--sitemap-out`) override config when passed.
 
+Add `--v2` to emit the columnar payload instead of v1. Publish the player first — see
+the deploy-order note under *v2 (columnar) payload*.
+
 Build first: `cd script/generate-albums && cargo build --release`
+
+### Migrating an existing acervo to v2
+
+Converts a published `.json.gz` in place, without needing the music volume mounted.
+Refuses to write unless the payload decodes back to exactly what went in:
+
+```bash
+bun script/convert-acervo-v2.js ../uqt/data/uqt-albums.json.gz
+bun script/convert-acervo-v2.js ../hominiscanidae/data/homi-albums.json.gz
+```
 
 ### Generating an acervo (JS — requires ffprobe)
 

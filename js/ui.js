@@ -1640,7 +1640,8 @@ document.addEventListener('DOMContentLoaded', async function () {
       ? decompressGzUrl(genresUrl).then(t => JSON.parse(t)).catch(() => null)
       : Promise.resolve(null),
   ]);
-  db = JSON.parse(json);
+  // Accepts both the v1 (row) and v2 (columnar) payloads; always yields v1 shape.
+  db = decodeAcervo(JSON.parse(json));
   genreData = genresRaw;
   genreLoading = false;
   BASE_URL = db.meta?.base_url || cfg.baseUrl || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
