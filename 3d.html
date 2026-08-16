@@ -654,12 +654,27 @@ function setStatus(msg) {
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 
+// Belt-and-suspenders: acervo-format.js is loaded classic (non-deferred, before
+// this module) specifically so decodeAcervo exists by the time it's needed, but
+// a flaky fetch or a stale cached shell can still leave it undefined.
+function ensureDecodeAcervo() {
+  if (typeof decodeAcervo === 'function') return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'js/acervo-format.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('failed to load js/acervo-format.js'));
+    document.head.appendChild(s);
+  });
+}
+
 async function loadAlbumData() {
   const res = await fetch(_dataUrl);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const ds = new DecompressionStream('gzip');
   const decompressed = res.body.pipeThrough(ds);
   const text = await new Response(decompressed).text();
+  await ensureDecodeAcervo();
   return decodeAcervo(JSON.parse(text));
 }
 
