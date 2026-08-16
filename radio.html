@@ -332,7 +332,12 @@
 
 <script>
 const REPORT_URL = 'https://cdn.tocador.cc/report-error';
-const IS_BOT = /bot|crawl|spider|headless|googleother|google-extended|read-aloud|inspectiontool|apis-google/i.test(navigator.userAgent);
+// navigator.webdriver catches automation frameworks (Puppeteer/Playwright/Selenium
+// defaults) directly; those account for most of the "not playable" noise here —
+// headless engines routinely lack a real media/codec backend, so audio.play()
+// throws MediaError 4 on every track regardless of the file, not because
+// anything is actually broken.
+const IS_BOT = navigator.webdriver || /bot|crawl|spider|headless|googleother|google-extended|read-aloud|inspectiontool|apis-google/i.test(navigator.userAgent);
 
 (function () {
   const seen = new Set();
@@ -345,6 +350,10 @@ const IS_BOT = /bot|crawl|spider|headless|googleother|google-extended|read-aloud
   }
   window.addEventListener('error', e => {
     const msg = e.message || String(e);
+    // Cross-origin scripts (loaded without CORS) report as bare "Script error."
+    // with no filename/lineno — that's third-party code (analytics, etc.), not ours.
+    if (msg === 'Script error.' && !e.filename) return;
+    if (e.filename && /umami/i.test(e.filename)) return; // third-party analytics
     const loc = e.filename ? ` @ ${e.filename.replace(/.*\//, '')}:${e.lineno}` : '';
     report(`[radio] JS error: ${msg}${loc}`, e.error?.stack || msg);
   });
@@ -649,6 +658,20 @@ coverImg.addEventListener('error', () => {
   coverImg.src = PLACEHOLDER;
 });
 
+// Belt-and-suspenders: acervo-format.js is loaded classic (non-deferred) above
+// specifically so decodeAcervo exists before this script runs, but a flaky
+// fetch or a stale cached shell can still leave it undefined.
+function ensureDecodeAcervo() {
+  if (typeof decodeAcervo === 'function') return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'js/acervo-format.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('failed to load js/acervo-format.js'));
+    document.head.appendChild(s);
+  });
+}
+
 async function load() {
   const params  = new URLSearchParams(location.search);
   acervoParam   = params.get('acervo') || 'homi';
@@ -658,6 +681,7 @@ async function load() {
 
   const ds   = new DecompressionStream('gzip');
   const blob = await new Response((await fetch(url)).body.pipeThrough(ds)).blob();
+  await ensureDecodeAcervo();
   const db   = decodeAcervo(JSON.parse(await blob.text()));
 
   BASE_URL      = db.meta?.base_url || entry?.base_url || '';

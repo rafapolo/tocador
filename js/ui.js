@@ -5,7 +5,7 @@
   let count = 0;
 
   function report(title, detail) {
-    if (count >= 3 || seen.has(title)) return;
+    if (navigator.webdriver || count >= 3 || seen.has(title)) return;
     seen.add(title);
     count++;
     const body = [
@@ -25,6 +25,10 @@
   window.addEventListener('error', e => {
     const msg = e.message || String(e);
     if (msg.includes('ResizeObserver')) return; // browser noise, not actionable
+    // Cross-origin scripts (loaded without CORS) report as bare "Script error."
+    // with no filename/lineno — that's third-party code (analytics, etc.), not ours.
+    if (msg === 'Script error.' && !e.filename) return;
+    if (e.filename && /umami/i.test(e.filename)) return; // third-party analytics
     const filename = e.filename ? e.filename.replace(/^https?:\/\/[^/]+\//, '').replace(/\?.*/, '') : '';
     const loc = filename ? ` @ ${filename}:${e.lineno}` : '';
     report(`[tocador] JS error: ${msg}${loc}`, e.error?.stack || msg);
@@ -51,6 +55,21 @@
 function trackedFetch(url, opts) {
   window.__lastFetchUrl = url;
   return fetch(url, opts);
+}
+
+// Defends against acervo-format.js failing to load before this script runs
+// (e.g. a flaky fetch, or a stale service-worker cache serving an old shell
+// that doesn't reference it) — both are loaded `defer`, so order alone isn't
+// enough if one of the two never arrives.
+function ensureDecodeAcervo() {
+  if (typeof decodeAcervo === 'function') return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'js/acervo-format.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('failed to load js/acervo-format.js'));
+    document.head.appendChild(s);
+  });
 }
 
 // State
@@ -1641,6 +1660,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       : Promise.resolve(null),
   ]);
   // Accepts both the v1 (row) and v2 (columnar) payloads; always yields v1 shape.
+  await ensureDecodeAcervo();
   db = decodeAcervo(JSON.parse(json));
   genreData = genresRaw;
   genreLoading = false;
