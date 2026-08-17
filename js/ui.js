@@ -3,9 +3,13 @@
   const REPORT_URL = 'https://cdn.tocador.cc/report-error';
   const seen = new Set();
   let count = 0;
+  // Real Chrome/Chromium patch numbers have never exceeded ~300; a randomized-UA
+  // bot generator was flooding /radio with spoofed UAs like "Chrome/56.0.4817.1447"
+  // — a 4-digit patch number that has never shipped. Same check, same source.
+  const HAS_FAKE_CHROME_VERSION = /Chrome\/\d+\.\d+\.\d+\.\d{4,}/.test(navigator.userAgent);
 
   function report(title, detail) {
-    if (navigator.webdriver || count >= 3 || seen.has(title)) return;
+    if (navigator.webdriver || HAS_FAKE_CHROME_VERSION || count >= 3 || seen.has(title)) return;
     seen.add(title);
     count++;
     const body = [

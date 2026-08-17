@@ -337,7 +337,12 @@ const REPORT_URL = 'https://cdn.tocador.cc/report-error';
 // headless engines routinely lack a real media/codec backend, so audio.play()
 // throws MediaError 4 on every track regardless of the file, not because
 // anything is actually broken.
-const IS_BOT = navigator.webdriver || /bot|crawl|spider|headless|googleother|google-extended|read-aloud|inspectiontool|apis-google/i.test(navigator.userAgent);
+// Real Chrome/Chromium patch numbers have never exceeded ~300; the flood of
+// false "not playable" reports (#546-#568) all carried spoofed UAs like
+// "Chrome/56.0.4817.1447" pairing an old device with a 4-digit patch number
+// that has never shipped — a randomized-UA generator, not a real browser.
+const HAS_FAKE_CHROME_VERSION = /Chrome\/\d+\.\d+\.\d+\.\d{4,}/.test(navigator.userAgent);
+const IS_BOT = navigator.webdriver || HAS_FAKE_CHROME_VERSION || /bot|crawl|spider|headless|googleother|google-extended|read-aloud|inspectiontool|apis-google/i.test(navigator.userAgent);
 
 (function () {
   const seen = new Set();
