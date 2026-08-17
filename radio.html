@@ -361,6 +361,7 @@ const IS_BOT = navigator.webdriver || /bot|crawl|spider|headless|googleother|goo
     const reason = e.reason;
     if (reason?.name === 'NotAllowedError') { e.preventDefault(); return; }
     const msg = reason?.message || String(reason);
+    if (/failed to fetch|network error|load failed/i.test(msg)) { e.preventDefault(); return; }
     report(`[radio] Unhandled rejection: ${msg}`, reason?.stack || new Error().stack || msg);
   });
 })();
