@@ -606,11 +606,24 @@ audio.addEventListener('waiting', () => setLoading(true));
 audio.addEventListener('stalled', () => setLoading(true));
 audio.addEventListener('canplay', () => { clearLoadTimer(); setLoading(false); });
 audio.addEventListener('ended',   next);
+const _retriedSrcs = new Set();
 audio.addEventListener('error',   () => {
   clearLoadTimer();
   setLoading(false);
   const failedSrc = curSrc || audio.src;
   const errCode = audio.error?.code ?? null;
+  // A lone failure is usually a transient network blip (dropped mobile
+  // connection, brief proxy/S3 hiccup) rather than a genuinely broken file —
+  // #569-577 were all different tracks/albums/browsers with nothing in
+  // common, and every reported file decodes cleanly when fetched directly.
+  // Retry the same track once with a fresh load() before writing it off.
+  if (failedSrc && curAlbum && curTrack && !_retriedSrcs.has(failedSrc)) {
+    _retriedSrcs.add(failedSrc);
+    const album = curAlbum, track = curTrack;
+    curSrc = '';
+    setTimeout(() => playTrack(album, track), 500);
+    return;
+  }
   // Only report the first error in a streak: once rate-limited or offline,
   // every subsequent random track fails too, and it's the same root cause,
   // not N distinct broken tracks — reporting all of them is just noise.
