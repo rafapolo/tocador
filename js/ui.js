@@ -1019,6 +1019,14 @@ function clearAllFilters() {
 }
 
 function selectBrowseItem(value, itemType) {
+  // filterAlbums() ANDs the search query with the browse selection, so a
+  // leftover query from before can hide the just-picked artist/genre's
+  // albums entirely. Clear it so the browse selection always shows results.
+  if (searchQuery) {
+    searchQuery = '';
+    if (_searchInput) _searchInput.value = '';
+    updateQueryInUrl('', false);
+  }
   if (browseTab === 'genres') {
     if (itemType === 'parent') {
       // Toggle expand/collapse; also toggle filter
