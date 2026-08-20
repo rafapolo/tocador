@@ -149,24 +149,6 @@ const corsBase = {
 };
 const corsHeaders = { ...corsBase, 'X-Content-Type-Options': 'nosniff' };
 
-// A failed stat() is a genuine 404 only when S3 actually answered. Connection
-// errors used to fall through to the same 404, which made an upstream outage
-// look like thousands of missing tracks: the player blamed each file, the
-// error reporter filed them, and the real fault stayed invisible. Default to
-// 503 and require proof of absence before saying Not Found.
-function statFailureResponse(err, method, path) {
-  const status = err?.status ?? err?.statusCode;
-  if (status === 404 || err?.code === 'NoSuchKey' || err?.name === 'NoSuchKey') {
-    markUpstreamOk();
-    counters.c4xx++;
-    return new Response('Not Found', { status: 404, headers: corsBase });
-  }
-  markUpstreamFail();
-  counters.c5xx++;
-  console.error(`[503] ${method} ${path}: upstream unreachable: ${err?.message ?? err}`);
-  return new Response('Service Unavailable', { status: 503, headers: { ...corsBase, 'Retry-After': '10' } });
-}
-
 // Single-hop 301 to the canonical domain, with CORS so a redirected fetch() still works
 function redirect301(location) {
   return new Response(null, { status: 301, headers: { ...corsBase, Location: location, 'Cache-Control': 'public, max-age=3600' } });
@@ -616,23 +598,15 @@ _server = Bun.serve({
       }
 
       const file = s3.file(s3Key, { bucket });
-      let stat; // reusable
 
-      if (isHead) {
-        // §9 — HEAD: one S3 stat call, return headers only
-        try {
-          stat = await file.stat();
-        } catch (err) {
-          return statFailureResponse(err, 'HEAD', path);
-        }
-        status = 200; body = null;
-        extra = {
-          'Content-Length': String(stat.size),
-          'Accept-Ranges': 'bytes',
-          'ETag': stat.etag,
-          'Last-Modified': stat.lastModified?.toUTCString(),
-        };
-      } else if (rangeHeader) {
+      // HEAD and full (non-Range) GETs go through the manually-signed path,
+      // same as open-ended ranges below — Bun.S3Client's .stat() call started
+      // failing outright against this endpoint (2026-08-20 incident: covers
+      // and HEAD requests down while ranged slice().stream() kept working),
+      // so only the stat-dependent branches route around it.
+      if (isHead) return await signedPassthrough(bucket, path, null, true);
+
+      if (rangeHeader) {
         const m = RANGE_RE.exec(rangeHeader);
         const start = Number(m[1]);
         const endStr = m[2];
@@ -651,19 +625,7 @@ _server = Bun.serve({
           return await signedPassthrough(bucket, path, rangeHeader, false);
         }
       } else {
-        // Full GET: stat for Content-Length so browser can show scrubber and seek
-        try {
-          stat = await file.stat();
-        } catch (err) {
-          return statFailureResponse(err, 'GET', path);
-        }
-        status = 200; body = file.stream();
-        extra = {
-          'Content-Length': String(stat.size),
-          'Accept-Ranges': 'bytes',
-          'ETag': stat.etag,
-          'Last-Modified': stat.lastModified?.toUTCString(),
-        };
+        return await signedPassthrough(bucket, path, null, false);
       }
 
       const headers = {
