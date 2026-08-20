@@ -1,0 +1,62 @@
+name: CDN Health Monitor
+
+# /health alone can't be trusted (see deploy-proxy.yml) — this hits a real
+# file through the proxy every 30 min. On failure it kicks off a redeploy
+# (fixes the case where credentials went stale) and files/updates a tracking
+# issue so a broken CDN can't sit unnoticed for days again, as it did on
+# 2026-08-11..2026-08-20.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  actions: write
+
+env:
+  SMOKE_URL: "https://cdn.tocador.cc/indie/Aldan%20Voce%20Ja%20Roubou%20Hoje/aldan-voce-ja-roubou-hoje-2010.mp3"
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Real fetch through the proxy
+        id: probe
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" "$SMOKE_URL")
+          echo "status: $code"
+          if [ "$code" = "206" ] || [ "$code" = "200" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "code=$code" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Recovery — close any open outage issue
+        if: steps.probe.outputs.ok == 'true'
+        run: |
+          issue=$(gh issue list --repo "$GITHUB_REPOSITORY" --label cdn-outage --state open --json number -q '.[0].number')
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body "CDN is serving real audio again as of $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+            gh issue close "$issue" --repo "$GITHUB_REPOSITORY"
+          fi
+
+      - name: Outage — file/update issue and try one redeploy
+        if: steps.probe.outputs.ok == 'false'
+        run: |
+          issue=$(gh issue list --repo "$GITHUB_REPOSITORY" --label cdn-outage --state open --json number -q '.[0].number')
+          if [ -z "$issue" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "cdn.tocador.cc failing real audio fetches" \
+              --label cdn-outage \
+              --body "Smoke test got HTTP ${{ steps.probe.outputs.code }} fetching a real file through the proxy at $(date -u +%Y-%m-%dT%H:%M:%SZ). Triggering an automatic redeploy now. If this issue reopens/stays open after that, the credentials or S3 endpoint likely need a manual look — see the 2026-08-20 incident for the failure modes already ruled out (stale AWS keys, quoted S3_ENDPOINT/S3_BUCKET secrets)."
+            gh workflow run deploy-proxy.yml --repo "$GITHUB_REPOSITORY"
+          else
+            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" \
+              --body "Still failing (HTTP ${{ steps.probe.outputs.code }}) as of $(date -u +%Y-%m-%dT%H:%M:%SZ). Not re-triggering a redeploy automatically — this needs manual investigation."
+          fi

@@ -42,3 +42,22 @@ jobs:
           # resolved to the ephemeral Actions token — revoked at job end, which
           # left /report-error baked with a dead credential in production.
           GITHUB_TOKEN: ${{ secrets.ISSUE_REPORT_TOKEN }}
+
+      # /health can report 200 right after a fresh deploy even with dead S3
+      # creds — its upstream-fail counter starts at zero until real traffic
+      # hits S3. Only an actual object fetch proves the backend can serve
+      # audio. (Caught a bad S3_ENDPOINT secret this way on 2026-08-20 that a
+      # clean health check had missed.) Retried: the S3 connection pool is
+      # cold for ~1-2 min right after a restart and can 503 briefly even when
+      # everything is actually configured correctly.
+      - name: Smoke test — real S3 fetch through the proxy
+        run: |
+          url="https://cdn.tocador.cc/indie/Aldan%20Voce%20Ja%20Roubou%20Hoje/aldan-voce-ja-roubou-hoje-2010.mp3"
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" "$url")
+            echo "attempt $attempt: $code"
+            [ "$code" = "206" ] || [ "$code" = "200" ] && exit 0
+            sleep 15
+          done
+          echo "::error::Smoke test failed — proxy is not serving real audio after 6 attempts"
+          exit 1
