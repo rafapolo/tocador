@@ -1,4 +1,8 @@
-FROM oven/bun:1-alpine
+# Pinned, not floating (oven/bun:1-alpine) — a silent Bun patch bump broke
+# Bun.S3Client's .stat() call against the Hetzner S3 endpoint on 2026-08-20,
+# taking down covers and HEAD requests for hours before anyone traced it here.
+# Bump deliberately, and re-run tests/cdn.spec.js's real-fetch checks after.
+FROM oven/bun:1.4.0-alpine
 
 RUN apk add --no-cache nginx
 
