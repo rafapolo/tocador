@@ -30,6 +30,30 @@ jobs:
       - name: Install haloy
         run: bun add -g haloy@0.1.0-beta.39
 
+      # gh secret set stores the value verbatim — unlike shell-sourcing .env,
+      # it does not strip surrounding quotes. A value copied from a quoted
+      # .env line (S3_ENDPOINT="https://...") ships the quote characters
+      # straight into the container and breaks S3 auth/endpoint parsing.
+      # Bit this repo three times on 2026-08-20 before being caught here.
+      - name: Validate secrets aren't quote-wrapped
+        run: |
+          fail=0
+          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY S3_ENDPOINT S3_BUCKET; do
+            value="${!name}"
+            first="${value:0:1}"
+            last="${value: -1}"
+            if [ "$first" = '"' ] || [ "$last" = '"' ] || [ "$first" = "'" ] || [ "$last" = "'" ]; then
+              echo "::error::$name is wrapped in quote characters — gh secret set doesn't strip them the way shell-sourcing .env does. Fix: gh secret set $name --body \"\$(grep '^$name=' .env | cut -d= -f2- | tr -d '\\\"')\""
+              fail=1
+            fi
+          done
+          exit $fail
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+
       - name: Deploy proxy to haloy
         run: haloy deploy
         env:
