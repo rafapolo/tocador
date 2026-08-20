@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://tocador.cc/</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -1141,6 +1141,10 @@
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/A%20Banda%20dos%20Cora%C3%A7%C3%B5es%20Partidos%20-%20Borrada%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Borrada — A Banda dos Corações Partidos (2026)</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Afreekassia+-+Cacau+50%25+%2C+Vol.2+%282026%29&amp;artista=Afreekassia</loc>
@@ -1236,6 +1240,42 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/arthur%20victor%20-%20V%20%282026%29/capa-min.jpg</image:loc>
       <image:title>V — arthur victor (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Artur+Miranda+-+Minha+Cidade+Deixa+de+Existir+%282026%29&amp;artista=Artur+Miranda</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Artur%20Miranda%20-%20Minha%20Cidade%20Deixa%20de%20Existir%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Minha Cidade Deixa de Existir — Artur Miranda (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=As+Beattas+-+Pro+Inferno+com+As+Beattas+%282026%29&amp;artista=As+Beattas</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/As%20Beattas%20-%20Pro%20Inferno%20com%20As%20Beattas%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Pro Inferno com As Beattas — As Beattas (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Asabove+%26+Soubelou+-+XUNCHADA+CYBERNETICA+vol.+1+%282026%29&amp;artista=Asabove+%26+Soubelou</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Aslan+-+Meu+Canto+%282026%29&amp;artista=Aslan</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Aslan%20-%20Meu%20Canto%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Meu Canto — Aslan (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1349,6 +1389,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Cantavento+-+Quintais+de+Dentro+%282026%29&amp;artista=Cantavento</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Cantavento%20-%20Quintais%20de%20Dentro%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Quintais de Dentro — Cantavento (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Cassiel+-+ON+%282026%29&amp;artista=Cassiel</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -1366,6 +1416,16 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/Catarina%20Zenaro%20-%20I%20Want%20The%20Love%20I%20See%20In%20Movies%20%282026%29/capa-min.jpg</image:loc>
       <image:title>I Want The Love I See In Movies — Catarina Zenaro (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=cement-tea-oily-sound-2026&amp;artista=Cement+Tea</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/cement-tea-oily-sound-2026/capa-min.jpg</image:loc>
+      <image:title>cement-tea-oily-sound-2026 — Cement Tea (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1396,6 +1456,16 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/Clau%20Aniz%20-%20M%C3%A1cula%20%282026%29/capa-min.jpg</image:loc>
       <image:title>Mácula — Clau Aniz (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Clayton+Barros+-+Primitivo+Atemporal+%282026%29&amp;artista=Clayton+Barros</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Clayton%20Barros%20-%20Primitivo%20Atemporal%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Primitivo Atemporal — Clayton Barros (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1439,10 +1509,40 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=dennis-e-o-cao-da-meia-noite-nao-deixe&amp;artista=Dennis+e+o+C%C3%A3o+da+Meia-Noite</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/dennis-e-o-cao-da-meia-noite-nao-deixe/capa-min.jpg</image:loc>
+      <image:title>dennis-e-o-cao-da-meia-noite-nao-deixe — Dennis e o Cão da Meia-Noite (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Desejo+Terr%C3%ADvel+-+Neurose+do+Momento+%282026%29&amp;artista=Desejo+Terr%C3%ADvel</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Desejo%20Terr%C3%ADvel%20-%20Neurose%20do%20Momento%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Neurose do Momento — Desejo Terrível (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Diego+Max+-+O+despertar+espiritual+de+Gilgamesh+%282026%29&amp;artista=Diego+Max</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Drama+em+Crise+-+Perversidade+Polim%C3%B3rfica+%282026%29&amp;artista=Drama+em+Crise</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Drama%20em%20Crise%20-%20Perversidade%20Polim%C3%B3rfica%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Perversidade Polimórfica — Drama em Crise (2026)</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Duo+Violeta+-+Mar+Pequeno+%282026%29&amp;artista=Duo+Violeta</loc>
@@ -1462,6 +1562,16 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/Edssada%20-%20Observat%C3%B3rio%20das%20Micro%20Belezas%20II%20%282026%29/capa-min.jpg</image:loc>
       <image:title>Observatório das Micro Belezas II — Edssada (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Eu+Jonatha+Mermo+-+sdd+strd+%282026%29&amp;artista=Eu+Jonatha+Mermo</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Eu%20Jonatha%20Mermo%20-%20sdd%20strd%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>sdd strd — Eu Jonatha Mermo (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1502,6 +1612,36 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/Felipe%20Antunes%20-%20Dan%C3%A7a%20do%20Universo%20%282026%29/capa-min.jpg</image:loc>
       <image:title>Dança do Universo — Felipe Antunes (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Fizeram+A+Elza+-+Cortejo+%282026%29&amp;artista=Fizeram+A+Elza</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Fizeram%20A%20Elza%20-%20Cortejo%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Cortejo — Fizeram A Elza (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Gabriel+Gorini+-+Ru%C3%ADnas+da+Nova+Roma+%28Trovazinhas%29+%282026%29&amp;artista=Gabriel+Gorini</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Gabriel%20Gorini%20-%20Ru%C3%ADnas%20da%20Nova%20Roma%20%28Trovazinhas%29%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Ruínas da Nova Roma (Trovazinhas) — Gabriel Gorini (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Georgez+-+ALUNO+%282026%29&amp;artista=Georgez</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Georgez%20-%20ALUNO%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>ALUNO — Georgez (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1565,6 +1705,16 @@
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Horney+-+Anti-Raso+%282026%29&amp;artista=Horney</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Horney%20-%20Anti-Raso%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Anti-Raso — Horney (2026)</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Igor+Fuchs+-+Inconveniente+%282026%29&amp;artista=Igor+Fuchs</loc>
@@ -1637,6 +1787,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=J%C3%BAlio+Ferraz+-+Transe+Solst%C3%ADcio+%282026%29&amp;artista=J%C3%BAlio+Ferraz</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/J%C3%BAlio%20Ferraz%20-%20Transe%20Solst%C3%ADcio%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Transe Solstício — Júlio Ferraz (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Kartas+-+LADO+H+%282026%29&amp;artista=Kartas</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -1667,6 +1827,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Larva+Serrote+-+A+Glimpse+of+Eternity+Through+the+Window+of+Time+%282026%29&amp;artista=Larva+Serrote</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Larva%20Serrote%20-%20A%20Glimpse%20of%20Eternity%20Through%20the%20Window%20of%20Time%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>A Glimpse of Eternity Through the Window of Time — Larva Serrote (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Lauiz+-+comece+por+aqui+%282026%29&amp;artista=Lauiz</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -1677,6 +1847,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Leandro+Serizo+-+SOL+QUIM%C3%89RICO+%282026%29&amp;artista=Leandro+Serizo</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Leandro%20Serizo%20-%20SOL%20QUIM%C3%89RICO%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>SOL QUIMÉRICO — Leandro Serizo (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=LEELEE+-+Despertar+%282026%29&amp;artista=LEELEE</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -1684,6 +1864,16 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/LEELEE%20-%20Despertar%20%282026%29/capa-min.jpg</image:loc>
       <image:title>Despertar — LEELEE (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Leffs+-+ATRAVESSADA+%282026%29&amp;artista=Leffs</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Leffs%20-%20ATRAVESSADA%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>ATRAVESSADA — Leffs (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1704,6 +1894,16 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/Louise%20-%20Not%C3%ADvaga%20%282026%29/capa-min.jpg</image:loc>
       <image:title>Notívaga — Louise (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Luana+Flores+-+Cria+do+Sol+Quente+%282026%29&amp;artista=Luana+Flores</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Luana%20Flores%20-%20Cria%20do%20Sol%20Quente%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Cria do Sol Quente — Luana Flores (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1839,6 +2039,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Nil+Tavares+-+Pelos+Outonos+da+Alma+%282026%29&amp;artista=Nil+Tavares</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Nil%20Tavares%20-%20Pelos%20Outonos%20da%20Alma%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Pelos Outonos da Alma — Nil Tavares (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Nilson+Chaves+-+Amaz%C3%B4nico+Brasileiro+%282026%29&amp;artista=Nilson+Chaves</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -1846,6 +2056,16 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/Nilson%20Chaves%20-%20Amaz%C3%B4nico%20Brasileiro%20%282026%29/capa-min.jpg</image:loc>
       <image:title>Amazônico Brasileiro — Nilson Chaves (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=o+espa%C3%A7o+%C3%A9+um+lugar+frio+e+vazio+-+Por+enquanto%2C+%C3%A9+isso+%282026%29&amp;artista=o+espa%C3%A7o+%C3%A9+um+lugar+frio+e+vazio</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/o%20espa%C3%A7o%20%C3%A9%20um%20lugar%20frio%20e%20vazio%20-%20Por%20enquanto%2C%20%C3%A9%20isso%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Por enquanto, é isso — o espaço é um lugar frio e vazio (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1879,6 +2099,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Oblomov+-+Quest%C3%A3o+de+Fogo+%282026%29&amp;artista=Oblomov</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Oblomov%20-%20Quest%C3%A3o%20de%20Fogo%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Questão de Fogo — Oblomov (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Outros+B%C3%A1rbaros+-+Pelas+Ruas+das+Am%C3%A9ricas+%282026%29&amp;artista=Outros+Ba%CC%81rbaros</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -1886,6 +2116,16 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/Outros%20B%C3%A1rbaros%20-%20Pelas%20Ruas%20das%20Am%C3%A9ricas%20%282026%29/capa-min.jpg</image:loc>
       <image:title>Pelas Ruas das Américas — Outros Bárbaros (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Paulete+Lindacelva+-+Filha+de+Abya+Yala+Herdeira+de+Kemet+%282026%29&amp;artista=Paulete+Lindacelva</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Paulete%20Lindacelva%20-%20Filha%20de%20Abya%20Yala%20Herdeira%20de%20Kemet%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Filha de Abya Yala Herdeira de Kemet — Paulete Lindacelva (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -1995,6 +2235,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Saci+W%C3%A8r%C3%A8+-+Pra+Ninar+o+Fim+do+Mundo+%282026%29&amp;artista=Saci+W%C3%A8r%C3%A8</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Saci%20W%C3%A8r%C3%A8%20-%20Pra%20Ninar%20o%20Fim%20do%20Mundo%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Pra Ninar o Fim do Mundo — Saci Wèrè (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Saga+Hc+-+Grito+da+Perifer%C3%ADa+%282026%29&amp;artista=Saga+Hc</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -2005,6 +2255,26 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Samucapta+-+SAMUCAPTA+%282026%29&amp;artista=Samucapta</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Samucapta%20-%20SAMUCAPTA%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>SAMUCAPTA — Samucapta (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Samuel+Amaro+-+M%C3%BAsicas+Surpreendentemente+Comuns%2C+Melanc%C3%B3licas+e+Feitas+Para+Dormir+%282026%29&amp;artista=Samuel+Amaro</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Samuel%20Amaro%20-%20M%C3%BAsicas%20Surpreendentemente%20Comuns%2C%20Melanc%C3%B3licas%20e%20Feitas%20Para%20Dormir%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Músicas Surpreendentemente Comuns, Melancólicas e Feitas Para Dormir — Samuel Amaro (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Schlop+-+cachorros+e+madames+no+fim+do+mundo+%282026%29&amp;artista=Schlop</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -2012,6 +2282,16 @@
     <image:image>
       <image:loc>https://cdn.tocador.cc/indie/Schlop%20-%20cachorros%20e%20madames%20no%20fim%20do%20mundo%20%282026%29/capa-min.jpg</image:loc>
       <image:title>cachorros e madames no fim do mundo — Schlop (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Scrambled+Heads+-+Inward%2C+Then+Apart+%282026%29&amp;artista=Scrambled+Heads</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Scrambled%20Heads%20-%20Inward%2C%20Then%20Apart%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Inward, Then Apart — Scrambled Heads (2026)</image:title>
     </image:image>
   </url>
   <url>
@@ -2113,10 +2393,34 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Trash+No+Star+-+Existir+%C3%A9+Resistir+%282026%29&amp;artista=Trash+No+Star</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Trash%20No%20Star%20-%20Existir%20%C3%A9%20Resistir%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Existir é Resistir — Trash No Star (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=ttor%C3%B3+-+ISCA+EP+%282026%29&amp;artista=ttor%C3%B3</loc>
+    <lastmod>2026-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/ttor%C3%B3%20-%20ISCA%20EP%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>ISCA EP — ttoró (2026)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Tuer+Lapin+-+Ao+Vivo+no+DF+202407060809+%282026%29&amp;artista=Tuer+Lapin</loc>
     <lastmod>2026-01-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/Tuer%20Lapin%20-%20Ao%20Vivo%20no%20DF%20202407060809%20%282026%29/capa-min.jpg</image:loc>
+      <image:title>Ao Vivo no DF 202407060809 — Tuer Lapin (2026)</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://tocador.cc/?album=ultraluna-dez-anos-ao-vivo-2026&amp;artista=Ultraluna</loc>
@@ -7019,6 +7323,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=NEXUS+DOWN+-+L%27onda+di+terrore+%282025%29&amp;artista=NEXUS+DOWN</loc>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://cdn.tocador.cc/indie/NEXUS%20DOWN%20-%20L%27onda%20di%20terrore%20%282025%29/capa-min.jpg</image:loc>
+      <image:title>L'onda di terrore — NEXUS DOWN (2025)</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Nosso+Querido+Figueiredo+Nos+Tambem+Nao&amp;artista=Nosso+Querido+Figueiredo</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -10883,18 +11197,6 @@
       <image:loc>https://cdn.tocador.cc/indie/2024%20-%20Z%C3%A9%20Nigro%20Arthur%20Verocai%20-%20Sil%C3%AAncio/capa-min.jpg</image:loc>
       <image:title>Silêncio — Zé Nigro Arthur Verocai (2024)</image:title>
     </image:image>
-  </url>
-  <url>
-    <loc>https://tocador.cc/?album=Irmaos+Panarotto+2violao+E+1balde&amp;artista=Irm%C3%A3os+Panarotto</loc>
-    <lastmod>2024-01-01</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://tocador.cc/?album=Obasquiat+Perturssis&amp;artista=Obasquiat+Big+Bend</loc>
-    <lastmod>2024-01-01</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Santa+Harpia+-+Harpia%27s+Blessing+%282024%29&amp;artista=Santa+Harpia</loc>
@@ -29815,6 +30117,12 @@
       <image:loc>https://cdn.tocador.cc/indie/2020%20-%20O%20Hipertr%C3%B3pico%20-%20Hipertr%C3%B3pico/capa-min.jpg</image:loc>
       <image:title>Hipertrópico — O Hipertrópico (2020)</image:title>
     </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=2020+-+O+Homem+Que+Tinha+Uma+Sacola+Plastica</loc>
+    <lastmod>2020-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=2020+-+O+Janus%2C+Victor+Souza%2C+Heber+Lemos+-+A+Utopia+Modular+no+Universo+de+Janus&amp;artista=O+Janus%3B+Victor+Souza%3B+Heber+Lemos</loc>
@@ -54259,12 +54567,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://tocador.cc/?album=Cadu+Tenorio+19871990&amp;artista=VICTIM%21</loc>
-    <lastmod>2015-01-01</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://tocador.cc/?album=Cidad%C3%A3o+Instigado+-+Fortaleza+%282015%29&amp;artista=Cidada%CC%83o+Instigado</loc>
     <lastmod>2015-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -54282,6 +54584,12 @@
   </url>
   <url>
     <loc>https://tocador.cc/?album=Karaoke+Holanda+Lopana+Lynch+Ep&amp;artista=Karaok%C3%AA+Holanda</loc>
+    <lastmod>2015-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Obasquiat+Perturssis&amp;artista=Obasquiat</loc>
     <lastmod>2015-01-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.7</priority>
@@ -58789,6 +59097,12 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=2013+-+Farmacopeia+Creezo+E+Doppelgangers</loc>
+    <lastmod>2013-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=2013+-+fear-of-unknown-fear-of-unknown-ep-2013&amp;artista=fear</loc>
     <lastmod>2013-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -59977,6 +60291,12 @@
       <image:loc>https://cdn.tocador.cc/indie/2013%20-%20ordinaria-hit-320-2013/capa-min.jpg</image:loc>
       <image:title>hit-320-2013 — ordinaria (2013)</image:title>
     </image:image>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=2013+-+Orgasmo+De+Porco+E+Violent+Illusion</loc>
+    <lastmod>2013-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=2013+-+Orlando+Scarpa+Neto+-+Cinco+Pe%C3%A7as+Com+Temas+Sobrepostos&amp;artista=Orlando+Scarpa+Neto</loc>
@@ -61309,7 +61629,19 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Cadu+Tenorio+19871990&amp;artista=VICTIM%21</loc>
+    <lastmod>2013-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Ismael+Lev&amp;artista=Ismael</loc>
+    <lastmod>2013-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tocador.cc/?album=Nino+Navarro+Guanabara+City&amp;artista=Nino+Navarro</loc>
     <lastmod>2013-01-01</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.7</priority>
@@ -64763,6 +65095,12 @@
     </image:image>
   </url>
   <url>
+    <loc>https://tocador.cc/?album=Irmaos+Panarotto+2violao+E+1balde&amp;artista=Irm%C3%A3os+Panarotto</loc>
+    <lastmod>2004-01-01</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://tocador.cc/?album=Preto+Velho+Discografia+Completa+Ou&amp;artista=Preto+Velho+%28RIP+2001-2003%29</loc>
     <lastmod>2004-01-01</lastmod>
     <changefreq>yearly</changefreq>
@@ -65830,115 +66168,115 @@
   </url>
   <url>
     <loc>https://tocador.cc/?album=Aldan+Voce+Ja+Roubou+Hoje</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Baladeur+Baladeur</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Cadu+Tenorio+Rimming+Compilation</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Caim+Celebracoes+Insurgentes</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Castelan+Recycle</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Cattleys+Gardener+Cinza</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Champu+Demo+Ep</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Chapa+Mamba+St</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Chicocorrea+Sequencers+001</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Cloud+Whale+Center+Square+Ep</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Coletanea+Diarios+Emocionais+Vl+2</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Coletanea+Fall+From+Stars</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Coletanea+Gran+Noise+Family</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Dedo+Ao+Vivo+Quintavant+Audio+Rebel</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Eu+Voce+E+Manga+Musica+Desenhada+Ep</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Evil+Matchers+Pre+Release+Ep</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Fabio+Cardelli+Palavra+Dos+Olhos</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Farmacopeia+Suicidio</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=farol-cego-do-desespero-eu-fiz&amp;artista=Farol+Cego</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
     <image:image>
@@ -65948,223 +66286,217 @@
   </url>
   <url>
     <loc>https://tocador.cc/?album=Ferias+Da+Desgraca+Episodio+01</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Ferias+Da+Desgraca+Episodio+02+Joao</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Ferias+Da+Desgraca+Episodio+02+Natal+Rn</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Ferias+Da+Desgraca+Episodio+04+Recife+Pe</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Ferias+Da+Desgraca+Episodio+05+Maceio+Al</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Ferias+Da+Desgraca+Episodio+06+Sao</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Gringos+Da+Semana+Mais+Um+Passeio+Pelo</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=GRINGOS+DE+JULHO+-+mais+um+passeio+musical+pelo+mundo+com+o+que+h%C3%A1+de+mais+novo+e+estranho</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=GRINGOS+DE+JUNHO+-+v%C3%A1rios+lan%C3%A7amentos+recentes+de+9+pa%C3%ADses+do+mundo+pra+voc%C3%AAs+conhecerem+e+se+apaixonarem</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=GRINGOS+DE+MAIO+-+nova+leva+de+sons+gringos+e+experimentais+bem+loucos+e+com+direito+a+invas%C3%A3o+italiana</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Gryner+Jardim+Sementes+Musicais+Para+Um</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Hc+Entrevista+Dante+Augusto+Rn+Fala</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Inputoutput+Eu+Contenho+Todos+Os+Meus</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Jair+Naves+Ao+Vivo+Estudio+Show+Livre</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Jonatas+Onofre+Aparicion</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Kaly+E+Os+Hospedes+Do+Chelsea+Porres</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Kapitalistik+Deth+St</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Lambs+Immolation</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Marcio+Teixeira+De+Mello+Ja+Ha+Lindos</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Moliere+Vida+E+Muito+Curta+Pro+Cafe+Da</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Munoz+Smokestack</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Nao+Nao+Eu+Remix</loc>
-    <lastmod>2026-08-01</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://tocador.cc/?album=Nino+Navarro+Guanabara+City</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Plumarino+Random+Access+Ep</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Plutao+Ja+Foi+Um+Planeta+Daqui+Pra+La</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Pools+Of+Happiness+Price+Of+Dreams</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Pumu+Ainda+Nao+Esta+Claro</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Rafael+Miranda+Carpindo+Ep</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Reverendo+T+Os+Discipulos+Descrentes</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Sila+Crvs+Aoa</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Sila+Crvs+Aoa+Bardo+Ep</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Supra+Vida+Secular+Ritmada+Eloquencia</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Treli+Feli+Repifarmacopeia+Split+De</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Verjaut+Geographic+Misanthropy</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Victor+Cardoso+Contraste</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Vida+De+Cacador+Ep</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://tocador.cc/?album=Zenicola+Miazzo+Spit</loc>
-    <lastmod>2026-08-01</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
