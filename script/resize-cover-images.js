@@ -12,6 +12,7 @@ const path = require('path');
 const zlib = require('zlib');
 const sharp = require('sharp');
 const { S3Client, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
+require('../js/acervo-format.js');
 
 const S3_REGION = 'hel1';
 const TARGET_WIDTH = 200;
@@ -43,7 +44,7 @@ function loadEnv(file = '.env') {
 function loadAlbums(dataFile) {
   const buf = fs.readFileSync(dataFile);
   const json = zlib.gunzipSync(buf).toString('utf8');
-  return JSON.parse(json).albums;
+  return decodeAcervo(JSON.parse(json)).albums;
 }
 
 function findCover(albumDir) {
