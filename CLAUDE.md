@@ -180,8 +180,18 @@ curl -I http://localhost:9001/health
 
 ### Deploying
 
+Automatic: pushing to `main` with changes to `proxy.js`, `package*.json`, `Dockerfile`,
+or `haloy.yaml` triggers `.github/workflows/deploy-proxy.yml`, which runs `haloy deploy`
+using GitHub-stored secrets and then gates on a real audio fetch through the proxy
+(`/health` alone can't be trusted — see Troubleshooting) before calling the run green.
+A separate scheduled workflow, `.github/workflows/cdn-health-monitor.yml`, re-checks
+every 30 minutes and auto-triggers one redeploy plus a tracking GitHub issue if the CDN
+is failing real fetches.
+
+Manual (break-glass fallback only — normal deploys should go through the push above):
+
 ```bash
-haloy deploy   # requires HALOY_API_TOKEN; deploys to cdn.tocador.cc
+set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in .env
 ```
 
 ## Key Technical Notes
@@ -205,3 +215,29 @@ haloy deploy   # requires HALOY_API_TOKEN; deploys to cdn.tocador.cc
 **App shows no albums**: Check browser console for fetch errors on the `.json.gz` URL. Verify the file is valid gzip.
 
 **Proxy not routing via haloy**: Verify `HALOY_API_TOKEN` with `haloy status`.
+
+**Nothing plays / covers don't load (cdn.tocador.cc 502 or 503)**: `haloy status` showing
+`Running` does not mean the proxy can reach S3 — `/health` only flips unhealthy after 5
+consecutive upstream failures (`UPSTREAM_FAIL_THRESHOLD` in `proxy.js`), and a fresh
+deploy starts that counter at zero, so a bad credential can pass CI's health check and
+only surface once real traffic hits it. Verify with a real fetch, not `/health`:
+
+```bash
+curl -sI -H "Range: bytes=0-1000" "https://cdn.tocador.cc/indie/<album>/<track>.mp3"
+```
+
+If that 502s/503s: redeploy (`git push` touching `proxy.js`, or the manual fallback
+above) to pick up current secrets. If it still fails after a redeploy, suspect the
+secrets themselves — check `gh secret list` timestamps against `.env`'s, and note that
+`gh secret set` does **not** strip quotes the way shell-sourcing `.env` does: a value
+copied as `S3_ENDPOINT="https://..."` (or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`,
+`S3_BUCKET` — any of the four) literally includes the quote characters as a GitHub
+secret. A quoted `S3_ENDPOINT`/`S3_BUCKET` crashes `Bun.S3Client` at startup; a quoted
+AWS key/secret is subtler — `Bun.S3Client`'s own signing tolerates the extra quote
+characters, so ranged audio *seeking* (`file.slice().stream()`) keeps working, but the
+hand-rolled `signedPassthrough()` signer in `proxy.js` does not, so first-play audio,
+HEAD checks, and covers all 403 while playback-after-seek looks fine — easy to
+mininterpret as a code regression rather than a credential problem (happened
+2026-08-20). `deploy-proxy.yml` now fails fast on any quote-wrapped secret before
+deploying, so this should surface as a red CI run instead of a live outage — but if you
+still need to fix one by hand: `gh secret set S3_ENDPOINT --body "$(grep '^S3_ENDPOINT=' .env | cut -d= -f2- | tr -d '"')"`.
