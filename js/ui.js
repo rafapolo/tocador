@@ -324,7 +324,10 @@ function updateMetaTags(album) {
 }
 
 function formatTime(seconds) {
-  if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '0:00';
+  // Upper bound guards against a huge-but-finite value (e.g. a browser clamping a
+  // seek to Infinity down to ~Number.MAX_VALUE) slipping past the isFinite check and
+  // rendering as a bizarre "2.99e+306:08"-style string instead of a real duration.
+  if (!seconds || isNaN(seconds) || !isFinite(seconds) || seconds > 1e7) return '0:00';
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -1157,10 +1160,10 @@ function applyArchiveMeta() {
   }
   const displayTitle = title !== 'Tocador' ? `Tocador ♪ ${title}` : 'Tocador';
   document.title = displayTitle;
-  const titleEl = document.getElementById('app-title');
+  const titleAcervoEl = document.getElementById('app-title-acervo');
   const subtitleEl = document.getElementById('app-subtitle');
   const hoursEl = document.getElementById('stat-hours');
-  if (titleEl) titleEl.textContent = displayTitle;
+  if (titleAcervoEl) titleAcervoEl.textContent = title !== 'Tocador' ? ` ♪ ${title}` : '';
   if (subtitleEl) subtitleEl.textContent = subtitle;
   if (hoursEl) hoursEl.textContent = hours ? `${hours} horas` : '';
 }
@@ -1867,6 +1870,10 @@ document.addEventListener('DOMContentLoaded', async function () {
   // those on the integer-second boundary to skip the per-tick text writes and DOM query.
   let _lastWholeSecond = -1;
   audio.addEventListener('timeupdate', () => {
+    // 'stalled'/'waiting' can fire mid-playback without a matching 'canplay'/'playing'
+    // to clear them (readyState never actually drops), leaving the spinner stuck even
+    // though audio is audibly advancing — timeupdate only fires while it truly is.
+    if (!audio.paused) setLoading(false);
     const percent = (audio.currentTime / audio.duration) * 100 || 0;
     progressFill.style.width = percent + '%';
     mainProgressBar.classList.toggle('has-progress', percent > 0);
@@ -2050,8 +2057,12 @@ document.addEventListener('DOMContentLoaded', async function () {
   });
 
   function seekFromClient(clientX, barEl) {
-    if (!audio.duration) return;
+    // audio.duration can be Infinity (unknown-length stream) or the bar can have zero
+    // width if it seeked before layout — both slip past a bare `!audio.duration` check
+    // and multiply out to a bogus, effectively-infinite currentTime.
+    if (!isFinite(audio.duration) || audio.duration <= 0) return;
     const rect = barEl.getBoundingClientRect();
+    if (!rect.width) return;
     audio.currentTime = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * audio.duration;
   }
 

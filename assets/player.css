@@ -1224,7 +1224,8 @@ audio {
     font-size: 1.1rem;
   }
 
-  .app-subtitle {
+  .app-subtitle,
+  .app-title-acervo {
     display: none;
   }
 
