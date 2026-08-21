@@ -368,13 +368,6 @@ function bucketFor(key) {
 const PORT = Number(process.env.PORT) || 9001;
 const MAX_CONCURRENT = 400;
 
-const s3 = new Bun.S3Client({
-  endpoint: process.env.S3_ENDPOINT,
-  region: 'hel1',
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-});
-
 // §12 — graceful shutdown: drain up to 25s on SIGTERM/SIGINT/uncaughtException
 let shuttingDown = false;
 let _server;
@@ -530,8 +523,6 @@ _server = Bun.serve({
     // §1 — path traversal: reject .., empty segments, NUL, backslash
     if (!isSafeKey(path)) { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
 
-    const s3Key = path;
-
     // §6 — Range: reject malformed and multi-range (multi-range never used by audio players)
     const rangeHeader = req.headers.get('range');
     if (rangeHeader && (rangeHeader.length > 128 || !RANGE_RE.test(rangeHeader))) {
@@ -589,56 +580,21 @@ _server = Bun.serve({
     activeRequests++;
     try {
       const bucket = bucketFor(path);
-      let body, status, extra = {};
 
-      // Bun's S3Client doesn't encode # or ? in keys, causing URL fragment/query truncation.
-      // For those keys we bypass it and use a manually-signed fetch instead.
-      if (path.includes('#') || path.includes('?')) {
-        return await signedPassthrough(bucket, path, rangeHeader, isHead);
-      }
-
-      const file = s3.file(s3Key, { bucket });
-
-      // HEAD and full (non-Range) GETs go through the manually-signed path,
-      // same as open-ended ranges below — Bun.S3Client's .stat() call started
-      // failing outright against this endpoint (2026-08-20 incident: covers
-      // and HEAD requests down while ranged slice().stream() kept working),
-      // so only the stat-dependent branches route around it.
-      if (isHead) return await signedPassthrough(bucket, path, null, true);
-
-      if (rangeHeader) {
-        const m = RANGE_RE.exec(rangeHeader);
-        const start = Number(m[1]);
-        const endStr = m[2];
-        if (endStr !== '') {
-          // Fixed range bytes=start-end: Content-Length known, no stat needed
-          const end = Number(endStr);
-          status = 206; body = file.slice(start, end + 1).stream();
-          extra = {
-            'Content-Range': `bytes ${start}-${end}/*`,
-            'Content-Length': String(end - start + 1),
-            'Accept-Ranges': 'bytes',
-          };
-        } else {
-          // Open range bytes=start-: forward to S3 in one signed request — its 206
-          // Content-Range already carries the total size, so no separate stat() needed.
-          return await signedPassthrough(bucket, path, rangeHeader, false);
-        }
-      } else {
-        return await signedPassthrough(bucket, path, null, false);
-      }
-
-      const headers = {
-        ...corsHeaders,
-        'Content-Type': mimeFor(path),
-        'Cache-Control': cacheControlFor(path),
-        ...extra,
-      };
-      for (const k of Object.keys(headers)) if (headers[k] == null) delete headers[k];
-
-      counters.ok++;
-      markUpstreamOk();
-      return new Response(body, { status, headers });
+      // Every request — HEAD, fixed range, open range, full GET — goes through one
+      // signed fetch to S3. A fixed byte-range (bytes=start-end) used to be served
+      // natively via Bun.S3Client's file.slice().stream(), which can't report the
+      // resource's real total size and fell back to a fabricated
+      // "Content-Range: bytes start-end/*". Desktop browsers request open-ended
+      // ranges and never hit that path, but mobile Safari's AVFoundation opens with
+      // a small *fixed* probe range to learn the total size before it will commit
+      // to playback — met with "/*" it reads the file as an unbounded/live stream
+      // and abandons playback within a few seconds. Signed passthrough forwards
+      // S3's own Content-Range (real total included) for every branch, so this
+      // also covers the '#'/'?' key-encoding workaround Bun.S3Client needed and
+      // the .stat() failures from the 2026-08-20 incident — there's no longer a
+      // native-client path left to fall back to.
+      return await signedPassthrough(bucket, path, rangeHeader, isHead);
     } catch (err) {
       const code = err?.status ?? err?.statusCode ?? 500;
       console.error(`[${code}] ${req.method} ${path}: ${err?.message ?? err}`);
