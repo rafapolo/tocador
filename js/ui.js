@@ -110,7 +110,7 @@ let _cachedGenreTree = null;
 
 // Browse panel DOM refs (set once after DOMContentLoaded)
 let _browsePanelEl = null, _browseListEl = null, _browseEmptyEl = null;
-let _browseSearchEl = null, _browseBadgeEl = null;
+let _browseSearchEl = null, _browseBadgeEl = null, _clearAllLabel = null;
 let _browseCountEl = null, _browseClearBtn = null;
 let _tracksPanelEl = null;
 
@@ -158,18 +158,11 @@ function attachArtistHandlers(container) {
     const handleArtistClick = e => {
       e.stopPropagation();
       const name = el.dataset.artist;
+      resetFacets('search');
       if (_searchInput) { _searchInput.value = name; }
       searchQuery = name;
-      activeDecade = null;
-      activeYear = 0; updateYearInUrl(0);
-      activeArtist = null;
-      activeGenre  = null;
-      document.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector('.decade-btn[data-decade="all"]')?.classList.add('active');
       filterAlbums();
       updateQueryInUrl(name, true);
-      updateBrowseFilterInUrl();
-      virtualBrowseList?.refresh(null);
       closeMobileDrawer();
       _searchInput?.focus();
     };
@@ -844,7 +837,6 @@ function filterAlbums() {
   _countEl ??= document.getElementById('search-count');
   _clearBtn ??= document.getElementById('search-clear');
   _emptyState ??= document.getElementById('empty-state');
-  _clearAllBtn ??= document.getElementById('clear-all-filters');
   const isFiltered = !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
   if (_countEl) {
     _countEl.textContent = `${filteredAlbums.length} álbun${filteredAlbums.length !== 1 ? 's' : ''}`;
@@ -852,7 +844,6 @@ function filterAlbums() {
   }
   if (_clearBtn) _clearBtn.classList.toggle('visible', !!searchQuery);
   if (_emptyState) _emptyState.hidden = filteredAlbums.length > 0;
-  if (_clearAllBtn) _clearAllBtn.hidden = !isFiltered;
 
   refreshBrowseCounts();
   renderActiveFilterChip();
@@ -997,51 +988,91 @@ function refreshBrowseCounts() {
   }
 }
 
+// Name of the single live facet, or null when nothing is filtering. Exactly
+// one can be set at a time — see resetFacets() — so the order here is only for
+// determinism, not precedence.
+//
+// searchQuery deliberately returns null: the chip sits right beside the search
+// input, which already shows the query and carries its own ✕. Showing a chip
+// too put two clear buttons side by side saying the same thing. The chip
+// exists for facets whose own control is somewhere else — a decade that has
+// scrolled out of the strip on mobile, or an artist/genre picked in a drawer
+// that is now closed.
+function activeFilterLabel() {
+  if (activeArtist) return activeArtist;
+  if (activeGenre)  return activeGenre.includes('---') ? activeGenre.split('---')[1] : activeGenre;
+  if (activeYear)   return String(activeYear);
+  if (activeDecade !== null) {
+    if (activeDecade === 'pre1940') return 'Antes de 1940';
+    if (activeDecade === 'noyear')  return 'Sem data';
+    return `Anos ${activeDecade}`;
+  }
+  return null;
+}
+
 function renderActiveFilterChip() {
-  const active = !!(activeGenre || activeArtist);
-  if (_browseBadgeEl) _browseBadgeEl.hidden = !active;
-  document.getElementById('btn-browse')?.classList.toggle('active', active);
+  const browseActive = !!(activeGenre || activeArtist);
+  if (_browseBadgeEl) _browseBadgeEl.hidden = !browseActive;
+  document.getElementById('btn-browse')?.classList.toggle('active', browseActive);
+
+  _clearAllBtn ??= document.getElementById('clear-all-filters');
+  _clearAllLabel ??= document.getElementById('clear-all-label');
+  const label = activeFilterLabel();
+  if (_clearAllLabel && label) _clearAllLabel.textContent = label;
+  if (_clearAllBtn) {
+    _clearAllBtn.hidden = !label;
+    if (label) _clearAllBtn.title = `Limpar filtro: ${label}`;
+  }
 }
 
-// Resets every filter facet at once (search, decade/year, genre/artist) — used
-// by both the empty-state clear button and the always-visible "clear all" chip,
-// since search/decade and genre/artist are otherwise independent facets that
-// each only clear themselves.
-function clearAllFilters() {
-  searchQuery = '';
-  activeDecade = null;
-  activeYear = 0; updateYearInUrl(0);
-  activeGenre = null;
-  activeArtist = null;
-  if (_searchInput) _searchInput.value = '';
-  document.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('.decade-btn[data-decade="all"]')?.classList.add('active');
-  updateBrowseFilterInUrl();
-  updateQueryInUrl('', false);
-  filterAlbums();
-  updateBrowseSelection();
-}
-
-function selectBrowseItem(value, itemType) {
-  // filterAlbums() ANDs the search query with the browse selection, so a
-  // leftover query from before can hide the just-picked artist/genre's
-  // albums entirely. Clear it so the browse selection always shows results.
-  if (searchQuery) {
+// The five filter facets (search, decade, year, artist, genre) are mutually
+// exclusive: choosing one resets the other four. Cumulative filtering let a
+// stale facet silently empty the grid — picking an artist while a search was
+// still live returned zero albums with no visible reason why.
+//
+// `keep` names the facet the caller is about to set; every other facet is
+// cleared along with its URL param and its chrome. This only ever clears, so
+// callers assign their own facet afterwards. Omit `keep` to clear all five.
+function resetFacets(keep) {
+  if (keep !== 'search' && searchQuery) {
     searchQuery = '';
     if (_searchInput) _searchInput.value = '';
     updateQueryInUrl('', false);
   }
+  if (keep !== 'decade' && activeDecade !== null) {
+    activeDecade = null;
+    document.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.decade-btn[data-decade="all"]')?.classList.add('active');
+  }
+  if (keep !== 'year' && activeYear) {
+    activeYear = 0;
+    updateYearInUrl(0);
+  }
+  if ((keep !== 'artist' && activeArtist) || (keep !== 'genre' && activeGenre)) {
+    if (keep !== 'artist') activeArtist = null;
+    if (keep !== 'genre')  activeGenre  = null;
+    updateBrowseFilterInUrl();
+    updateBrowseSelection();
+  }
+}
+
+// Used by the empty-state clear button and the always-visible "clear all" chip.
+function clearAllFilters() {
+  resetFacets();
+  filterAlbums();
+}
+
+function selectBrowseItem(value, itemType) {
+  resetFacets(browseTab === 'genres' ? 'genre' : 'artist');
   if (browseTab === 'genres') {
     if (itemType === 'parent') {
       // Toggle expand/collapse; also toggle filter
       if (expandedGenres.has(value)) expandedGenres.delete(value);
       else expandedGenres.add(value);
       activeGenre = activeGenre === value ? null : value;
-      activeArtist = null;
     } else {
       // child subgenre or flat
       activeGenre = activeGenre === value ? null : value;
-      activeArtist = null;
       if (isMobile()) setTimeout(closeBrowseDrawer, 180);
     }
     updateBrowseFilterInUrl();
@@ -1049,7 +1080,6 @@ function selectBrowseItem(value, itemType) {
     renderBrowsePanel(); // rebuild tree to reflect expand state
   } else {
     activeArtist  = activeArtist === value ? null : value;
-    activeGenre   = null;
     updateBrowseFilterInUrl();
     filterAlbums();
     virtualBrowseList?.refresh(activeArtist);
@@ -1179,10 +1209,8 @@ function renderDecadeButtons() {
   todosBtn.textContent = 'Todos';
   todosBtn.dataset.decade = 'all';
   todosBtn.addEventListener('click', () => {
+    resetFacets('decade');
     activeDecade = null;
-    activeYear = 0; updateYearInUrl(0);
-    searchQuery = '';
-    if (_searchInput) _searchInput.value = '';
     filterAlbums();
     container.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
     todosBtn.classList.add('active');
@@ -1198,10 +1226,8 @@ function renderDecadeButtons() {
   pre1940Btn.dataset.decade = 'pre1940';
   pre1940Btn.title = '1900–1949';
   pre1940Btn.addEventListener('click', () => {
+    resetFacets('decade');
     activeDecade = 'pre1940';
-    activeYear = 0; updateYearInUrl(0);
-    searchQuery = '';
-    if (_searchInput) _searchInput.value = '';
     filterAlbums();
     container.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
     pre1940Btn.classList.add('active');
@@ -1215,10 +1241,8 @@ function renderDecadeButtons() {
     btn.dataset.decade = decade;
     btn.title = `${decade}–${decade + 9}`;
     btn.addEventListener('click', () => {
+      resetFacets('decade');
       activeDecade = parseInt(btn.dataset.decade);
-      activeYear = 0; updateYearInUrl(0);
-      searchQuery = '';
-      if (_searchInput) _searchInput.value = '';
       filterAlbums();
       container.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -1233,10 +1257,8 @@ function renderDecadeButtons() {
     infBtn.dataset.decade = 'noyear';
     infBtn.title = 'Sem data';
     infBtn.addEventListener('click', () => {
+      resetFacets('decade');
       activeDecade = 'noyear';
-      activeYear = 0; updateYearInUrl(0);
-      searchQuery = '';
-      if (_searchInput) _searchInput.value = '';
       filterAlbums();
       container.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
       infBtn.classList.add('active');
@@ -1269,18 +1291,10 @@ function renderAlbumHeader() {
 
   const yearLinkEl = info.querySelector('.year-link');
   const handleYearClick = () => {
+    resetFacets('year');
     activeYear = selectedAlbum.year;
-    searchQuery = '';
-    activeDecade = null;
-    activeArtist = null;
-    activeGenre  = null;
-    if (_searchInput) _searchInput.value = '';
-    document.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('.decade-btn[data-decade="all"]')?.classList.add('active');
     updateYearInUrl(activeYear);
-    updateBrowseFilterInUrl();
     filterAlbums();
-    updateBrowseSelection();
   };
   yearLinkEl?.addEventListener('click', handleYearClick);
   yearLinkEl?.addEventListener('keydown', e => {
@@ -2081,13 +2095,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   let searchDebounce;
   _searchInput?.addEventListener('input', function () {
-    searchQuery = this.value;
-    if (searchQuery) {
-      activeDecade = null;
-      activeYear = 0; updateYearInUrl(0);
-      document.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector('.decade-btn[data-decade="all"]')?.classList.add('active');
-    }
+    const typed = this.value;
+    if (typed) resetFacets('search');
+    searchQuery = typed;
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(() => { filterAlbums(); updateQueryInUrl(searchQuery.trim(), false); }, 150);
   });
