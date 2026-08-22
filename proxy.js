@@ -243,8 +243,29 @@ async function s3GetSigned(bucket, key, rangeHeader) {
 // (Content-Range with total size, Content-Length, ETag) straight through.
 // Used for keys Bun's S3Client mishandles (# ?) and for open-ended Range
 // requests, where it saves the separate stat() round trip.
+// macOS writes accented filenames decomposed (NFD, "c\u0327"); most other sources
+// compose them (NFC, "\u00e7"). Those are two different byte sequences, so they are
+// two different S3 keys for what looks like the same name. Neither bucket is
+// uniform: sambaraiz/uqt is mostly NFD with ~93 NFC keys, indie/indie is mostly
+// NFC with a couple of NFD ones — so no single blanket normalization is correct.
+// Try exactly what the client asked for first (one round trip for every key that
+// exists), and only fall back to the other forms on a 404.
+function keyCandidates(key) {
+  const out = [key];
+  for (const form of ['NFC', 'NFD']) {
+    const alt = key.normalize(form);
+    if (!out.includes(alt)) out.push(alt);
+  }
+  return out;
+}
+
 async function signedPassthrough(bucket, path, rangeHeader, isHead) {
-  const r = await s3GetSigned(bucket, path, isHead ? null : rangeHeader);
+  let r;
+  for (const key of keyCandidates(path)) {
+    r = await s3GetSigned(bucket, key, isHead ? null : rangeHeader);
+    if (r.status !== 404) break;
+    r.body?.cancel().catch(() => {}); // don't leak the socket on a retried miss
+  }
   markUpstreamOk(); // S3 answered at all — the link is up, whatever the status
   if (!r.ok && r.status !== 206) {
     const code = r.status >= 500 ? 500 : r.status;
@@ -515,7 +536,9 @@ _server = Bun.serve({
 
     // §1 — decode path with try/catch; malformed percent-sequences return 400 instead of crashing
     let path;
-    try { path = decodeURIComponent(url.pathname.replace(/^\/+/, '')).normalize('NFC'); }
+    // Deliberately NOT normalized here — see keyCandidates(). Normalizing to a
+    // single form at the door silently 404s every key stored in the other one.
+    try { path = decodeURIComponent(url.pathname.replace(/^\/+/, '')); }
     catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
 
     if (!path) return redirect301('https://tocador.cc/3d.html');
