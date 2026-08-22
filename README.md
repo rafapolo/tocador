@@ -21,6 +21,12 @@ https://tocador.cc/radio?acervo=homi
 https://tocador.cc/radio?acervo=uqt
 ```
 
+<p align="center">
+  <a href="https://radio.tocador.cc">
+    <img src="docs/radio-demo.png" alt="Tocador — modo rádio" width="337">
+  </a>
+</p>
+
 ### Embed
 
 Cole em qualquer página para incorporar a rádio:
