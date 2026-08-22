@@ -10,11 +10,11 @@ Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` com
   </a>
 </p>
 
-[![Rádio ao vivo](https://img.shields.io/badge/📻_Rádio-ao_vivo-d4a574?style=for-the-badge)](https://tocador.cc/radio?acervo=homi)
+[![Rádio ao vivo](https://img.shields.io/badge/📻_Rádio-ao_vivo-d4a574?style=for-the-badge)](https://radio.tocador.cc)
 
 ## 📻 Rádio
 
-O Tocador tem um modo rádio standalone em [`https://radio.tocador.cc`](radio.html) — um widget minimalista que toca faixas aleatórias de qualquer acervo, sem a interface completa do player.
+O Tocador tem um modo rádio standalone em [`https://radio.tocador.cc`](https://radio.tocador.cc) — um widget minimalista que toca faixas aleatórias de qualquer acervo, sem a interface completa do player.
 
 ```
 https://tocador.cc/radio?acervo=homi
