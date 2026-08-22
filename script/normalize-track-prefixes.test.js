@@ -1,6 +1,7 @@
 import { test, expect, describe } from 'bun:test';
 import { gunzipSync, gzipSync } from 'zlib';
 import { existsSync } from 'fs';
+import '../js/acervo-format.js';
 
 // The two "regression:" cases at the bottom assert against a real catalogue
 // snapshot at data/homi-albums.json.gz. That file is a local working artifact —
@@ -104,6 +105,14 @@ function makeGz(obj) {
 
 function readGz(buf) {
   return JSON.parse(gunzipSync(buf).toString());
+}
+
+// The published catalogue is v2 (columnar) while every maintenance script here
+// works on the v1 shape. Read through the player's own decoder so these tests
+// hold whichever version the local snapshot happens to be in — a plain
+// JSON.parse of a v2 payload has no `albums` array and would throw.
+function readCatalog(path) {
+  return decodeAcervo(readGz(readFileSync(path)));
 }
 
 import { writeFileSync, readFileSync, unlinkSync } from 'fs';
@@ -264,8 +273,7 @@ describe('normalizer integration', () => {
   });
 
   test.skipIf(!HAS_LIVE_SNAPSHOT)('regression: live JSON has no remaining title===path albums (excluding genuinely ambiguous)', async () => {
-    const buf = readFileSync('data/homi-albums.json.gz');
-    const db = readGz(buf);
+    const db = readCatalog('data/homi-albums.json.gz');
     const stillBad = db.albums.filter(a => a.title === a.path);
     // Allow some tolerance for albums that could not be fixed (no year prefix)
     const withYearPrefix = stillBad.filter(a => /^\d{4}\s*-/.test(a.path));
@@ -273,8 +281,7 @@ describe('normalizer integration', () => {
   });
 
   test.skipIf(!HAS_LIVE_SNAPSHOT)('regression: no multi-track album has >50% tracks with artist prefix', async () => {
-    const buf = readFileSync('data/homi-albums.json.gz');
-    const db = readGz(buf);
+    const db = readCatalog('data/homi-albums.json.gz');
     const badAlbums = db.albums.filter(album => {
       if (!album.artist || album.tracks?.length < 2) return false;
       const prefix = album.artist + ' - ';
