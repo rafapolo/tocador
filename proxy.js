@@ -406,6 +406,13 @@ process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 process.on('uncaughtException',  (err) => { console.error('uncaughtException:', err);  gracefulShutdown('uncaughtException'); });
 process.on('unhandledRejection', (r)   => { console.error('unhandledRejection:', r); });
 
+// Only bind a port when run as the entrypoint (`bun proxy.js`, and the
+// Dockerfile CMD). Importing this file — which the tests do, so they exercise
+// the real helpers instead of copies that can silently drift from them — must
+// not start a server.
+if (import.meta.main) startServer();
+
+function startServer() {
 _server = Bun.serve({
   port: PORT,
   hostname: '127.0.0.1',   // §3 — never 0.0.0.0; only nginx on loopback connects here
@@ -637,3 +644,9 @@ _server = Bun.serve({
 });
 
 console.log(`Proxy listening on :${PORT} -> s3://${BUCKET}/`);
+}
+
+// Exported for tests only — see tests/proxy.test.js. The suite must import
+// these rather than re-declare them; a test that copies its subject cannot
+// fail when the subject changes.
+export { sigV4Encode, keyCandidates, isSafeKey, bucketFor, startServer };

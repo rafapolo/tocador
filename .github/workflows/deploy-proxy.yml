@@ -74,14 +74,37 @@ jobs:
       # clean health check had missed.) Retried: the S3 connection pool is
       # cold for ~1-2 min right after a restart and can 503 briefly even when
       # everything is actually configured correctly.
+      # Probes a matrix, not one URL. The single ASCII indie track this used to
+      # check stayed green through the whole 2026-05→08 NFC outage: it has no
+      # accents, and it is in the other bucket. A gate has to cover both buckets
+      # AND both Unicode normalization forms, because sambaraiz/uqt stores keys
+      # mostly decomposed (NFD, uploaded from macOS) and indie/indie mostly
+      # composed (NFC). URLs below are percent-encoded exactly as ui.js's
+      # encodeURI() emits them, so the probe sends what a real player sends.
       - name: Smoke test — real S3 fetch through the proxy
         run: |
-          url="https://cdn.tocador.cc/indie/Aldan%20Voce%20Ja%20Roubou%20Hoje/aldan-voce-ja-roubou-hoje-2010.mp3"
-          for attempt in 1 2 3 4 5 6; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" "$url")
-            echo "attempt $attempt: $code"
-            [ "$code" = "206" ] || [ "$code" = "200" ] && exit 0
-            sleep 15
-          done
-          echo "::error::Smoke test failed — proxy is not serving real audio after 6 attempts"
-          exit 1
+          set -u
+          rc=0
+          probe() {
+            label="$1"; url="$2"
+            # Retried: the S3 connection pool is cold for ~1-2 min right after a
+            # restart and can 503 briefly even when configured correctly.
+            for attempt in 1 2 3 4 5 6; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" "$url")
+              echo "  [$label] attempt $attempt: $code"
+              if [ "$code" = "206" ] || [ "$code" = "200" ]; then return 0; fi
+              [ "$attempt" = "6" ] || sleep 15
+            done
+            echo "::error::Smoke test failed — $label not serving: $url"
+            rc=1
+          }
+
+          probe 'indie ASCII baseline' \
+            'https://cdn.tocador.cc/indie/Aldan%20Voce%20Ja%20Roubou%20Hoje/aldan-voce-ja-roubou-hoje-2010.mp3'
+          probe 'uqt accented, NFD-stored key' \
+            'https://cdn.tocador.cc/uqt/1965%20-%20Forma65/03%20Canc%CC%A7a%CC%83o%20do%20Olhar%20Amado.mp3'
+          probe 'uqt accented, NFC-stored dir' \
+            'https://cdn.tocador.cc/uqt/1960%20-%20Elza%20Soares,%20Oswaldo%20Borba%20-%20Se%20Acaso%20Voc%C3%AA%20Chegasse/03%20Mulata%20Assanhada.mp3'
+
+          [ "$rc" = "0" ] || exit 1
+          echo "All probes served."

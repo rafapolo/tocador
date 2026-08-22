@@ -13,5 +13,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install
+
+      # Runs the bun-native suites (proxy helpers + the proxy/S3 normalization
+      # regression). These existed but CI only ever ran Playwright, which
+      # testIgnore's them — so they had never actually run here. Scoped by glob
+      # rather than a bare `bun test`, which would also pick up the Playwright
+      # *.spec.js files and fail on them.
+      - run: bun test tests/*.test.js script/*.test.js
+
       - run: bunx playwright install --with-deps chromium
       - run: bunx playwright test

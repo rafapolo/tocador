@@ -5,7 +5,7 @@
   "scripts": {
     "start": "bun proxy.js",
     "test": "playwright test",
-    "test:unit": "bun test tests/proxy.test.js"
+    "test:unit": "bun test tests/*.test.js script/*.test.js"
   },
   "dependencies": {},
   "devDependencies": {
