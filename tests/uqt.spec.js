@@ -4,6 +4,11 @@ const fs = require('fs');
 
 const fixturePath = path.join(__dirname, 'fixtures', 'albums.json.gz');
 const fixtureGz = fs.readFileSync(fixturePath);
+// A real, decodable 10s silence. An empty body made audio.play() reject with
+// NotSupportedError, so the 'pause' event stripped the .playing class that
+// playTrack() sets optimistically — a race the button-state tests lost about
+// one run in three. Long enough that no test outlives it and hits 'ended'.
+const fixtureMp3 = fs.readFileSync(path.join(__dirname, 'fixtures', 'silence.mp3'));
 
 async function gotoWithFixture(page, url = '/') {
   // Clear persisted player state so shuffle/repeat start at defaults
@@ -32,7 +37,7 @@ async function gotoWithFixture(page, url = '/') {
   });
   await page.route('**/*-genres.json.gz', route => route.fulfill({ status: 404 }));
   // Block audio and image network requests to keep tests fast
-  await page.route('**/*.mp3', route => route.fulfill({ status: 200, body: Buffer.alloc(0) }));
+  await page.route('**/*.mp3', route => route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: fixtureMp3 }));
   await page.route('**/capa-min.jpg', route => route.fulfill({ status: 404 }));
   await page.route('**/report-error', route => route.fulfill({ status: 204 }));
   await page.goto(url);

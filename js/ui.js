@@ -110,7 +110,7 @@ let _cachedGenreTree = null;
 
 // Browse panel DOM refs (set once after DOMContentLoaded)
 let _browsePanelEl = null, _browseListEl = null, _browseEmptyEl = null;
-let _browseSearchEl = null, _browseBadgeEl = null, _clearAllLabel = null;
+let _browseSearchEl = null, _clearAllLabel = null;
 let _browseCountEl = null, _browseClearBtn = null;
 let _tracksPanelEl = null;
 
@@ -1011,9 +1011,11 @@ function activeFilterLabel() {
 }
 
 function renderActiveFilterChip() {
-  const browseActive = !!(activeGenre || activeArtist);
-  if (_browseBadgeEl) _browseBadgeEl.hidden = !browseActive;
-  document.getElementById('btn-browse')?.classList.toggle('active', browseActive);
+  // The chip below says *what* is filtering; this highlight says *where* to
+  // change it. A dot badge used to sit on this same button under this same
+  // condition — with the chip a few pixels away naming the selection, it was
+  // a second, less informative copy of the highlight, so it's gone.
+  document.getElementById('btn-browse')?.classList.toggle('active', !!(activeGenre || activeArtist));
 
   _clearAllBtn ??= document.getElementById('clear-all-filters');
   _clearAllLabel ??= document.getElementById('clear-all-label');
@@ -1720,7 +1722,6 @@ document.addEventListener('DOMContentLoaded', async function () {
   _browseSearchEl   = document.getElementById('browse-search');
   _browseCountEl    = document.getElementById('browse-count');
   _browseClearBtn   = document.getElementById('browse-clear');
-  _browseBadgeEl    = document.getElementById('browse-badge');
   _tracksPanelEl    = document.getElementById('tracks-panel');
 
   buildAlbums();
