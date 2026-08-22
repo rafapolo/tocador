@@ -1,5 +1,14 @@
 import { test, expect, describe } from 'bun:test';
 import { gunzipSync, gzipSync } from 'zlib';
+import { existsSync } from 'fs';
+
+// The two "regression:" cases at the bottom assert against a real catalogue
+// snapshot at data/homi-albums.json.gz. That file is a local working artifact —
+// it is NOT tracked in git (the published catalogue lives in the hominiscanidae
+// repo), so on a fresh CI checkout it simply does not exist and readFileSync
+// would throw before any assertion ran. Skip them when it is absent rather than
+// failing the build for a file CI was never given.
+const HAS_LIVE_SNAPSHOT = existsSync('data/homi-albums.json.gz');
 
 // ── re-export pure logic from the normalizer for unit testing ────────────────
 
@@ -254,7 +263,7 @@ describe('normalizer integration', () => {
     expect(result.albums[0].tracks[1].title).toBe('Track Two');
   });
 
-  test('regression: live JSON has no remaining title===path albums (excluding genuinely ambiguous)', async () => {
+  test.skipIf(!HAS_LIVE_SNAPSHOT)('regression: live JSON has no remaining title===path albums (excluding genuinely ambiguous)', async () => {
     const buf = readFileSync('data/homi-albums.json.gz');
     const db = readGz(buf);
     const stillBad = db.albums.filter(a => a.title === a.path);
@@ -263,7 +272,7 @@ describe('normalizer integration', () => {
     expect(withYearPrefix.length).toBe(0);
   });
 
-  test('regression: no multi-track album has >50% tracks with artist prefix', async () => {
+  test.skipIf(!HAS_LIVE_SNAPSHOT)('regression: no multi-track album has >50% tracks with artist prefix', async () => {
     const buf = readFileSync('data/homi-albums.json.gz');
     const db = readGz(buf);
     const badAlbums = db.albums.filter(album => {

@@ -16,7 +16,13 @@ permissions:
   actions: write
 
 env:
+  # Three probes, not one. The ASCII indie URL alone stayed green through the
+  # entire 2026-05→08 NFC outage that 404'd half the uqt catalog: it has no
+  # accents and it is in the other bucket. Cover both buckets and both Unicode
+  # normalization forms — sambaraiz/uqt is mostly NFD, indie/indie mostly NFC.
   SMOKE_URL: "https://cdn.tocador.cc/indie/Aldan%20Voce%20Ja%20Roubou%20Hoje/aldan-voce-ja-roubou-hoje-2010.mp3"
+  SMOKE_URL_NFD: "https://cdn.tocador.cc/uqt/1965%20-%20Forma65/03%20Canc%CC%A7a%CC%83o%20do%20Olhar%20Amado.mp3"
+  SMOKE_URL_NFC: "https://cdn.tocador.cc/uqt/1960%20-%20Elza%20Soares,%20Oswaldo%20Borba%20-%20Se%20Acaso%20Voc%C3%AA%20Chegasse/03%20Mulata%20Assanhada.mp3"
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
@@ -28,13 +34,21 @@ jobs:
       - name: Real fetch through the proxy
         id: probe
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" "$SMOKE_URL")
-          echo "status: $code"
-          if [ "$code" = "206" ] || [ "$code" = "200" ]; then
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "code=$code" >> "$GITHUB_OUTPUT"
+          ok=true
+          detail=""
+          for probe in "indie ASCII|$SMOKE_URL" "uqt NFD-stored|$SMOKE_URL_NFD" "uqt NFC-stored|$SMOKE_URL_NFC"; do
+            label=${probe%%|*}
+            url=${probe#*|}
+            code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" "$url")
+            echo "[$label] status: $code"
+            if [ "$code" != "206" ] && [ "$code" != "200" ]; then
+              ok=false
+              detail="${detail}${label} -> HTTP ${code}; "
+            fi
+          done
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          if [ "$ok" = "false" ]; then
+            echo "code=$detail" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Recovery — close any open outage issue

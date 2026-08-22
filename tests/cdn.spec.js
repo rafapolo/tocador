@@ -141,18 +141,27 @@ test('CDN: 404 response has CORS headers but no X-Content-Type-Options nosniff',
   expect(res.headers()['x-content-type-options']).toBeUndefined();
 });
 
-// Regression: macOS writes filenames in NFD (decomposed) unicode; S3 keys are
-// stored in NFC (composed). The proxy must normalize the decoded path to NFC
-// so that NFD-encoded URLs resolve to the correct S3 object (37b3d41).
-// 'á' NFC = %C3%A1, NFD = a%CC%81 — sending NFD must still return 200.
-test('CDN: NFD-encoded path normalizes to NFC and serves correctly', async ({ request }) => {
+// Regression: an NFD-encoded URL must still resolve to an NFC-stored key
+// (37b3d41). NFC 'a-acute' = %C3%A1, NFD = a%CC%81 -- sending NFD must return 200.
+//
+// NOTE: this test used to be called "NFD-encoded path normalizes to NFC", and its
+// rationale read "S3 keys are stored in NFC, so the proxy must normalize the
+// decoded path to NFC". That premise is false, and stating it here is part of why
+// the 2026-05-28 regression looked deliberate. S3 stores whatever bytes were
+// uploaded and never normalizes: sambaraiz/uqt is mostly NFD, indie/indie mostly
+// NFC. Normalizing every request to NFC 404'd half the uqt catalogue for three
+// months while this test stayed green -- the object it checks happens to live in
+// the NFC bucket, so composing the request could only ever help it. The proxy now
+// tries the requested form first and falls back to the other; the cross-bucket
+// block at the end of this file covers the direction this test cannot.
+test('CDN: NFD-encoded URL resolves to an NFC-stored key', async ({ request }) => {
   // NFC path (normal): 'música' → m%C3%BAsica
   // NFD path (macOS):  'música' → mu%CC%81sica  (u + combining acute)
   const nfdPath = 'indie/2026%20-%20Barulhista%20-%20mu%CC%81sica%20para%20dan%C3%A7ar%20sentado/capa-min.jpg';
   const res = await request.get(`${CDN}/${nfdPath}`, {
     headers: { 'User-Agent': BROWSER_UA },
   });
-  // NFD path must resolve — proxy normalizes to NFC before S3 lookup
+  // NFD path must resolve — the proxy falls back to NFC when NFD misses
   expect(res.status()).toBe(200);
 });
 
@@ -190,3 +199,55 @@ test('CDN: path with # and () served correctly (sigV4Encode encodes parentheses)
   expect(res.status()).toBe(200);
   expect(res.headers()['content-type']).toContain('audio/mpeg');
 });
+
+// ── Unicode normalization across buckets ─────────────────────────────────────
+//
+// S3 stores keys byte-exactly and never normalizes, and the buckets are not
+// uniform: sambaraiz/uqt is mostly NFD (uploaded from macOS), indie/indie is
+// mostly NFC, and each holds keys in the other form. Every check above lives in
+// indie and is ASCII or NFC — which is exactly why all of them stayed green
+// through the 2026-05→08 outage where a blanket `.normalize('NFC')` in proxy.js
+// 404'd 14,676 of 28,817 uqt tracks (50.9%, across 2,199 of 2,306 albums).
+// These probe the axis that was actually broken: the other bucket, both forms.
+
+const NORMALIZATION_TRACKS = [
+  {
+    label: 'uqt NFD-stored filename',
+    key: 'uqt/1965 - Forma65/03 Canção do Olhar Amado.mp3',
+    stored: 'NFD',
+  },
+  {
+    label: 'uqt NFC-stored directory',
+    key: 'uqt/1960 - Elza Soares, Oswaldo Borba - Se Acaso Você Chegasse/03 Mulata Assanhada.mp3',
+    stored: 'NFC',
+  },
+];
+
+for (const { label, key, stored } of NORMALIZATION_TRACKS) {
+  const other = stored === 'NFD' ? 'NFC' : 'NFD';
+
+  // Guard against a silent tautology: if this source file is ever re-saved in a
+  // single normalization form, both variants would collapse to one string and
+  // these tests would pass while checking nothing.
+  test(`CDN: ${label} — fixture really is accented`, async () => {
+    expect(key.normalize('NFD')).not.toBe(key.normalize('NFC'));
+  });
+
+  for (const asked of [stored, other]) {
+    test(`CDN: ${label}, requested as ${asked}`, async ({ request }) => {
+      const url = `${CDN}/${encodeURI(key.normalize(asked))}`;
+      const res = await request.get(url, {
+        headers: {
+          'User-Agent': BROWSER_UA,
+          'Referer': PLAYER_REFERER,
+          'Range': 'bytes=0-1000',
+        },
+      });
+      expect(res.status()).toBe(206);
+      expect(res.headers()['content-type']).toContain('audio/mpeg');
+      // Content-Range must carry the real total, not "*" — mobile Safari
+      // abandons playback otherwise, and the fallback path must not lose it.
+      expect(res.headers()['content-range']).toMatch(/^bytes 0-1000\/\d+$/);
+    });
+  }
+}
