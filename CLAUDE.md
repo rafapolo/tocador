@@ -208,6 +208,19 @@ set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in
 
 **404 on audio/covers**: Check S3 path — `{prefix}/{album.path}/{file}`. Sync may be incomplete.
 
+**Accented filenames 404 (and only accented ones)**: Unicode normalization mismatch.
+macOS writes decomposed names (NFD) and most other sources compose them (NFC); those
+are different byte sequences, so S3 sees two different keys. The buckets are *not*
+uniform — `sambaraiz/uqt` is mostly NFD, `indie/indie` is mostly NFC, and each holds a
+handful of keys in the other form. `proxy.js` therefore must not normalize the incoming
+path to any single form: `signedPassthrough()` tries the key exactly as requested, then
+falls back to NFC and NFD only on a 404 (see `keyCandidates()`). A blanket
+`.normalize('NFC')` at the door was live from 2026-05-28 to 2026-08-21 and silently
+404'd **50.9% of the uqt catalog** (14,676 of 28,817 tracks, touching 2,199 of 2,306
+albums) while leaving homi untouched — which is why it went unnoticed for months. Tell
+this apart from a missing sync by listing the prefix: if the key is *in* the bucket but
+the CDN 404s it, it's normalization, not a gap. Do **not** "fix" it by re-uploading.
+
 **CORB errors in browser**: Proxy must be running and `base_url` must point to the proxy, not directly to S3.
 
 **Wrong `base_url`**: Regenerate the `.json.gz` with `--base-url`. Do not set it in `KNOWN_ACERVOS`.
