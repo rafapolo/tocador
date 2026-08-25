@@ -1875,6 +1875,43 @@ audio {
   margin: 0;
 }
 
+/* Acervo switcher — pinned under the scrolling list */
+.browse-acervo {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.acervo-select {
+  width: 100%;
+  padding: 7px 26px 7px 9px;
+  background-color: var(--color-surface-light);
+  /* chevron, drawn inline so it needs no request */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%237a7268' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M1.5 2 6 6.3 10.5 2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 10px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.acervo-select:hover { border-color: var(--color-accent); }
+
+.acervo-select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* Firefox/Windows paint the popup with the page background otherwise */
+.acervo-select option { background: var(--color-surface); color: var(--color-text); }
+
 /* Browse badge dot (mobile) */
 
 /* Mobile scrim */
@@ -2004,6 +2041,7 @@ audio {
   .browse-panel.open { transform: translateX(0); }
   .browse-scrim { display: block; }
   .browse-item { height: 44px; }
+  .acervo-select { padding-top: 10px; padding-bottom: 10px; font-size: 0.85rem; }
 
   .btn-browse {
     position: relative;

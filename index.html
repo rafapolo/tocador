@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-        <title>♪ Tocador</title>
+        <title>♪</title>
         <meta name="description" content="Player de acervos musicais." />
         <meta name="author" content="extrapolo.com" />
         <meta property="og:type" content="music.playlist" />
@@ -105,6 +105,10 @@
                 </div>
                 <div class="browse-list" id="browse-list" role="listbox" aria-label="Artistas" aria-multiselectable="false"></div>
                 <p class="browse-empty" id="browse-empty" hidden>Nenhum resultado</p>
+                <div class="browse-acervo">
+                    <label for="acervo-select" class="sr-only">Acervo</label>
+                    <select id="acervo-select" class="acervo-select"></select>
+                </div>
             </aside>
 
             <main class="main-content" id="main-content" tabindex="-1">

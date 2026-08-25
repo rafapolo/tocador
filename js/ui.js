@@ -116,10 +116,12 @@ let _tracksPanelEl = null;
 
 const KNOWN_ACERVOS = {
   uqt: {
+    label: 'UQT',
     data: 'https://rafapolo.github.io/uqt/data/uqt-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/uqt',
   },
   homi: {
+    label: 'Hominis Canidae',
     data: 'https://rafapolo.github.io/hominiscanidae/data/homi-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/indie',
     genres: 'https://rafapolo.github.io/hominiscanidae/data/homi-genres.json.gz',
@@ -1181,6 +1183,54 @@ function updateLibraryStats() {
   if (artistsStatEl) artistsStatEl.textContent = `${totalArtists} artista${totalArtists !== 1 ? 's' : ''}`;
 }
 
+// Which KNOWN_ACERVOS entry is loaded. The ?acervo= alias is only present right
+// after a switch, so fall back to matching the data URL's basename (the uqt Pages
+// deploy pins a *relative* dataUrl in config.json) and then the base_url baked into
+// the payload. Returns null for a third-party acervo passed as a full URL.
+function resolveAcervoKey(dataUrl, param) {
+  if (param && KNOWN_ACERVOS[param]) return param;
+  const file = (dataUrl || '').split('?')[0].split('/').pop();
+  for (const [key, entry] of Object.entries(KNOWN_ACERVOS)) {
+    if (file && entry.data.split('/').pop() === file) return key;
+  }
+  const base = db?.meta?.base_url;
+  if (base) {
+    for (const [key, entry] of Object.entries(KNOWN_ACERVOS)) {
+      if (entry.base_url === base) return key;
+    }
+  }
+  return null;
+}
+
+// Acervo switcher at the foot of the browse panel. Switching reloads the page:
+// albums, indexes, the virtual grid, BASE_URL and the genre data are all built
+// once at boot, and a bare ?acervo= correctly drops any album/artist deep link
+// pointing at the archive we're leaving.
+function renderAcervoSelect(activeKey) {
+  const select = document.getElementById('acervo-select');
+  if (!select) return;
+  const frag = document.createDocumentFragment();
+  if (!activeKey) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = db?.meta?.title || 'Acervo externo';
+    frag.append(opt);
+  }
+  for (const [key, entry] of Object.entries(KNOWN_ACERVOS)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = entry.label || key;
+    frag.append(opt);
+  }
+  select.replaceChildren(frag);
+  select.value = activeKey || '';
+  select.addEventListener('change', () => {
+    const key = select.value;
+    if (!KNOWN_ACERVOS[key]) return;
+    location.href = `${location.pathname}?acervo=${encodeURIComponent(key)}`;
+  });
+}
+
 function applyArchiveMeta() {
   const meta = db.meta || {};
   const title = meta.title || 'Tocador';
@@ -1190,8 +1240,6 @@ function applyArchiveMeta() {
     const totalSeconds = db.albums.reduce((s, a) => s + (a.tracks || []).reduce((ts, t) => ts + (t.duration || 0), 0), 0);
     if (totalSeconds > 0) hours = Math.round(totalSeconds / 3600).toString();
   }
-  const displayTitle = title !== 'Tocador' ? `Tocador ♪ ${title}` : 'Tocador';
-  document.title = displayTitle;
   const titleAcervoEl = document.getElementById('app-title-acervo');
   const subtitleEl = document.getElementById('app-subtitle');
   const hoursEl = document.getElementById('stat-hours');
@@ -1678,8 +1726,8 @@ document.addEventListener('DOMContentLoaded', async function () {
   } catch {}
   const defaultEntry = KNOWN_ACERVOS[defaultKey];
   const dataUrl = sessionStorage.getItem('acervo') || cfg.dataUrl || defaultEntry.data;
-  const activeAcervoKey = (acervoParam && KNOWN_ACERVOS[acervoParam]) ? acervoParam : defaultKey;
-  const genresUrl = KNOWN_ACERVOS[activeAcervoKey]?.genres ?? null;
+  // db isn't loaded yet, so this can't use the base_url hint; refined below.
+  const genresUrl = KNOWN_ACERVOS[resolveAcervoKey(dataUrl, acervoParam) ?? defaultKey]?.genres ?? null;
 
   async function decompressGzUrl(url) {
     const resp = await trackedFetch(url);
@@ -1701,10 +1749,19 @@ document.addEventListener('DOMContentLoaded', async function () {
   genreData = genresRaw;
   genreLoading = false;
   BASE_URL = db.meta?.base_url || cfg.baseUrl || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
+  // Now that db.meta is available, resolve for real — sub-pages and the switcher
+  // must follow the acervo actually loaded, not the deployment's default.
+  const activeAcervoKey = resolveAcervoKey(dataUrl, acervoParam);
+  const acervoQuery = activeAcervoKey
+    ? `?acervo=${encodeURIComponent(activeAcervoKey)}`
+    : (acervoParam ? `?acervo=${encodeURIComponent(acervoParam)}` : '');
   const btn3d = document.getElementById('btn-3d');
-  if (btn3d) btn3d.href = `./3d.html?acervo=${encodeURIComponent(acervoParam || defaultKey)}`;
+  if (btn3d) btn3d.href = `./3d.html${acervoQuery}`;
+  const btnRadio = document.getElementById('btn-radio');
+  if (btnRadio) btnRadio.href = `./radio.html${acervoQuery}`;
   skeletonEl.remove();
   applyArchiveMeta();
+  renderAcervoSelect(activeAcervoKey);
 
   // Cache hot-path DOM elements once at init time
   _btnPlay = document.getElementById('btn-play');
