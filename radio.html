@@ -373,8 +373,16 @@ const IS_BOT = navigator.webdriver || HAS_FAKE_CHROME_VERSION || /bot|crawl|spid
 
 // Report unplayable tracks to GitHub issues via the proxy
 const _reportedTracks = new Set();
+// Per-track dedup alone doesn't bound total reports — a session that keeps
+// hitting new albums (real binge-listening, or a crawler walking the whole
+// catalog) could otherwise file one issue per track with no ceiling. #578-637
+// was 60 such issues, 43 of them from one session inside 66 minutes. Cap it
+// like the JS-error reporter below already does; the server verifies each
+// report against the actual file too (see proxy.js), so this is a backstop,
+// not the only guard.
+const MAX_PLAYBACK_REPORTS = 3;
 function reportPlayback(reason) {
-  if (IS_BOT || !curAlbum || !curTrack) return;
+  if (IS_BOT || !curAlbum || !curTrack || _reportedTracks.size >= MAX_PLAYBACK_REPORTS) return;
   const key = `${curAlbum.path}/${curTrack.file}`;
   if (_reportedTracks.has(key)) return;
   _reportedTracks.add(key);
