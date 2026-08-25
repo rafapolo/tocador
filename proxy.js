@@ -503,6 +503,33 @@ _server = Bun.serve({
         'User-Agent': 'tocador-proxy',
       };
       const normalizedTitle = title.slice(0, 200);
+      // Verify "not playable" reports against the real file before creating GitHub
+      // noise. #578-637 was 60 issues filed in one crawl (43 of them inside a single
+      // 66-minute window) — automated traffic (headless/stealth browsers with no real
+      // audio decoder, or navigator.webdriver spoofed false) reporting tracks that
+      // fetch fine everywhere else. Every audio src in that wave returned 200 with a
+      // valid audio/mpeg body when checked directly. Client-side dedup/caps can't stop
+      // this reliably (each album gets its own title, so per-title dedup doesn't
+      // collapse them, and bot UAs can mimic real ones) — so confirm the file is
+      // actually broken server-side, which the report can't spoof, before filing.
+      if (normalizedTitle.startsWith('[radio] not playable:')) {
+        const srcMatch = body.match(/\*\*Audio src:\*\* `([^`]+)`/);
+        const src = srcMatch?.[1];
+        if (src && /^https:\/\/cdn\.tocador\.cc\//.test(src)) {
+          try {
+            const check = await fetch(src, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+            const ct = check.headers.get('content-type') || '';
+            const len = Number(check.headers.get('content-length') || 0);
+            if (check.ok && ct.startsWith('audio/') && len > 10_000) {
+              console.log(`[report-error] skipped, file verified playable: ${src}`);
+              return new Response('OK (file verified playable)', { status: 200, headers: corsBase });
+            }
+          } catch (err) {
+            // HEAD failed/timed out — corroborates rather than contradicts the
+            // report, so fall through and file it.
+          }
+        }
+      }
       try {
         // Deduplicate: comment on existing open issue instead of creating a new one
         let existingNumber = null;
