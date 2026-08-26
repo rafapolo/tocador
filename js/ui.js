@@ -281,7 +281,7 @@ function updateMetaTags(album) {
   const desc = `Álbum de ${album.artists}, ${album.year}. Ouça no ${archiveTitle}.`;
   const image = `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg`;
   const url = generateAlbumUrl(album);
-  document.title = `${album.name} · ${archiveTitle}`;
+  document.title = `♪ ${album.artists} · ${album.name}`;
   setMeta('property', 'og:title', title);
   setMeta('property', 'og:description', desc);
   setMeta('property', 'og:image', image);
@@ -1244,6 +1244,8 @@ function applyArchiveMeta() {
   const subtitleEl = document.getElementById('app-subtitle');
   const hoursEl = document.getElementById('stat-hours');
   if (titleAcervoEl) titleAcervoEl.textContent = title !== 'Tocador' ? ` ♪ ${title}` : '';
+  // Tab title: the archive until an album is opened, then artist · album.
+  document.title = `♪ ${title}`;
   if (subtitleEl) subtitleEl.textContent = subtitle;
   if (hoursEl) hoursEl.textContent = hours ? `${hours} horas` : '';
 }
