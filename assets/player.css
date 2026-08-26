@@ -1879,16 +1879,33 @@ audio {
 .browse-acervo {
   flex-shrink: 0;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 5px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
+/* Caption row — on desktop the ✕ is .mobile-only, so this is just the label */
+.browse-acervo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Names the concept, so "Hominis Canidae" reads as an archive and not a filter */
+.browse-acervo-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
 .acervo-select {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   padding: 7px 26px 7px 9px;
   background-color: var(--color-surface-light);
   /* chevron, drawn inline so it needs no request */
@@ -2064,6 +2081,7 @@ audio {
   .browse-clear { right: 6px; font-size: 0.9rem; padding: 8px; }
   .browse-empty { font-size: 0.88rem; }
   .acervo-select { padding-top: 11px; padding-bottom: 11px; font-size: 0.9rem; }
+  .browse-acervo-label { font-size: 0.68rem; }
 
   .btn-browse {
     position: relative;

@@ -90,11 +90,13 @@
         <div class="browse-scrim" id="browse-scrim"></div>
 
         <div class="app-layout">
-            <aside class="browse-panel" id="browse-panel" aria-label="Navegar por artistas e gêneros">
+            <aside class="browse-panel" id="browse-panel" aria-label="Acervo, artistas e gêneros">
                 <div class="browse-acervo">
-                    <label for="acervo-select" class="sr-only">Acervo</label>
+                    <div class="browse-acervo-head">
+                        <label for="acervo-select" class="browse-acervo-label">Acervo</label>
+                        <button id="btn-browse-close" class="browse-close mobile-only" aria-label="Fechar painel">✕</button>
+                    </div>
                     <select id="acervo-select" class="acervo-select"></select>
-                    <button id="btn-browse-close" class="browse-close mobile-only" aria-label="Fechar painel">✕</button>
                 </div>
                 <div class="browse-tabs" role="tablist" aria-label="Navegar por">
                     <button class="browse-tab active" role="tab" data-tab="artists" aria-selected="true">Artistas</button>
@@ -114,7 +116,7 @@
             <main class="main-content" id="main-content" tabindex="-1">
                 <div class="filters-section">
                     <div class="search-group">
-                        <button id="btn-browse" class="btn-browse mobile-only" aria-label="Filtrar por artista ou gênero" aria-expanded="false">
+                        <button id="btn-browse" class="btn-browse mobile-only" aria-label="Acervo, artistas e gêneros" aria-expanded="false">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/></svg>
                         </button>
                         <div class="search-wrapper">
