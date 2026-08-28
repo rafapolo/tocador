@@ -166,6 +166,7 @@ function attachArtistHandlers(container) {
       filterAlbums();
       updateQueryInUrl(name, true);
       closeMobileDrawer();
+      document.getElementById('now-playing-overlay')?.classList.remove('open');
       _searchInput?.focus();
     };
     el.addEventListener('click', handleArtistClick);
@@ -1521,7 +1522,7 @@ function updateNowPlaying() {
   if (!currentTrack) return;
   (_playerTitleEl ??= document.getElementById('player-title')).textContent = currentTrack.title;
   const playerArtistEl = document.getElementById('player-artist');
-  if (playerArtistEl) playerArtistEl.textContent = currentTrack.artists;
+  if (playerArtistEl) { playerArtistEl.innerHTML = artistLinksHTML(currentTrack.artists); attachArtistHandlers(playerArtistEl); }
   const folder = currentTrack.file.split('/')[0];
   const coverUrl = `${BASE_URL}/${folder}/capa-min.jpg`;
   const coverImg = document.getElementById('player-cover');
@@ -1539,7 +1540,7 @@ function updateNowPlaying() {
   _overlayTrackTitle ??= document.getElementById('overlay-track-title');
   if (_overlayTrackTitle) _overlayTrackTitle.textContent = currentTrack.title;
   _overlayTrackArtist ??= document.getElementById('overlay-track-artist');
-  if (_overlayTrackArtist) _overlayTrackArtist.textContent = currentTrack.artists;
+  if (_overlayTrackArtist) { _overlayTrackArtist.innerHTML = artistLinksHTML(currentTrack.artists); attachArtistHandlers(_overlayTrackArtist); }
 
   // Media Session
   if ('mediaSession' in navigator) {
