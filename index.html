@@ -26,14 +26,14 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="preconnect" href="https://cdn.tocador.cc" />
         <link
-            href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600&display=optional"
             rel="stylesheet"
             media="print"
             onload="this.media='all'"
         />
         <noscript>
             <link
-                href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap"
+                href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600&display=optional"
                 rel="stylesheet"
             />
         </noscript>
@@ -169,7 +169,7 @@
         <div id="toast" role="status" aria-live="assertive"></div>
         <div id="now-playing-status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
-        <footer class="player-bar" role="region" aria-label="Player de música">
+        <footer class="player-bar" aria-label="Player de música">
             <div id="now-playing-overlay" class="now-playing-overlay">
                 <div class="overlay-header">
                     <button
@@ -281,9 +281,11 @@
                     <button
                         id="drawer-close"
                         class="drawer-close"
-                        aria-label="Fechar"
+                        aria-label="Recolher lista de faixas"
                     >
-                        ✕
+                        <svg viewBox="0 0 12 8" width="14" height="10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M1.5 2 6 6.3 10.5 2" />
+                        </svg>
                     </button>
                 </div>
                 <ol id="drawer-track-list" class="drawer-track-list"></ol>

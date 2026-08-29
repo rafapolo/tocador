@@ -116,7 +116,7 @@ let _tracksPanelEl = null;
 
 const KNOWN_ACERVOS = {
   uqt: {
-    label: 'UQT',
+    label: 'UmQueTenha',
     data: 'https://rafapolo.github.io/uqt/data/uqt-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/uqt',
   },
@@ -281,7 +281,9 @@ function updateMetaTags(album) {
   const archiveTitle = db?.meta?.title || 'Tocador';
   const desc = `Álbum de ${album.artists}, ${album.year}. Ouça no ${archiveTitle}.`;
   const image = `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg`;
-  const url = generateAlbumUrl(album);
+  // og:url and <link rel=canonical> must be absolute — generateAlbumUrl() returns a
+  // path-relative URL (right for pushState/anchor hrefs, wrong for these two).
+  const url = window.location.origin + generateAlbumUrl(album);
   document.title = `♪ ${album.artists} · ${album.name}`;
   setMeta('property', 'og:title', title);
   setMeta('property', 'og:description', desc);
@@ -533,6 +535,7 @@ class VirtualGrid {
     }
 
     item.className = 'album-item';
+    item.setAttribute('role', 'listitem');
     if (selectedAlbum === album) item.classList.add('active');
     item.dataset.albumIdx = i;
     item.href = generateAlbumUrl(album);

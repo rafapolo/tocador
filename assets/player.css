@@ -7,7 +7,7 @@
   --color-accent-dark: #9d7d54;
   --color-text: #f5f1ed;
   --color-text-secondary: #b8b0a8;
-  --color-text-muted: #7a7268;
+  --color-text-muted: #958d83;
   --color-border: #3a3530;
 
   --font-display: 'Playfair Display', serif;
@@ -102,6 +102,11 @@ body {
   backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
+  /* #stat-hours/#mobile-stat-albums/#mobile-stat-artists start empty and are
+     filled in once the acervo loads — reserve the fully-populated height so
+     that fill-in doesn't shift .app-layout down (the CLS culprit trace kept
+     flagging). Mobile has its own fixed 44px height below and doesn't need this. */
+  min-height: 94px;
 }
 
 .app-header::before {
@@ -1477,10 +1482,12 @@ audio {
   }
 
   .drawer-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: var(--color-text-muted);
-    font-size: 1rem;
     cursor: pointer;
     padding: 8px;
     border-radius: 4px;
