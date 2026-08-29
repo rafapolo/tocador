@@ -12,6 +12,8 @@ Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` com
 
 [![Rádio ao vivo](https://img.shields.io/badge/📻_Rádio-ao_vivo-d4a574?style=for-the-badge)](https://radio.tocador.cc)
 
+📊 **Lighthouse** (auditado localmente via `chrome-devtools-mcp`): Acessibilidade 96 · Boas Práticas 100 · SEO 100 — o único ponto de acessibilidade restante é intencional (`user-scalable=no`, ver `tasks/perf-audit-chrome-devtools-mcp.md`).
+
 ## 📻 Rádio
 
 O Tocador tem um modo rádio standalone em [`https://radio.tocador.cc`](https://radio.tocador.cc) — um widget minimalista que toca faixas aleatórias de qualquer acervo, sem a interface completa do player.
