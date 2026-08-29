@@ -367,6 +367,10 @@ body {
   width: 100%;
   align-items: center;
   justify-content: center;
+  /* Empty until the acervo loads (buttons are generated from which decades
+     it actually has), then wraps to ~2 rows at typical widths — reserve
+     that so #albums-list below it doesn't get pushed down mid-load (CLS). */
+  min-height: 65px;
 }
 
 .decade-btn {
@@ -641,6 +645,10 @@ body {
   align-items: center;
   flex-shrink: 0;
   overflow-y: auto;
+  /* Empty at first paint (just the 40px of padding), then grows to ~310px
+     once the default album's cover/title/meta render — reserve that height
+     so #track-list below it doesn't get pushed down mid-load (CLS). */
+  min-height: 320px;
 }
 
 .album-header.empty {
@@ -1378,6 +1386,7 @@ audio {
     justify-content: flex-start;
     gap: 4px;
     padding-top: 5px;
+    min-height: 30px; /* single row here, vs. desktop's ~2-row wrap */
   }
 
   .decade-buttons::-webkit-scrollbar {
