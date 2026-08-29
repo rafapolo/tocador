@@ -1680,6 +1680,10 @@ audio {
 
 .browse-tab {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 9px 6px;
   background: none;
   border: none;
@@ -1692,6 +1696,8 @@ audio {
   transition: color 0.2s, border-color 0.2s;
   white-space: nowrap;
 }
+
+.browse-tab svg { flex-shrink: 0; }
 
 .browse-tab:hover { color: var(--color-text); }
 
