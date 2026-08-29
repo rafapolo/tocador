@@ -18,3 +18,4 @@ tasks/
 *.bak
 *.bak2
 .claude/
+.DS_Store
