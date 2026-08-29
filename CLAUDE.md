@@ -122,10 +122,11 @@ cached older `ui.js` cannot read v2 and will render an empty grid.
 Title, subtitle, hours are read from `acervo.json` in the music dir; `base_url` from `.env` there. No flags needed. Each acervo outputs directly into its own repo:
 
 ```bash
-# uqt → ../uqt repo
+# uqt → ../uqt repo (also writes sitemap.xml here)
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/bkps/UQT/sambaderaiz \
-  ../uqt/data/uqt-albums.json.gz
+  ../uqt/data/uqt-albums.json.gz \
+  --sitemap-out sitemap.xml
 
 # hominiscanidae → ../hominiscanidae repo (also writes sitemap.xml here)
 ./script/generate-albums/target/release/generate-albums \
@@ -138,6 +139,21 @@ bun script/build-genre-index.js
 ```
 
 Then commit and push in each repo (including `data/homi-genres.json.gz`). CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`, `--sitemap-url`, `--sitemap-out`) override config when passed.
+
+`--sitemap-url` for both archives is `https://tocador.cc/?acervo=<alias>` (set once in each music dir's
+`acervo.json`, not passed on the CLI) — every acervo lives at `tocador.cc` behind `?acervo=`, there is
+no separate public domain per archive. `write_sitemap()` merges the per-album `?album=&artista=` params
+onto whatever query string `--sitemap-url` already carries, so `sitemap-albums.xml` ends up with entries
+like `https://tocador.cc/?acervo=uqt&album=...&artista=...`.
+
+**`sitemap.xml`/`sitemap-albums.xml` live in the archive repo (`uqt`, `hominiscanidae`), never in this
+one.** They're data, and this repo is the shared player. Since a sitemap file may only list URLs at or
+below its own hosting origin, and every URL in these points at `tocador.cc`, `tocador`'s own
+`deploy.yml` fetches each archive's `sitemap-albums.xml` fresh at deploy time (`sitemap-albums-uqt.xml`,
+`sitemap-albums-homi.xml`) and assembles the `sitemap.xml` index that's actually served — on a daily
+cron as well as on push, so it stays current even when only an archive repo changes. Don't commit a
+`sitemap.xml` or `sitemap-albums.xml` here; it'll just be overwritten (or worse, silently stick around
+stale if the fetch step is ever removed).
 
 Add `--v2` to emit the columnar payload instead of v1. Publish the player first — see
 the deploy-order note under *v2 (columnar) payload*.

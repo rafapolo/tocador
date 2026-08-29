@@ -838,6 +838,15 @@ fn xml_escape(s: &str) -> String {
 fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitemap_path: &Path) {
     let today = today_iso();
     let base = base_url.trim_end_matches('/');
+    // base_url may already carry a query string (e.g. "https://tocador.cc/?acervo=uqt", needed
+    // when several archives share one origin and are told apart by ?acervo=) — merge the
+    // per-album params with '&' instead of assuming a bare domain. site_root strips the query
+    // back down to a plain path, since sitemap-albums.xml itself always lives at the origin root
+    // regardless of which acervo it's for.
+    let has_query = base.contains('?');
+    let sep = if has_query { "&amp;" } else { "?" }; // XML: a literal '&' would be invalid here
+    let home_loc = if has_query { xml_escape(base) } else { format!("{}/", base) };
+    let site_root = base.split('?').next().unwrap_or(base).trim_end_matches('/');
     let cdn = cdn_base.map(|s| s.trim_end_matches('/'));
     let dir = sitemap_path.parent().unwrap_or(Path::new("."));
     let albums_path = dir.join("sitemap-albums.xml");
@@ -848,17 +857,18 @@ fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitem
     if cdn.is_some() { xml.push_str(" xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\""); }
     xml.push_str(">\n");
     xml.push_str(&format!(
-        "  <url>\n    <loc>{}/</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n",
-        base, today
+        "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n",
+        home_loc, today
     ));
     for album in albums {
         let album_param = form_encode(&album.path);
         // Page canonical now keeps both params when present (see index.html),
-        // so the sitemap loc must match exactly: ?album=X&artista=Y.
+        // so the sitemap loc must match exactly: ?album=X&artista=Y (plus &acervo= up front
+        // when base_url carries one).
         let loc = if !album.artist.is_empty() {
-            format!("{}/?album={}&amp;artista={}", base, album_param, form_encode(&album.artist))
+            format!("{}{}album={}&amp;artista={}", base, sep, album_param, form_encode(&album.artist))
         } else {
-            format!("{}/?album={}", base, album_param)
+            format!("{}{}album={}", base, sep, album_param)
         };
         let lastmod = if album.year > 0 { format!("{}-01-01", album.year) } else { today.clone() };
         let priority = if album.year >= 2020 { "0.9" } else if album.year >= 2010 { "0.7" } else { "0.5" };
@@ -885,7 +895,7 @@ fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitem
     // sitemap.xml = index (albums only — artist pages are covered via ?album=&artista= above)
     let mut index = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     index.push_str("<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
-    index.push_str(&format!("  <sitemap>\n    <loc>{}/sitemap-albums.xml</loc>\n    <lastmod>{}</lastmod>\n  </sitemap>\n", base, today));
+    index.push_str(&format!("  <sitemap>\n    <loc>{}/sitemap-albums.xml</loc>\n    <lastmod>{}</lastmod>\n  </sitemap>\n", site_root, today));
     index.push_str("</sitemapindex>\n");
     fs::write(sitemap_path, &index).expect("Falha ao escrever sitemap.xml");
 

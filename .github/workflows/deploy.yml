@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 3 * * *'   # keeps sitemap-albums-{uqt,homi}.xml in sync even when only the archive repos push
   workflow_dispatch:
 
 permissions:
@@ -22,6 +24,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Pull per-archive sitemaps
+        # sitemap-albums.xml is generated and owned by each archive repo (uqt, hominiscanidae),
+        # not committed here — it's their data. But the sitemap protocol only lets a sitemap
+        # list URLs at/under its own hosting origin, and every URL in these points at
+        # tocador.cc, so the files still have to be *served* from here. Fetch each one fresh
+        # at deploy time instead of duplicating it in this repo.
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/rafapolo/uqt/master/sitemap-albums.xml \
+            -o sitemap-albums-uqt.xml || echo "::warning::couldn't fetch uqt sitemap, leaving previous deploy's copy in place"
+          curl -fsSL https://raw.githubusercontent.com/rafapolo/hominiscanidae/main/sitemap-albums.xml \
+            -o sitemap-albums-homi.xml || echo "::warning::couldn't fetch hominiscanidae sitemap, leaving previous deploy's copy in place"
+          {
+            echo '<?xml version="1.0" encoding="UTF-8"?>'
+            echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            [ -f sitemap-albums-uqt.xml ]  && echo '  <sitemap><loc>https://tocador.cc/sitemap-albums-uqt.xml</loc></sitemap>'
+            [ -f sitemap-albums-homi.xml ] && echo '  <sitemap><loc>https://tocador.cc/sitemap-albums-homi.xml</loc></sitemap>'
+            echo '</sitemapindex>'
+          } > sitemap.xml
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
