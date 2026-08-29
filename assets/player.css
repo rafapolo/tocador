@@ -1247,10 +1247,14 @@ audio {
 @media (max-width: 768px) {
   #mobile-stat-albums { display: none; }
 
-  /* Header: compact single row ~44px */
+  /* Header: compact single row ~44px. min-height is reset here — the 94px
+     desktop reservation (for CLS from late-filled stats) doesn't apply once
+     the mobile stats are hidden below, and left alone it was overriding the
+     44px height, so the header rendered full-height on mobile anyway. */
   .app-header {
     padding: 0 var(--spacing-sm);
     height: 44px;
+    min-height: 0;
     display: flex;
     align-items: center;
   }
