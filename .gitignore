@@ -14,6 +14,7 @@ sync-to-bucket.log
 tmp-atlas-homi/
 plans/
 plan/
+tasks/
 *.bak
 *.bak2
 .claude/

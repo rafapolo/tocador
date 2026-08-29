@@ -11,12 +11,12 @@ Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` com
 </p>
 
 [![Rádio ao vivo](https://img.shields.io/badge/📻_Rádio-ao_vivo-d4a574?style=for-the-badge)](https://radio.tocador.cc)
-[![Acessibilidade](https://img.shields.io/badge/♿_Acessibilidade-96%2F100-d4a574?style=for-the-badge)](tasks/perf-audit-chrome-devtools-mcp.md)
-[![Boas Práticas](https://img.shields.io/badge/✅_Boas_Práticas-100%2F100-d4a574?style=for-the-badge)](tasks/perf-audit-chrome-devtools-mcp.md)
-[![SEO](https://img.shields.io/badge/🔍_SEO-100%2F100-d4a574?style=for-the-badge)](tasks/perf-audit-chrome-devtools-mcp.md)
-[![CLS](https://img.shields.io/badge/📐_CLS-0.003-d4a574?style=for-the-badge)](tasks/perf-audit-chrome-devtools-mcp.md)
+![Acessibilidade](https://img.shields.io/badge/♿_Acessibilidade-96%2F100-d4a574?style=for-the-badge)
+![Boas Práticas](https://img.shields.io/badge/✅_Boas_Práticas-96%2F100-d4a574?style=for-the-badge)
+![SEO](https://img.shields.io/badge/🔍_SEO-100%2F100-d4a574?style=for-the-badge)
+![CLS](https://img.shields.io/badge/📐_CLS-0.003-d4a574?style=for-the-badge)
 
-<sub>Auditado localmente via [`chrome-devtools-mcp`](https://www.npmjs.com/package/chrome-devtools-mcp) + Lighthouse. O único ponto de acessibilidade restante (`user-scalable=no`) é intencional — detalhes, o que foi corrigido e o que falta em [`tasks/perf-audit-chrome-devtools-mcp.md`](tasks/perf-audit-chrome-devtools-mcp.md).</sub>
+<sub>Auditado localmente via [`chrome-devtools-mcp`](https://www.npmjs.com/package/chrome-devtools-mcp) + Lighthouse. O único ponto de acessibilidade restante (`user-scalable=no`) é intencional; Boas Práticas reflete capas de álbum ainda não sincronizadas ao S3 (dado, não código).</sub>
 
 ## 📻 Rádio
 
