@@ -451,12 +451,15 @@ test('J42: header stats show album and artist counts', async ({ page }) => {
 // Albums like "Álbum #99" produced audio src truncated at # (b74c8b0).
 test('K43: audio src uses %23 for album with # in path, never bare #', async ({ page }) => {
   await gotoWithFixture(page);
-  await page.locator('.album-item', { hasText: 'Álbum com # no caminho' }).click();
-
+  // This fixture album has exactly one track, so clicking it (below) primes
+  // audio.src/load() as part of *album* selection (CLAUDE.md's data flow) —
+  // the track click that follows is then a no-op for playTrack()'s own
+  // src-unchanged guard and fires no second request. Wait on the album click.
   const [request] = await Promise.all([
     page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 5000 }),
-    page.locator('#track-list .track-item').first().click(),
+    page.locator('.album-item', { hasText: 'Álbum com # no caminho' }).click(),
   ]);
+  await page.locator('#track-list .track-item').first().click();
 
   const url = request.url();
   expect(url).not.toMatch(/#[^/]/);
