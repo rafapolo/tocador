@@ -264,13 +264,13 @@ body {
 
 
 .filters-section {
-  padding: var(--spacing-sm) var(--spacing-lg);
+  padding: 10px var(--spacing-md);
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   background: linear-gradient(180deg, rgba(212, 165, 116, 0.08) 0%, transparent 100%);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 6px;
 }
 
 .search-input {
@@ -363,7 +363,7 @@ body {
 .decade-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
   align-items: center;
   justify-content: center;
@@ -371,11 +371,11 @@ body {
      it actually has), then wraps to ~2 rows at typical widths — reserve
      that so #albums-list below it doesn't get pushed down mid-load (CLS).
      Keep in lockstep with .decade-btn's padding/font-size below. */
-  min-height: 59px;
+  min-height: 60px;
 }
 
 .decade-btn {
-  padding: 5px 10px;
+  padding: 4px 8px;
   background: var(--color-surface-light);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
