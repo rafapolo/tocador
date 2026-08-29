@@ -7,7 +7,7 @@
 //
 // Bump CACHE when the shell changes in a way that must invalidate old copies;
 // day-to-day updates propagate anyway via revalidation on each visit.
-const CACHE = 'tocador-v4';
+const CACHE = 'tocador-v5';
 const SHELL = ['./', './index.html', './assets/player.css', './js/acervo-format.js', './js/ui.js', './manifest.json'];
 
 self.addEventListener('install', e => {
