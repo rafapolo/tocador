@@ -540,15 +540,21 @@ test('K48: no album in fixture produces an audio URL with a bare # in the path',
 // audit tool's own a11y-debugging and debug-optimize-lcp skills that weren't
 // previously exercised.
 
-// Fix #2: aria-required-children — grid children need role="listitem" to
-// match the container's role="list".
-test('L49: each .album-item card has role="listitem"', async ({ page }) => {
+// Fix #2 (superseded): role="listitem" on the .album-item <a> satisfied
+// aria-required-children (the container was role="list"), but it also
+// replaces the anchor's implicit link role in the accessibility tree —
+// which a later chrome-devtools-mcp audit (agent-accessibility-tree) flagged
+// as inappropriate. #albums-list is role="group" instead (no required-owned-
+// elements constraint), and the cards stay plain, unadorned links.
+test('L49: album cards keep their native link role — no role override', async ({ page }) => {
   await gotoWithFixture(page);
+  const container = page.locator('#albums-list');
+  await expect(container).toHaveAttribute('role', 'group');
   const items = page.locator('.album-item');
   const count = await items.count();
   expect(count).toBeGreaterThan(0);
   for (let i = 0; i < count; i++) {
-    await expect(items.nth(i)).toHaveAttribute('role', 'listitem');
+    await expect(items.nth(i)).not.toHaveAttribute('role');
   }
 });
 

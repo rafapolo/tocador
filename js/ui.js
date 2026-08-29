@@ -535,7 +535,6 @@ class VirtualGrid {
     }
 
     item.className = 'album-item';
-    item.setAttribute('role', 'listitem');
     if (selectedAlbum === album) item.classList.add('active');
     item.dataset.albumIdx = i;
     item.href = generateAlbumUrl(album);
