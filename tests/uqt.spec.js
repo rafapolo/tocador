@@ -533,3 +533,158 @@ test('K48: no album in fixture produces an audio URL with a bare # in the path',
 
   expect(badPaths).toHaveLength(0);
 });
+
+// ── L. Accessibility / CLS / LCP regressions (chrome-devtools-mcp audit) ───
+// L49-L54 pin the fixes from tasks/perf-audit-chrome-devtools-mcp.md so they
+// can't silently regress. L55-L58 add coverage for adjacent checks from the
+// audit tool's own a11y-debugging and debug-optimize-lcp skills that weren't
+// previously exercised.
+
+// Fix #2: aria-required-children — grid children need role="listitem" to
+// match the container's role="list".
+test('L49: each .album-item card has role="listitem"', async ({ page }) => {
+  await gotoWithFixture(page);
+  const items = page.locator('.album-item');
+  const count = await items.count();
+  expect(count).toBeGreaterThan(0);
+  for (let i = 0; i < count; i++) {
+    await expect(items.nth(i)).toHaveAttribute('role', 'listitem');
+  }
+});
+
+// Fix #5: updateMetaTags() used to write a path-relative URL into og:url and
+// <link rel=canonical> (generateAlbumUrl() is relative by design, for
+// pushState/anchor hrefs — right there, wrong here).
+test('L50: og:url is an absolute URL once an album is selected', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  const content = await page.locator('meta[property="og:url"]').getAttribute('content');
+  expect(content).toMatch(/^https?:\/\//);
+});
+
+test('L51: <link rel=canonical> is an absolute URL once an album is selected', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  const href = await page.locator('link[rel="canonical"]').getAttribute('href');
+  expect(href).toMatch(/^https?:\/\//);
+});
+
+// Fix #3: --color-text-muted (#7a7268 → #958d83) needed to clear WCAG AA's
+// 4.5:1 for small text against both the page background and the lightest
+// surface it appears on (per the audit's Lighthouse color-contrast finding).
+test('L52: --color-text-muted meets WCAG AA contrast (>=4.5:1) against page background and surfaces', async ({ page }) => {
+  await gotoWithFixture(page);
+  const ratios = await page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    const hexToRgb = (hex) => {
+      const n = parseInt(hex.replace('#', ''), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    const relLuminance = ([r, g, b]) => {
+      const c = [r, g, b].map(v => {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const contrast = (hexA, hexB) => {
+      const lA = relLuminance(hexToRgb(hexA));
+      const lB = relLuminance(hexToRgb(hexB));
+      const [lighter, darker] = lA > lB ? [lA, lB] : [lB, lA];
+      return (lighter + 0.05) / (darker + 0.05);
+    };
+    const muted = style.getPropertyValue('--color-text-muted').trim();
+    const bg = style.getPropertyValue('--color-bg').trim();
+    const surfaceLight = style.getPropertyValue('--color-surface-light').trim();
+    return {
+      vsBg: contrast(muted, bg),
+      vsSurfaceLight: contrast(muted, surfaceLight),
+    };
+  });
+  expect(ratios.vsBg).toBeGreaterThanOrEqual(4.5);
+  expect(ratios.vsSurfaceLight).toBeGreaterThanOrEqual(4.5);
+});
+
+// Fix #1: font-display swap → optional. `swap` reflows the header stats line
+// when the webfont lands (the CLS cluster the audit's trace flagged);
+// `optional` commits to the fallback for that page view instead.
+test('L53: Google Fonts stylesheet uses display=optional, never display=swap', async ({ page }) => {
+  await gotoWithFixture(page);
+  const href = await page.locator('link[href*="fonts.googleapis.com/css2"]').first().getAttribute('href');
+  expect(href).toContain('display=optional');
+  expect(href).not.toContain('display=swap');
+});
+
+// Unrelated fix made in passing during the same audit session.
+test('L54: uqt acervo option reads "UmQueTenha", not "UQT"', async ({ page }) => {
+  await gotoWithFixture(page);
+  const label = await page.locator('#acervo-select option[value="uqt"]').textContent();
+  expect(label).toBe('UmQueTenha');
+});
+
+// debug-optimize-lcp skill: "never lazy-load LCP" — the first paint's album
+// covers are exactly the kind of above-the-fold content that principle
+// targets, so the virtual grid must not opt them into loading="lazy".
+test('L55: album grid cover thumbnails are not lazy-loaded', async ({ page }) => {
+  await gotoWithFixture(page);
+  const loadingAttr = await page.locator('.album-cover-thumb').first().getAttribute('loading');
+  expect(loadingAttr).not.toBe('lazy');
+});
+
+// a11y-debugging skill: "images have alt text" — grid thumbs are aria-hidden
+// (the parent <a> carries the real accessible name) but must still carry alt
+// so the same markup is safe if that aria-hidden is ever dropped.
+test('L56: every rendered album cover thumbnail has non-empty alt text', async ({ page }) => {
+  await gotoWithFixture(page);
+  const alts = await page.locator('.album-cover-thumb').evaluateAll(
+    imgs => imgs.map(img => img.getAttribute('alt'))
+  );
+  expect(alts.length).toBeGreaterThan(0);
+  for (const alt of alts) expect(alt).toBeTruthy();
+});
+
+// a11y-debugging skill: "form inputs have associated labels" — search-input
+// carries both a visible-to-AT <label for> and an aria-label; keep them from
+// drifting apart silently.
+test('L57: search input has an associated <label> matching its aria-label', async ({ page }) => {
+  await gotoWithFixture(page);
+  const input = page.locator('#search-input');
+  const ariaLabel = await input.getAttribute('aria-label');
+  const label = page.locator('label[for="search-input"]');
+  await expect(label).toHaveCount(1);
+  expect((await label.textContent())?.trim()).toBe(ariaLabel);
+});
+
+// a11y-debugging skill: "test Tab/keyboard navigation" — grid cards bind a
+// keydown handler that synthesizes a click on Enter/Space; confirm Enter
+// alone (no mouse) actually selects the album.
+test('L58: Enter key on a focused album-item selects that album', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Clube da Esquina' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#album-header h2')).toContainText('Clube da Esquina');
+});
+
+// memory-leak-debugging skill: "repeat interactions ~10 times to amplify leak
+// visibility" — the recycled-node pool is exactly the kind of cache that
+// skill flags; assert its own advertised cap actually holds under repeated
+// scrolling, not just that on-screen DOM count looks fine once (H33).
+test('L59: recycled node pool stays within its cap after repeated scroll cycles', async ({ page }) => {
+  await gotoWithFixture(page);
+  const result = await page.evaluate(async () => {
+    const el = document.getElementById('albums-list');
+    const maxHeight = el.scrollHeight;
+    for (let i = 0; i < 10; i++) {
+      el.scrollTop = i % 2 === 0 ? maxHeight : 0;
+      virtualGrid._render();
+    }
+    return {
+      poolLength: virtualGrid._pool.length,
+      poolCap: virtualGrid._poolCap,
+      nodeCount: virtualGrid._nodes.size,
+      domCount: document.querySelectorAll('.album-item').length,
+    };
+  });
+  expect(result.poolLength).toBeLessThanOrEqual(result.poolCap);
+  expect(result.nodeCount).toBe(result.domCount);
+});
