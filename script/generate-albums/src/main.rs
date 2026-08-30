@@ -72,6 +72,7 @@ struct DirConfig {
     title:       Option<String>,
     subtitle:    Option<String>,
     sitemap_url: Option<String>,
+    v2:          Option<bool>,
 }
 
 // Tocador-compatible schema
@@ -546,6 +547,8 @@ fn parse_args() -> Config {
         eprintln!("     [--sitemap-url \"https://exemplo.com/player\"] [--sitemap-out sitemap.xml]");
         eprintln!("     [--v2]  formato colunar (menor e mais rápido de parsear).");
         eprintln!("             Publique o player antes do catálogo v2 — players antigos não o leem.");
+        eprintln!("             Fica permanente com \"v2\": true em acervo.json — evita reverter para v1");
+        eprintln!("             numa regeneração futura (ex.: só para atualizar o sitemap).");
         std::process::exit(if args.is_empty() { 1 } else { 0 });
     }
 
@@ -610,6 +613,10 @@ fn main() {
     let meta_subtitle    = cfg.meta_subtitle   .or(dir_cfg.subtitle);
     let meta_base_url    = cfg.meta_base_url   .or_else(|| env_val("BASE_URL"));
     let meta_sitemap_url = cfg.meta_sitemap_url.or(dir_cfg.sitemap_url).or_else(|| env_val("SITEMAP_URL"));
+    // --v2 CLI flag → acervo.json "v2" — once an archive has been migrated, every later
+    // regeneration (e.g. for a sitemap-only fix) must keep emitting v2, or it silently
+    // reverts to v1 and throws away the parse/transfer win. See CLAUDE.md.
+    let format_v2         = cfg.format_v2 || dir_cfg.v2.unwrap_or(false);
 
     let mut folders: Vec<PathBuf> = WalkDir::new(&cfg.music_dir)
         .min_depth(1)
@@ -748,7 +755,7 @@ fn main() {
         write_sitemap(&output.albums, sitemap_url, output.meta.base_url.as_deref(), &sitemap_out);
     }
 
-    let json = if cfg.format_v2 {
+    let json = if format_v2 {
         serde_json::to_string(&to_v2(output.meta, output.albums))
     } else {
         serde_json::to_string(&output)
@@ -763,7 +770,7 @@ fn main() {
     gz.finish().expect("Falha ao finalizar gzip");
 
     let size_gz = fs::metadata(&out_gz).map(|m| m.len() / 1024).unwrap_or(0);
-    let fmt = if cfg.format_v2 { "v2" } else { "v1" };
+    let fmt = if format_v2 { "v2" } else { "v1" };
     println!("{} álbuns  →  {} ({size_gz} KB, formato {fmt})", n_albums, out_gz.display());
 }
 
