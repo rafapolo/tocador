@@ -1248,7 +1248,7 @@ function applyArchiveMeta() {
   const hoursEl = document.getElementById('stat-hours');
   if (titleAcervoEl) titleAcervoEl.textContent = title !== 'Tocador' ? ` ♪ ${title}` : '';
   // Tab title: the archive until an album is opened, then artist · album.
-  document.title = `♪ ${title}`;
+  document.title = `♪ Tocador · ${title}`;
   if (subtitleEl) subtitleEl.textContent = subtitle;
   if (hoursEl) hoursEl.textContent = hours ? `${hours} horas` : '';
 }
