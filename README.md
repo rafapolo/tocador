@@ -10,13 +10,12 @@ Um player web para acervos musicais. Aponte para qualquer arquivo `.json.gz` com
   </a>
 </p>
 
-[![Rádio ao vivo](https://img.shields.io/badge/📻_Rádio-ao_vivo-d4a574?style=for-the-badge)](https://radio.tocador.cc)
-![Acessibilidade](https://img.shields.io/badge/♿_Acessibilidade-96%2F100-d4a574?style=for-the-badge)
-![Boas Práticas](https://img.shields.io/badge/✅_Boas_Práticas-96%2F100-d4a574?style=for-the-badge)
-![SEO](https://img.shields.io/badge/🔍_SEO-100%2F100-d4a574?style=for-the-badge)
-![CLS](https://img.shields.io/badge/📐_CLS-0.003-d4a574?style=for-the-badge)
-
-<sub>Auditado localmente via [`chrome-devtools-mcp`](https://www.npmjs.com/package/chrome-devtools-mcp) + Lighthouse. O único ponto de acessibilidade restante (`user-scalable=no`) é intencional; Boas Práticas reflete capas de álbum ainda não sincronizadas ao S3 (dado, não código).</sub>
+<p align="center">
+  <a href="https://radio.tocador.cc"><img src="https://img.shields.io/badge/📻_Rádio-ao_vivo-d4a574?style=for-the-badge" alt="Rádio ao vivo"></a>
+  <img src="https://img.shields.io/badge/♿_Acessibilidade-96%2F100-d4a574?style=for-the-badge" alt="Acessibilidade">
+  <img src="https://img.shields.io/badge/✅_Boas_Práticas-96%2F100-d4a574?style=for-the-badge" alt="Boas Práticas">
+  <img src="https://img.shields.io/badge/🔍_SEO-100%2F100-d4a574?style=for-the-badge" alt="SEO">
+</p>
 
 ## 📻 Rádio
 
@@ -86,6 +85,8 @@ Cole em qualquer página para incorporar a rádio:
 - **Anúncio automático de faixa**: região `aria-live="polite"` anuncia "Reproduzindo: [faixa] — [artista]" a cada troca sem que o usuário precise navegar
 - **HTML semântico**: filtro de décadas como `<nav>`, grid de álbuns com `role="list"`, campo de busca com `<label>` visualmente oculto
 - **Focus-visible**: estilo de foco explícito em todos os elementos interativos — distinguível do foco por mouse
+
+<sub>Auditado localmente via [`chrome-devtools-mcp`](https://www.npmjs.com/package/chrome-devtools-mcp) + Lighthouse. O único ponto de acessibilidade restante (`user-scalable=no`) é intencional; Boas Práticas reflete capas de álbum ainda não sincronizadas ao S3 (dado, não código).</sub>
 
 ### 📱 Totalmente Responsivo
 - **Desktop**: Layout lado-a-lado (grid de álbuns + painel de faixas lateral com auto-scroll para a faixa tocando)
