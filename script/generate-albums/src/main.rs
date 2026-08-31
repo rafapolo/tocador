@@ -19,11 +19,19 @@ const COVER_PRIORITY: &[&str] = &["cover", "capa", "folder", "front", "artwork",
 static RE_COPY_SUFFIX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(.*)\s+\(([2-9]|[1-9]\d{1,2})\)\s*$").unwrap()
 });
+// The artist/album separator must be a *spaced* dash. A bare "-" belongs to the name,
+// not to the separator: with \s* the lazy (.+?) stopped at the first hyphen it found, so
+// "2016 - a-ferramenta-sementes-2016" parsed as artist "a", and "1985 - Neguinho da
+// Beija-Flor - Oficio de Puxador" as artist "Neguinho da Beija". The folder name wins
+// over ID3 (see process_album), so those bad artists stuck - 663 of 6690 homi albums and
+// 42 of 2306 uqt ones - and surfaced as junk entries ("a", "o", "os", "the", "los") in
+// the player's artist list. Requiring spaces makes an untagged slug folder fall through
+// to RE_YEAR_ALBUM with no artist, letting the ID3 fallback supply the real one.
 static RE_ARTIST_ALBUM_YEAR: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(.+?)\s*[-–]\s*(.+?)\s*\((\d{4})\)\s*$").unwrap()
+    Regex::new(r"^(.+?)\s+[-–]\s+(.+?)\s*\((\d{4})\)\s*$").unwrap()
 });
 static RE_YEAR_ARTIST_ALBUM: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(\d{4})\s*[-–]\s*(.+?)\s*[-–]\s*(.+)$").unwrap()
+    Regex::new(r"^(\d{4})\s*[-–]\s*(.+?)\s+[-–]\s+(.+)$").unwrap()
 });
 static RE_ALBUM_YEAR: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(.+?)\s*\((\d{4})\)\s*$").unwrap()
@@ -909,4 +917,63 @@ fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitem
     let sz_a = fs::metadata(&albums_path).map(|m| m.len() / 1024).unwrap_or(0);
     println!("sitemap.xml  →  index → sitemap-albums.xml ({} KB, {} URLs)",
              sz_a, albums.len() + 1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_folder_name;
+
+    fn artist(name: &str) -> String {
+        parse_folder_name(name).0
+    }
+
+    #[test]
+    fn spaced_dash_separates_artist_from_album() {
+        assert_eq!(
+            parse_folder_name("1975 - Milton Nascimento - Minas"),
+            ("Milton Nascimento".into(), "Minas".into(), 1975)
+        );
+        assert_eq!(
+            parse_folder_name("Eva - Ritual (2026)"),
+            ("Eva".into(), "Ritual".into(), 2026)
+        );
+    }
+
+    // A hyphen inside a name is part of the name, never a separator.
+    #[test]
+    fn hyphenated_artist_names_survive() {
+        assert_eq!(artist("1985 - Neguinho da Beija-Flor - Ofício de Puxador"), "Neguinho da Beija-Flor");
+        assert_eq!(artist("2008 - Ex-exus - Terroristas Freelancers"), "Ex-exus");
+        assert_eq!(artist("2021 - tsé-tsé - Sorvedouro"), "tsé-tsé");
+        assert_eq!(artist("2012 - Lo-Fi - Fast Rocking, Slow Humping"), "Lo-Fi");
+        assert_eq!(artist("2014 - J.-P. Caron - ST"), "J.-P. Caron");
+        assert_eq!(artist("2023 - NP-Exception - Sete Vidas"), "NP-Exception");
+        assert_eq!(artist("Pé-Preto - Pé-Preto EP (2009)"), "Pé-Preto");
+    }
+
+    // Untagged slug folders have no separator at all: yield no artist so the ID3
+    // fallback in process_album can supply the real one, rather than inventing "a".
+    #[test]
+    fn slug_folders_yield_no_artist() {
+        assert_eq!(
+            parse_folder_name("2016 - a-ferramenta-sementes-2016"),
+            (String::new(), "a-ferramenta-sementes-2016".into(), 2016)
+        );
+        assert_eq!(artist("2013 - os-torto-album-marrom-2012"), "");
+        assert_eq!(artist("2012 - o-padre-dos-baloes-ep-2012"), "");
+        assert_eq!(artist("2013 - the-floors-ep-2013"), "");
+        assert_eq!(artist("2018 - abdala-pacheco-selva-de-pedra-2018"), "");
+    }
+
+    #[test]
+    fn en_dash_still_separates() {
+        assert_eq!(artist("1972 - Os maiores sambas-enredos – Vol 2"), "Os maiores sambas-enredos");
+    }
+
+    #[test]
+    fn year_only_and_bare_folders() {
+        assert_eq!(parse_folder_name("1968 - O melhor da Velha-Guarda"),
+                   (String::new(), "O melhor da Velha-Guarda".into(), 1968));
+        assert_eq!(parse_folder_name("Sem Ano"), (String::new(), "Sem Ano".into(), 0));
+    }
 }
