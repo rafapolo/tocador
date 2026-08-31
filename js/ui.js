@@ -2148,6 +2148,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     bar.addEventListener('click', e => seekFromClient(e.clientX, bar));
     bar.addEventListener('touchstart', e => { e.preventDefault(); seekFromClient(e.touches[0].clientX, bar); }, { passive: false });
     bar.addEventListener('touchmove',  e => { e.preventDefault(); seekFromClient(e.touches[0].clientX, bar); }, { passive: false });
+
+    // Mouse drag-to-seek. preventDefault on mousedown stops the browser from
+    // starting a native text-selection drag as the pointer moves off the bar —
+    // without it, dragging seeks *and* highlights whatever text is underneath.
+    bar.addEventListener('mousedown', e => {
+      e.preventDefault();
+      seekFromClient(e.clientX, bar);
+      const onMove = moveEvt => seekFromClient(moveEvt.clientX, bar);
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
   });
 
   if (_playerTitleEl && window.ResizeObserver) {

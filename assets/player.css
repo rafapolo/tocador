@@ -1044,6 +1044,8 @@ body {
   cursor: pointer;
   position: relative;
   transition: height 0.1s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .progress-bar::before {
