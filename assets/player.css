@@ -2017,8 +2017,10 @@ audio {
 }
 .shortcuts-modal-header h2 {
   font-family: var(--font-display);
-  font-size: 1.1rem;
-  color: var(--color-text);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--color-accent);
   margin: 0;
 }
 .shortcuts-close {
