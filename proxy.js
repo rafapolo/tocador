@@ -42,6 +42,27 @@ setInterval(() => {
   for (const [k, ts] of rawIpLastSeen) if (ts < cutoff) { rawIpCounts.delete(k); rawIpLastSeen.delete(k); }
 }, 60_000).unref();
 
+// §14 — radio "listening now" presence. radio.html beacons a heartbeat every
+// ~15s while its <audio> element is actually playing (not merely on the page),
+// keyed by a random id generated once per page load. A listener who vanishes
+// without a clean stop — tab killed, phone locked, network dropped — just ages
+// out here instead of needing an explicit disconnect; 40s tolerates a couple of
+// missed beats before /metrics stops counting them.
+const RADIO_HEARTBEAT_TIMEOUT_MS = 40_000;
+const RADIO_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+const radioListeners = new Map(); // id -> lastSeen
+setInterval(() => {
+  const cutoff = Date.now() - RADIO_HEARTBEAT_TIMEOUT_MS;
+  for (const [id, ts] of radioListeners) if (ts < cutoff) radioListeners.delete(id);
+}, 10_000).unref();
+
+// Heartbeats are frequent by design (one every ~15s per real listener) but
+// still per-device rate limited so a misbehaving client can't grow the map —
+// cap comfortably above the real cadence rather than choking it.
+const HEARTBEAT_BUCKET_CAP = 6;
+const HEARTBEAT_BUCKET_REFILL = 1 / 10; // 1 token/10s after the initial burst
+const heartbeatTokenBuckets = new Map();
+
 // §4 — token bucket rate limit (audio only).
 // Per-device: 30 req burst, 0.5 tokens/s refill (~30/min) — sized for one real
 // listener, same numbers as before this now applies per-device instead of per-IP.
@@ -78,6 +99,7 @@ setInterval(() => {
   for (const [k, b] of deviceTokenBuckets) if (b.last < cutoff) deviceTokenBuckets.delete(k);
   for (const [k, b] of rawIpTokenBuckets) if (b.last < cutoff) rawIpTokenBuckets.delete(k);
   for (const [k, b] of reportTokenBuckets) if (b.last < cutoff) reportTokenBuckets.delete(k);
+  for (const [k, b] of heartbeatTokenBuckets) if (b.last < cutoff) heartbeatTokenBuckets.delete(k);
 }, 5 * 60_000).unref();
 
 // FNV-1a 32-bit — cheap, fixed-size fingerprint derived from the User-Agent.
@@ -122,21 +144,42 @@ setInterval(() => {
   }
 }, 10_000).unref();
 
-function metricsBody() {
+function metricsJSON() {
   const m = process.memoryUsage();
-  return [
-    `# TYPE tocador_active_requests gauge`,
-    `tocador_active_requests ${activeRequests}`,
-    `tocador_ip_map_size ${rawIpCounts.size}`,
-    `tocador_device_map_size ${deviceCounts.size}`,
-    `tocador_event_loop_lag_ms ${eventLoopLag}`,
-    `tocador_upstream_fail_streak ${upstreamFailStreak}`,
-    `tocador_memory_rss_bytes ${m.rss}`,
-    `tocador_memory_heap_used_bytes ${m.heapUsed}`,
-    `tocador_requests_total{code="2xx"} ${counters.ok}`,
-    `tocador_requests_total{code="4xx"} ${counters.c4xx}`,
-    `tocador_requests_total{code="5xx"} ${counters.c5xx}`,
-  ].join('\n') + '\n';
+  return {
+    radioListeners: radioListeners.size,
+    activeRequests,
+    ipMapSize: rawIpCounts.size,
+    deviceMapSize: deviceCounts.size,
+    eventLoopLagMs: eventLoopLag,
+    upstreamFailStreak,
+    memory: { rssBytes: m.rss, heapUsedBytes: m.heapUsed },
+    // ok/4xx/5xx are a 10s rolling window, not a running total — counters
+    // reset in the [stats] log tick above.
+    requestsLast10s: { ok: counters.ok, c4xx: counters.c4xx, c5xx: counters.c5xx },
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+// §15 — public /metrics auth. The password is fixed (md5("tocador.cc/metrics")),
+// not a per-user secret, so a plain string compare is fine functionally — this
+// is only to avoid leaking *how many characters matched* through a timing
+// side-channel, cheap insurance for near-zero cost. Username is ignored.
+const METRICS_PASSWORD = '610336c3eeea7dc0347bd58b3a197473'; // md5("tocador.cc/metrics")
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+function metricsAuthorized(req) {
+  const auth = req.headers.get('authorization') ?? '';
+  if (!auth.startsWith('Basic ')) return false;
+  let decoded;
+  try { decoded = atob(auth.slice(6)); } catch { return false; }
+  const pass = decoded.slice(decoded.indexOf(':') + 1);
+  return timingSafeEqual(pass, METRICS_PASSWORD);
 }
 
 // CORS — corsBase on all responses including errors (nosniff omitted to avoid CORB on text/plain error bodies)
@@ -160,6 +203,8 @@ function redirect301(location) {
 const ROBOTS_TXT = `User-agent: *
 Allow: /
 Disallow: /report-error
+Disallow: /radio-heartbeat
+Disallow: /metrics
 Disallow: /*.mp3$
 Disallow: /*.m4a$
 Disallow: /*.mp4$
@@ -457,12 +502,25 @@ _server = Bun.serve({
       );
     }
 
-    // §13 — Prometheus metrics (port 9002 is not exposed externally)
+    // §13/§15 — public JSON metrics, gated by HTTP Basic Auth (password only —
+    // see METRICS_PASSWORD). nginx's location / catch-all forwards this straight
+    // through same as everything else, so it's reachable at cdn.tocador.cc/metrics.
     if (url.pathname === '/metrics') {
-      return new Response(metricsBody(), { headers: { 'Content-Type': 'text/plain; version=0.0.4' } });
+      if (!metricsAuthorized(req)) {
+        counters.c4xx++;
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { ...corsBase, 'WWW-Authenticate': 'Basic realm="tocador metrics"' },
+        });
+      }
+      counters.ok++;
+      return new Response(JSON.stringify(metricsJSON()), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      });
     }
 
-    // block all bots globally — /health and /metrics above are exempt (internal use)
+    // block all bots globally — /health and /metrics above are exempt (health checks
+    // and metrics scraping aren't real listeners; /metrics is auth-gated anyway)
     // goodBotRegex exceptions are let through (Google indexing + og:image crawling)
     const ua = req.headers.get('user-agent') ?? '';
     if (botRegex.test(ua) && !goodBotRegex.test(ua)) {
@@ -561,6 +619,31 @@ _server = Bun.serve({
         counters.c5xx++;
         return new Response('Bad Gateway', { status: 502, headers: corsBase });
       }
+    }
+
+    // §14 — POST /radio-heartbeat: radio.html beacons this every ~15s while its
+    // <audio> is actually playing, plus once on stop (pause/tab close, via
+    // sendBeacon) so the count drops immediately instead of waiting out the
+    // sweep's 40s timeout. Body size already capped by maxRequestBodySize: 8192.
+    if (req.method === 'POST' && url.pathname === '/radio-heartbeat') {
+      if (goodBotRegex.test(ua)) return new Response(null, { status: 204, headers: corsBase }); // crawlers aren't listeners
+      const hbIp = realIp(req, server);
+      if (!takeFrom(heartbeatTokenBuckets, hbIp, HEARTBEAT_BUCKET_CAP, HEARTBEAT_BUCKET_REFILL)) {
+        counters.c4xx++;
+        return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '15' } });
+      }
+      let payload;
+      try { payload = await req.json(); }
+      catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
+      const id = payload?.id;
+      if (typeof id !== 'string' || !RADIO_ID_RE.test(id)) {
+        counters.c4xx++;
+        return new Response('Bad Request', { status: 400, headers: corsBase });
+      }
+      if (payload?.stop === true) radioListeners.delete(id);
+      else if (radioListeners.size < MAP_HARD_CAP || radioListeners.has(id)) radioListeners.set(id, Date.now());
+      counters.ok++;
+      return new Response(null, { status: 204, headers: corsBase });
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -676,4 +759,4 @@ console.log(`Proxy listening on :${PORT} -> s3://${BUCKET}/`);
 // Exported for tests only — see tests/proxy.test.js. The suite must import
 // these rather than re-declare them; a test that copies its subject cannot
 // fail when the subject changes.
-export { sigV4Encode, keyCandidates, isSafeKey, bucketFor, startServer };
+export { sigV4Encode, keyCandidates, isSafeKey, bucketFor, startServer, timingSafeEqual, metricsAuthorized, RADIO_ID_RE };

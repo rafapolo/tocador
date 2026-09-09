@@ -13,7 +13,52 @@
 // these tests would still pass while guarding nothing.
 
 const { test, expect, describe } = require('bun:test');
-const { sigV4Encode, keyCandidates, isSafeKey } = require('../proxy.js');
+const { sigV4Encode, keyCandidates, isSafeKey, timingSafeEqual, metricsAuthorized } = require('../proxy.js');
+
+// ── timingSafeEqual / metricsAuthorized — /metrics HTTP Basic Auth ────────────
+
+const METRICS_PASSWORD = '610336c3eeea7dc0347bd58b3a197473'; // md5("tocador.cc/metrics")
+
+describe('timingSafeEqual', () => {
+  test('true for identical strings', () => {
+    expect(timingSafeEqual('abc', 'abc')).toBe(true);
+  });
+  test('false for different strings of the same length', () => {
+    expect(timingSafeEqual('abc', 'abd')).toBe(false);
+  });
+  test('false for different lengths (short-circuits before comparing bytes)', () => {
+    expect(timingSafeEqual('abc', 'abcd')).toBe(false);
+  });
+});
+
+function basicAuthReq(userpass) {
+  return { headers: new Headers({ authorization: `Basic ${btoa(userpass)}` }) };
+}
+
+describe('metricsAuthorized', () => {
+  test('accepts the correct password regardless of username', () => {
+    expect(metricsAuthorized(basicAuthReq(`:${METRICS_PASSWORD}`))).toBe(true);
+    expect(metricsAuthorized(basicAuthReq(`tocador:${METRICS_PASSWORD}`))).toBe(true);
+  });
+  test('accepts a bare password with no username/colon at all', () => {
+    expect(metricsAuthorized(basicAuthReq(METRICS_PASSWORD))).toBe(true);
+  });
+  test('rejects a wrong password', () => {
+    expect(metricsAuthorized(basicAuthReq(':wrongpassword'))).toBe(false);
+  });
+  test('rejects the pre-image instead of its md5', () => {
+    expect(metricsAuthorized(basicAuthReq(':tocador.cc/metrics'))).toBe(false);
+  });
+  test('rejects a missing Authorization header', () => {
+    expect(metricsAuthorized({ headers: new Headers() })).toBe(false);
+  });
+  test('rejects a non-Basic scheme', () => {
+    expect(metricsAuthorized({ headers: new Headers({ authorization: 'Bearer sometoken' }) })).toBe(false);
+  });
+  test('rejects malformed base64', () => {
+    expect(metricsAuthorized({ headers: new Headers({ authorization: 'Basic not-base64!!' }) })).toBe(false);
+  });
+});
 
 // ── sigV4Encode correctness ───────────────────────────────────────────────────
 
