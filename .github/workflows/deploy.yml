@@ -31,16 +31,33 @@ jobs:
         # list URLs at/under its own hosting origin, and every URL in these points at
         # tocador.cc, so the files still have to be *served* from here. Fetch each one fresh
         # at deploy time instead of duplicating it in this repo.
+        #
+        # Because these files aren't committed here, a plain checkout has no previous copy to
+        # fall back on if the raw.githubusercontent.com fetch fails — publishing would silently
+        # ship no sitemap file at all for the day. So retry the archive fetch a few times, and
+        # if it's still down, fall back to the copy already live on tocador.cc (the actual
+        # previous deploy's output) instead of dropping the file.
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rafapolo/uqt/master/sitemap-albums.xml \
-            -o sitemap-albums-uqt.xml || echo "::warning::couldn't fetch uqt sitemap, leaving previous deploy's copy in place"
-          curl -fsSL https://raw.githubusercontent.com/rafapolo/hominiscanidae/main/sitemap-albums.xml \
-            -o sitemap-albums-homi.xml || echo "::warning::couldn't fetch hominiscanidae sitemap, leaving previous deploy's copy in place"
+          fetch_sitemap() {
+            local url="$1" out="$2" live="$3"
+            if curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$out"; then
+              return 0
+            fi
+            echo "::warning::couldn't fetch $url after retries, falling back to live copy at $live"
+            if ! curl -fsSL "$live" -o "$out"; then
+              echo "::error::couldn't fetch $out from archive repo or live fallback — publishing without it"
+              rm -f "$out"
+            fi
+          }
+          fetch_sitemap https://raw.githubusercontent.com/rafapolo/uqt/master/sitemap-albums.xml \
+            sitemap-albums-uqt.xml https://tocador.cc/sitemap-albums-uqt.xml
+          fetch_sitemap https://raw.githubusercontent.com/rafapolo/hominiscanidae/main/sitemap-albums.xml \
+            sitemap-albums-homi.xml https://tocador.cc/sitemap-albums-homi.xml
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            [ -f sitemap-albums-uqt.xml ]  && echo '  <sitemap><loc>https://tocador.cc/sitemap-albums-uqt.xml</loc></sitemap>'
-            [ -f sitemap-albums-homi.xml ] && echo '  <sitemap><loc>https://tocador.cc/sitemap-albums-homi.xml</loc></sitemap>'
+            [ -s sitemap-albums-uqt.xml ]  && echo '  <sitemap><loc>https://tocador.cc/sitemap-albums-uqt.xml</loc></sitemap>'
+            [ -s sitemap-albums-homi.xml ] && echo '  <sitemap><loc>https://tocador.cc/sitemap-albums-homi.xml</loc></sitemap>'
             echo '</sitemapindex>'
           } > sitemap.xml
 
