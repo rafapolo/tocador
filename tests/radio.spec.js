@@ -96,7 +96,7 @@ test('R6: prev button navigates to a previous track from history', async ({ page
 test.describe('radio heartbeat', () => {
   test.use({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' });
 
-  test('R16: heartbeat posts the listener id once playback starts', async ({ page }) => {
+  test('R16: heartbeat posts the listener id and track:true once playback starts', async ({ page }) => {
     await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
     await gotoRadio(page);
     let hbBody = null;
@@ -109,9 +109,34 @@ test.describe('radio heartbeat', () => {
     expect(hbBody).toBeTruthy();
     expect(typeof hbBody.id).toBe('string');
     expect(hbBody.id.length).toBeGreaterThan(0);
+    expect(hbBody.track).toBe(true); // first heartbeat of a session is always a new track
   });
 
-  test('R17: heartbeat sends stop when playback pauses', async ({ page }) => {
+  test('R17: a repeated play on the same track does not resend track:true, but a real track change does', async ({ page }) => {
+    await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
+    await gotoRadio(page);
+    const bodies = [];
+    await page.route('**/radio-heartbeat', route => {
+      try { bodies.push(JSON.parse(route.request().postData() || '{}')); } catch {}
+      route.fulfill({ status: 204 });
+    });
+    await page.evaluate(() => audio.dispatchEvent(new Event('play'))); // 1st: new track
+    await page.waitForTimeout(100);
+    await page.evaluate(() => audio.dispatchEvent(new Event('play'))); // spurious repeat, same track
+    await page.waitForTimeout(100);
+    expect(bodies.length).toBe(1); // startHeartbeat() no-ops while already running and the track hasn't changed
+
+    await page.evaluate(() => {
+      // Simulate next()/prev() swapping the track without an intervening pause.
+      curAlbum = { ...curAlbum, path: curAlbum.path + ' (other)' };
+      audio.dispatchEvent(new Event('play'));
+    });
+    await page.waitForTimeout(100);
+    expect(bodies.length).toBe(2);
+    expect(bodies[1].track).toBe(true);
+  });
+
+  test('R18: heartbeat sends stop when playback pauses', async ({ page }) => {
     await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
     await gotoRadio(page);
     const bodies = [];
