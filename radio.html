@@ -612,19 +612,30 @@ if (typeof BroadcastChannel !== 'undefined') {
 // playing, counted server-side in radioListeners (see proxy.js) and surfaced
 // at cdn.tocador.cc/metrics. LISTENER_ID is per page load, not persisted:
 // a reload is a new listener, same as a real new connection would be.
+// Each heartbeat also folds into two 24h rolling stats server-side (metrics'
+// last_24h): every heartbeat (including the stop beacon) marks this id as a
+// viewer; a `track: true` flag — sent once per distinct track, from the
+// dedup below — increments played_tracks.
 const LISTENER_ID = crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36));
 const HEARTBEAT_INTERVAL_MS = 15000;
 let heartbeatTimer = null;
-function sendHeartbeat(stop) {
+let lastHeartbeatTrackKey = null; // dedup: one `track: true` per distinct track, not per heartbeat tick
+function sendHeartbeat(stop, newTrack) {
   if (IS_BOT) return;
-  const body = JSON.stringify(stop ? { id: LISTENER_ID, stop: true } : { id: LISTENER_ID });
+  const payload = { id: LISTENER_ID };
+  if (stop) payload.stop = true;
+  if (newTrack) payload.track = true;
+  const body = JSON.stringify(payload);
   // sendBeacon survives page teardown; fetch(keepalive) doesn't need to.
   if (stop && navigator.sendBeacon) { navigator.sendBeacon(HEARTBEAT_URL, new Blob([body], { type: 'application/json' })); return; }
   fetch(HEARTBEAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true, credentials: 'omit' }).catch(() => {});
 }
 function startHeartbeat() {
-  if (heartbeatTimer) return;
-  sendHeartbeat(false);
+  const key = curAlbum && curTrack ? `${curAlbum.path}/${curTrack.file}` : null;
+  const newTrack = !!key && key !== lastHeartbeatTrackKey;
+  if (newTrack) lastHeartbeatTrackKey = key;
+  if (heartbeatTimer) { if (newTrack) sendHeartbeat(false, true); return; }
+  sendHeartbeat(false, newTrack);
   heartbeatTimer = setInterval(() => sendHeartbeat(false), HEARTBEAT_INTERVAL_MS);
 }
 function stopHeartbeat() {

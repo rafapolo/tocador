@@ -221,12 +221,15 @@ set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in
 - **S3 bucket policy**: Needs public `GetObject` on `*` and `PutObject` on `{prefix}/*` for the service account.
 - **Radio "listening now"**: `radio.html` POSTs `{id}` to `/radio-heartbeat` every ~15s while its `<audio>`
   is actually playing (id is per page-load, generated client-side; `{id, stop:true}` fires once on
-  pause/tab-close via `sendBeacon`), and proxy.js ages an entry out after 40s of silence either way. The
-  live count is `radioListeners` at `GET /metrics` — public JSON, gated by HTTP Basic Auth where the
-  password is `md5("tocador.cc/metrics")` (username ignored). Both endpoints are reachable at
-  `cdn.tocador.cc` because nginx's catch-all `location /` forwards everything to the app; there's no
-  separate internal-only port for them despite `proxy.js`'s comments about port 9002 not being exposed —
-  that's true of the raw port, not of what nginx proxies through it.
+  pause/tab-close via `sendBeacon`; `{id, track:true}` is added once per distinct track, deduped
+  client-side), and proxy.js ages a listener out after 40s of silence either way. `GET /metrics` is public
+  JSON, gated by HTTP Basic Auth where the password is `md5("tocador.cc/metrics")` (username ignored):
+  `radioListeners` is the live "now" count; `last_24h.viewers`/`last_24h.played_tracks` are rolling
+  24h counts (viewers keyed by the same per-load id — a stop beacon still counts as "was here" and isn't
+  removed early like it is from `radioListeners`; played_tracks from the `track:true` beacons). Both
+  endpoints are reachable at `cdn.tocador.cc` because nginx's catch-all `location /` forwards everything
+  to the app; there's no separate internal-only port for them despite `proxy.js`'s comments about port
+  9002 not being exposed — that's true of the raw port, not of what nginx proxies through it.
 
 ## Troubleshooting
 

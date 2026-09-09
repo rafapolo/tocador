@@ -63,6 +63,24 @@ const HEARTBEAT_BUCKET_CAP = 6;
 const HEARTBEAT_BUCKET_REFILL = 1 / 10; // 1 token/10s after the initial burst
 const heartbeatTokenBuckets = new Map();
 
+// §16 — 24h rolling stats for /metrics' last_24h. viewers24h is keyed like
+// radioListeners but only ever pruned past a full day, so a listener who left
+// still counts as "was here" until their last heartbeat ages out — unlike
+// radioListeners, an explicit stop does NOT remove them early. playedTracks24h
+// is a plain timestamp queue: radio.html sends `track: true` once per distinct
+// track (deduped client-side), never once per heartbeat tick, so this stays
+// small relative to heartbeat volume; pushes are always Date.now(), so the
+// queue is already sorted and prunes off the front in O(shifted) rather than
+// a full scan.
+const DAY_MS = 24 * 60 * 60_000;
+const viewers24h = new Map(); // id -> lastSeen
+const playedTracks24h = []; // timestamps
+setInterval(() => {
+  const cutoff = Date.now() - DAY_MS;
+  for (const [id, ts] of viewers24h) if (ts < cutoff) viewers24h.delete(id);
+  while (playedTracks24h.length && playedTracks24h[0] < cutoff) playedTracks24h.shift();
+}, 5 * 60_000).unref();
+
 // §4 — token bucket rate limit (audio only).
 // Per-device: 30 req burst, 0.5 tokens/s refill (~30/min) — sized for one real
 // listener, same numbers as before this now applies per-device instead of per-IP.
@@ -148,6 +166,7 @@ function metricsJSON() {
   const m = process.memoryUsage();
   return {
     radioListeners: radioListeners.size,
+    last_24h: { viewers: viewers24h.size, played_tracks: playedTracks24h.length },
     activeRequests,
     ipMapSize: rawIpCounts.size,
     deviceMapSize: deviceCounts.size,
@@ -642,6 +661,11 @@ _server = Bun.serve({
       }
       if (payload?.stop === true) radioListeners.delete(id);
       else if (radioListeners.size < MAP_HARD_CAP || radioListeners.has(id)) radioListeners.set(id, Date.now());
+      // 24h stats: even the stop beacon proves this id was listening moments
+      // ago, so it still counts as a viewer — only radioListeners (the "now"
+      // count) removes it early.
+      if (viewers24h.size < MAP_HARD_CAP || viewers24h.has(id)) viewers24h.set(id, Date.now());
+      if (payload?.track === true && playedTracks24h.length < MAP_HARD_CAP) playedTracks24h.push(Date.now());
       counters.ok++;
       return new Response(null, { status: 204, headers: corsBase });
     }
