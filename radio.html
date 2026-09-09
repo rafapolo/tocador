@@ -332,6 +332,7 @@
 
 <script>
 const REPORT_URL = 'https://cdn.tocador.cc/report-error';
+const HEARTBEAT_URL = 'https://cdn.tocador.cc/radio-heartbeat';
 // navigator.webdriver catches automation frameworks (Puppeteer/Playwright/Selenium
 // defaults) directly; those account for most of the "not playable" noise here —
 // headless engines routinely lack a real media/codec backend, so audio.play()
@@ -607,8 +608,35 @@ if (typeof BroadcastChannel !== 'undefined') {
   } catch (_) {}
 }
 
-audio.addEventListener('play',    () => { setPlaying(true); tapOverlay.classList.remove('visible'); });
-audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); });
+// "Listening now" presence — a heartbeat every ~15s while audio is actually
+// playing, counted server-side in radioListeners (see proxy.js) and surfaced
+// at cdn.tocador.cc/metrics. LISTENER_ID is per page load, not persisted:
+// a reload is a new listener, same as a real new connection would be.
+const LISTENER_ID = crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36));
+const HEARTBEAT_INTERVAL_MS = 15000;
+let heartbeatTimer = null;
+function sendHeartbeat(stop) {
+  if (IS_BOT) return;
+  const body = JSON.stringify(stop ? { id: LISTENER_ID, stop: true } : { id: LISTENER_ID });
+  // sendBeacon survives page teardown; fetch(keepalive) doesn't need to.
+  if (stop && navigator.sendBeacon) { navigator.sendBeacon(HEARTBEAT_URL, new Blob([body], { type: 'application/json' })); return; }
+  fetch(HEARTBEAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true, credentials: 'omit' }).catch(() => {});
+}
+function startHeartbeat() {
+  if (heartbeatTimer) return;
+  sendHeartbeat(false);
+  heartbeatTimer = setInterval(() => sendHeartbeat(false), HEARTBEAT_INTERVAL_MS);
+}
+function stopHeartbeat() {
+  if (!heartbeatTimer) return;
+  clearInterval(heartbeatTimer);
+  heartbeatTimer = null;
+  sendHeartbeat(true);
+}
+window.addEventListener('pagehide', stopHeartbeat);
+
+audio.addEventListener('play',    () => { setPlaying(true); tapOverlay.classList.remove('visible'); startHeartbeat(); });
+audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); stopHeartbeat(); });
 audio.addEventListener('playing', () => { clearLoadTimer(); timeoutStreak = 0; setLoading(false); });
 audio.addEventListener('waiting', () => setLoading(true));
 audio.addEventListener('stalled', () => setLoading(true));

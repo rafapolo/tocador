@@ -219,6 +219,14 @@ set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in
 - **Virtual grid**: ~30 DOM nodes always in the grid regardless of library size. `VirtualGrid` uses absolute positioning + `ResizeObserver`.
 - **Range requests**: Proxy forwards `Range` headers to S3; returns 206 for partial content — required for seek without full download.
 - **S3 bucket policy**: Needs public `GetObject` on `*` and `PutObject` on `{prefix}/*` for the service account.
+- **Radio "listening now"**: `radio.html` POSTs `{id}` to `/radio-heartbeat` every ~15s while its `<audio>`
+  is actually playing (id is per page-load, generated client-side; `{id, stop:true}` fires once on
+  pause/tab-close via `sendBeacon`), and proxy.js ages an entry out after 40s of silence either way. The
+  live count is `radioListeners` at `GET /metrics` — public JSON, gated by HTTP Basic Auth where the
+  password is `md5("tocador.cc/metrics")` (username ignored). Both endpoints are reachable at
+  `cdn.tocador.cc` because nginx's catch-all `location /` forwards everything to the app; there's no
+  separate internal-only port for them despite `proxy.js`'s comments about port 9002 not being exposed —
+  that's true of the raw port, not of what nginx proxies through it.
 
 ## Troubleshooting
 

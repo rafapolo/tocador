@@ -14,6 +14,7 @@ async function gotoRadio(page, params = '') {
   await page.route('**/*.mp3', route => route.fulfill({ status: 200, body: Buffer.alloc(0) }));
   await page.route('**/capa-min.jpg', route => route.fulfill({ status: 404 }));
   await page.route('**/report-error', route => route.fulfill({ status: 204 }));
+  await page.route('**/radio-heartbeat', route => route.fulfill({ status: 204 }));
   await page.goto(`/radio.html${params}`);
   await page.waitForSelector('.widget:not(.loading)', { timeout: 8000 });
 }
@@ -77,6 +78,53 @@ test('R6: prev button navigates to a previous track from history', async ({ page
   await page.click('#btn-prev');
   const titleBack = await page.locator('#track-title').textContent();
   expect(titleBack?.trim()).toBe(title1?.trim());
+});
+
+// R16/R17 exercise the heartbeat, which radio.html deliberately skips for
+// IS_BOT — and headless Playwright trips two of its signals at once:
+// navigator.webdriver (masked below via addInitScript) and the UA's own
+// "HeadlessChrome" substring (masked via test.use's userAgent override,
+// since navigator.userAgent isn't safely reassignable from page JS). Real
+// listeners never carry either.
+//
+// The fixture's mocked '**/*.mp3' route never serves real decodable audio
+// either, so audio.play() rejects with NotSupportedError before the browser
+// ever fires a genuine 'play' event (same reason R6 above drives playback
+// through the always-erroring route rather than real decode). Dispatching
+// the events directly exercises the same listeners real playback would,
+// without needing a real audio pipeline in a headless test run.
+test.describe('radio heartbeat', () => {
+  test.use({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' });
+
+  test('R16: heartbeat posts the listener id once playback starts', async ({ page }) => {
+    await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
+    await gotoRadio(page);
+    let hbBody = null;
+    await page.route('**/radio-heartbeat', route => {
+      try { hbBody = JSON.parse(route.request().postData() || '{}'); } catch {}
+      route.fulfill({ status: 204 });
+    });
+    await page.evaluate(() => audio.dispatchEvent(new Event('play')));
+    await page.waitForTimeout(100);
+    expect(hbBody).toBeTruthy();
+    expect(typeof hbBody.id).toBe('string');
+    expect(hbBody.id.length).toBeGreaterThan(0);
+  });
+
+  test('R17: heartbeat sends stop when playback pauses', async ({ page }) => {
+    await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
+    await gotoRadio(page);
+    const bodies = [];
+    await page.route('**/radio-heartbeat', route => {
+      try { bodies.push(JSON.parse(route.request().postData() || '{}')); } catch {}
+      route.fulfill({ status: 204 });
+    });
+    await page.evaluate(() => audio.dispatchEvent(new Event('play')));
+    await page.waitForTimeout(100);
+    await page.evaluate(() => audio.dispatchEvent(new Event('pause')));
+    await page.waitForTimeout(100);
+    expect(bodies.some(b => b.stop === true)).toBe(true);
+  });
 });
 
 test('R7: play button has correct initial aria-label', async ({ page }) => {
