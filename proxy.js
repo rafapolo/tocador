@@ -63,23 +63,44 @@ const HEARTBEAT_BUCKET_CAP = 6;
 const HEARTBEAT_BUCKET_REFILL = 1 / 10; // 1 token/10s after the initial burst
 const heartbeatTokenBuckets = new Map();
 
-// §16 — 24h rolling stats for /metrics' last_24h. viewers24h is keyed like
-// radioListeners but only ever pruned past a full day, so a listener who left
-// still counts as "was here" until their last heartbeat ages out — unlike
-// radioListeners, an explicit stop does NOT remove them early. playedTracks24h
-// is a plain timestamp queue: radio.html sends `track: true` once per distinct
-// track (deduped client-side), never once per heartbeat tick, so this stays
-// small relative to heartbeat volume; pushes are always Date.now(), so the
-// queue is already sorted and prunes off the front in O(shifted) rather than
-// a full scan.
+// §16 — calendar-day stats for /metrics' `today`, reset at local midnight in
+// America/Sao_Paulo. Brazil dropped DST in 2019, so the offset is a fixed
+// UTC-3 — no tz database needed, just shift the clock before flooring to a day.
 const DAY_MS = 24 * 60 * 60_000;
-const viewers24h = new Map(); // id -> lastSeen
-const playedTracks24h = []; // timestamps
-setInterval(() => {
-  const cutoff = Date.now() - DAY_MS;
-  for (const [id, ts] of viewers24h) if (ts < cutoff) viewers24h.delete(id);
-  while (playedTracks24h.length && playedTracks24h[0] < cutoff) playedTracks24h.shift();
-}, 5 * 60_000).unref();
+const SP_OFFSET_MS = 3 * 60 * 60_000; // America/Sao_Paulo = UTC-3, fixed
+const dayKeyNow = () => Math.floor((Date.now() - SP_OFFSET_MS) / DAY_MS);
+
+// radio.html ticks a heartbeat every 15s while actually playing (see
+// HEARTBEAT_INTERVAL_MS there) plus one extra at play-start and one at stop —
+// counting every accepted heartbeat as one tick and multiplying by the
+// interval is an estimate of listening time, not an exact watch-time log; it
+// over-counts short sessions slightly (the play-start tick doesn't represent
+// a full prior interval) the same way the old last_24h counters were already
+// approximate.
+const RADIO_HEARTBEAT_INTERVAL_SECONDS = 15;
+
+let todayDayKey = dayKeyNow();
+const todayListenerIds = new Set(); // ids seen today, any heartbeat (stop included)
+let todayHeartbeatTicks = 0;        // -> listeningHours estimate
+let todayTracksPlayed = 0;          // `track: true` heartbeats today
+let todayRequests = 0;              // all HTTP requests to the proxy today
+let todaySentBytes = 0;             // response bytes sent today (audio + covers)
+let listenersPeakToday = 0;         // max radioListeners.size observed today
+
+// Rolls the `today` counters over exactly once per calendar day, lazily —
+// called from anywhere that reads or writes them, so it fires on the first
+// request after local midnight rather than needing its own timer.
+function ensureToday() {
+  const k = dayKeyNow();
+  if (k === todayDayKey) return;
+  todayDayKey = k;
+  todayListenerIds.clear();
+  todayHeartbeatTicks = 0;
+  todayTracksPlayed = 0;
+  todayRequests = 0;
+  todaySentBytes = 0;
+  listenersPeakToday = radioListeners.size;
+}
 
 // §4 — token bucket rate limit (audio only).
 // Per-device: 30 req burst, 0.5 tokens/s refill (~30/min) — sized for one real
@@ -141,6 +162,11 @@ let activeRequests = 0;
 let eventLoopLag = 0;
 let _lastTick = Date.now();
 const counters = { ok: 0, c4xx: 0, c5xx: 0 };
+// Every counted request also counts toward today.requests — one place so the
+// 10s rolling window (counters) and the calendar-day total (today) can't drift.
+function markOk()   { counters.ok++;   ensureToday(); todayRequests++; }
+function mark4xx()  { counters.c4xx++; ensureToday(); todayRequests++; }
+function mark5xx()  { counters.c5xx++; ensureToday(); todayRequests++; }
 
 // §13 — upstream reachability. A 404 from S3 still proves the link is alive, so
 // only connection-level failures count. Tracked as a streak because a single
@@ -163,10 +189,21 @@ setInterval(() => {
 }, 10_000).unref();
 
 function metricsJSON() {
+  ensureToday();
   const m = process.memoryUsage();
   return {
-    radioListeners: radioListeners.size,
-    last_24h: { viewers: viewers24h.size, played_tracks: playedTracks24h.length },
+    listeners: {
+      now: radioListeners.size,
+      peakToday: listenersPeakToday,
+    },
+    today: {
+      uniqueListeners: todayListenerIds.size,
+      // heartbeat ticks * interval — see the estimate caveat at §16 above.
+      listeningHours: Math.round(todayHeartbeatTicks * RADIO_HEARTBEAT_INTERVAL_SECONDS / 3600 * 10) / 10,
+      tracksPlayed: todayTracksPlayed,
+      requests: todayRequests,
+      sent_MB: Math.round(todaySentBytes / 1_000_000 * 10) / 10,
+    },
     activeRequests,
     ipMapSize: rawIpCounts.size,
     deviceMapSize: deviceCounts.size,
@@ -333,7 +370,7 @@ async function signedPassthrough(bucket, path, rangeHeader, isHead) {
   markUpstreamOk(); // S3 answered at all — the link is up, whatever the status
   if (!r.ok && r.status !== 206) {
     const code = r.status >= 500 ? 500 : r.status;
-    if (code >= 500) counters.c5xx++; else counters.c4xx++;
+    if (code >= 500) mark5xx(); else mark4xx();
     return new Response(code === 404 ? 'Not Found' : 'Error', { status: code, headers: corsBase });
   }
   const fwdHeaders = {
@@ -346,7 +383,14 @@ async function signedPassthrough(bucket, path, rangeHeader, isHead) {
     const v = r.headers.get(h);
     if (v) fwdHeaders[h] = v;
   }
-  counters.ok++;
+  markOk();
+  // today.sent_MB: body bytes actually queued to send (HEAD sends no body).
+  // Content-Length reflects what's being sent for this request — the full
+  // file on a plain GET, just the requested slice on a 206 Range response.
+  if (!isHead && fwdHeaders['content-length']) {
+    ensureToday();
+    todaySentBytes += Number(fwdHeaders['content-length']);
+  }
   return new Response(isHead ? null : r.body, { status: isHead ? 200 : r.status, headers: fwdHeaders });
 }
 
@@ -486,7 +530,7 @@ _server = Bun.serve({
     if (shuttingDown) return new Response('Service Unavailable', { status: 503, headers: corsBase });
 
     // §2 — reject oversized URLs before any parsing
-    if (req.url.length > 1200) { counters.c4xx++; return new Response('URI Too Long', { status: 414, headers: corsBase }); }
+    if (req.url.length > 1200) { mark4xx(); return new Response('URI Too Long', { status: 414, headers: corsBase }); }
 
     const url = new URL(req.url);
 
@@ -495,7 +539,7 @@ _server = Bun.serve({
     // ("Erro de redirecionamento" in Search Console). Covers stay crawlable so the
     // <image:image> entries in sitemap-albums.xml can still be indexed.
     if (url.pathname === '/robots.txt') {
-      counters.ok++;
+      markOk();
       return new Response(ROBOTS_TXT, {
         headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=86400' },
       });
@@ -514,7 +558,7 @@ _server = Bun.serve({
     if (url.pathname === '/health') {
       const upstreamDown = upstreamFailStreak >= UPSTREAM_FAIL_THRESHOLD;
       const degraded = shuttingDown || activeRequests >= MAX_CONCURRENT * 0.9 || eventLoopLag > 500 || upstreamDown;
-      counters.ok++;
+      markOk();
       return new Response(
         JSON.stringify({ status: degraded ? 'degraded' : 'ok', activeRequests, eventLoopLag, upstreamFailStreak }),
         { status: degraded ? 503 : 200, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } }
@@ -526,13 +570,13 @@ _server = Bun.serve({
     // through same as everything else, so it's reachable at cdn.tocador.cc/metrics.
     if (url.pathname === '/metrics') {
       if (!metricsAuthorized(req)) {
-        counters.c4xx++;
+        mark4xx();
         return new Response('Unauthorized', {
           status: 401,
           headers: { ...corsBase, 'WWW-Authenticate': 'Basic realm="tocador metrics"' },
         });
       }
-      counters.ok++;
+      markOk();
       return new Response(JSON.stringify(metricsJSON()), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
       });
@@ -544,7 +588,7 @@ _server = Bun.serve({
     const ua = req.headers.get('user-agent') ?? '';
     if (botRegex.test(ua) && !goodBotRegex.test(ua)) {
       console.log(`[BLOCKED] bot: ${ua.slice(0, 120)}`);
-      counters.c4xx++;
+      mark4xx();
       return new Response('Forbidden', { status: 403, headers: corsBase });
     }
 
@@ -560,17 +604,17 @@ _server = Bun.serve({
       if (goodBotRegex.test(ua)) return new Response('OK', { status: 200, headers: corsBase });
       const reportIp = realIp(req, server);
       if (!takeFrom(reportTokenBuckets, reportIp, REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL)) {
-        counters.c4xx++;
+        mark4xx();
         return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '60' } });
       }
       const token = process.env.GITHUB_TOKEN;
       if (!token) return new Response('Not configured', { status: 503, headers: corsBase });
       let payload;
       try { payload = await req.json(); }
-      catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
+      catch { mark4xx(); return new Response('Bad Request', { status: 400, headers: corsBase }); }
       const { title, body } = payload;
       if (!title || typeof title !== 'string' || typeof body !== 'string') {
-        counters.c4xx++;
+        mark4xx();
         return new Response('Bad Request', { status: 400, headers: corsBase });
       }
       const ghHeaders = {
@@ -623,7 +667,7 @@ _server = Bun.serve({
           const cr = await fetch(`https://api.github.com/repos/rafapolo/tocador/issues/${existingNumber}/comments`, {
             method: 'POST', headers: ghHeaders, body: JSON.stringify({ body }),
           });
-          if (cr.ok) counters.ok++; else counters.c5xx++;
+          if (cr.ok) markOk(); else mark5xx();
           return new Response(cr.ok ? 'Commented' : 'GitHub error', { status: cr.ok ? 200 : cr.status, headers: corsBase });
         }
 
@@ -631,11 +675,11 @@ _server = Bun.serve({
           method: 'POST', headers: ghHeaders,
           body: JSON.stringify({ title: normalizedTitle, body, labels: ['bug'] }),
         });
-        if (gh.ok) counters.ok++; else counters.c5xx++;
+        if (gh.ok) markOk(); else mark5xx();
         return new Response(gh.ok ? 'Created' : 'GitHub error', { status: gh.ok ? 201 : gh.status, headers: corsBase });
       } catch (err) {
         console.error('report-error failed:', err.message);
-        counters.c5xx++;
+        mark5xx();
         return new Response('Bad Gateway', { status: 502, headers: corsBase });
       }
     }
@@ -648,30 +692,33 @@ _server = Bun.serve({
       if (goodBotRegex.test(ua)) return new Response(null, { status: 204, headers: corsBase }); // crawlers aren't listeners
       const hbIp = realIp(req, server);
       if (!takeFrom(heartbeatTokenBuckets, hbIp, HEARTBEAT_BUCKET_CAP, HEARTBEAT_BUCKET_REFILL)) {
-        counters.c4xx++;
+        mark4xx();
         return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '15' } });
       }
       let payload;
       try { payload = await req.json(); }
-      catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
+      catch { mark4xx(); return new Response('Bad Request', { status: 400, headers: corsBase }); }
       const id = payload?.id;
       if (typeof id !== 'string' || !RADIO_ID_RE.test(id)) {
-        counters.c4xx++;
+        mark4xx();
         return new Response('Bad Request', { status: 400, headers: corsBase });
       }
       if (payload?.stop === true) radioListeners.delete(id);
       else if (radioListeners.size < MAP_HARD_CAP || radioListeners.has(id)) radioListeners.set(id, Date.now());
-      // 24h stats: even the stop beacon proves this id was listening moments
-      // ago, so it still counts as a viewer — only radioListeners (the "now"
-      // count) removes it early.
-      if (viewers24h.size < MAP_HARD_CAP || viewers24h.has(id)) viewers24h.set(id, Date.now());
-      if (payload?.track === true && playedTracks24h.length < MAP_HARD_CAP) playedTracks24h.push(Date.now());
-      counters.ok++;
+      ensureToday();
+      if (radioListeners.size > listenersPeakToday) listenersPeakToday = radioListeners.size;
+      // today.uniqueListeners: even the stop beacon proves this id was
+      // listening moments ago, so it still counts — only radioListeners (the
+      // "now" count) removes it early.
+      if (todayListenerIds.size < MAP_HARD_CAP || todayListenerIds.has(id)) todayListenerIds.add(id);
+      todayHeartbeatTicks++;
+      if (payload?.track === true) todayTracksPlayed++;
+      markOk();
       return new Response(null, { status: 204, headers: corsBase });
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD') {
-      counters.c4xx++;
+      mark4xx();
       return new Response('Method Not Allowed', { status: 405, headers: corsBase });
     }
 
@@ -680,17 +727,17 @@ _server = Bun.serve({
     // Deliberately NOT normalized here — see keyCandidates(). Normalizing to a
     // single form at the door silently 404s every key stored in the other one.
     try { path = decodeURIComponent(url.pathname.replace(/^\/+/, '')); }
-    catch { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
+    catch { mark4xx(); return new Response('Bad Request', { status: 400, headers: corsBase }); }
 
     if (!path) return redirect301('https://tocador.cc/3d.html');
 
     // §1 — path traversal: reject .., empty segments, NUL, backslash
-    if (!isSafeKey(path)) { counters.c4xx++; return new Response('Bad Request', { status: 400, headers: corsBase }); }
+    if (!isSafeKey(path)) { mark4xx(); return new Response('Bad Request', { status: 400, headers: corsBase }); }
 
     // §6 — Range: reject malformed and multi-range (multi-range never used by audio players)
     const rangeHeader = req.headers.get('range');
     if (rangeHeader && (rangeHeader.length > 128 || !RANGE_RE.test(rangeHeader))) {
-      counters.c4xx++;
+      mark4xx();
       return new Response('Bad Request', { status: 400, headers: corsBase });
     }
 
@@ -702,7 +749,7 @@ _server = Bun.serve({
                     || (req.headers.get('referer') ?? '').includes('/radio');
     if (isAudio && !isRadioCtx && !refererAllowed(req)) {
       console.warn(`[HOTLINK] ${realIp(req, server)} ref=${req.headers.get('referer')}`);
-      counters.c4xx++;
+      mark4xx();
       return new Response('Forbidden', { status: 403, headers: corsBase });
     }
 
@@ -714,7 +761,7 @@ _server = Bun.serve({
     // looser per-raw-IP backstop so one address can't evade the limit with spoofed UAs.
     if (device && (!takeFrom(deviceTokenBuckets, device, BUCKET_CAP, BUCKET_REFILL)
                 || !takeFrom(rawIpTokenBuckets, ip, RAW_BUCKET_CAP, RAW_BUCKET_REFILL))) {
-      counters.c4xx++;
+      mark4xx();
       return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '60' } });
     }
 
@@ -723,21 +770,21 @@ _server = Bun.serve({
     if (device) {
       const deviceActive = deviceCounts.get(device) ?? 0;
       if (deviceActive >= 5) {
-        counters.c4xx++;
+        mark4xx();
         return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '5' } });
       }
       const rawActive = rawIpCounts.get(ip) ?? 0;
       if (rawActive >= RAW_CONCURRENCY_CAP) {
-        counters.c4xx++;
+        mark4xx();
         return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '5' } });
       }
-      if (!incDevice(device) || !incRawIp(ip)) { counters.c5xx++; return new Response('Service Unavailable', { status: 503, headers: corsBase }); }
+      if (!incDevice(device) || !incRawIp(ip)) { mark5xx(); return new Response('Service Unavailable', { status: 503, headers: corsBase }); }
     }
 
     // Global concurrency ceiling
     if (activeRequests >= MAX_CONCURRENT) {
       if (device) { decDevice(device); decRawIp(ip); }
-      counters.c5xx++;
+      mark5xx();
       return new Response('Too Many Requests', { status: 503, headers: corsBase });
     }
 
@@ -762,7 +809,7 @@ _server = Bun.serve({
     } catch (err) {
       const code = err?.status ?? err?.statusCode ?? 500;
       console.error(`[${code}] ${req.method} ${path}: ${err?.message ?? err}`);
-      if (code >= 500) { counters.c5xx++; markUpstreamFail(); } else counters.c4xx++;
+      if (code >= 500) { mark5xx(); markUpstreamFail(); } else mark4xx();
       return new Response(err?.name ?? 'Error', { status: code, headers: corsBase });
     } finally {
       activeRequests--;
@@ -772,7 +819,7 @@ _server = Bun.serve({
 
   error(err) {
     console.error('[server]', err.message);
-    counters.c5xx++;
+    mark5xx();
     return new Response('Internal Server Error', { status: 500, headers: corsBase });
   },
 });

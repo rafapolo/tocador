@@ -224,9 +224,13 @@ set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in
   pause/tab-close via `sendBeacon`; `{id, track:true}` is added once per distinct track, deduped
   client-side), and proxy.js ages a listener out after 40s of silence either way. `GET /metrics` is public
   JSON, gated by HTTP Basic Auth where the password is `md5("tocador.cc/metrics")` (username ignored):
-  `radioListeners` is the live "now" count; `last_24h.viewers`/`last_24h.played_tracks` are rolling
-  24h counts (viewers keyed by the same per-load id — a stop beacon still counts as "was here" and isn't
-  removed early like it is from `radioListeners`; played_tracks from the `track:true` beacons). Both
+  `listeners.now` is the live count (same as the old top-level `radioListeners`), `listeners.peakToday`
+  the day's high-water mark. `today.*` resets at local midnight in America/Sao_Paulo (fixed UTC-3, no
+  DST since 2019) rather than rolling 24h: `uniqueListeners` (keyed by the same per-load id — a stop
+  beacon still counts as "was here" and isn't removed early like it is from `listeners.now`),
+  `listeningHours` (estimated from heartbeat tick count × 15s, not an exact watch-time log),
+  `tracksPlayed` (from `track:true` beacons), `requests` (every HTTP request the proxy served today,
+  all endpoints), and `sent_MB` (response bytes sent today, audio + covers). Both
   endpoints are reachable at `cdn.tocador.cc` because nginx's catch-all `location /` forwards everything
   to the app; there's no separate internal-only port for them despite `proxy.js`'s comments about port
   9002 not being exposed — that's true of the raw port, not of what nginx proxies through it.
