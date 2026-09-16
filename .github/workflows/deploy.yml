@@ -49,10 +49,22 @@ jobs:
               rm -f "$out"
             fi
           }
+          # Every <loc> must match the canonical URL index.html sets (https://tocador.cc/?acervo=<alias>…).
+          # A regeneration without the archive's sitemap_url config emits https://tocador.cc?album=…,
+          # which Google files as a duplicate of a different canonical and never indexes (happened
+          # to homi on 2026-09-03). Warn loudly rather than block the deploy.
+          check_sitemap() {
+            local out="$1" alias="$2" bad
+            [ -s "$out" ] || return 0
+            bad=$(grep -o '<loc>https://tocador\.cc[^<]*' "$out" | grep -vc "^<loc>https://tocador\.cc/?acervo=$alias" || true)
+            [ "$bad" = 0 ] || echo "::warning::$out has $bad <loc> entries not starting with https://tocador.cc/?acervo=$alias — regenerate it with the archive's sitemap_url set"
+          }
           fetch_sitemap https://raw.githubusercontent.com/rafapolo/uqt/master/sitemap-albums.xml \
             sitemap-albums-uqt.xml https://tocador.cc/sitemap-albums-uqt.xml
           fetch_sitemap https://raw.githubusercontent.com/rafapolo/hominiscanidae/main/sitemap-albums.xml \
             sitemap-albums-homi.xml https://tocador.cc/sitemap-albums-homi.xml
+          check_sitemap sitemap-albums-uqt.xml uqt
+          check_sitemap sitemap-albums-homi.xml homi
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
