@@ -691,6 +691,38 @@ body {
   margin-bottom: 2px;
 }
 
+.album-share {
+  margin-top: 10px;
+  padding: 4px 14px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.album-share:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.acervo-index-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.acervo-index-link[hidden] {
+  display: none;
+}
+
+.acervo-index-link:hover {
+  color: var(--color-accent);
+}
+
 .year-link,
 .artist-link {
   cursor: pointer;

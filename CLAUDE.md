@@ -28,6 +28,7 @@ The app fetches the acervo `.json.gz` asynchronously on load, decompresses via n
 - **find-untagged.js** — Lists MP3s missing ID3 tags
 - **dedup-albums.js** — Detects duplicate albums by track fingerprint
 - **convert-acervo-v2.js** — Rewrites a published `.json.gz` from the v1 to the v2 columnar payload, verifying the round-trip before writing
+- **build-album-pages.js** — Builds static per-album pages, per-acervo indexes and sitemaps at deploy (see *Generating an acervo*)
 - **build-genre-index.js** — Reads `../hominiscanidae/data/genres.json`, majority-votes top-3 genre predictions per track → outputs `../hominiscanidae/data/homi-genres.json.gz` (~147 KB)
 
 ## Acervos
@@ -146,14 +147,18 @@ no separate public domain per archive. `write_sitemap()` merges the per-album `?
 onto whatever query string `--sitemap-url` already carries, so `sitemap-albums.xml` ends up with entries
 like `https://tocador.cc/?acervo=uqt&album=...&artista=...`.
 
-**`sitemap.xml`/`sitemap-albums.xml` live in the archive repo (`uqt`, `hominiscanidae`), never in this
-one.** They're data, and this repo is the shared player. Since a sitemap file may only list URLs at or
-below its own hosting origin, and every URL in these points at `tocador.cc`, `tocador`'s own
-`deploy.yml` fetches each archive's `sitemap-albums.xml` fresh at deploy time (`sitemap-albums-uqt.xml`,
-`sitemap-albums-homi.xml`) and assembles the `sitemap.xml` index that's actually served — on a daily
-cron as well as on push, so it stays current even when only an archive repo changes. Don't commit a
-`sitemap.xml` or `sitemap-albums.xml` here; it'll just be overwritten (or worse, silently stick around
-stale if the fetch step is ever removed).
+**The sitemaps tocador.cc serves are built at deploy, not taken from the archive repos.**
+`deploy.yml` downloads both catalogs and runs `script/build-album-pages.js`, which writes a static
+page per album at `/<alias>/<slug>/` (real title, description, cover `og:image`, JSON-LD, tracklist
+linking into the player), an `/<alias>/` index linking every album, and `sitemap.xml` →
+`sitemap-albums-{uqt,homi}.xml` listing those pages. It runs on push and on a daily cron, so an
+archive-only push shows up within a day. This exists because the player renders albums with JS:
+Google never indexed any `?acervo=&album=` URL, and link previews (which don't run JS) showed no
+cover. Slugs come from `albumSlugs()` in `js/acervo-format.js`; the player uses the same function
+to point `<link rel=canonical>`, `og:url` and its Compartilhar button at the static page, so never
+slugify anywhere else. The `sitemap.xml`/`sitemap-albums.xml` that `--sitemap-out` still writes into
+the archive repos are no longer served. The generated `uqt/`, `homi/` and `sitemap*.xml` are
+gitignored here.
 
 Add `--v2` to emit the columnar payload instead of v1. Publish the player first — see
 the deploy-order note under *v2 (columnar) payload*.

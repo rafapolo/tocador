@@ -276,14 +276,48 @@ function setMeta(attr, key, value) {
   el.setAttribute('content', value);
 }
 
+// Static, crawlable page for an album: /<acervo>/<slug>/ on tocador.cc, built at
+// deploy by script/build-album-pages.js with the same albumSlugs(). Only KNOWN_ACERVOS
+// get one, so a third-party ?acervo=<url> catalog returns null. Always tocador.cc,
+// even on the uqt/hominiscanidae Pages mirrors, which don't serve these pages.
+const SITE_ORIGIN = 'https://tocador.cc';
+let activeAcervoKey = null;
+let _albumSlugByPath = null;
+function albumPageUrl(album) {
+  if (!activeAcervoKey || !db?.albums || typeof albumSlugs !== 'function') return null;
+  if (!_albumSlugByPath) {
+    const slugs = albumSlugs(db.albums);
+    _albumSlugByPath = new Map(db.albums.map((a, i) => [a.path, slugs[i]]));
+  }
+  const slug = _albumSlugByPath.get(album.path);
+  return slug ? `${SITE_ORIGIN}/${activeAcervoKey}/${slug}/` : null;
+}
+
+async function shareAlbum(album) {
+  const url = albumPageUrl(album) || window.location.origin + generateAlbumUrl(album);
+  const title = `${album.name} — ${album.artists}`;
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); return; }
+    catch (err) { if (err?.name === 'AbortError') return; }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('Link do álbum copiado');
+  } catch {
+    showToast(url, 6000);
+  }
+}
+
 function updateMetaTags(album) {
   const title = `${album.name} — ${album.artists} (${album.year})`;
   const archiveTitle = db?.meta?.title || 'Tocador';
   const desc = `Álbum de ${album.artists}, ${album.year}. Ouça no ${archiveTitle}.`;
   const image = `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg`;
   // og:url and <link rel=canonical> must be absolute — generateAlbumUrl() returns a
-  // path-relative URL (right for pushState/anchor hrefs, wrong for these two).
-  const url = window.location.origin + generateAlbumUrl(album);
+  // path-relative URL (right for pushState/anchor hrefs, wrong for these two). The
+  // album's static page is the canonical when one exists: it's what gets indexed and
+  // what unfurls with the cover, since crawlers don't run this script.
+  const url = albumPageUrl(album) || window.location.origin + generateAlbumUrl(album);
   document.title = `♪ ${album.artists} · ${album.name}`;
   setMeta('property', 'og:title', title);
   setMeta('property', 'og:description', desc);
@@ -1357,6 +1391,16 @@ function renderAlbumHeader() {
   });
 
   attachArtistHandlers(info);
+
+  const album = selectedAlbum;
+  const share = document.createElement('button');
+  share.type = 'button';
+  share.className = 'album-share';
+  share.textContent = 'Compartilhar';
+  share.setAttribute('aria-label', `Compartilhar link de ${album.name}`);
+  share.addEventListener('click', () => shareAlbum(album));
+  info.appendChild(share);
+
   container.replaceChildren(cover, info);
 }
 
@@ -1756,7 +1800,12 @@ document.addEventListener('DOMContentLoaded', async function () {
   BASE_URL = db.meta?.base_url || cfg.baseUrl || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
   // Now that db.meta is available, resolve for real — sub-pages and the switcher
   // must follow the acervo actually loaded, not the deployment's default.
-  const activeAcervoKey = resolveAcervoKey(dataUrl, acervoParam);
+  activeAcervoKey = resolveAcervoKey(dataUrl, acervoParam);
+  const indexLink = document.getElementById('acervo-index-link');
+  if (indexLink && activeAcervoKey) {
+    indexLink.href = `${SITE_ORIGIN}/${activeAcervoKey}/`;
+    indexLink.hidden = false;
+  }
   const acervoQuery = activeAcervoKey
     ? `?acervo=${encodeURIComponent(activeAcervoKey)}`
     : (acervoParam ? `?acervo=${encodeURIComponent(acervoParam)}` : '');

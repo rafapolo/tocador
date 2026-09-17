@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '17 3 * * *'   # keeps sitemap-albums-{uqt,homi}.xml in sync even when only the archive repos push
+    - cron: '17 3 * * *'   # rebuilds album pages + sitemaps even when only the archive repos push
   workflow_dispatch:
 
 permissions:
@@ -25,53 +25,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Pull per-archive sitemaps
-        # sitemap-albums.xml is generated and owned by each archive repo (uqt, hominiscanidae),
-        # not committed here — it's their data. But the sitemap protocol only lets a sitemap
-        # list URLs at/under its own hosting origin, and every URL in these points at
-        # tocador.cc, so the files still have to be *served* from here. Fetch each one fresh
-        # at deploy time instead of duplicating it in this repo.
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Build static album pages and sitemaps
+        # The player renders albums with JavaScript, so its ?acervo=&album= URLs all serve
+        # the same "♪" shell: Google left every one of them unknown, and link previews
+        # (which never run JS) showed no cover. script/build-album-pages.js turns each
+        # catalog into a real page per album at /<alias>/<slug>/, an /<alias>/ index
+        # linking all of them, and the sitemaps listing those pages (sitemap.xml,
+        # sitemap-albums-<alias>.xml). Built from the same catalogs the player loads
+        # (KNOWN_ACERVOS in js/ui.js), fresh on every push and on the daily cron above.
         #
-        # Because these files aren't committed here, a plain checkout has no previous copy to
-        # fall back on if the raw.githubusercontent.com fetch fails — publishing would silently
-        # ship no sitemap file at all for the day. So retry the archive fetch a few times, and
-        # if it's still down, fall back to the copy already live on tocador.cc (the actual
-        # previous deploy's output) instead of dropping the file.
+        # A catalog that can't be fetched fails the run on purpose: publishing without
+        # it would 404 every album page and sitemap entry for that acervo, whereas a
+        # failed run leaves the previous deployment live.
         run: |
-          fetch_sitemap() {
-            local url="$1" out="$2" live="$3"
-            if curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$out"; then
-              return 0
-            fi
-            echo "::warning::couldn't fetch $url after retries, falling back to live copy at $live"
-            if ! curl -fsSL "$live" -o "$out"; then
-              echo "::error::couldn't fetch $out from archive repo or live fallback — publishing without it"
-              rm -f "$out"
-            fi
-          }
-          # Every <loc> must match the canonical URL index.html sets (https://tocador.cc/?acervo=<alias>…).
-          # A regeneration without the archive's sitemap_url config emits https://tocador.cc?album=…,
-          # which Google files as a duplicate of a different canonical and never indexes (happened
-          # to homi on 2026-09-03). Warn loudly rather than block the deploy.
-          check_sitemap() {
-            local out="$1" alias="$2" bad
-            [ -s "$out" ] || return 0
-            bad=$(grep -o '<loc>https://tocador\.cc[^<]*' "$out" | grep -vc "^<loc>https://tocador\.cc/?acervo=$alias" || true)
-            [ "$bad" = 0 ] || echo "::warning::$out has $bad <loc> entries not starting with https://tocador.cc/?acervo=$alias — regenerate it with the archive's sitemap_url set"
-          }
-          fetch_sitemap https://raw.githubusercontent.com/rafapolo/uqt/master/sitemap-albums.xml \
-            sitemap-albums-uqt.xml https://tocador.cc/sitemap-albums-uqt.xml
-          fetch_sitemap https://raw.githubusercontent.com/rafapolo/hominiscanidae/main/sitemap-albums.xml \
-            sitemap-albums-homi.xml https://tocador.cc/sitemap-albums-homi.xml
-          check_sitemap sitemap-albums-uqt.xml uqt
-          check_sitemap sitemap-albums-homi.xml homi
-          {
-            echo '<?xml version="1.0" encoding="UTF-8"?>'
-            echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            [ -s sitemap-albums-uqt.xml ]  && echo '  <sitemap><loc>https://tocador.cc/sitemap-albums-uqt.xml</loc></sitemap>'
-            [ -s sitemap-albums-homi.xml ] && echo '  <sitemap><loc>https://tocador.cc/sitemap-albums-homi.xml</loc></sitemap>'
-            echo '</sitemapindex>'
-          } > sitemap.xml
+          mkdir -p "$RUNNER_TEMP/catalogs"
+          for pair in uqt=https://rafapolo.github.io/uqt/data/uqt-albums.json.gz \
+                      homi=https://rafapolo.github.io/hominiscanidae/data/homi-albums.json.gz; do
+            curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors "${pair#*=}" \
+              -o "$RUNNER_TEMP/catalogs/${pair%%=*}.json.gz"
+          done
+          bun script/build-album-pages.js --out . \
+            uqt="$RUNNER_TEMP/catalogs/uqt.json.gz" \
+            homi="$RUNNER_TEMP/catalogs/homi.json.gz"
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

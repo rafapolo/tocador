@@ -79,5 +79,33 @@
     return decodeV2(db);
   }
 
+  // URL slug for each album's static page (/<acervo>/<slug>/), built at deploy by
+  // script/build-album-pages.js. The player computes the same slugs to point its
+  // canonical and share links there, so both must go through this one function.
+  // Takes the whole album list because distinct paths can fold to the same slug
+  // ("Chuva - Chuva" / "Chuva Chuva"): later ones, in catalog order, get -2, -3...
+  function slugify(s) {
+    return String(s)
+      .normalize('NFKD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 90)
+      .replace(/-+$/, '') || 'album';
+  }
+
+  function albumSlugs(albums) {
+    var used = Object.create(null);
+    return albums.map(function (album) {
+      var base = slugify(album.path);
+      var slug = base;
+      for (var i = 2; used[slug]; i++) slug = base + '-' + i;
+      used[slug] = true;
+      return slug;
+    });
+  }
+
   global.decodeAcervo = decodeAcervo;
+  global.albumSlugs = albumSlugs;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

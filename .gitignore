@@ -19,3 +19,9 @@ tasks/
 *.bak2
 .claude/
 .DS_Store
+
+# generated at deploy by script/build-album-pages.js
+/uqt/
+/homi/
+/sitemap.xml
+/sitemap-albums-*.xml

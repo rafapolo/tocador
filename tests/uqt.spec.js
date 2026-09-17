@@ -575,6 +575,34 @@ test('L51: <link rel=canonical> is an absolute URL once an album is selected', a
   expect(href).toMatch(/^https?:\/\//);
 });
 
+// Album pages: script/build-album-pages.js publishes /<acervo>/<slug>/ for every
+// album, and the player must name that page as canonical (and share it) so crawlers
+// and link previews land on the version with real content and a cover og:image.
+test('L60: canonical points at the static album page for a known acervo', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=uqt');
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  await expect(page.locator('link[rel="canonical"]'))
+    .toHaveAttribute('href', 'https://tocador.cc/uqt/1971-chico-buarque-construcao/');
+  await expect(page.locator('meta[property="og:url"]'))
+    .toHaveAttribute('content', 'https://tocador.cc/uqt/1971-chico-buarque-construcao/');
+});
+
+test('L61: share button copies the static album page URL', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.addInitScript(() => { delete Navigator.prototype.share; });
+  await gotoWithFixture(page, '/?acervo=uqt');
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  await page.locator('#album-header .album-share').click();
+  await expect(page.locator('#toast')).toContainText('copiado');
+  expect(await page.evaluate(() => navigator.clipboard.readText()))
+    .toBe('https://tocador.cc/uqt/1971-chico-buarque-construcao/');
+});
+
+test('L62: browse panel links to the acervo album index', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=homi');
+  await expect(page.locator('#acervo-index-link')).toHaveAttribute('href', 'https://tocador.cc/homi/');
+});
+
 // Fix #3: --color-text-muted (#7a7268 → #958d83) needed to clear WCAG AA's
 // 4.5:1 for small text against both the page background and the lightest
 // surface it appears on (per the audit's Lighthouse color-contrast finding).
