@@ -89,6 +89,11 @@ let shuffleOn = false;
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
 let renderedAlbum = null;
 let _consecutiveErrors = 0;
+// True from a play request until the next pause. A track that was only primed
+// (album opened or ?t= loaded, nothing pressed) must not auto-skip on a load error:
+// Googlebot's renderer can't fetch audio, and skipping rewrote ?t=4 to ?t=5, which
+// Search Console reports as a redirect on every track URL it crawls.
+let _playRequested = false;
 const durationCache = new Map();
 let _toastEl = null, _countEl = null, _clearBtn = null, _emptyState = null, _clearAllBtn = null;
 // Cached DOM references for hot-path elements (set once after DOMContentLoaded)
@@ -228,11 +233,21 @@ function generateAlbumUrl(album, trackNum) {
   return `${window.location.pathname}?${params}`;
 }
 
+// Rewriting the address bar to a URL that differs only in encoding (`,` → `%2C`,
+// param order) still counts as a JS redirect to crawlers, so keep the current
+// URL whenever the parameters are the same.
+function replaceUrl(state, url) {
+  const q = url.slice(url.indexOf('?') + 1);
+  const same = url.startsWith(window.location.pathname + '?') &&
+    new URLSearchParams(q).toString() === new URLSearchParams(window.location.search).toString();
+  window.history.replaceState(state, '', same ? window.location.pathname + window.location.search : url);
+}
+
 function updateTrackInUrl(trackNum) {
   const params = new URLSearchParams(window.location.search);
   if (trackNum) params.set('t', trackNum); else params.delete('t');
   const state = { album: selectedAlbum?.path, t: trackNum };
-  window.history.replaceState(state, '', `${window.location.pathname}?${params}`);
+  replaceUrl(state, `${window.location.pathname}?${params}`);
 }
 
 function updateQueryInUrl(q, push) {
@@ -1481,6 +1496,7 @@ function renderTrackList() {
 // ── Playback ──────────────────────────────────────────────────────────────
 
 function safePlay(audio) {
+  _playRequested = true;
   const p = audio.play();
   if (p?.catch) p.catch(err => {
     if (err.name === 'NotAllowedError') {
@@ -1909,7 +1925,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (albumFromUrl && isMobile()) openMobileDrawer();
     if (albumFromUrl) {
       updateMetaTags(albumToSelect);
-      window.history.replaceState({ album: albumToSelect.path, t: trackNumFromUrl || null }, '', generateAlbumUrl(albumToSelect, trackNumFromUrl || null));
+      replaceUrl({ album: albumToSelect.path, t: trackNumFromUrl || null }, generateAlbumUrl(albumToSelect, trackNumFromUrl || null));
     }
   }
 
@@ -1950,6 +1966,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     overlayBtnPlay?.setAttribute('aria-label', 'Pausar');
   });
   audio.addEventListener('pause',    () => {
+    _playRequested = false;
     (_btnPlay ??= document.getElementById('btn-play'))?.classList.remove('playing');
     overlayBtnPlay?.classList.remove('playing');
     _btnPlay?.setAttribute('aria-label', 'Reproduzir');
@@ -1963,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   const MAX_CONSECUTIVE_ERRORS = 3;
   audio.addEventListener('error', () => {
     setLoading(false);
-    if (currentTrack) {
+    if (currentTrack && _playRequested) {
       const errored = currentTrack;
       _consecutiveErrors++;
       // Several tracks failing in a row usually means the proxy/network is down,

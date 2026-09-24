@@ -10,7 +10,7 @@ const fixtureGz = fs.readFileSync(fixturePath);
 // one run in three. Long enough that no test outlives it and hits 'ended'.
 const fixtureMp3 = fs.readFileSync(path.join(__dirname, 'fixtures', 'silence.mp3'));
 
-async function gotoWithFixture(page, url = '/') {
+async function gotoWithFixture(page, url = '/', { blockAudio = false } = {}) {
   // Clear persisted player state so shuffle/repeat start at defaults
   await page.addInitScript(() => {
     localStorage.removeItem('uqt-shuffle');
@@ -37,7 +37,9 @@ async function gotoWithFixture(page, url = '/') {
   });
   await page.route('**/*-genres.json.gz', route => route.fulfill({ status: 404 }));
   // Block audio and image network requests to keep tests fast
-  await page.route('**/*.mp3', route => route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: fixtureMp3 }));
+  await page.route('**/*.mp3', route => blockAudio
+    ? route.abort()
+    : route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: fixtureMp3 }));
   await page.route('**/capa-min.jpg', route => route.fulfill({ status: 404 }));
   await page.route('**/report-error', route => route.fulfill({ status: 204 }));
   await page.goto(url);
@@ -52,6 +54,16 @@ test('A1: albums render in grid after gzip fetch and decompress', async ({ page 
   const items = page.locator('.album-item');
   // fixture has 13 albums (10 originals + 2 with # in path + 1 with duplicate tracks)
   await expect(items).toHaveCount(13);
+});
+
+// Googlebot renders ?t= track URLs but can't fetch audio. The primed track's load
+// error used to auto-skip to the next one and rewrite ?t=2 to ?t=3, which Search
+// Console reported as "Page with redirect" on every track URL it crawled.
+test('A1b: a primed track that fails to load leaves the URL untouched', async ({ page }) => {
+  const url = '/?album=1971+-+Chico+Buarque+-+Constru%C3%A7%C3%A3o&t=2';
+  await gotoWithFixture(page, url, { blockAudio: true });
+  await page.waitForTimeout(2500); // past the 1.5s auto-skip delay
+  expect(new URL(page.url()).search).toBe(url.slice(1));
 });
 
 test('A2: ?album= pre-selects album and shows track list', async ({ page }) => {

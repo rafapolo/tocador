@@ -174,7 +174,7 @@ function albumPage({ alias, meta, album, slug, siblings }) {
       '@type': 'MusicRecording',
       name: t.title,
       position: t.num,
-      url: SITE + playerUrl(alias, album, t.num),
+      url: `${canonical}#t${t.num}`,
       ...(t.duration > 0 && { duration: isoDuration(t.duration) }),
       ...(t.artists && t.artists !== artist && { byArtist: { '@type': 'Person', name: t.artists } }),
     })),
@@ -182,7 +182,7 @@ function albumPage({ alias, meta, album, slug, siblings }) {
 
   const rows = tracks.map(t => {
     const other = t.artists && t.artists !== artist ? `<span class="ta">${esc(t.artists)}</span>` : '';
-    return `<li><a href="${esc(playerUrl(alias, album, t.num))}"><span class="n">${esc(t.num)}</span>` +
+    return `<li id="t${esc(t.num)}"><a rel="nofollow" href="${esc(playerUrl(alias, album, t.num))}"><span class="n">${esc(t.num)}</span>` +
       `<span class="t">${esc(t.title)}${other}</span><span class="d">${fmtDuration(t.duration)}</span></a></li>`;
   }).join('\n');
 
@@ -198,7 +198,7 @@ ${image ? `<img class="cover" src="${esc(image)}" alt="Capa de ${esc(album.title
 <div>
 <h1>${esc(album.title)}</h1>
 <p class="meta">${esc(artist)}${year ? ` · ${year}` : ''} · ${tracks.length} faixa${tracks.length === 1 ? '' : 's'}${total ? ` · ${Math.round(total / 60)} min` : ''}</p>
-<a class="play" href="${esc(playerUrl(alias, album))}">▶ Ouvir no Tocador</a>
+<a class="play" rel="nofollow" href="${esc(playerUrl(alias, album))}">▶ Ouvir no Tocador</a>
 </div>
 </article>
 <ol class="tracks">
