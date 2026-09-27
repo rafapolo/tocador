@@ -123,31 +123,25 @@ cached older `ui.js` cannot read v2 and will render an empty grid.
 Title, subtitle, hours are read from `acervo.json` in the music dir; `base_url` from `.env` there. No flags needed. Each acervo outputs directly into its own repo:
 
 ```bash
-# uqt → ../uqt repo (also writes sitemap.xml here)
+# uqt → ../uqt repo
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/bkps/UQT/sambaderaiz \
-  ../uqt/data/uqt-albums.json.gz \
-  --sitemap-out sitemap.xml
+  ../uqt/data/uqt-albums.json.gz
 
-# hominiscanidae → ../hominiscanidae repo (also writes sitemap.xml here)
+# hominiscanidae → ../hominiscanidae repo
 ./script/generate-albums/target/release/generate-albums \
   /Volumes/EXTRA/hominiscanidae/unzips \
-  ../hominiscanidae/data/homi-albums.json.gz \
-  --sitemap-out sitemap.xml
+  ../hominiscanidae/data/homi-albums.json.gz
 
 # then regenerate the genre index (homi only)
 bun script/build-genre-index.js
 ```
 
-Then commit and push in each repo (including `data/homi-genres.json.gz`). CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`, `--sitemap-url`, `--sitemap-out`) override config when passed.
+Then commit and push in each repo (including `data/homi-genres.json.gz`). CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`, `--s3-prefix`, `--v2`) override config when passed.
+The generator writes no sitemaps: `--sitemap-url`/`--sitemap-out` were removed and now exit with an
+error (a leftover `sitemap_url` key in a music dir's `acervo.json` is ignored).
 
-`--sitemap-url` for both archives is `https://tocador.cc/?acervo=<alias>` (set once in each music dir's
-`acervo.json`, not passed on the CLI) — every acervo lives at `tocador.cc` behind `?acervo=`, there is
-no separate public domain per archive. `write_sitemap()` merges the per-album `?album=&artista=` params
-onto whatever query string `--sitemap-url` already carries, so `sitemap-albums.xml` ends up with entries
-like `https://tocador.cc/?acervo=uqt&album=...&artista=...`.
-
-**The sitemaps tocador.cc serves are built at deploy, not taken from the archive repos.**
+**Sitemaps are built at deploy, never in the archive repos.**
 `deploy.yml` downloads both catalogs and runs `script/build-album-pages.js`, which writes a page
 per album at `/<alias>/<slug>/`, an `/<alias>/` index linking every album, and `sitemap.xml` →
 `sitemap-albums-{uqt,homi}.xml` listing those pages. It runs on push and on a daily cron, so an
@@ -167,8 +161,7 @@ must keep *relative* asset paths because the mirrors serve it from a subdirector
 the app root from its own script URL (`APP_ROOT`). Slugs come from `albumSlugs()` in
 `js/acervo-format.js`, shared by the builder and the player, so never slugify anywhere else.
 
-The `sitemap.xml`/`sitemap-albums.xml` that `--sitemap-out` still writes into the archive repos are no longer served. The generated `uqt/`, `homi/` and `sitemap*.xml` are
-gitignored here.
+The generated `uqt/`, `homi/` and `sitemap*.xml` are gitignored here.
 
 Add `--v2` to emit the columnar payload instead of v1. Publish the player first — see
 the deploy-order note under *v2 (columnar) payload*.

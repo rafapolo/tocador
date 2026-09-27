@@ -35,7 +35,6 @@ flowchart TD
     subgraph Phase7["7. Catálogo"]
         V[generate-albums<br>Rust / rayon / id3 crate] --> W[js/homi-albums.json.gz]
         V -->|lê ID3 tags<br>+ nome da pasta| J
-        V -->|--sitemap-url| SX[sitemap.xml<br>opcional]
     end
 
     subgraph Phase7b["7b. Limpeza S3"]
@@ -80,7 +79,7 @@ flowchart TD
 | 4 | **Charset gap** | álbuns com tracks faltando em `unzips/` | tracks copiadas + upload S3 | megadl, yt-dlp, boto3 |
 | 5 | **Nome normalize** | pastas `unzips/` sem ano | `YYYY - Artist - Album` | regex, fuzzy match de slugs |
 | 6 | **Capas** | pastas sem imagem | `capa.jpg` + `capa-min.jpg` na pasta | requests, PIL, Discogs API, iTunes API |
-| 7 | **Catálogo** | `unzips/` | `js/homi-albums.json.gz`, `sitemap.xml` (opcional) | Rust (id3, rayon, walkdir); flags `--s3-prefix`, `--sitemap-url` |
+| 7 | **Catálogo** | `unzips/` | `js/homi-albums.json.gz` | Rust (id3, rayon, walkdir); flag `--s3-prefix` |
 | 7b | **Limpeza S3** | `homi-albums.json.gz` + S3 | orphans removidos, nested subdirs removidos | `scripts/utils/clean_s3.py` |
 | 8 | **S3 audio** | `unzips/` | `s3://$S3_BUCKET/<s3_prefix>/<album>/` | @aws-sdk/lib-storage, diff por tamanho; prefix via `meta.s3_prefix` |
 | 9 | **S3 capa-min** | `unzips/` | `s3://$S3_BUCKET/indie/<album>/capa-min.jpg` | sync-covers-homi.js |
@@ -90,7 +89,7 @@ flowchart TD
 
 - **ID3 tags**: O binary `generate-albums` *lê* tags ID3 de título/artista/álbum/ano/faixa/duração para preencher metadados. O nome da pasta tem prioridade sobre ID3 (preenche lacunas).
 - **`--s3-prefix`**: bake o prefixo S3 em `meta.s3_prefix` no `.json.gz`. `sync-to-bucket.js` lê esse campo via `ACERVO_JSON` env var, tornando o script agnóstico ao acervo — sem hardcode de `indie/` ou `uqt/`.
-- **`--sitemap-url`**: grava `sitemap.xml` no mesmo diretório do `.json.gz` (raiz do repo). Cada álbum vira uma `<url>` com deep link `?album=&artist=`, `lastmod` = hoje, prioridade tiered por década.
+- **Sitemaps**: não são gerados aqui. O deploy do tocador (`script/build-album-pages.js`) cria a página de cada álbum em `tocador.cc/<acervo>/<slug>/` e os sitemaps que as listam, a partir do catálogo publicado.
 - **capa-min.jpg**: `fetch-covers.py` grava `capa.jpg` (q92) e `capa-min.jpg` (200px, q80) localmente; `sync-covers-homi.js` sobe os `capa-min.jpg` já existentes para S3. Não há conversão para WebP.
 - **S3 bucket**: definido via `$S3_BUCKET` no `.env`. Prefixo lido de `meta.s3_prefix` no `.json.gz` — `indie/` para hominiscanidae, `uqt/` para o acervo uqt.
 - **Ordenação**: O catálogo final ordena álbuns por ano decrescente. Tracks dentro de cada álbum seguem a ordem alfabética dos nomes de arquivo.

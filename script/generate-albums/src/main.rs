@@ -79,7 +79,6 @@ fn normalize_artists(s: &str) -> String {
 struct DirConfig {
     title:       Option<String>,
     subtitle:    Option<String>,
-    sitemap_url: Option<String>,
     v2:          Option<bool>,
 }
 
@@ -541,8 +540,6 @@ struct Config {
     meta_hours: Option<String>,
     meta_base_url: Option<String>,
     meta_s3_prefix: Option<String>,
-    meta_sitemap_url: Option<String>,
-    meta_sitemap_out: Option<String>,
     format_v2: bool,
 }
 
@@ -552,11 +549,10 @@ fn parse_args() -> Config {
         eprintln!("Uso: generate-albums <pasta-de-musicas> [saida.json.gz]");
         eprintln!("     [--title \"Nome do Acervo\"] [--subtitle \"Subtítulo\"]");
         eprintln!("     [--hours \"42\"] [--base-url \"https://cdn.exemplo.com/musicas\"] [--s3-prefix \"indie/\"]");
-        eprintln!("     [--sitemap-url \"https://exemplo.com/player\"] [--sitemap-out sitemap.xml]");
         eprintln!("     [--v2]  formato colunar (menor e mais rápido de parsear).");
         eprintln!("             Publique o player antes do catálogo v2 — players antigos não o leem.");
         eprintln!("             Fica permanente com \"v2\": true em acervo.json — evita reverter para v1");
-        eprintln!("             numa regeneração futura (ex.: só para atualizar o sitemap).");
+        eprintln!("             numa regeneração futura.");
         std::process::exit(if args.is_empty() { 1 } else { 0 });
     }
 
@@ -566,8 +562,6 @@ fn parse_args() -> Config {
     let mut meta_hours = None;
     let mut meta_base_url = None;
     let mut meta_s3_prefix = None;
-    let mut meta_sitemap_url = None;
-    let mut meta_sitemap_out = None;
     let mut format_v2 = false;
     let mut i = 0;
     while i < args.len() {
@@ -577,9 +571,17 @@ fn parse_args() -> Config {
             "--hours"        => { i += 1; meta_hours        = args.get(i).cloned(); }
             "--base-url"     => { i += 1; meta_base_url     = args.get(i).cloned(); }
             "--s3-prefix"    => { i += 1; meta_s3_prefix    = args.get(i).cloned(); }
-            "--sitemap-url"  => { i += 1; meta_sitemap_url  = args.get(i).cloned(); }
-            "--sitemap-out"  => { i += 1; meta_sitemap_out  = args.get(i).cloned(); }
+            // Sitemaps are built at deploy by tocador's script/build-album-pages.js from the
+            // published catalog; the ?album= ones this used to write were never served.
+            "--sitemap-url" | "--sitemap-out" => {
+                eprintln!("Erro: {} foi removido — os sitemaps agora são gerados no deploy do tocador (script/build-album-pages.js).", args[i]);
+                std::process::exit(2);
+            }
             "--v2"           => { format_v2 = true; }
+            flag if flag.starts_with("--") => {
+                eprintln!("Erro: opção desconhecida {flag}");
+                std::process::exit(2);
+            }
             other            => positional.push(other.to_string()),
         }
         i += 1;
@@ -590,7 +592,7 @@ fn parse_args() -> Config {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("acervo.json.gz"));
 
-    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix, meta_sitemap_url, meta_sitemap_out, format_v2 }
+    Config { music_dir, output, meta_title, meta_subtitle, meta_hours, meta_base_url, meta_s3_prefix, format_v2 }
 }
 
 fn main() {
@@ -606,7 +608,7 @@ fn main() {
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
 
-    // base_url / sitemap_url: CLI flag → acervo.json → .env in music dir → env var
+    // base_url: CLI flag → .env in music dir → env var
     let dot_env = fs::read_to_string(cfg.music_dir.join(".env")).ok().unwrap_or_default();
     let env_val = |key: &str| -> Option<String> {
         dot_env.lines()
@@ -620,9 +622,8 @@ fn main() {
     let meta_title       = cfg.meta_title      .or(dir_cfg.title);
     let meta_subtitle    = cfg.meta_subtitle   .or(dir_cfg.subtitle);
     let meta_base_url    = cfg.meta_base_url   .or_else(|| env_val("BASE_URL"));
-    let meta_sitemap_url = cfg.meta_sitemap_url.or(dir_cfg.sitemap_url).or_else(|| env_val("SITEMAP_URL"));
     // --v2 CLI flag → acervo.json "v2" — once an archive has been migrated, every later
-    // regeneration (e.g. for a sitemap-only fix) must keep emitting v2, or it silently
+    // regeneration must keep emitting v2, or it silently
     // reverts to v1 and throws away the parse/transfer win. See CLAUDE.md.
     let format_v2         = cfg.format_v2 || dir_cfg.v2.unwrap_or(false);
 
@@ -750,19 +751,6 @@ fn main() {
 
     let n_albums = output.albums.len();
 
-    // Written before the payload: the v2 conversion consumes the album list.
-    if let Some(ref sitemap_url) = meta_sitemap_url {
-        let sitemap_out = cfg.meta_sitemap_out
-            .as_deref()
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                out_gz.parent()
-                    .map(|p| p.join("sitemap.xml"))
-                    .unwrap_or_else(|| PathBuf::from("sitemap.xml"))
-            });
-        write_sitemap(&output.albums, sitemap_url, output.meta.base_url.as_deref(), &sitemap_out);
-    }
-
     let json = if format_v2 {
         serde_json::to_string(&to_v2(output.meta, output.albums))
     } else {
@@ -780,143 +768,6 @@ fn main() {
     let size_gz = fs::metadata(&out_gz).map(|m| m.len() / 1024).unwrap_or(0);
     let fmt = if format_v2 { "v2" } else { "v1" };
     println!("{} álbuns  →  {} ({size_gz} KB, formato {fmt})", n_albums, out_gz.display());
-}
-
-fn is_leap(y: u32) -> bool {
-    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
-}
-
-fn today_iso() -> String {
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    let mut days = (secs / 86400) as u32;
-    let mut year = 1970u32;
-    loop {
-        let in_year = if is_leap(year) { 366 } else { 365 };
-        if days < in_year { break; }
-        days -= in_year;
-        year += 1;
-    }
-    let month_days = [31u32, if is_leap(year) { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    let mut month = 1u32;
-    for &m in &month_days {
-        if days < m { break; }
-        days -= m;
-        month += 1;
-    }
-    format!("{:04}-{:02}-{:02}", year, month, days + 1)
-}
-
-fn form_encode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len() * 2);
-    for b in s.bytes() {
-        match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' |
-            b'-' | b'_' | b'.' | b'~' => out.push(b as char),
-            b' ' => out.push('+'),
-            _ => { out.push('%'); out.push_str(&format!("{:02X}", b)); }
-        }
-    }
-    out
-}
-
-// Percent-encode a URL path segment (spaces → %20, not +)
-fn path_segment_encode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len() * 3);
-    for b in s.bytes() {
-        match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' |
-            b'-' | b'_' | b'.' | b'~' => out.push(b as char),
-            _ => { out.push('%'); out.push_str(&format!("{:02X}", b)); }
-        }
-    }
-    out
-}
-
-fn xml_escape(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            // strip control chars invalid in XML 1.0 (tab/CR/LF allowed)
-            c if (c as u32) < 0x20 && c != '\t' && c != '\n' && c != '\r' => {}
-            c => out.push(c),
-        }
-    }
-    out
-}
-
-fn write_sitemap(albums: &[Album], base_url: &str, cdn_base: Option<&str>, sitemap_path: &Path) {
-    let today = today_iso();
-    let base = base_url.trim_end_matches('/');
-    // base_url may already carry a query string (e.g. "https://tocador.cc/?acervo=uqt", needed
-    // when several archives share one origin and are told apart by ?acervo=) — merge the
-    // per-album params with '&' instead of assuming a bare domain. site_root strips the query
-    // back down to a plain path, since sitemap-albums.xml itself always lives at the origin root
-    // regardless of which acervo it's for.
-    let has_query = base.contains('?');
-    let sep = if has_query { "&amp;" } else { "?" }; // XML: a literal '&' would be invalid here
-    let home_loc = if has_query { xml_escape(base) } else { format!("{}/", base) };
-    let site_root = base.split('?').next().unwrap_or(base).trim_end_matches('/');
-    let cdn = cdn_base.map(|s| s.trim_end_matches('/'));
-    let dir = sitemap_path.parent().unwrap_or(Path::new("."));
-    let albums_path = dir.join("sitemap-albums.xml");
-
-    // sitemap-albums.xml
-    let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    xml.push_str("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"");
-    if cdn.is_some() { xml.push_str(" xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\""); }
-    xml.push_str(">\n");
-    xml.push_str(&format!(
-        "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n",
-        home_loc, today
-    ));
-    for album in albums {
-        let album_param = form_encode(&album.path);
-        // Page canonical now keeps both params when present (see index.html),
-        // so the sitemap loc must match exactly: ?album=X&artista=Y (plus &acervo= up front
-        // when base_url carries one).
-        let loc = if !album.artist.is_empty() {
-            format!("{}{}album={}&amp;artista={}", base, sep, album_param, form_encode(&album.artist))
-        } else {
-            format!("{}{}album={}", base, sep, album_param)
-        };
-        let lastmod = if album.year > 0 { format!("{}-01-01", album.year) } else { today.clone() };
-        let priority = if album.year >= 2020 { "0.9" } else if album.year >= 2010 { "0.7" } else { "0.5" };
-        let mut entry = format!(
-            "  <url>\n    <loc>{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>{}</priority>\n",
-            loc, lastmod, priority
-        );
-        if album.has_cover {
-            if let Some(cdn_base) = cdn {
-                let img_loc = format!("{}/{}/capa-min.jpg", cdn_base, path_segment_encode(&album.path));
-                let img_title = xml_escape(&format!("{} — {} ({})", album.title, album.artist, album.year));
-                entry.push_str(&format!(
-                    "    <image:image>\n      <image:loc>{}</image:loc>\n      <image:title>{}</image:title>\n    </image:image>\n",
-                    img_loc, img_title
-                ));
-            }
-        }
-        entry.push_str("  </url>\n");
-        xml.push_str(&entry);
-    }
-    xml.push_str("</urlset>\n");
-    fs::write(&albums_path, &xml).expect("Falha ao escrever sitemap-albums.xml");
-
-    // sitemap.xml = index (albums only — artist pages are covered via ?album=&artista= above)
-    let mut index = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    index.push_str("<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
-    index.push_str(&format!("  <sitemap>\n    <loc>{}/sitemap-albums.xml</loc>\n    <lastmod>{}</lastmod>\n  </sitemap>\n", site_root, today));
-    index.push_str("</sitemapindex>\n");
-    fs::write(sitemap_path, &index).expect("Falha ao escrever sitemap.xml");
-
-    let sz_a = fs::metadata(&albums_path).map(|m| m.len() / 1024).unwrap_or(0);
-    println!("sitemap.xml  →  index → sitemap-albums.xml ({} KB, {} URLs)",
-             sz_a, albums.len() + 1);
 }
 
 #[cfg(test)]
