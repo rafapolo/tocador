@@ -95,6 +95,12 @@ describe('albumPage', () => {
     expect(() => playerTemplate('<html><head><title>x</title></head><body></body></html>')).toThrow(/index.html template/);
   });
 
+  // Shared links read "<album> — <artist> (<year>) ♪ Tocador", not the archive name.
+  test('titles the page and its preview with the album and ♪ Tocador', () => {
+    expect(html).toContain('<meta property="og:title" content="Fé &amp; &quot;Festa&quot; — Zé &lt;b&gt; (1975) ♪ Tocador">');
+    expect(html).toContain('<title>Fé &amp; &quot;Festa&quot; — Zé &lt;b&gt; (1975) ♪ Tocador</title>');
+  });
+
   test('omits og:image cover when the album has none', () => {
     const noCover = albumPage({ template, alias: 'uqt', meta, album: { ...album, has_cover: false }, slug: 'x' });
     expect(noCover).not.toContain('capa-min.jpg');

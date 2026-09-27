@@ -178,7 +178,7 @@ function albumPage({ template, alias, meta, album, slug }) {
   const year = album.year > 0 ? album.year : null;
   const canonical = `${SITE}/${alias}/${slug}/`;
   const image = coverUrl(meta.base_url, album);
-  const title = `${album.title}${artist ? ` — ${artist}` : ''}${year ? ` (${year})` : ''} · ${archive}`;
+  const title = `${album.title}${artist ? ` — ${artist}` : ''}${year ? ` (${year})` : ''} ♪ Tocador`;
   const trackNames = tracks.slice(0, 4).map(t => String(t.title ?? "").replace(/\s+/g, ' ')).join(', ');
   const desc = `Ouça ${album.title}${artist ? `, álbum de ${artist}` : ''}${year ? ` lançado em ${year}` : ''}: ` +
     `${tracks.length} faixa${tracks.length === 1 ? '' : 's'}${trackNames ? ` — ${trackNames}${tracks.length > 4 ? '…' : '.'}` : '.'} ` +
