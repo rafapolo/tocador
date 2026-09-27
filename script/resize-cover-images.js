@@ -116,7 +116,9 @@ async function processAlbum(s3, S3_BUCKET, config, album, force, dryRun) {
   if (cover.preresized) {
     buffer = fs.readFileSync(cover.path);
   } else {
-    buffer = await sharp(cover.path)
+    // failOn 'none': a cover truncated in transfer ("premature end of JPEG") still
+    // decodes to the full picture in practice, and browsers show it; sharp refused it.
+    buffer = await sharp(cover.path, { failOn: 'none' })
       .resize(TARGET_WIDTH, null, { withoutEnlargement: true, fit: 'inside' })
       .jpeg({ quality: 80 })
       .toBuffer();
