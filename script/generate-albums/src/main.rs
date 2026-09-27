@@ -13,7 +13,6 @@ use serde::Serialize;
 use walkdir::WalkDir;
 
 const IMAGE_EXTS: &[&str] = &[".jpg", ".jpeg", ".png", ".webp"];
-const COVER_PRIORITY: &[&str] = &["cover", "capa", "folder", "front", "artwork", "albumart"];
 
 // Matches OS copy suffixes like " (2)", " (3)" — not "(1)" and not 4-digit years
 static RE_COPY_SUFFIX: Lazy<Regex> = Lazy::new(|| {
@@ -51,6 +50,14 @@ static RE_TRACK_NUM_MID: Lazy<Regex> = Lazy::new(|| {
 // artifact mixed into an extracted archive (e.g. bando-mastodontes-ciranda-celestial-2022.mp3)
 static RE_SLUG_TAIL: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^[a-z][a-z0-9\-]+\.mp3$").unwrap()
+});
+// A folder named like a URL slug ("lizard-cult-lotico-split-2026") says nothing a reader
+// wants as a title; the ID3 album tags do. An optional trailing -YYYY is the year.
+static RE_SLUG_FOLDER: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[a-z0-9]+(?:-[a-z0-9]+)+?(?:-((?:19|20)\d{2}))?$").unwrap()
+});
+static RE_YEAR_PREFIX_SLUG: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(?:19|20)\d{2} - ").unwrap()
 });
 // Strip leading track-number prefix from filename-derived titles ("01. ", "02 - ", "03_", etc.)
 static RE_TRACK_NUM_STRIP: Lazy<Regex> = Lazy::new(|| {
@@ -262,18 +269,28 @@ fn clean_text(s: &str) -> String {
     out
 }
 
-fn read_id3(path: &Path) -> (String, String, String, u32, u32, u32) {
+struct Id3 {
+    title: String,
+    artist: String,
+    album_artist: String,
+    album: String,
+    year: u32,
+    track: u32,
+    dur_hint: u32,
+}
+
+fn read_id3(path: &Path) -> Id3 {
     match Tag::read_from_path(path) {
-        Ok(tag) => {
-            let title  = clean_text(tag.title().unwrap_or("")).trim().to_string();
-            let artist = clean_text(tag.artist().unwrap_or("")).trim().to_string();
-            let album  = clean_text(tag.album().unwrap_or("")).trim().to_string();
-            let year   = tag.year().map(|y| y as u32).unwrap_or(0);
-            let track  = tag.track().unwrap_or(0);
-            let dur_hint = tag.duration().unwrap_or(0) / 1000;
-            (title, artist, album, year, track, dur_hint)
-        }
-        Err(_) => Default::default(),
+        Ok(tag) => Id3 {
+            title:        clean_text(tag.title().unwrap_or("")).trim().to_string(),
+            artist:       clean_text(tag.artist().unwrap_or("")).trim().to_string(),
+            album_artist: clean_text(tag.album_artist().unwrap_or("")).trim().to_string(),
+            album:        clean_text(tag.album().unwrap_or("")).trim().to_string(),
+            year:         tag.year().map(|y| y as u32).unwrap_or(0),
+            track:        tag.track().unwrap_or(0),
+            dur_hint:     tag.duration().unwrap_or(0) / 1000,
+        },
+        Err(_) => Id3 { title: String::new(), artist: String::new(), album_artist: String::new(), album: String::new(), year: 0, track: 0, dur_hint: 0 },
     }
 }
 
@@ -304,22 +321,35 @@ fn read_duration(path: &Path, hint: u32) -> u32 {
         .unwrap_or(0)
 }
 
+// Whether script/resize-cover-images.js will find a cover to upload for this folder. It
+// takes a cover-named image if there is one, else the largest image of any kind, so any
+// image counts. Requiring a cover-ish name here while the uploader didn't left albums
+// like "Purple Ties - Purple Void.jpg" marked coverless with a cover right there.
 fn has_cover(folder: &Path) -> bool {
     fs::read_dir(folder)
         .map(|entries| {
             entries.filter_map(|e| e.ok()).any(|e| {
-                e.file_type().map(|t| t.is_file()).unwrap_or(false) && {
-                    let name = e.file_name().to_string_lossy().to_lowercase();
-                    let stem = Path::new(&*name)
-                        .file_stem()
-                        .map(|s| s.to_string_lossy().into_owned())
-                        .unwrap_or_default();
-                    IMAGE_EXTS.iter().any(|ext| name.ends_with(ext))
-                        && COVER_PRIORITY.iter().any(|p| stem.contains(p))
-                }
+                let name = e.file_name().to_string_lossy().to_lowercase();
+                e.file_type().map(|t| t.is_file()).unwrap_or(false)
+                    && !name.starts_with("._")
+                    && IMAGE_EXTS.iter().any(|ext| name.ends_with(ext))
             })
         })
         .unwrap_or(false)
+}
+
+// Whether an album's own folder is a URL slug, with or without a "YYYY - " prefix
+// ("2012 - cepacaina-melhor-banda-do-mundo-2012").
+fn slug_named(rel_path: &str) -> bool {
+    let name = rel_path.rsplit('/').next().unwrap_or(rel_path);
+    let name = RE_YEAR_PREFIX_SLUG.replace(name, "");
+    RE_SLUG_FOLDER.is_match(&name)
+}
+
+// Lowercase letters and digits only, for comparing names written different ways
+// ("UQT2011_Caraivana-SerFeliz" vs "Ser Feliz").
+fn alnum(s: &str) -> String {
+    s.nfd().filter(|c| c.is_alphanumeric() && c.is_ascii()).flat_map(|c| c.to_lowercase()).collect()
 }
 
 // Natural sort: compares digit runs numerically so "10 - Track" sorts after "2 - Track".
@@ -386,13 +416,45 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
     // Folder name is the authoritative source for album-level metadata; ID3 fills gaps only.
     let (fa, ft, fy) = parse_folder_name(&folder_name);
     let (mut album_artist, mut album_title, mut album_year) = (fa, ft, fy);
+
+    // A folder inside another folder (a bonus disc, "Extras", uqt's "UQT2011_Artist-Title"
+    // wrappers) is named for its part, not the release: its own name alone gave albums
+    // titled "Extras" with no year. Name it after the parent, keeping the part's name
+    // only when it adds something the parent's title doesn't already say.
+    let parent = folder.parent().filter(|p| *p != music_dir);
+    if let Some(parent) = parent {
+        let parent_name = parent.file_name()?.to_string_lossy().into_owned();
+        let parent_name = RE_COPY_SUFFIX.captures(&parent_name).map(|c| c[1].to_string()).unwrap_or(parent_name);
+        let (pa, pt, py) = parse_folder_name(&parent_name);
+        if !pt.is_empty() {
+            album_title = if alnum(&folder_name).contains(&alnum(&pt)) {
+                pt
+            } else {
+                format!("{pt} ({folder_name})")
+            };
+        }
+        if album_artist.is_empty() { album_artist = pa; }
+        if album_year == 0 { album_year = py; }
+    }
+
+    // Slug-named folder: let ID3 supply the title and artist, keep the slug's year.
+    let slug_folder = parent.is_none() && album_artist.is_empty() && RE_SLUG_FOLDER.is_match(&album_title);
+    let slug_title = if slug_folder {
+        if album_year == 0 {
+            album_year = RE_SLUG_FOLDER.captures(&album_title)
+                .and_then(|c| c.get(1)).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+        }
+        std::mem::take(&mut album_title)
+    } else {
+        String::new()
+    };
     if !album_artist.is_empty() {
         album_artist = normalize_artists(&album_artist);
     }
     let mut tracks = Vec::new();
 
     for mp3 in &mp3s {
-        let (title, artist, album, year, mut track_n, dur_hint) = read_id3(mp3);
+        let Id3 { title, artist, album_artist: tag_album_artist, album, year, track: mut track_n, dur_hint } = read_id3(mp3);
         if track_n == 0 {
             let fname = mp3.file_name().unwrap_or_default().to_string_lossy();
             track_n = RE_TRACK_NUM_START.captures(&*fname)
@@ -403,6 +465,11 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         }
         let duration = read_duration(mp3, dur_hint);
 
+        // A slug folder is usually a split or collab post: the album-artist tag names
+        // everyone ("Lizard Cult / lōtico"), the first track's artist only one of them.
+        if album_artist.is_empty() && slug_folder && !tag_album_artist.is_empty() {
+            album_artist = normalize_artists(&tag_album_artist.replace(" / ", "; "));
+        }
         if album_artist.is_empty() && !artist.is_empty() { album_artist = primary_artist(&artist).to_string(); }
         if album_title.is_empty()  && !album.is_empty()  { album_title  = album; }
         if album_year  == 0        && year > 0            { album_year   = year; }
@@ -522,12 +589,16 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         }
     }
 
+    if album_title.is_empty() { album_title = slug_title; } // no ID3 album either
+
     Some(Album {
         title: album_title,
         artist: album_artist,
         year: album_year,
         path: rel_path,
-        has_cover: has_cover(folder),
+        // A part folder usually has no art of its own; resize-cover-images.js falls
+        // back to the parent's the same way.
+        has_cover: has_cover(folder) || parent.map(has_cover).unwrap_or(false),
         tracks,
     })
 }
@@ -695,8 +766,11 @@ fn main() {
         merged
     };
     // Deduplicate: same (artist, title, year) can arise when an archive extracts into
-    // nested subdirectories alongside a properly-named top-level folder. Keep the
-    // shallowest path (fewest '/' components), tie-break by most tracks.
+    // nested subdirectories alongside a properly-named top-level folder, or when a blog
+    // post was downloaded twice, once into a URL-slug folder whose ID3 tags now name it
+    // the same as its twin. Keep the shallowest path (fewest '/' components), then the
+    // properly-named folder over the slug one (its path is the one old links point at),
+    // then the one with most tracks.
     let mut albums = {
         use std::collections::HashMap;
         let mut seen: HashMap<(String, String, u32), usize> = HashMap::new();
@@ -711,7 +785,8 @@ fn main() {
             if let Some(&idx) = seen.get(&key) {
                 let existing = &deduped[idx];
                 let ex_depth = existing.path.chars().filter(|&c| c == '/').count();
-                if depth < ex_depth || (depth == ex_depth && album.tracks.len() > existing.tracks.len()) {
+                let rank = |a: &Album, d: usize| (d, slug_named(&a.path), std::cmp::Reverse(a.tracks.len()));
+                if rank(&album, depth) < rank(existing, ex_depth) {
                     deduped[idx] = album;
                 }
             } else {
@@ -719,7 +794,24 @@ fn main() {
                 deduped.push(album);
             }
         }
-        deduped
+        // Same again by content, for nested copies only: one can still end up named
+        // differently from its twin (uqt's Pitanga folder holds the live album both directly
+        // and one level down, inside a UQT2010_… wrapper). Folders at the same depth with the
+        // same tracklist are left alone — those are separate posts or editions (a 2026
+        // reissue of a 2015 record), not extraction leftovers.
+        let content = |a: &Album| (
+            a.artist.to_lowercase(),
+            a.tracks.iter().map(|t| t.title.to_lowercase()).collect::<Vec<_>>(),
+        );
+        let depth = |a: &Album| a.path.matches('/').count();
+        let mut shallowest: HashMap<(String, Vec<String>), usize> = HashMap::new();
+        for a in &deduped {
+            let d = depth(a);
+            shallowest.entry(content(a)).and_modify(|m| *m = (*m).min(d)).or_insert(d);
+        }
+        deduped.into_iter()
+            .filter(|a| a.tracks.len() < 2 || depth(a) == shallowest[&content(a)])
+            .collect::<Vec<_>>()
     };
 
     albums.sort_by(|a, b| b.year.cmp(&a.year));
