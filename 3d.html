@@ -10,8 +10,8 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
     }
   }
   </script>
@@ -192,7 +192,8 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.LinearToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// PCFSoftShadowMap was removed for WebGL in r182; PCFShadowMap now does the soft filtering.
+renderer.shadowMap.type = THREE.PCFShadowMap;
 
 // ─── Scene ───────────────────────────────────────────────────────────────────
 
@@ -680,7 +681,10 @@ async function loadAlbumData() {
 
 // ─── Render loop ──────────────────────────────────────────────────────────────
 
-const clock = new THREE.Clock();
+// Timer replaces the deprecated Clock (r183). connect(document) pauses it while the
+// tab is hidden, which the old visibilitychange stop/start handler used to do by hand.
+const timer = new THREE.Timer();
+timer.connect(document);
 const TARGET_FRAME_MS = isMobile ? 1000 / 30 : 0;
 let lastFrameTime = 0;
 let frame = 0;
@@ -693,7 +697,7 @@ function startRenderLoop() {
     frame++;
 
     controls.update();
-    const t = clock.getElapsedTime();
+    const t = timer.update().getElapsed();
     animateFire(t);
     animateScene(t, frame);
     updatePriorities(frame);
@@ -701,10 +705,6 @@ function startRenderLoop() {
   }
   requestAnimationFrame(tick);
 }
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) clock.stop(); else clock.start();
-});
 
 // ─── Atlas mode ───────────────────────────────────────────────────────────────
 
