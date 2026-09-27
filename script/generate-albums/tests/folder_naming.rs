@@ -141,3 +141,36 @@ fn a_slug_folder_twin_loses_to_the_properly_named_folder() {
         assert_eq!(paths, ["2012 - Cepacaína - A Melhor Banda do Mundo"]);
     }
 }
+
+#[test]
+fn the_same_download_under_another_name_is_listed_once() {
+    // A monthly "Hominis Canidae #NNN" post and a separator-less folder, both holding
+    // the album already listed as "2018 - Chuva - Chuva", collapse into it. An unrelated album stays.
+    let m = music_dir("same-recording");
+    for dir in ["2018 - Chuva - Chuva", "2018 - Chuva - Hominis Canidae #94 - Março", "2018 - Chuva Chuva"] {
+        for f in ["01 - Chuva - Um.mp3", "02 - Chuva - Dois.mp3"] {
+            let p = add_track(&m.join(dir), f);
+            let mut tag = Tag::new();
+            tag.set_artist("Chuva");
+            tag.set_title(if f.starts_with("01") { "Um" } else { "Dois" });
+            tag.write_to_path(&p, Version::Id3v24).expect("write id3");
+        }
+    }
+    add_track(&m.join("2020 - Outra - Coisa"), "01 Faixa.mp3");
+    add_track(&m.join("2020 - Outra - Coisa"), "02 Outra.mp3");
+    // The named copy would win, but it's the excluded one: its twin must survive.
+    for dir in ["2021 - Some - Hidden", "2021 - Some Hidden"] {
+        for f in ["01 Um.mp3", "02 Dois.mp3"] {
+            let p = add_track(&m.join(dir), f);
+            let mut tag = Tag::new();
+            tag.set_artist("Some");
+            tag.write_to_path(&p, Version::Id3v24).expect("write id3");
+        }
+    }
+    std::fs::write(m.join("acervo.json"), r#"{"exclude": ["2021 - Some - Hidden"]}"#).unwrap();
+
+    let all = albums(&m);
+    let mut paths: Vec<_> = all.iter().map(|a| a["path"].as_str().unwrap()).collect();
+    paths.sort();
+    assert_eq!(paths, ["2018 - Chuva - Chuva", "2020 - Outra - Coisa", "2021 - Some Hidden"]);
+}

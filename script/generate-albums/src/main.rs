@@ -87,6 +87,10 @@ struct DirConfig {
     title:       Option<String>,
     subtitle:    Option<String>,
     v2:          Option<bool>,
+    // Album paths to leave out: duplicates no naming rule can pick between (two
+    // separator-less folders holding the same download, only one named right).
+    #[serde(default)]
+    exclude:     Vec<String>,
 }
 
 // Tocador-compatible schema
@@ -111,6 +115,9 @@ struct Album {
     #[serde(skip_serializing_if = "Clone::clone")]
     has_cover: bool,
     tracks: Vec<Track>,
+    // First ID3 album tag, used only to pick between duplicate copies.
+    #[serde(skip)]
+    tag_album: String,
 }
 
 #[derive(Serialize)]
@@ -343,7 +350,8 @@ fn has_cover(folder: &Path) -> bool {
 fn slug_named(rel_path: &str) -> bool {
     let name = rel_path.rsplit('/').next().unwrap_or(rel_path);
     let name = RE_YEAR_PREFIX_SLUG.replace(name, "");
-    RE_SLUG_FOLDER.is_match(&name)
+    // "2017 - Sentidor - 2017 - Sentidor - sentidor-doismiletreze-2013": slug at the end
+    RE_SLUG_FOLDER.is_match(name.rsplit(" - ").next().unwrap_or(&name))
 }
 
 // Lowercase letters and digits only, for comparing names written different ways
@@ -453,6 +461,7 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
     }
     let mut tracks = Vec::new();
 
+    let mut tag_album = String::new();
     for mp3 in &mp3s {
         let Id3 { title, artist, album_artist: tag_album_artist, album, year, track: mut track_n, dur_hint } = read_id3(mp3);
         if track_n == 0 {
@@ -471,6 +480,7 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
             album_artist = normalize_artists(&tag_album_artist.replace(" / ", "; "));
         }
         if album_artist.is_empty() && !artist.is_empty() { album_artist = primary_artist(&artist).to_string(); }
+        if tag_album.is_empty() && !album.is_empty() { tag_album = album.clone(); }
         if album_title.is_empty()  && !album.is_empty()  { album_title  = album; }
         if album_year  == 0        && year > 0            { album_year   = year; }
 
@@ -600,6 +610,7 @@ fn process_album(folder: &Path, music_dir: &Path) -> Option<Album> {
         // back to the parent's the same way.
         has_cover: has_cover(folder) || parent.map(has_cover).unwrap_or(false),
         tracks,
+        tag_album,
     })
 }
 
@@ -690,6 +701,7 @@ fn main() {
             .or_else(|| std::env::var(key).ok())
     };
 
+    let exclude          = dir_cfg.exclude;
     let meta_title       = cfg.meta_title      .or(dir_cfg.title);
     let meta_subtitle    = cfg.meta_subtitle   .or(dir_cfg.subtitle);
     let meta_base_url    = cfg.meta_base_url   .or_else(|| env_val("BASE_URL"));
@@ -771,6 +783,8 @@ fn main() {
     // the same as its twin. Keep the shallowest path (fewest '/' components), then the
     // properly-named folder over the slug one (its path is the one old links point at),
     // then the one with most tracks.
+    // Before deduplicating, so an excluded copy can't be the one kept.
+    let albums: Vec<Album> = albums.into_iter().filter(|a| !exclude.contains(&a.path)).collect();
     let mut albums = {
         use std::collections::HashMap;
         let mut seen: HashMap<(String, String, u32), usize> = HashMap::new();
@@ -794,23 +808,40 @@ fn main() {
                 deduped.push(album);
             }
         }
-        // Same again by content, for nested copies only: one can still end up named
-        // differently from its twin (uqt's Pitanga folder holds the live album both directly
-        // and one level down, inside a UQT2010_… wrapper). Folders at the same depth with the
-        // same tracklist are left alone — those are separate posts or editions (a 2026
-        // reissue of a 2015 record), not extraction leftovers.
+        // Same again by recording: same artist, track titles and per-track durations is
+        // the same download listed twice under different names (a "Hominis Canidae #NNN"
+        // post of an album already here, "2018 - Chuva Chuva" beside "2018 - Chuva - Chuva",
+        // a nested copy). Keep the shallowest, then a real release over a monthly post,
+        // a named folder over a slug or separator-less one, the title its tags agree
+        // with, the most tracks, the earliest year.
         let content = |a: &Album| (
-            a.artist.to_lowercase(),
-            a.tracks.iter().map(|t| t.title.to_lowercase()).collect::<Vec<_>>(),
+            alnum(&a.artist),
+            a.tracks.iter().map(|t| (alnum(&t.title), t.duration)).collect::<Vec<_>>(),
         );
-        let depth = |a: &Album| a.path.matches('/').count();
-        let mut shallowest: HashMap<(String, Vec<String>), usize> = HashMap::new();
-        for a in &deduped {
-            let d = depth(a);
-            shallowest.entry(content(a)).and_modify(|m| *m = (*m).min(d)).or_insert(d);
+        let rank = |a: &Album| {
+            let folder = a.path.rsplit('/').next().unwrap_or(&a.path);
+            (
+                a.path.matches('/').count(),
+                a.title.to_lowercase().contains("hominis canidae"),
+                slug_named(&a.path),
+                parse_folder_name(folder).0.is_empty(),
+                a.tag_album.is_empty() || alnum(&a.tag_album) != alnum(&a.title),
+                std::cmp::Reverse(a.tracks.len()),
+                a.year,
+                a.path.clone(),
+            )
+        };
+        let mut best: HashMap<_, usize> = HashMap::new();
+        for (i, a) in deduped.iter().enumerate() {
+            if a.tracks.len() < 2 { continue; }
+            best.entry(content(a))
+                .and_modify(|b| if rank(a) < rank(&deduped[*b]) { *b = i })
+                .or_insert(i);
         }
-        deduped.into_iter()
-            .filter(|a| a.tracks.len() < 2 || depth(a) == shallowest[&content(a)])
+        let keep: std::collections::HashSet<usize> = best.into_values().collect();
+        deduped.into_iter().enumerate()
+            .filter(|(i, a)| a.tracks.len() < 2 || keep.contains(i))
+            .map(|(_, a)| a)
             .collect::<Vec<_>>()
     };
 

@@ -120,7 +120,11 @@ cached older `ui.js` cannot read v2 and will render an empty grid.
 
 ### Generating an acervo (Rust — preferred for large archives)
 
-Title, subtitle, hours are read from `acervo.json` in the music dir; `base_url` from `.env` there. No flags needed. Each acervo outputs directly into its own repo:
+Title, subtitle, hours are read from `acervo.json` in the music dir; `base_url` from `.env` there. No flags needed.
+The generator lists each recording once: folders with the same artist, track titles and per-track
+durations collapse into the best-named one (a real release over a "Hominis Canidae #NNN" post, a
+`YYYY - Artist - Title` folder over a slug or separator-less one). When no naming rule can tell two
+copies apart, list the wrong folder's path in `acervo.json` → `"exclude": [...]`. Each acervo outputs directly into its own repo:
 
 ```bash
 # uqt → ../uqt repo
