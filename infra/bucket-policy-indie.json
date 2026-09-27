@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyAllButOwner",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::indie",
+        "arn:aws:s3:::indie/*"
+      ],
+      "Condition": {
+        "StringNotEquals": {
+          "aws:username": "p2100630"
+        }
+      }
+    }
+  ]
+}
