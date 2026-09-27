@@ -2,7 +2,7 @@
 # Bun.S3Client's .stat() call against the Hetzner S3 endpoint on 2026-08-20,
 # taking down covers and HEAD requests for hours before anyone traced it here.
 # Bump deliberately, and re-run tests/cdn.spec.js's real-fetch checks after.
-FROM oven/bun:1.4.0-alpine
+FROM oven/bun:1.4.2-alpine
 
 RUN apk add --no-cache nginx
 
