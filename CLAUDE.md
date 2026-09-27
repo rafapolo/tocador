@@ -252,7 +252,14 @@ set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in
   tracklists are kept (reissues, separate posts).
 - **Virtual grid**: ~30 DOM nodes always in the grid regardless of library size. `VirtualGrid` uses absolute positioning + `ResizeObserver`.
 - **Range requests**: Proxy forwards `Range` headers to S3; returns 206 for partial content — required for seek without full download.
-- **S3 bucket policy**: Needs public `GetObject` on `*` and `PutObject` on `{prefix}/*` for the service account.
+- **S3 bucket policy**: Both buckets (`sambaraiz`, `indie`) are private since 2026-09-27 — the proxy signs
+  every request, so nothing needs anonymous access. The policy is a single `Deny` on `s3:GetObject` +
+  `s3:ListBucket` for `Principal: "*"` with `Condition: {"StringNotEquals": {"aws:username": "p2100630"}}`
+  (the owner account). A plain delete of the old public-read policy is *not* enough: objects were
+  uploaded with an `AllUsers` READ ACL, which the explicit Deny overrides. Hetzner's Ceph ignores
+  `NotPrincipal` (the anonymous read still went through), and `{"Null": {"aws:userid": "true"}}` locks out the owner too —
+  don't use either. After a policy change, one RGW node can serve the old policy for a while; check
+  with repeated anonymous `curl`s against `hel1.your-objectstorage.com/<bucket>/<key>`, not just one.
 - **Radio "listening now"**: `radio.html` POSTs `{id}` to `/radio-heartbeat` every ~15s while its `<audio>`
   is actually playing (id is per page-load, generated client-side; `{id, stop:true}` fires once on
   pause/tab-close via `sendBeacon`; `{id, track:true}` is added once per distinct track, deduped
