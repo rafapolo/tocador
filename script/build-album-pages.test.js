@@ -95,10 +95,10 @@ describe('albumPage', () => {
     expect(() => playerTemplate('<html><head><title>x</title></head><body></body></html>')).toThrow(/index.html template/);
   });
 
-  // Shared links read "<album> — <artist> (<year>) ♪ Tocador", not the archive name.
-  test('titles the page and its preview with the album and ♪ Tocador', () => {
-    expect(html).toContain('<meta property="og:title" content="Fé &amp; &quot;Festa&quot; — Zé &lt;b&gt; (1975) ♪ Tocador">');
-    expect(html).toContain('<title>Fé &amp; &quot;Festa&quot; — Zé &lt;b&gt; (1975) ♪ Tocador</title>');
+  // Shared links read "♪ Tocador - <album> — <artist> (<year>)", not the archive name.
+  test('titles the page and its preview "♪ Tocador - album — artist (year)"', () => {
+    expect(html).toContain('<meta property="og:title" content="♪ Tocador - Fé &amp; &quot;Festa&quot; — Zé &lt;b&gt; (1975)">');
+    expect(html).toContain('<title>♪ Tocador - Fé &amp; &quot;Festa&quot; — Zé &lt;b&gt; (1975)</title>');
   });
 
   test('describes the album as "♪ banda - álbum (ano) - N faixas"', () => {

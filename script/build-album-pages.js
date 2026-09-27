@@ -176,7 +176,7 @@ function albumPage({ template, alias, meta, album, slug }) {
   const year = album.year > 0 ? album.year : null;
   const canonical = `${SITE}/${alias}/${slug}/`;
   const image = coverUrl(meta.base_url, album);
-  const title = `${album.title}${artist ? ` — ${artist}` : ''}${year ? ` (${year})` : ''} ♪ Tocador`;
+  const title = `♪ Tocador - ${album.title}${artist ? ` — ${artist}` : ''}${year ? ` (${year})` : ''}`;
   // What link previews show under the title: "♪ Banda - Álbum (2016) - 17 faixas".
   const desc = `♪ ${[artist, `${album.title}${year ? ` (${year})` : ''}`, `${tracks.length} faixa${tracks.length === 1 ? '' : 's'}`]
     .filter(Boolean).join(' - ')}`;
