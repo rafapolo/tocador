@@ -33,6 +33,20 @@ for (const origin of PLAYER_ORIGINS) {
   });
 }
 
+test('CDN: audio refused with no Referer or Origin', async ({ request }) => {
+  const res = await request.head(`${CDN}/${encodeURI(TRACKS[0])}`, {
+    headers: { 'User-Agent': BROWSER_UA },
+  });
+  expect(res.status()).toBe(403);
+});
+
+test('CDN: ?ctx=radio no longer bypasses the hotlink check', async ({ request }) => {
+  const res = await request.head(`${CDN}/${encodeURI(TRACKS[0])}?ctx=radio`, {
+    headers: { 'User-Agent': BROWSER_UA, 'Referer': 'https://evil.example/radio' },
+  });
+  expect(res.status()).toBe(403);
+});
+
 // ── CDN HEAD checks ───────────────────────────────────────────────────────────
 
 test('CDN: cover image returns 200 with image/jpeg', async ({ request }) => {

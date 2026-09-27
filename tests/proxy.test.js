@@ -13,7 +13,7 @@
 // these tests would still pass while guarding nothing.
 
 const { test, expect, describe } = require('bun:test');
-const { sigV4Encode, keyCandidates, isSafeKey, timingSafeEqual, metricsAuthorized, blockedBot } = require('../proxy.js');
+const { sigV4Encode, keyCandidates, isSafeKey, timingSafeEqual, metricsAuthorized, blockedBot, refererAllowed } = require('../proxy.js');
 
 // ── blockedBot — link previews need the cover, never the audio ─────────────────
 
@@ -41,6 +41,28 @@ describe('blockedBot', () => {
   test('browsers and Google pass', () => {
     expect(blockedBot('Mozilla/5.0 (Macintosh) Chrome/140 Safari/537.36', track)).toBe(false);
     expect(blockedBot('Mozilla/5.0 (compatible; Googlebot/2.1)', track)).toBe(false);
+  });
+});
+
+// ── refererAllowed — audio hotlink allowlist ──────────────────────────────────
+
+describe('refererAllowed', () => {
+  const req = (headers) => new Request('https://cdn.tocador.cc/x.mp3', { headers });
+  test('allows the player origins, by Referer or Origin', () => {
+    expect(refererAllowed(req({ Referer: 'https://tocador.cc/uqt/some-album/' }))).toBe(true);
+    expect(refererAllowed(req({ Referer: 'https://radio.tocador.cc/' }))).toBe(true);
+    expect(refererAllowed(req({ Origin: 'https://rafapolo.github.io' }))).toBe(true);
+  });
+  test('refuses a request with neither header (curl, download managers)', () => {
+    expect(refererAllowed(req({}))).toBe(false);
+  });
+  test('refuses other sites, even ones whose path mentions /radio', () => {
+    expect(refererAllowed(req({ Referer: 'https://evil.example/' }))).toBe(false);
+    expect(refererAllowed(req({ Referer: 'https://evil.example/radio' }))).toBe(false);
+    expect(refererAllowed(req({ Referer: 'https://tocador.cc.evil.example/' }))).toBe(false);
+  });
+  test('refuses a malformed Referer', () => {
+    expect(refererAllowed(req({ Referer: 'not a url' }))).toBe(false);
   });
 });
 

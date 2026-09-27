@@ -260,6 +260,15 @@ set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in
   `NotPrincipal` (the anonymous read still went through), and `{"Null": {"aws:userid": "true"}}` locks out the owner too —
   don't use either. After a policy change, one RGW node can serve the old policy for a while; check
   with repeated anonymous `curl`s against `hel1.your-objectstorage.com/<bucket>/<key>`, not just one.
+  The live policies are versioned in `infra/bucket-policy-{sambaraiz,indie}.json`; re-apply with
+  `infra/apply-bucket-policies.sh`.
+- **Audio hotlink check**: `refererAllowed()` in `proxy.js` serves audio only when Referer (or Origin)
+  is one of `ALLOWED_ORIGINS`. A request with *neither* header is refused — browsers always send at
+  least the origin for a cross-origin `<audio>`, so a bare request is curl or a scraper. Anything
+  fetching audio server-side must set a Referer itself: the deploy/monitor smoke tests pass
+  `-e https://tocador.cc/`, and the `/report-error` playability HEAD sets one too — drop it and every
+  radio report gets filed as an issue. Covers are exempt. There is no radio bypass (a `?ctx=radio`
+  one existed and let anyone skip the check); the radio's hosts are simply on the allowlist.
 - **Radio "listening now"**: `radio.html` POSTs `{id}` to `/radio-heartbeat` every ~15s while its `<audio>`
   is actually playing (id is per page-load, generated client-side; `{id, stop:true}` fires once on
   pause/tab-close via `sendBeacon`; `{id, track:true}` is added once per distinct track, deduped
@@ -308,7 +317,7 @@ deploy starts that counter at zero, so a bad credential can pass CI's health che
 only surface once real traffic hits it. Verify with a real fetch, not `/health`:
 
 ```bash
-curl -sI -H "Range: bytes=0-1000" "https://cdn.tocador.cc/indie/<album>/<track>.mp3"
+curl -sI -H "Range: bytes=0-1000" -e https://tocador.cc/ "https://cdn.tocador.cc/indie/<album>/<track>.mp3"
 ```
 
 If that 502s/503s: redeploy (`git push` touching `proxy.js`, or the manual fallback

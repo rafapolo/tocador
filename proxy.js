@@ -428,13 +428,16 @@ const ALLOWED_ORIGINS = new Set([
   'https://tocador.cc',
   'http://localhost:9001',
 ]);
+// No Referer/Origin at all is refused: every browser sends at least the origin for a
+// cross-origin <audio> request (strict-origin-when-cross-origin), so a bare request is
+// curl, a download manager or a scraper. Our own server-side checks set one explicitly.
 function refererAllowed(req) {
   const ref = req.headers.get('referer') ?? req.headers.get('origin');
-  if (!ref) return true;
+  if (!ref) return false;
   try {
     const u = new URL(ref);
     return ALLOWED_ORIGINS.has(`${u.protocol}//${u.host}`);
-  } catch { return true; }
+  } catch { return false; }
 }
 
 // Legitimate crawlers we want to let through — Google indexing + og:image rendering
@@ -652,7 +655,7 @@ _server = Bun.serve({
         const src = srcMatch?.[1];
         if (src && /^https:\/\/cdn\.tocador\.cc\//.test(src)) {
           try {
-            const check = await fetch(src, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+            const check = await fetch(src, { method: 'HEAD', headers: { Referer: 'https://tocador.cc/' }, signal: AbortSignal.timeout(5000) });
             const ct = check.headers.get('content-type') || '';
             const len = Number(check.headers.get('content-length') || 0);
             if (check.ok && ct.startsWith('audio/') && len > 10_000) {
@@ -758,10 +761,10 @@ _server = Bun.serve({
     const isAudio = /\.(mp3|mp4|m4a)$/i.test(path);
     const isHead  = req.method === 'HEAD';
 
-    // §5 — hotlink block for audio; radio embeds (?ctx=radio or Referer contains /radio) pass through
-    const isRadioCtx = url.searchParams.get('ctx') === 'radio'
-                    || (req.headers.get('referer') ?? '').includes('/radio');
-    if (isAudio && !isRadioCtx && !refererAllowed(req)) {
+    // §5 — hotlink block for audio. The radio needs no exemption: it's served from
+    // radio.tocador.cc / tocador.cc, both allowlisted. (A `?ctx=radio` / "Referer contains
+    // /radio" bypass used to live here and let any site or curl skip the check.)
+    if (isAudio && !refererAllowed(req)) {
       console.warn(`[HOTLINK] ${realIp(req, server)} ref=${req.headers.get('referer')}`);
       mark4xx();
       return new Response('Forbidden', { status: 403, headers: corsBase });
@@ -844,4 +847,4 @@ console.log(`Proxy listening on :${PORT} -> s3://${BUCKET}/`);
 // Exported for tests only — see tests/proxy.test.js. The suite must import
 // these rather than re-declare them; a test that copies its subject cannot
 // fail when the subject changes.
-export { sigV4Encode, keyCandidates, isSafeKey, bucketFor, startServer, timingSafeEqual, metricsAuthorized, blockedBot, RADIO_ID_RE };
+export { sigV4Encode, keyCandidates, isSafeKey, bucketFor, startServer, timingSafeEqual, metricsAuthorized, blockedBot, refererAllowed, RADIO_ID_RE };

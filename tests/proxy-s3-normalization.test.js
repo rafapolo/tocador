@@ -119,7 +119,7 @@ let seq = 0;
 async function get(key, { range = 'bytes=0-99' } = {}) {
   const url = `http://127.0.0.1:${proxyPort}/${key.split('/').map(encodeURIComponent).join('/')}`;
   const r = await fetch(url, {
-    headers: { Range: range, 'User-Agent': `Mozilla/5.0 test-${seq++}` },
+    headers: { Range: range, 'User-Agent': `Mozilla/5.0 test-${seq++}`, Referer: 'https://tocador.cc/' },
   });
   const buf = await r.arrayBuffer();
   return { status: r.status, len: buf.byteLength, headers: r.headers };

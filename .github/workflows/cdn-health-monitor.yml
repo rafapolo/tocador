@@ -39,7 +39,7 @@ jobs:
           for probe in "indie ASCII|$SMOKE_URL" "uqt NFD-stored|$SMOKE_URL_NFD" "uqt NFC-stored|$SMOKE_URL_NFC"; do
             label=${probe%%|*}
             url=${probe#*|}
-            code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" "$url")
+            code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" -e "https://tocador.cc/" "$url")
             echo "[$label] status: $code"
             if [ "$code" != "206" ] && [ "$code" != "200" ]; then
               ok=false

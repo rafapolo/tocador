@@ -91,7 +91,7 @@ jobs:
             # Retried: the S3 connection pool is cold for ~1-2 min right after a
             # restart and can 503 briefly even when configured correctly.
             for attempt in 1 2 3 4 5 6; do
-              code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" "$url")
+              code=$(curl -s -o /dev/null -w "%{http_code}" -H "Range: bytes=0-1000" -e "https://tocador.cc/" "$url")
               echo "  [$label] attempt $attempt: $code"
               if [ "$code" = "206" ] || [ "$code" = "200" ]; then return 0; fi
               [ "$attempt" = "6" ] || sleep 15
