@@ -101,6 +101,12 @@ describe('albumPage', () => {
     expect(html).toContain('<title>Fé &amp; &quot;Festa&quot; — Zé &lt;b&gt; (1975) ♪ Tocador</title>');
   });
 
+  test('describes the album as "♪ Toque : banda - álbum - ano - N faixas"', () => {
+    expect(html).toContain('<meta property="og:description" content="♪ Toque : Zé &lt;b&gt; - Fé &amp; &quot;Festa&quot; - 1975 - 1 faixa">');
+    const bare = albumPage({ template, alias: 'uqt', meta, album: { ...album, artist: '', year: 0, tracks: [...album.tracks, { title: 'Dois', num: 2, file: '02.mp3' }] }, slug: 'y' });
+    expect(bare).toContain('<meta property="og:description" content="♪ Toque : Fé &amp; &quot;Festa&quot; - 2 faixas">');
+  });
+
   test('omits og:image cover when the album has none', () => {
     const noCover = albumPage({ template, alias: 'uqt', meta, album: { ...album, has_cover: false }, slug: 'x' });
     expect(noCover).not.toContain('capa-min.jpg');
