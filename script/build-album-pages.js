@@ -96,6 +96,8 @@ ol.tracks{list-style:none;padding:0;margin:32px 0 0;border-top:1px solid var(--b
 ol.tracks li{border-bottom:1px solid var(--border)}
 ol.tracks a{display:flex;gap:12px;padding:10px 4px;color:var(--text);text-decoration:none}
 ol.tracks a:hover{background:var(--surface)}
+ol.tracks li{scroll-margin-top:24px}
+ol.tracks li:target a{background:var(--surface-light);box-shadow:inset 3px 0 0 var(--accent)}
 .n{color:var(--muted);min-width:2ch;text-align:right}
 .t{flex:1}
 .ta{display:block;color:var(--muted);font-size:.85rem}

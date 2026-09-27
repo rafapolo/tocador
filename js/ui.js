@@ -308,16 +308,27 @@ function albumPageUrl(album) {
   return slug ? `${SITE_ORIGIN}/${activeAcervoKey}/${slug}/` : null;
 }
 
+// With a track of this album loaded, the link names it: #tN on the static page
+// (whose tracklist rows carry id="tN" with the player's own numbering), or ?t=N
+// on the player fallback. The preview itself stays album-level either way. The
+// first track is left out: opening an album primes it, so it says nothing about
+// what the listener picked, and the album page starts there anyway.
 async function shareAlbum(album) {
-  const url = albumPageUrl(album) || window.location.origin + generateAlbumUrl(album);
-  const title = `${album.name} — ${album.artists}`;
+  const track = currentTrack !== album.tracks?.[0] && album.tracks?.includes(currentTrack) ? currentTrack : null;
+  const page = albumPageUrl(album);
+  const url = page
+    ? (track ? `${page}#t${track.num}` : page)
+    : window.location.origin + generateAlbumUrl(album, track?.num);
+  const title = track
+    ? `${track.title} — ${album.name} — ${album.artists}`
+    : `${album.name} — ${album.artists}`;
   if (navigator.share) {
     try { await navigator.share({ title, url }); return; }
     catch (err) { if (err?.name === 'AbortError') return; }
   }
   try {
     await navigator.clipboard.writeText(url);
-    showToast('Link do álbum copiado');
+    showToast(track ? 'Link da faixa copiado' : 'Link do álbum copiado');
   } catch {
     showToast(url, 6000);
   }

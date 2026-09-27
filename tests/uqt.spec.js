@@ -610,6 +610,20 @@ test('L61: share button copies the static album page URL', async ({ page, contex
     .toBe('https://tocador.cc/uqt/1971-chico-buarque-construcao/');
 });
 
+test('L63: share button names the loaded track with a #tN anchor', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.addInitScript(() => { delete Navigator.prototype.share; });
+  await gotoWithFixture(page, '/?acervo=uqt');
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  const second = page.locator('#track-list .track-item').nth(1);
+  await second.click();
+  const num = (await second.locator('.track-num').textContent()).trim();
+  await page.locator('#album-header .album-share').click();
+  await expect(page.locator('#toast')).toContainText('copiado');
+  expect(await page.evaluate(() => navigator.clipboard.readText()))
+    .toBe(`https://tocador.cc/uqt/1971-chico-buarque-construcao/#t${num}`);
+});
+
 test('L62: browse panel links to the acervo album index', async ({ page }) => {
   await gotoWithFixture(page, '/?acervo=homi');
   await expect(page.locator('#acervo-index-link')).toHaveAttribute('href', 'https://tocador.cc/homi/');
