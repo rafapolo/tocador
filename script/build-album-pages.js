@@ -103,8 +103,6 @@ function headMeta({ title, desc, canonical, image, ogType, ld }) {
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="${esc(canonical)}">
 ${image ? `<meta property="og:image" content="${esc(image)}">
-<meta property="og:image:width" content="200">
-<meta property="og:image:height" content="200">
 <meta property="og:image:type" content="image/jpeg">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="${esc(image)}">` : `<meta property="og:image" content="${SITE}/assets/og.svg">
@@ -179,8 +177,8 @@ function albumPage({ template, alias, meta, album, slug }) {
   const canonical = `${SITE}/${alias}/${slug}/`;
   const image = coverUrl(meta.base_url, album);
   const title = `${album.title}${artist ? ` — ${artist}` : ''}${year ? ` (${year})` : ''} ♪ Tocador`;
-  // What link previews show under the title: "♪ Toque : Banda - Álbum - 2016 - 17 faixas".
-  const desc = `♪ Toque : ${[artist, album.title, year, `${tracks.length} faixa${tracks.length === 1 ? '' : 's'}`]
+  // What link previews show under the title: "♪ Banda - Álbum (2016) - 17 faixas".
+  const desc = `♪ ${[artist, `${album.title}${year ? ` (${year})` : ''}`, `${tracks.length} faixa${tracks.length === 1 ? '' : 's'}`]
     .filter(Boolean).join(' - ')}`;
 
   const ld = {

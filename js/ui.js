@@ -400,7 +400,7 @@ function updateMetaTags(album) {
   // link previews show; Google reads this rendered copy too.
   const n = album.tracks.length;
   const title = `${album.name}${album.artists ? ` — ${album.artists}` : ''}${album.year > 0 ? ` (${album.year})` : ''} ♪ Tocador`;
-  const desc = `♪ Toque : ${[album.artists, album.name, album.year > 0 && album.year, `${n} faixa${n === 1 ? '' : 's'}`]
+  const desc = `♪ ${[album.artists, `${album.name}${album.year > 0 ? ` (${album.year})` : ''}`, `${n} faixa${n === 1 ? '' : 's'}`]
     .filter(Boolean).join(' - ')}`;
   const image = `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg`;
   // og:url and <link rel=canonical> must be absolute — generateAlbumUrl() returns a
