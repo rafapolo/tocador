@@ -13,7 +13,36 @@
 // these tests would still pass while guarding nothing.
 
 const { test, expect, describe } = require('bun:test');
-const { sigV4Encode, keyCandidates, isSafeKey, timingSafeEqual, metricsAuthorized } = require('../proxy.js');
+const { sigV4Encode, keyCandidates, isSafeKey, timingSafeEqual, metricsAuthorized, blockedBot } = require('../proxy.js');
+
+// ── blockedBot — link previews need the cover, never the audio ─────────────────
+
+describe('blockedBot', () => {
+  const cover = '/indie/2016 - Hominis Canidae 68 Janeiro/capa-min.jpg';
+  const track = '/indie/2016 - Hominis Canidae 68 Janeiro/05 Faixa.mp3';
+  const previewBots = [
+    'WhatsApp/2.23.20.0',
+    'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+    'TelegramBot (like TwitterBot)',
+    'Twitterbot/1.0',
+    'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
+    'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)',
+  ];
+  test('lets link-preview crawlers fetch covers', () => {
+    for (const ua of previewBots) expect(blockedBot(ua, cover)).toBe(false);
+  });
+  test('still keeps them off audio', () => {
+    for (const ua of previewBots) expect(blockedBot(ua, track)).toBe(true);
+  });
+  test('scrapers stay blocked from covers too', () => {
+    expect(blockedBot('python-requests/2.31', cover)).toBe(true);
+    expect(blockedBot('Mozilla/5.0 HeadlessChrome/140', cover)).toBe(true);
+  });
+  test('browsers and Google pass', () => {
+    expect(blockedBot('Mozilla/5.0 (Macintosh) Chrome/140 Safari/537.36', track)).toBe(false);
+    expect(blockedBot('Mozilla/5.0 (compatible; Googlebot/2.1)', track)).toBe(false);
+  });
+});
 
 // ── timingSafeEqual / metricsAuthorized — /metrics HTTP Basic Auth ────────────
 

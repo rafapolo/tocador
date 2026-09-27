@@ -440,6 +440,19 @@ function refererAllowed(req) {
 // Legitimate crawlers we want to let through — Google indexing + og:image rendering
 const goodBotRegex = /googlebot|googleother|google-inspectiontool|google-extended|adsbot-google|mediapartners-google|google-read-aloud|apis-google/i;
 
+// Link-preview crawlers. Album pages on tocador.cc name a cover here as og:image, and a
+// preview bot refused it shows no picture — so these may fetch images, which are public
+// anyway (no hotlink check), and nothing else: audio stays off limits to them. They used
+// to get covers only by luck, when nginx already held one cached from a browser.
+const previewBotRegex = /facebookexternalhit|facebookcatalog|meta-externalagent|twitterbot|linkedinbot|discordbot|pinterestbot|slackbot|telegrambot|whatsapp|redditbot|bluesky|cardyb|mastodon|skypeuripreview|iframely|embedly|applebot/i;
+const IMAGE_PATH_RE = /\.(?:jpe?g|png|webp)$/i;
+
+// Whether the proxy turns this user agent away from this path.
+function blockedBot(ua, pathname) {
+  if (!botRegex.test(ua) || goodBotRegex.test(ua)) return false;
+  return !(previewBotRegex.test(ua) && IMAGE_PATH_RE.test(pathname));
+}
+
 const botRegex = new RegExp([
   // automation & headless browsers
   'scrapy', 'selenium(?:-webdriver)?', 'puppeteer', 'playwright', 'phantomjs', 'casperjs',
@@ -584,9 +597,10 @@ _server = Bun.serve({
 
     // block all bots globally — /health and /metrics above are exempt (health checks
     // and metrics scraping aren't real listeners; /metrics is auth-gated anyway)
-    // goodBotRegex exceptions are let through (Google indexing + og:image crawling)
+    // goodBotRegex exceptions are let through (Google indexing), and link-preview
+    // crawlers may fetch images (see previewBotRegex)
     const ua = req.headers.get('user-agent') ?? '';
-    if (botRegex.test(ua) && !goodBotRegex.test(ua)) {
+    if (blockedBot(ua, url.pathname)) {
       console.log(`[BLOCKED] bot: ${ua.slice(0, 120)}`);
       mark4xx();
       return new Response('Forbidden', { status: 403, headers: corsBase });
@@ -830,4 +844,4 @@ console.log(`Proxy listening on :${PORT} -> s3://${BUCKET}/`);
 // Exported for tests only — see tests/proxy.test.js. The suite must import
 // these rather than re-declare them; a test that copies its subject cannot
 // fail when the subject changes.
-export { sigV4Encode, keyCandidates, isSafeKey, bucketFor, startServer, timingSafeEqual, metricsAuthorized, RADIO_ID_RE };
+export { sigV4Encode, keyCandidates, isSafeKey, bucketFor, startServer, timingSafeEqual, metricsAuthorized, blockedBot, RADIO_ID_RE };
