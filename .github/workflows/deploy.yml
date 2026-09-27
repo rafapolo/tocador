@@ -31,8 +31,9 @@ jobs:
         # The player renders albums with JavaScript, so its ?acervo=&album= URLs all serve
         # the same "♪" shell: Google left every one of them unknown, and link previews
         # (which never run JS) showed no cover. script/build-album-pages.js turns each
-        # catalog into a real page per album at /<alias>/<slug>/, an /<alias>/ index
-        # linking all of them, and the sitemaps listing those pages (sitemap.xml,
+        # catalog into a page per album at /<alias>/<slug>/ — the player itself with
+        # that album's meta and markup baked in, and the URL the player keeps in the
+        # address bar — an /<alias>/ index linking all of them, and the sitemaps listing those pages (sitemap.xml,
         # sitemap-albums-<alias>.xml). Built from the same catalogs the player loads
         # (KNOWN_ACERVOS in js/ui.js), fresh on every push and on the daily cron above.
         #

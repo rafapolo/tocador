@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const { build, playerTracks, albumPage } = require('./build-album-pages.js');
+const { build, playerTracks, playerTemplate, albumPage } = require('./build-album-pages.js');
 // Loaded by build-album-pages.js onto globalThis.
 const { albumSlugs } = globalThis;
 
@@ -29,7 +29,7 @@ describe('albumSlugs', () => {
 });
 
 describe('playerTracks', () => {
-  // Must match buildAlbums() in js/ui.js, or ?t= links open the wrong track.
+  // Must match buildAlbums() in js/ui.js, or #tN links open the wrong track.
   test('dedupes titles before numbering un-numbered tracks', () => {
     const tracks = playerTracks({
       tracks: [
@@ -55,7 +55,8 @@ describe('albumPage', () => {
     title: 'Fé & "Festa"', artist: 'Zé <b>', year: 1975, path: '1975 - Zé - Fé', has_cover: true,
     tracks: [{ title: 'Um</script><script>x()', num: 1, file: '01.mp3', duration: 125 }],
   };
-  const html = albumPage({ alias: 'uqt', meta, album, slug: '1975-ze-fe', siblings: [] });
+  const template = playerTemplate(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'));
+  const html = albumPage({ template, alias: 'uqt', meta, album, slug: '1975-ze-fe' });
 
   test('sets canonical, og:url and a cover og:image for link previews', () => {
     expect(html).toContain('<link rel="canonical" href="https://tocador.cc/uqt/1975-ze-fe/">');
@@ -71,13 +72,31 @@ describe('albumPage', () => {
     expect(JSON.parse(ld).track[0].name).toBe('Um</script><script>x()');
   });
 
-  test('links tracks into the player with ?t=', () => {
-    expect(html).toContain('href="/?acervo=uqt&amp;album=1975+-+Z%C3%A9+-+F%C3%A9&amp;t=1"');
+  // The page is the player, so a copied /<alias>/<slug>/ URL both unfurls and plays.
+  test('is the player with the album pre-rendered into it', () => {
+    expect(html).toContain('<html data-album-pages lang="pt-BR">');
+    expect(html).toContain('src="/js/ui.js"');
+    expect(html).toContain('href="/assets/player.css"');
+    expect(html).toContain('href="/radio.html"');
+    expect(html).not.toMatch(/(?:href|src)="(?:\.\/)?(?:js|assets)\//);
+    expect(html).toMatch(/id="album-header"[^>]*><img class="album-cover-large"[^>]*><div class="album-header-info"><h2>Fé &amp; &quot;Festa&quot;<\/h2>/);
+    expect(html).toContain('<div class="track-title">Um&lt;/script&gt;&lt;script&gt;x()</div>');
     expect(html).toContain('2:05');
   });
 
+  test('replaces the home page meta instead of adding to it', () => {
+    expect(html.match(/<title>/g)).toHaveLength(2); // the album's, plus the mute icon's inline SVG <title>
+    expect(html.match(/<link rel="canonical"/g)).toHaveLength(1);
+    expect(html.match(/property="og:url"/g)).toHaveLength(1);
+    expect(html).not.toContain('Acervo UQT e Hominis Canidae');
+  });
+
+  test('fails loudly when index.html no longer has what it cuts', () => {
+    expect(() => playerTemplate('<html><head><title>x</title></head><body></body></html>')).toThrow(/index.html template/);
+  });
+
   test('omits og:image cover when the album has none', () => {
-    const noCover = albumPage({ alias: 'uqt', meta, album: { ...album, has_cover: false }, slug: 'x', siblings: [] });
+    const noCover = albumPage({ template, alias: 'uqt', meta, album: { ...album, has_cover: false }, slug: 'x' });
     expect(noCover).not.toContain('capa-min.jpg');
   });
 });

@@ -7,9 +7,11 @@
 // catalog with JavaScript, so every ?acervo=&album= URL serves the same "♪" shell.
 // Google never fetched the album sitemaps and left every album URL unknown, and
 // link-preview crawlers (WhatsApp, Telegram, Mastodon…) never run JS, so a shared
-// album link showed no cover. Each album here gets a real page at
-// /<alias>/<slug>/ with its own title, description, cover og:image, JSON-LD and
-// tracklist, linking into the player. /<alias>/ lists every album so crawlers can
+// album link showed no cover. Each album here gets a real page at /<alias>/<slug>/:
+// the player itself (index.html), with the album's own title, description, cover
+// og:image and JSON-LD in <head> and its header and tracklist pre-rendered in the
+// body. The player keeps that URL in the address bar (the track as #tN), so any
+// copied link unfurls with the cover. /<alias>/ lists every album so crawlers can
 // reach all of them by following links, not only through the sitemap.
 //
 // Writes, under --out:
@@ -19,7 +21,7 @@
 //   sitemap.xml                        sitemap index over the per-acervo files
 //
 // Slugs come from albumSlugs() in js/acervo-format.js, which the player also uses
-// for its canonical and share links, so the two can't drift apart.
+// for its address bar, canonical and share links, so the two can't drift apart.
 
 const fs = require('fs');
 const path = require('path');
@@ -68,12 +70,6 @@ function playerTracks(album) {
   }));
 }
 
-function playerUrl(alias, album, trackNum) {
-  const q = new URLSearchParams({ acervo: alias, album: album.path });
-  if (trackNum) q.set('t', trackNum);
-  return `/?${q}`;
-}
-
 const coverUrl = (base, album) =>
   album.has_cover !== false && base ? `${base}/${encodeURIComponent(album.path)}/capa-min.jpg` : null;
 
@@ -86,37 +82,18 @@ a{color:var(--accent)}
 .crumbs{font-size:.85rem;color:var(--muted);margin-bottom:24px}
 .crumbs a{color:var(--text2);text-decoration:none}
 .crumbs a:hover{color:var(--accent)}
-.album{display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap}
-.cover{width:200px;height:200px;border-radius:8px;object-fit:cover;background:var(--surface-light);box-shadow:0 8px 24px rgba(0,0,0,.5)}
 h1{font-family:"Playfair Display",Georgia,serif;font-size:2rem;line-height:1.2;margin:0 0 4px}
 .meta{color:var(--text2);margin:0}
-.play{display:inline-block;margin-top:16px;padding:10px 22px;border-radius:999px;background:var(--accent);color:#1a1814;font-weight:600;text-decoration:none}
-.play:hover{filter:brightness(1.08)}
-ol.tracks{list-style:none;padding:0;margin:32px 0 0;border-top:1px solid var(--border)}
-ol.tracks li{border-bottom:1px solid var(--border)}
-ol.tracks a{display:flex;gap:12px;padding:10px 4px;color:var(--text);text-decoration:none}
-ol.tracks a:hover{background:var(--surface)}
-ol.tracks li{scroll-margin-top:24px}
-ol.tracks li:target a{background:var(--surface-light);box-shadow:inset 3px 0 0 var(--accent)}
-.n{color:var(--muted);min-width:2ch;text-align:right}
-.t{flex:1}
-.ta{display:block;color:var(--muted);font-size:.85rem}
-.d{color:var(--muted);font-variant-numeric:tabular-nums}
 h2{font-family:"Playfair Display",Georgia,serif;font-size:1.2rem;margin:40px 0 8px}
 ul.more{padding-left:18px;margin:0}
 ul.more li{margin:4px 0}
 .artist{margin:0 0 12px}
 .artist h2{margin:28px 0 4px;font-size:1.05rem}
-@media (max-width:520px){.album{flex-direction:column;align-items:flex-start}h1{font-size:1.6rem}}
+@media (max-width:520px){h1{font-size:1.6rem}}
 `;
 
-function head({ title, desc, canonical, image, ogType, ld }) {
-  return `<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)}</title>
+function headMeta({ title, desc, canonical, image, ogType, ld }) {
+  return `<title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${esc(canonical)}">
 <meta property="og:type" content="${ogType}">
@@ -134,10 +111,19 @@ ${image ? `<meta property="og:image" content="${esc(image)}">
 <meta name="twitter:card" content="summary">`}
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(desc)}">
+${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>` : ''}`;
+}
+
+function head(page) {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${headMeta(page)}
 <meta name="theme-color" content="#1a1814">
 <link rel="preconnect" href="https://cdn.tocador.cc">
 <style>${PAGE_CSS}</style>
-${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>` : ''}
 </head>
 <body>
 <main class="wrap">
@@ -149,17 +135,52 @@ const FOOT = `</main>
 </html>
 `;
 
-function albumPage({ alias, meta, album, slug, siblings }) {
+// index.html turned into a template for album pages. They live two levels down, so
+// its relative asset paths become root-absolute (index.html itself stays relative:
+// the uqt/hominiscanidae mirrors serve it from a subdirectory). Its site-wide
+// title, description, canonical and og/twitter tags are cut out for the album's
+// own, and data-album-pages tells js/ui.js to keep /<alias>/<slug>/ URLs even off
+// tocador.cc (local previews, tests). Every cut is checked, so a reshuffled
+// index.html fails the build instead of shipping album pages with the home meta.
+function playerTemplate(html) {
+  const cut = (re, what) => {
+    const before = html;
+    html = html.replace(re, '');
+    if (html === before) throw new Error(`index.html template: no ${what} found`);
+  };
+  const headEnd = html.indexOf('</head>');
+  if (headEnd < 0) throw new Error('index.html template: no </head>');
+  let head = html.slice(0, headEnd);
+  const body = html.slice(headEnd);
+  html = head;
+  cut(/[ \t]*<title>[^<]*<\/title>\n/, '<title>');
+  cut(/[ \t]*<meta name="description"[^>]*>\n/, 'meta description');
+  cut(/[ \t]*<meta property="og:[^>]*>\n/g, 'og: meta');
+  cut(/[ \t]*<meta name="twitter:[^>]*>\n/g, 'twitter: meta');
+  cut(/[ \t]*<link rel="canonical"[^>]*>\n/, 'canonical link');
+  cut(/[ \t]*<script>\(function\(\)\{var p=new URLSearchParams[^\n]*<\/script>\n/, 'inline canonical script');
+  const marker = html.match(/[ \t]*<meta name="viewport"[^>]*>\n/);
+  if (!marker) throw new Error('index.html template: no meta viewport');
+  head = html.slice(0, marker.index + marker[0].length) + '<!--ALBUM_HEAD-->\n' + html.slice(marker.index + marker[0].length);
+  html = (head + body)
+    .replace(/<html\b/, '<html data-album-pages')
+    .replace(/\b(href|src)="(?:\.\/)?(?![a-z][a-z0-9+.-]*:|\/|#)/gi, '$1="/');
+  for (const id of ['album-header', 'track-list']) {
+    if (!new RegExp(`id="${id}"[^>]*></`).test(html)) throw new Error(`index.html template: no empty #${id}`);
+  }
+  return html;
+}
+
+function albumPage({ template, alias, meta, album, slug }) {
   const tracks = playerTracks(album);
   const archive = meta.title || alias;
-  const artist = album.artist || 'Artista desconhecido';
+  const artist = album.artist || ''; // compilations often have none; say nothing rather than "desconhecido"
   const year = album.year > 0 ? album.year : null;
   const canonical = `${SITE}/${alias}/${slug}/`;
   const image = coverUrl(meta.base_url, album);
-  const total = tracks.reduce((s, t) => s + t.duration, 0);
-  const title = `${album.title} — ${artist}${year ? ` (${year})` : ''} · ${archive}`;
+  const title = `${album.title}${artist ? ` — ${artist}` : ''}${year ? ` (${year})` : ''} · ${archive}`;
   const trackNames = tracks.slice(0, 4).map(t => String(t.title ?? "").replace(/\s+/g, ' ')).join(', ');
-  const desc = `Ouça ${album.title}, álbum de ${artist}${year ? ` lançado em ${year}` : ''}: ` +
+  const desc = `Ouça ${album.title}${artist ? `, álbum de ${artist}` : ''}${year ? ` lançado em ${year}` : ''}: ` +
     `${tracks.length} faixa${tracks.length === 1 ? '' : 's'}${trackNames ? ` — ${trackNames}${tracks.length > 4 ? '…' : '.'}` : '.'} ` +
     `Em ${archive}.`;
 
@@ -168,7 +189,7 @@ function albumPage({ alias, meta, album, slug, siblings }) {
     '@type': 'MusicAlbum',
     name: album.title,
     url: canonical,
-    byArtist: { '@type': 'MusicGroup', name: artist },
+    ...(artist && { byArtist: { '@type': 'MusicGroup', name: artist } }),
     ...(year && { datePublished: String(year) }),
     ...(image && { image }),
     numTracks: tracks.length,
@@ -182,32 +203,22 @@ function albumPage({ alias, meta, album, slug, siblings }) {
     })),
   };
 
+  // Same markup js/ui.js renders (renderAlbumHeader, buildTrackItemsFragment), so
+  // the page reads right before the catalog arrives and the player replaces it.
+  const header = `${image ? `<img class="album-cover-large" src="${esc(image)}" alt="${esc(album.title)}" width="200" height="200">` : ''}` +
+    `<div class="album-header-info"><h2>${esc(album.title)}</h2><p><strong>${esc(artist)}</strong></p>` +
+    `<p>${year ?? ''}${year ? ' • ' : ''}${tracks.length} canções</p></div>`;
   const rows = tracks.map(t => {
-    const other = t.artists && t.artists !== artist ? `<span class="ta">${esc(t.artists)}</span>` : '';
-    return `<li id="t${esc(t.num)}"><a rel="nofollow" href="${esc(playerUrl(alias, album, t.num))}"><span class="n">${esc(t.num)}</span>` +
-      `<span class="t">${esc(t.title)}${other}</span><span class="d">${fmtDuration(t.duration)}</span></a></li>`;
-  }).join('\n');
+    const other = t.artists && t.artists !== artist ? `<div class="track-artist">${esc(t.artists)}</div>` : '';
+    return `<li class="track-item"><span class="track-num" aria-hidden="true">${esc(t.num)}</span>` +
+      `<div class="track-details"><div class="track-title">${esc(t.title)}</div>${other}</div>` +
+      `<span class="track-duration">${fmtDuration(t.duration) || '-'}</span></li>`;
+  }).join('');
 
-  const more = siblings.length
-    ? `<h2>Mais de ${esc(artist)}</h2>\n<ul class="more">\n${siblings.map(s =>
-        `<li><a href="/${alias}/${s.slug}/">${esc(s.album.title)}</a>${s.album.year > 0 ? ` (${s.album.year})` : ''}</li>`).join('\n')}\n</ul>`
-    : '';
-
-  return head({ title, desc, canonical, image, ogType: 'music.album', ld }) +
-`<nav class="crumbs"><a href="/">♪ Tocador</a> / <a href="/${alias}/">${esc(archive)}</a></nav>
-<article class="album">
-${image ? `<img class="cover" src="${esc(image)}" alt="Capa de ${esc(album.title)}" width="200" height="200">` : ''}
-<div>
-<h1>${esc(album.title)}</h1>
-<p class="meta">${esc(artist)}${year ? ` · ${year}` : ''} · ${tracks.length} faixa${tracks.length === 1 ? '' : 's'}${total ? ` · ${Math.round(total / 60)} min` : ''}</p>
-<a class="play" rel="nofollow" href="${esc(playerUrl(alias, album))}">▶ Ouvir no Tocador</a>
-</div>
-</article>
-<ol class="tracks">
-${rows}
-</ol>
-${more}
-` + FOOT;
+  return template
+    .replace('<!--ALBUM_HEAD-->', () => headMeta({ title, desc, canonical, image, ogType: 'music.album', ld }))
+    .replace(/(id="album-header"[^>]*>)(<\/)/, (_, open, close) => open + header + close)
+    .replace(/(id="track-list"[^>]*>)(<\/)/, (_, open, close) => open + rows + close);
 }
 
 function indexPage({ alias, meta, entries }) {
@@ -257,7 +268,8 @@ function loadCatalog(file) {
   return globalThis.decodeAcervo(JSON.parse(raw.toString('utf8')));
 }
 
-function build({ out, catalogs }) {
+function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index.html') }) {
+  const template = playerTemplate(fs.readFileSync(templateFile, 'utf8'));
   const sitemaps = [];
   const summary = [];
   for (const [alias, file] of catalogs) {
@@ -269,22 +281,12 @@ function build({ out, catalogs }) {
     const slugs = globalThis.albumSlugs(albums);
     const entries = albums.map((album, i) => ({ album, slug: slugs[i] }));
 
-    const byArtist = new Map();
-    for (const e of entries) {
-      const k = e.album.artist || '';
-      if (!byArtist.has(k)) byArtist.set(k, []);
-      byArtist.get(k).push(e);
-    }
-
     const root = path.join(out, alias);
     fs.rmSync(root, { recursive: true, force: true });
     for (const e of entries) {
-      const siblings = e.album.artist
-        ? byArtist.get(e.album.artist).filter(s => s !== e).slice(0, 30)
-        : [];
       const dir = path.join(root, e.slug);
       fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, 'index.html'), albumPage({ alias, meta, album: e.album, slug: e.slug, siblings }));
+      fs.writeFileSync(path.join(dir, 'index.html'), albumPage({ template, alias, meta, album: e.album, slug: e.slug }));
     }
     fs.writeFileSync(path.join(root, 'index.html'), indexPage({ alias, meta, entries }));
 
@@ -301,7 +303,7 @@ function build({ out, catalogs }) {
   return summary;
 }
 
-module.exports = { build, playerTracks, albumPage, indexPage, sitemapFor };
+module.exports = { build, playerTracks, playerTemplate, albumPage, indexPage, sitemapFor };
 
 if (require.main === module) {
   const args = process.argv.slice(2);

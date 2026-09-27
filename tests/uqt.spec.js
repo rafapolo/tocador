@@ -624,6 +624,64 @@ test('L63: share button names the loaded track with a #tN anchor', async ({ page
     .toBe(`https://tocador.cc/uqt/1971-chico-buarque-construcao/#t${num}`);
 });
 
+// Album pages are the player: /<alias>/<slug>/ is index.html with the album's meta
+// and markup baked in (script/build-album-pages.js), and the player keeps that URL
+// in the address bar so a copied link unfurls with the cover. They only exist on
+// tocador.cc, so these serve one built from the fixture in place of a deployed page.
+const { playerTemplate, albumPage } = require('../script/build-album-pages.js');
+const fixtureCatalog = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'albums.json'), 'utf8'));
+const playerShell = playerTemplate(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'));
+async function gotoAlbumPage(page, slug, hash = '') {
+  const slugs = globalThis.albumSlugs(fixtureCatalog.albums);
+  await page.route(/\/uqt\/[a-z0-9-]+\/(\?.*)?$/, route => {
+    const s = new URL(route.request().url()).pathname.split('/')[2];
+    const i = slugs.indexOf(s);
+    if (i < 0) return route.fulfill({ status: 404, body: 'not found' });
+    route.fulfill({
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      body: albumPage({ template: playerShell, alias: 'uqt', meta: fixtureCatalog.meta || {}, album: fixtureCatalog.albums[i], slug: s }),
+    });
+  });
+  await gotoWithFixture(page, `/uqt/${slug}/${hash}`);
+}
+
+test('L64: an album page opens its album and track from the path and #tN', async ({ page }) => {
+  await gotoAlbumPage(page, '1971-chico-buarque-construcao', '#t2');
+  await expect(page.locator('#album-header h2')).toHaveText('Construção');
+  await expect(page.locator('#track-list .track-item.playing .track-num')).toHaveText('2');
+  expect(new URL(page.url()).pathname + new URL(page.url()).hash).toBe('/uqt/1971-chico-buarque-construcao/#t2');
+  await expect(page.locator('link[rel="canonical"]'))
+    .toHaveAttribute('href', 'https://tocador.cc/uqt/1971-chico-buarque-construcao/');
+});
+
+test('L65: from an album page, other albums and tracks keep path URLs', async ({ page }) => {
+  await gotoAlbumPage(page, '1971-chico-buarque-construcao');
+  await page.locator('.album-item', { hasText: 'Clube da Esquina' }).click();
+  await expect(page).toHaveURL(/\/uqt\/1972-milton-nascimento-clube-da-esquina\/(#t1)?$/);
+  await page.locator('#track-list .track-item').nth(1).click();
+  await expect(page).toHaveURL(/\/uqt\/1972-milton-nascimento-clube-da-esquina\/#t2$/);
+  await page.goBack();
+  await expect(page.locator('#album-header h2')).toHaveText('Construção');
+});
+
+test('L66: searching on an album page keeps the album path and track', async ({ page }) => {
+  await gotoAlbumPage(page, '1971-chico-buarque-construcao', '#t2');
+  await page.fill('#search-input', 'elis');
+  await expect(page).toHaveURL(/\/uqt\/1971-chico-buarque-construcao\/\?q=elis#t2$/);
+});
+
+test('L67: an unknown album slug says so instead of opening another album', async ({ page }) => {
+  await page.route(/\/uqt\/gone\/$/, route => route.fulfill({
+    status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    body: albumPage({ template: playerShell, alias: 'uqt', meta: {}, album: fixtureCatalog.albums[0], slug: 'gone' }),
+  }));
+  await gotoWithFixture(page, '/uqt/gone/');
+  await expect(page.locator('.album-not-found')).toBeVisible();
+  await expect(page.locator('#track-list .track-item')).toHaveCount(0);
+  expect(new URL(page.url()).search).toBe('?acervo=uqt');
+});
+
 test('L62: browse panel links to the acervo album index', async ({ page }) => {
   await gotoWithFixture(page, '/?acervo=homi');
   await expect(page.locator('#acervo-index-link')).toHaveAttribute('href', 'https://tocador.cc/homi/');

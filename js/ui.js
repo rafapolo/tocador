@@ -49,7 +49,7 @@
     const extra = [
       `**online:** ${navigator.onLine}`,
       conn ? `**connection:** ${[conn.effectiveType, conn.downlink && conn.downlink + 'Mbps'].filter(Boolean).join(' ')}` : null,
-      `**acervo:** ${new URLSearchParams(location.search).get('acervo') || '(default)'}`,
+      `**acervo:** ${new URLSearchParams(location.search).get('acervo') || location.pathname}`,
       window.__lastFetchUrl ? `**last fetch:** ${window.__lastFetchUrl}` : null,
     ].filter(Boolean).join('\n');
     report(`[tocador] Unhandled rejection: ${msg}`, `${stack}\n\n${extra}`);
@@ -69,7 +69,7 @@ function ensureDecodeAcervo() {
   if (typeof decodeAcervo === 'function') return Promise.resolve();
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'js/acervo-format.js';
+    s.src = `${APP_ROOT}js/acervo-format.js`;
     s.onload = resolve;
     s.onerror = () => reject(new Error('failed to load js/acervo-format.js'));
     document.head.appendChild(s);
@@ -204,7 +204,34 @@ function checkMarquee(el) {
   });
 }
 
+// Album URLs. On tocador.cc every album of a KNOWN_ACERVOS catalog has a real page
+// at /<alias>/<slug>/ (script/build-album-pages.js) that is this same player with
+// the album's own title, description and cover og:image in its <head>. The address
+// bar shows that URL, so copying it from anywhere unfurls with the cover — a
+// ?album= URL never can, since every query string serves the same index.html and
+// link-preview crawlers don't run this script. The track rides in the fragment
+// (#t5): crawlers never see it, so changing tracks never reads as a redirect.
+// The uqt/hominiscanidae Pages mirrors and ?acervo=<url> catalogs have no such
+// pages and keep ?album=&t=, which is also still read everywhere for old links.
+//
+// APP_ROOT is where index.html lives ('/' on tocador.cc, '/uqt/' on a mirror),
+// taken from this script's own URL so it holds on any album page too.
+const APP_ROOT = new URL('..', document.currentScript?.src || location.href).pathname;
+const ALBUM_PAGES = location.origin === 'https://tocador.cc' ||
+  document.documentElement.hasAttribute('data-album-pages');
+
+// { alias, slug } when the current path is an album page, else null.
+function albumPageFromPath() {
+  if (!location.pathname.startsWith(APP_ROOT)) return null;
+  const m = location.pathname.slice(APP_ROOT.length).match(/^([a-z0-9-]+)\/([a-z0-9-]+)\/$/);
+  return m && KNOWN_ACERVOS[m[1]] ? { alias: m[1], slug: m[2] } : null;
+}
+
 function getAlbumFromUrl() {
+  const page = albumPageFromPath();
+  // An unknown slug (catalog changed since the page was built) comes back as-is:
+  // it matches no album path, so the player says the album doesn't exist.
+  if (page) return albumPathForSlug(page.slug) ?? page.slug;
   return new URLSearchParams(window.location.search).get('album');
 }
 
@@ -217,6 +244,8 @@ function getYearFromUrl() {
 }
 
 function getTrackNumFromUrl() {
+  const m = location.hash.match(/^#t(\d+)$/);
+  if (m) return parseInt(m[1]);
   return parseInt(new URLSearchParams(window.location.search).get('t') || 0);
 }
 
@@ -228,32 +257,52 @@ function generateAlbumUrl(album, trackNum) {
   const params = new URLSearchParams(window.location.search);
   params.delete('artista');
   params.delete('genero');
+  const page = ALBUM_PAGES && albumPagePath(album);
+  if (page) {
+    params.delete('acervo');
+    params.delete('album');
+    params.delete('t');
+    const qs = params.toString();
+    return `${page}${qs ? `?${qs}` : ''}${trackNum ? `#t${trackNum}` : ''}`;
+  }
+  // Leaving an album page for a ?album= URL: the path no longer names the acervo.
+  if (albumPageFromPath() && activeAcervoKey) params.set('acervo', activeAcervoKey);
   params.set('album', album.path);
   if (trackNum) params.set('t', trackNum); else params.delete('t');
-  return `${window.location.pathname}?${params}`;
+  return `${APP_ROOT}?${params}`;
+}
+
+// The current path and fragment with a different query string.
+function urlWithParams(params) {
+  const qs = params.toString();
+  return `${location.pathname}${qs ? `?${qs}` : ''}${location.hash}`;
 }
 
 // Rewriting the address bar to a URL that differs only in encoding (`,` → `%2C`,
 // param order) still counts as a JS redirect to crawlers, so keep the current
-// URL whenever the parameters are the same.
+// URL whenever the path, fragment and parameters are the same.
 function replaceUrl(state, url) {
-  const q = url.slice(url.indexOf('?') + 1);
-  const same = url.startsWith(window.location.pathname + '?') &&
-    new URLSearchParams(q).toString() === new URLSearchParams(window.location.search).toString();
-  window.history.replaceState(state, '', same ? window.location.pathname + window.location.search : url);
+  const u = new URL(url, location.href);
+  const same = u.pathname === location.pathname && u.hash === location.hash &&
+    u.searchParams.toString() === new URLSearchParams(location.search).toString();
+  window.history.replaceState(state, '', same ? location.pathname + location.search + location.hash : url);
 }
 
 function updateTrackInUrl(trackNum) {
+  const state = { album: selectedAlbum?.path, t: trackNum };
+  if (albumPageFromPath()) {
+    replaceUrl(state, `${location.pathname}${location.search}${trackNum ? `#t${trackNum}` : ''}`);
+    return;
+  }
   const params = new URLSearchParams(window.location.search);
   if (trackNum) params.set('t', trackNum); else params.delete('t');
-  const state = { album: selectedAlbum?.path, t: trackNum };
-  replaceUrl(state, `${window.location.pathname}?${params}`);
+  replaceUrl(state, urlWithParams(params));
 }
 
 function updateQueryInUrl(q, push) {
   const params = new URLSearchParams(window.location.search);
   if (q) params.set('q', q); else params.delete('q');
-  const url = `${window.location.pathname}?${params}`;
+  const url = urlWithParams(params);
   const state = selectedAlbum ? { album: selectedAlbum.path } : {};
   if (push) window.history.pushState(state, '', url);
   else window.history.replaceState(state, '', url);
@@ -262,7 +311,7 @@ function updateQueryInUrl(q, push) {
 function updateYearInUrl(year) {
   const params = new URLSearchParams(window.location.search);
   if (year) params.set('ano', year); else params.delete('ano');
-  const url = `${window.location.pathname}?${params}`;
+  const url = urlWithParams(params);
   const state = selectedAlbum ? { album: selectedAlbum.path } : {};
   window.history.replaceState(state, '', url);
 }
@@ -282,7 +331,7 @@ function updateBrowseFilterInUrl() {
   if (activeGenre)  params.set('genero', activeGenre);
   if (activeArtist) params.set('artista', activeArtist);
   const state = selectedAlbum ? { album: selectedAlbum.path } : {};
-  window.history.replaceState(state, '', `${window.location.pathname}?${params}`);
+  window.history.replaceState(state, '', urlWithParams(params));
 }
 
 function setMeta(attr, key, value) {
@@ -297,15 +346,27 @@ function setMeta(attr, key, value) {
 // even on the uqt/hominiscanidae Pages mirrors, which don't serve these pages.
 const SITE_ORIGIN = 'https://tocador.cc';
 let activeAcervoKey = null;
-let _albumSlugByPath = null;
-function albumPageUrl(album) {
+let _albumSlugByPath = null, _albumPathBySlug = null;
+function albumSlug(album) {
   if (!activeAcervoKey || !db?.albums || typeof albumSlugs !== 'function') return null;
   if (!_albumSlugByPath) {
     const slugs = albumSlugs(db.albums);
     _albumSlugByPath = new Map(db.albums.map((a, i) => [a.path, slugs[i]]));
+    _albumPathBySlug = new Map(db.albums.map((a, i) => [slugs[i], a.path]));
   }
-  const slug = _albumSlugByPath.get(album.path);
+  return _albumSlugByPath.get(album.path) ?? null;
+}
+function albumPathForSlug(slug) {
+  if (!_albumPathBySlug && db?.albums) albumSlug(db.albums[0]);
+  return _albumPathBySlug?.get(slug) ?? null;
+}
+function albumPageUrl(album) {
+  const slug = albumSlug(album);
   return slug ? `${SITE_ORIGIN}/${activeAcervoKey}/${slug}/` : null;
+}
+function albumPagePath(album) {
+  const slug = albumSlug(album);
+  return slug ? `${APP_ROOT}${activeAcervoKey}/${slug}/` : null;
 }
 
 // With a track of this album loaded, the link names it: #tN on the static page
@@ -1290,7 +1351,7 @@ function renderAcervoSelect(activeKey) {
   select.addEventListener('change', () => {
     const key = select.value;
     if (!KNOWN_ACERVOS[key]) return;
-    location.href = `${location.pathname}?acervo=${encodeURIComponent(key)}`;
+    location.href = `${APP_ROOT}?acervo=${encodeURIComponent(key)}`;
   });
 }
 
@@ -1741,7 +1802,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       filterAlbums();
       updateBrowseSelection();
     }
-    const path = e.state?.album ?? new URLSearchParams(window.location.search).get('album');
+    const path = e.state?.album ?? getAlbumFromUrl();
     if (!path) return;
     const album = albums.find(a => a.path.normalize('NFC') === path.normalize('NFC'));
     if (!album || album === selectedAlbum) return;
@@ -1788,7 +1849,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   virtualGrid = new VirtualGrid(albumsList);
 
   // Async data: ?acervo=<url|alias> selects the archive; defaults to UQT if omitted
-  const acervoParam = new URLSearchParams(location.search).get('acervo');
+  const acervoParam = albumPageFromPath()?.alias ?? new URLSearchParams(location.search).get('acervo');
   if (acervoParam) {
     const entry = KNOWN_ACERVOS[acervoParam];
     sessionStorage.setItem('acervo', entry ? entry.data : decodeURIComponent(acervoParam));
@@ -1797,7 +1858,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   let defaultKey = DEFAULT_ACERVO;
   let cfg = {};
   try {
-    cfg = await trackedFetch('config.json').then(r => r.ok ? r.json() : {});
+    cfg = await trackedFetch(`${APP_ROOT}config.json`).then(r => r.ok ? r.json() : {});
     if (cfg.acervo && KNOWN_ACERVOS[cfg.acervo]) defaultKey = cfg.acervo;
   } catch {}
   const defaultEntry = KNOWN_ACERVOS[defaultKey];
@@ -1837,9 +1898,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     ? `?acervo=${encodeURIComponent(activeAcervoKey)}`
     : (acervoParam ? `?acervo=${encodeURIComponent(acervoParam)}` : '');
   const btn3d = document.getElementById('btn-3d');
-  if (btn3d) btn3d.href = `./3d.html${acervoQuery}`;
+  if (btn3d) btn3d.href = `${APP_ROOT}3d.html${acervoQuery}`;
   const btnRadio = document.getElementById('btn-radio');
-  if (btnRadio) btnRadio.href = `./radio.html${acervoQuery}`;
+  if (btnRadio) btnRadio.href = `${APP_ROOT}radio.html${acervoQuery}`;
   skeletonEl.remove();
   applyArchiveMeta();
   renderAcervoSelect(activeAcervoKey);
@@ -1906,11 +1967,13 @@ document.addEventListener('DOMContentLoaded', async function () {
   if (albumFromUrl && !albumToSelect) {
     const cleanParams = new URLSearchParams(window.location.search);
     cleanParams.delete('album'); cleanParams.delete('t'); cleanParams.delete('artista'); cleanParams.delete('genero');
-    const cleanUrl = `${window.location.pathname}${cleanParams.toString() ? '?' + cleanParams : ''}`;
+    if (albumPageFromPath() && activeAcervoKey) cleanParams.set('acervo', activeAcervoKey);
+    const cleanUrl = `${APP_ROOT}${cleanParams.toString() ? '?' + cleanParams : ''}`;
     window.history.replaceState({}, '', cleanUrl);
     virtualGrid.setItems(filteredAlbums);
     const container = document.getElementById('album-header');
     container.innerHTML = `<p class="album-not-found">Álbum não existe</p>`;
+    document.getElementById('track-list').replaceChildren(); // an album page's pre-rendered tracks
   } else if (albumToSelect) {
     selectedAlbum = albumToSelect;
     virtualGrid.setItems(filteredAlbums);
@@ -2391,6 +2454,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 // Registered after load so it never competes with the initial catalog fetch.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register(`${APP_ROOT}sw.js`, { scope: APP_ROOT }).catch(() => {});
   });
 }

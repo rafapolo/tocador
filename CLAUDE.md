@@ -110,9 +110,9 @@ cached older `ui.js` cannot read v2 and will render an empty grid.
 
 ## Data Flow
 
-1. Browser loads `index.html` from GitHub Pages
-2. `ui.js` reads `?acervo=` (alias or direct URL), fetches the `.json.gz`, decompresses, sets `BASE_URL = db.meta.base_url`
-3. User clicks album → primes first track (`audio.src`, `audio.load()`) without auto-playing
+1. Browser loads `index.html` (or an album page, `/<alias>/<slug>/`, which is the same player) from GitHub Pages
+2. `ui.js` reads the acervo from the album-page path or `?acervo=` (alias or direct URL), fetches the `.json.gz`, decompresses, sets `BASE_URL = db.meta.base_url`
+3. User clicks album → primes first track (`audio.src`, `audio.load()`) without auto-playing, and the address bar becomes `/<alias>/<slug>/` (track as `#tN`)
 4. User presses play → constructs `{BASE_URL}/{encodeURI(path)}/{encodeURI(file)}`
 5. Proxy receives request, forwards to S3 with CORS + MIME headers
 
@@ -148,16 +148,26 @@ onto whatever query string `--sitemap-url` already carries, so `sitemap-albums.x
 like `https://tocador.cc/?acervo=uqt&album=...&artista=...`.
 
 **The sitemaps tocador.cc serves are built at deploy, not taken from the archive repos.**
-`deploy.yml` downloads both catalogs and runs `script/build-album-pages.js`, which writes a static
-page per album at `/<alias>/<slug>/` (real title, description, cover `og:image`, JSON-LD, tracklist
-linking into the player), an `/<alias>/` index linking every album, and `sitemap.xml` →
+`deploy.yml` downloads both catalogs and runs `script/build-album-pages.js`, which writes a page
+per album at `/<alias>/<slug>/`, an `/<alias>/` index linking every album, and `sitemap.xml` →
 `sitemap-albums-{uqt,homi}.xml` listing those pages. It runs on push and on a daily cron, so an
 archive-only push shows up within a day. This exists because the player renders albums with JS:
 Google never indexed any `?acervo=&album=` URL, and link previews (which don't run JS) showed no
-cover. Slugs come from `albumSlugs()` in `js/acervo-format.js`; the player uses the same function
-to point `<link rel=canonical>`, `og:url` and its Compartilhar button at the static page, so never
-slugify anywhere else. The `sitemap.xml`/`sitemap-albums.xml` that `--sitemap-out` still writes into
-the archive repos are no longer served. The generated `uqt/`, `homi/` and `sitemap*.xml` are
+cover.
+
+**Album pages are the player.** Each is `index.html` with the album's title, description, cover
+`og:image` and JSON-LD swapped into `<head>`, its header and tracklist pre-rendered into
+`#album-header`/`#track-list`, root-absolute asset paths, and `<html data-album-pages>`
+(`playerTemplate()` checks every cut, so an `index.html` reshuffle fails the build). On tocador.cc
+the player keeps `/<alias>/<slug>/` in the address bar with the track as `#tN` — a fragment, so
+crawlers never see track changes as redirects — which means any copied URL unfurls with the cover.
+The uqt/hominiscanidae Pages mirrors and `?acervo=<url>` catalogs have no album pages and keep
+`?album=&t=`; `ui.js` still reads those everywhere, so old links keep working. `index.html` itself
+must keep *relative* asset paths because the mirrors serve it from a subdirectory; `ui.js` finds
+the app root from its own script URL (`APP_ROOT`). Slugs come from `albumSlugs()` in
+`js/acervo-format.js`, shared by the builder and the player, so never slugify anywhere else.
+
+The `sitemap.xml`/`sitemap-albums.xml` that `--sitemap-out` still writes into the archive repos are no longer served. The generated `uqt/`, `homi/` and `sitemap*.xml` are
 gitignored here.
 
 Add `--v2` to emit the columnar payload instead of v1. Publish the player first — see
