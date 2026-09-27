@@ -1,7 +1,7 @@
 [package]
 name = "generate-albums"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [[bin]]
 name = "generate-albums"
@@ -9,7 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 id3          = "1"
-lofty        = "0.22"
+lofty        = "0.25"
 rayon        = "1"
 serde        = { version = "1", features = ["derive"] }
 serde_json   = "1"
