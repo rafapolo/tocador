@@ -708,21 +708,6 @@ body {
   border-color: var(--color-accent);
 }
 
-.acervo-index-link {
-  display: inline-block;
-  margin-top: 6px;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.acervo-index-link[hidden] {
-  display: none;
-}
-
-.acervo-index-link:hover {
-  color: var(--color-accent);
-}
-
 .year-link,
 .artist-link {
   cursor: pointer;
@@ -1936,6 +1921,23 @@ audio {
   margin: 0;
 }
 
+/* Pinned under the browse list; its href is the crawlable static index */
+.acervo-index-link {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.77rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acervo-index-link[hidden] { display: none; }
+
+.acervo-index-link:hover { color: var(--color-accent); }
+
 /* Acervo switcher — panel header, above the tabs */
 .browse-acervo {
   flex-shrink: 0;
@@ -2194,7 +2196,7 @@ audio {
   .browse-acervo { padding: calc(8px + env(safe-area-inset-top)) 10px 8px max(10px, env(safe-area-inset-left)); }
   .browse-tabs,
   .browse-search-wrap { padding-left: max(8px, env(safe-area-inset-left)); }
-  .browse-list { padding-bottom: env(safe-area-inset-bottom); }
+  .acervo-index-link { padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); font-size: 0.88rem; }
 
   /* Touch targets ≥44px everywhere in the drawer */
   /* height must stay in lockstep with BrowseList._rowHeight in js/ui.js */

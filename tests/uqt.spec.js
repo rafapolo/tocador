@@ -682,9 +682,29 @@ test('L67: an unknown album slug says so instead of opening another album', asyn
   expect(new URL(page.url()).search).toBe('?acervo=uqt');
 });
 
-test('L62: browse panel links to the acervo album index', async ({ page }) => {
+test('L62: browse panel links to the acervo album index; a click filters instead of leaving', async ({ page }) => {
   await gotoWithFixture(page, '/?acervo=homi');
-  await expect(page.locator('#acervo-index-link')).toHaveAttribute('href', 'https://tocador.cc/homi/');
+  const link = page.locator('#acervo-index-link');
+  const count = page.locator('#search-count');
+  await expect(link).toHaveAttribute('href', 'https://tocador.cc/homi/');
+  await expect(link).toHaveText('Todos os álbuns do acervo');
+
+  // No artist selected: a click drops the search and shows the whole acervo, in place.
+  await page.fill('#search-input', 'zzzz-no-match');
+  await link.click();
+  await expect(page.locator('#search-input')).toHaveValue('');
+  await expect(page.locator('#empty-state')).toBeHidden();
+  await expect(page).toHaveURL(/acervo=homi/);
+
+  // Artist selected: the link names them and a click keeps just their albums.
+  const artist = page.locator('#browse-list .browse-item').first();
+  const name = await artist.getAttribute('data-value');
+  await artist.click();
+  await expect(link).toHaveText(`Todos os álbuns de ${name}`);
+  const byArtist = await count.textContent();
+  await link.click();
+  await expect(count).toHaveText(byArtist);
+  await expect(link).toHaveText(`Todos os álbuns de ${name}`);
 });
 
 // Fix #3: --color-text-muted (#7a7268 → #958d83) needed to clear WCAG AA's
