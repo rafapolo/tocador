@@ -1921,7 +1921,7 @@ audio {
   margin: 0;
 }
 
-/* Pinned under the browse list; its href is the crawlable static index */
+/* Pinned under the browse list: plain link to the static album index (crawl path) */
 .acervo-index-link {
   flex-shrink: 0;
   padding: 10px 14px;

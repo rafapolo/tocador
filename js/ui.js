@@ -934,16 +934,7 @@ function getDecades() {
   return _cachedDecades;
 }
 
-// Bottom-of-browse-panel link: names the selected artist, if any, and a plain
-// click drops every other filter so the grid shows just that artist's albums
-// (or the whole acervo when no artist is selected).
-function updateIndexLink() {
-  const link = document.getElementById('acervo-index-link');
-  if (link) link.textContent = activeArtist ? `Todos os álbuns de ${activeArtist}` : 'Todos os álbuns do acervo';
-}
-
 function filterAlbums() {
-  updateIndexLink();
   const q = fold(searchQuery);
   const ak = activeArtist ? fold(activeArtist) : null;
   filteredAlbums = albums.filter(album => {
@@ -1903,8 +1894,8 @@ document.addEventListener('DOMContentLoaded', async function () {
   activeAcervoKey = resolveAcervoKey(dataUrl, acervoParam);
   const indexLink = document.getElementById('acervo-index-link');
   if (indexLink) {
-    // The href is for crawlers (and new-tab clicks): the static album index of the
-    // loaded acervo only. A plain click stays in the player — see updateIndexLink().
+    // Plain link to the static album index of the loaded acervo — the crawl path
+    // from the player into every album page.
     if (activeAcervoKey) indexLink.href = `${SITE_ORIGIN}/${activeAcervoKey}/`;
     else indexLink.hidden = true;
   }
@@ -2347,14 +2338,6 @@ document.addEventListener('DOMContentLoaded', async function () {
   document.getElementById('clear-all-filters')?.addEventListener('click', clearAllFilters);
 
   // ── Browse panel events ─────────────────────────────────────────────────
-
-  document.getElementById('acervo-index-link')?.addEventListener('click', e => {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
-    resetFacets('artist');
-    filterAlbums();
-    if (isMobile()) setTimeout(closeBrowseDrawer, 180);
-  });
 
   // Delegated click on list items
   _browseListEl?.addEventListener('click', e => {
