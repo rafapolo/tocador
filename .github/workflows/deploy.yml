@@ -51,6 +51,12 @@ jobs:
             uqt="$RUNNER_TEMP/catalogs/uqt.json.gz" \
             homi="$RUNNER_TEMP/catalogs/homi.json.gz"
 
+      - name: Ensure config.json exists
+        # ui.js fetches config.json for optional overrides. It is gitignored here (the
+        # mirrors ship their own), so without this the request 404s on tocador.cc and
+        # lands in the console as an error, which costs Lighthouse's best-practices score.
+        run: '[ -f config.json ] || echo "{}" > config.json'
+
       - name: Minify JS and CSS
         # The player ships as plain source (no build step, and the uqt/hominiscanidae
         # mirrors copy it verbatim); only tocador.cc's deploy minifies, in place, on

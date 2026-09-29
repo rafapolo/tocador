@@ -136,7 +136,9 @@ class VirtualGrid {
     item.dataset.albumIdx = i;
     item.href = generateAlbumUrl(album);
     item.style.cssText = `position:absolute;width:${this.itemWidth}px;top:${pad + row * this.rowHeight}px;left:${pad + col * (this.itemWidth + gap)}px`;
-    item.setAttribute('aria-label', `${album.name}, ${album.artists}, ${album.year || 'sem data'}`);
+    // No aria-label: the visible title and "artist • year" line already name the link, and a
+    // label that differs from the visible text fails WCAG 2.5.3 (Label in Name).
+    item.removeAttribute('aria-label');
     if (!item._keydownBound) {
       item.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
