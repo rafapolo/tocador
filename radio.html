@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>♪ Tocador · Rádio</title>
+  <meta name="description" content="Rádio do Tocador: toca ao acaso álbuns dos acervos UQT e Hominis Canidae, música brasileira independente e clássicos da MPB.">
   <!-- Classic (non-deferred) so decodeAcervo exists before the inline app script runs. -->
   <script src="js/acervo-format.js"></script>
   <script defer src="https://cloud.umami.is/script.js" data-website-id="9fad9893-55da-4e20-abbf-b79b12bf3146"></script>
@@ -12,7 +13,7 @@
 </head>
 <body>
 
-<div class="widget loading" id="widget">
+<main class="widget loading" id="widget">
   <div class="cover-wrap">
     <img id="cover" src="" alt="">
   </div>
@@ -65,7 +66,7 @@
     <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
     <span>clique para ouvir</span>
   </div>
-</div>
+</main>
 
 <audio id="audio" preload="auto"></audio>
 
