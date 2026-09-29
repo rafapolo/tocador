@@ -51,6 +51,27 @@ jobs:
             uqt="$RUNNER_TEMP/catalogs/uqt.json.gz" \
             homi="$RUNNER_TEMP/catalogs/homi.json.gz"
 
+      - name: Minify JS and CSS
+        # The player ships as plain source (no build step, and the uqt/hominiscanidae
+        # mirrors copy it verbatim); only tocador.cc's deploy minifies, in place, on
+        # the runner's checkout. ~35% fewer bytes over the wire, same file names, so
+        # nothing that references them changes. The js/ files are classic scripts that
+        # share globals, so this is a plain minify: esbuild leaves top-level names alone
+        # outside a bundle/module. 3d.js is the one ES module.
+        run: |
+          for f in js/acervo-format.js js/util.js js/virtual-lists.js js/ui.js js/radio.js; do
+            bunx esbuild@0.25.10 "$f" --minify --allow-overwrite --outfile="$f" --log-level=warning
+          done
+          bunx esbuild@0.25.10 js/3d.js --minify --format=esm --allow-overwrite --outfile=js/3d.js --log-level=warning
+          for f in assets/*.css; do
+            bunx esbuild@0.25.10 "$f" --minify --allow-overwrite --outfile="$f" --log-level=warning
+          done
+
+      - name: Stamp the service-worker cache with this commit
+        # A new CACHE name per deploy makes sw.js differ byte-wise, so browsers
+        # install the new worker and it purges every older cache.
+        run: sed -i "s/^const CACHE = '[^']*';/const CACHE = 'tocador-${GITHUB_SHA::8}';/" sw.js && grep -n "^const CACHE" sw.js
+
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

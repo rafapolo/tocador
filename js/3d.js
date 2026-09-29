@@ -1,0 +1,717 @@
+/*
+ * UNIVERSO MUSICAL — Globo 3D de Álbuns
+ *
+ * ARQUITETURA: Opção A (textura por demanda) com upgrade automático para Opção C (atlas).
+ *
+ * Caminho atlas (ativo quando 3d-atlas/atlas-map.json existe em BASE_URL):
+ *   node script/build-3d-atlas.js --acervo homi
+ *   → empacota capas em N× atlas WebP de 4096² + atlas-map.json (com cores de borda pré-calculadas)
+ *   → envia para o S3; 3d.html carrega atlas-map.json na inicialização e baixa 2 arquivos em vez de milhares
+ *
+ * Fallback (Opção A): carregamento preguiçoso por textura, priorizado por visibilidade no frustum.
+ */
+
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const KNOWN_ACERVOS = {
+  uqt: {
+    data: 'https://raw.githubusercontent.com/rafapolo/uqt/refs/heads/master/data/uqt-albums.json.gz',
+    base_url: 'https://cdn.tocador.cc/uqt',
+  },
+  homi: {
+    data: 'https://raw.githubusercontent.com/rafapolo/hominiscanidae/refs/heads/main/data/homi-albums.json.gz',
+    base_url: 'https://cdn.tocador.cc/indie',
+  },
+};
+const DEFAULT_ACERVO = 'uqt';
+
+const _acervoParam = new URLSearchParams(location.search).get('acervo');
+let _dataUrl, _fallbackBaseUrl;
+if (_acervoParam) {
+  const entry = KNOWN_ACERVOS[_acervoParam];
+  if (entry) {
+    _dataUrl = entry.data;
+    _fallbackBaseUrl = entry.base_url;
+  } else {
+    _dataUrl = decodeURIComponent(_acervoParam);
+    _fallbackBaseUrl = sessionStorage.getItem('acervo-base') || '';
+  }
+} else {
+  const ssAcervo = sessionStorage.getItem('acervo');
+  const defaultEntry = KNOWN_ACERVOS[DEFAULT_ACERVO];
+  _dataUrl = ssAcervo || defaultEntry.data;
+  _fallbackBaseUrl = sessionStorage.getItem('acervo-base') || defaultEntry.base_url;
+}
+
+let BASE_URL = _fallbackBaseUrl;
+let SPHERE_RADIUS = 300;
+const PLANE_SIZE = 16;
+const isMobile = window.matchMedia('(max-width: 768px)').matches
+  || /Mobi|Android/i.test(navigator.userAgent);
+const MAX_CONCURRENT = isMobile ? 4 : 8;
+
+// ─── Renderer ────────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: !isMobile && window.devicePixelRatio < 2,
+  powerPreference: 'high-performance',
+  stencil: false,
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.LinearToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+// PCFSoftShadowMap was removed for WebGL in r182; PCFShadowMap now does the soft filtering.
+renderer.shadowMap.type = THREE.PCFShadowMap;
+
+// ─── Scene ───────────────────────────────────────────────────────────────────
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0906);
+scene.fog = new THREE.FogExp2(0x0a0906, 0.0007);
+
+// ─── Camera ──────────────────────────────────────────────────────────────────
+
+const camera = new THREE.PerspectiveCamera(
+  isMobile ? 85 : 75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  2000
+);
+camera.position.set(0, 0, 0.001);
+
+
+// ─── Resize ──────────────────────────────────────────────────────────────────
+
+new ResizeObserver(() => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}).observe(document.documentElement);
+
+// ─── Controls ────────────────────────────────────────────────────────────────
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+controls.minDistance = 0;
+controls.maxDistance = SPHERE_RADIUS * 0.85;
+controls.rotateSpeed = -0.35;  // negative = inside-sphere invert
+controls.zoomSpeed = 0;         // zoom via custom wheel/pinch only
+controls.enablePan = false;
+controls.enableDamping = true;
+controls.dampingFactor = 0.055;
+controls.minPolarAngle = 0.05;
+controls.maxPolarAngle = Math.PI - 0.05;
+controls.touches.ONE = THREE.TOUCH.ROTATE;
+controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+
+function moveForward(delta) {
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  const newPos = camera.position.clone().addScaledVector(dir, delta);
+  const dist = newPos.length();
+  if (dist < SPHERE_RADIUS * 0.88 && dist > 0.1) {
+    camera.position.copy(newPos);
+    controls.target.copy(newPos).addScaledVector(dir, 0.1);
+  }
+}
+
+renderer.domElement.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  moveForward(-e.deltaY * 0.08);
+}, { passive: false });
+
+let lastPinchDist = 0;
+renderer.domElement.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    lastPinchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+  }
+}, { passive: true });
+renderer.domElement.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    const d = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    moveForward((d - lastPinchDist) * 0.25);
+    lastPinchDist = d;
+  }
+}, { passive: true });
+
+// ─── Lighting ────────────────────────────────────────────────────────────────
+
+// lights-on default: uniform ambient; headSpot used only when user dims lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+scene.add(ambientLight);
+
+// spot follows camera for the dim-light cinematic mode
+const headSpot = new THREE.SpotLight(0xfff4cc, 0.90, 0, 0.572, 0.5, 0);
+const spotTarget = new THREE.Object3D();
+spotTarget.position.set(0, 0, -50); // camera looks in -Z in local space
+camera.add(headSpot);
+camera.add(spotTarget);
+headSpot.target = spotTarget;
+headSpot.castShadow = true;
+headSpot.shadow.mapSize.set(isMobile ? 512 : 1024, isMobile ? 512 : 1024);
+headSpot.shadow.camera.near = 10;
+headSpot.shadow.camera.far = 900;
+headSpot.shadow.bias = -0.003;
+headSpot.shadow.normalBias = 0.05;
+headSpot.visible = false;
+scene.add(camera);
+
+// ─── Room ─────────────────────────────────────────────────────────────────────
+
+const roomMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(780, 780, 780),
+  new THREE.MeshLambertMaterial({ color: 0x2a2018, side: THREE.BackSide })
+);
+roomMesh.receiveShadow = true;
+roomMesh.raycast = () => {};
+scene.add(roomMesh);
+
+function animateFire(_t) {}
+
+// ─── Light toggle ─────────────────────────────────────────────────────────────
+
+let lightsOn = true;
+document.getElementById('light-toggle').addEventListener('click', function () {
+  lightsOn = !lightsOn;
+  ambientLight.intensity = lightsOn ? 1.0 : 0.10;
+  headSpot.visible = !lightsOn;
+  this.classList.toggle('on', lightsOn);
+  this.title = lightsOn ? 'Apagar Luz' : 'Ascender Luz';
+});
+
+// ─── Starfield ───────────────────────────────────────────────────────────────
+
+function buildStarfield() {
+  const count = isMobile ? 3000 : 8000;
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const r = 1500 + Math.random() * 400;
+    pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i*3+2] = r * Math.cos(phi);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xffffff, size: 1.8, sizeAttenuation: true,
+    transparent: true, opacity: 0.7, depthWrite: false,
+  });
+  const stars = new THREE.Points(geo, mat);
+  stars.raycast = () => {};
+  scene.add(stars);
+}
+
+// ─── Overlap resolution ───────────────────────────────────────────────────────
+
+function resolveOverlaps(positions, size) {
+  const minDist2 = (size * 1.05) ** 2;
+  const bump = size * 0.5;
+  const dir = new THREE.Vector3();
+  for (let iter = 0; iter < 3; iter++) {
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        if (positions[i].distanceToSquared(positions[j]) < minDist2) {
+          dir.copy(positions[j]).normalize();
+          positions[j].addScaledVector(dir, bump);
+          // pull i slightly inward so the pair never shares the same radius plane
+          dir.copy(positions[i]).normalize();
+          positions[i].addScaledVector(dir, -1.5);
+        }
+      }
+    }
+  }
+}
+
+// ─── Fibonacci sphere ────────────────────────────────────────────────────────
+
+function fibonacciPoints(n, radius) {
+  const phi = Math.PI * (3 - Math.sqrt(5));
+  const jitter = 0.03; // fraction of radius — breaks spiral arms without creating pile-ups
+  return Array.from({ length: n }, (_, i) => {
+    const y = 1 - (i / (n - 1)) * 2;
+    const r = Math.sqrt(1 - y * y);
+    const theta = phi * i;
+    const v = new THREE.Vector3(
+      Math.cos(theta) * r + (Math.random() - 0.5) * jitter,
+      y               + (Math.random() - 0.5) * jitter,
+      Math.sin(theta) * r + (Math.random() - 0.5) * jitter
+    );
+    return v.normalize().multiplyScalar(radius);
+  });
+}
+
+// ─── Placeholder materials (per decade) ──────────────────────────────────────
+
+const BOX_DEPTH = PLANE_SIZE * 0.03;
+
+// Shared side materials — warm beige with subtle shading
+const sideR    = new THREE.MeshLambertMaterial({ color: 0xe8dcc8 });
+const sideL    = new THREE.MeshLambertMaterial({ color: 0xc8bcaa });
+const sideT    = new THREE.MeshLambertMaterial({ color: 0xe0d4bc });
+const sideB    = new THREE.MeshLambertMaterial({ color: 0xbcb09a });
+const sideBack = new THREE.MeshLambertMaterial({ color: 0xb0a490 });
+
+const placeholderFrontMat = new THREE.MeshPhongMaterial({
+  color: 0xd4a574, shininess: 2, specular: 0x050505,
+});
+function getDecadeFrontMat(_year) { return placeholderFrontMat; }
+
+// BoxGeometry face order: [+X, -X, +Y, -Y, +Z(front), -Z(back)]
+function boxMats(frontMat) {
+  return [sideR, sideL, sideT, sideB, frontMat, sideBack];
+}
+
+// ─── Album meshes ─────────────────────────────────────────────────────────────
+
+const sharedGeo = new THREE.BoxGeometry(PLANE_SIZE, PLANE_SIZE, BOX_DEPTH);
+const albumMeshes = [];
+const albumGroup = new THREE.Group();
+scene.add(albumGroup);
+
+// shared outline material — BackSide so it peeks out beyond the cover as a border
+const outlineMat = new THREE.MeshBasicMaterial({ color: 0xd4a574, side: THREE.BackSide });
+
+function buildAlbumMeshes(albums, positions) {
+  albums.forEach((album, i) => {
+    const mesh = new THREE.Mesh(sharedGeo, boxMats(getDecadeFrontMat(album.year)));
+    mesh.position.copy(positions[i]);
+    mesh.lookAt(0, 0, 0);
+    mesh.castShadow = true;
+    mesh.userData = { album, index: i, textureLoaded: false, loading: false };
+
+    const outline = new THREE.Mesh(sharedGeo, outlineMat);
+    outline.scale.set(1.08, 1.08, 1.0);
+    outline.visible = false;
+    outline.raycast = () => {};
+    mesh.add(outline);
+    mesh.userData.outline = outline;
+
+    albumGroup.add(mesh);
+    albumMeshes.push(mesh);
+  });
+}
+
+// ─── Texture loading ──────────────────────────────────────────────────────────
+
+const texLoader = new THREE.TextureLoader();
+let activeLoads = 0;
+const loadQueue = new Map();
+
+function enqueueTexture(index, priority) {
+  const m = albumMeshes[index];
+  if (!m || m.userData.textureLoaded || m.userData.loading || m.userData.failed) return;
+  const cur = loadQueue.get(index) ?? -Infinity;
+  if (priority > cur) loadQueue.set(index, priority);
+}
+
+function drainQueue() {
+  while (activeLoads < MAX_CONCURRENT && loadQueue.size > 0) {
+    let bestIdx = -1, bestPri = -Infinity;
+    for (const [idx, pri] of loadQueue) {
+      if (pri > bestPri) { bestPri = pri; bestIdx = idx; }
+    }
+    if (bestIdx === -1) break;
+    loadQueue.delete(bestIdx);
+    fetchTexture(bestIdx);
+  }
+}
+
+// Sample avg color of a pixel strip from a pre-drawn 32×32 canvas data array
+function stripAvg(d, S, x0, y0, x1, y1) {
+  let r=0,g=0,b=0,n=0;
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++) {
+    const i=(y*S+x)*4; r+=d[i];g+=d[i+1];b+=d[i+2];n++;
+  }
+  return (Math.round(r/n)<<16)|(Math.round(g/n)<<8)|Math.round(b/n);
+}
+
+function edgeColors(image) {
+  const S=32, t=2;
+  const c=document.createElement('canvas'); c.width=c.height=S;
+  const ctx=c.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(image,0,0,S,S);
+  const d=ctx.getImageData(0,0,S,S).data;
+  const dk = hex => { // darken by ~50% for back face
+    return ((Math.round(((hex>>16)&0xff)*0.5))<<16)|
+           ((Math.round(((hex>>8) &0xff)*0.5))<<8)|
+            (Math.round(( hex     &0xff)*0.5));
+  };
+  const right  = stripAvg(d,S, S-t,0, S-1,S-1);
+  const left   = stripAvg(d,S, 0,0,   t-1,S-1);
+  const top    = stripAvg(d,S, 0,0,   S-1,t-1);
+  const bottom = stripAvg(d,S, 0,S-t, S-1,S-1);
+  const avg    = stripAvg(d,S, 0,0,   S-1,S-1);
+  return [right, left, top, bottom, dk(avg)]; // +X,-X,+Y,-Y,-Z
+}
+
+function fetchTexture(index) {
+  const mesh = albumMeshes[index];
+  if (!mesh || mesh.userData.textureLoaded || mesh.userData.loading) return;
+  mesh.userData.loading = true;
+  activeLoads++;
+
+  const url = `${BASE_URL}/${encodeURI(mesh.userData.album.path)}/capa-min.jpg`;
+  texLoader.load(
+    url,
+    (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.generateMipmaps = true;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      const [cr,cl,ct,cb,ck] = edgeColors(tex.image);
+      // Composite vinyl-sleeve gloss over cover image
+      const S = 256;
+      const gc = document.createElement('canvas'); gc.width = gc.height = S;
+      const gx = gc.getContext('2d');
+      gx.drawImage(tex.image, 0, 0, S, S);
+      // Broad soft wash — upper-left ambient glow
+      const grad = gx.createLinearGradient(0, 0, S * 0.75, S * 0.75);
+      const glossTex = new THREE.CanvasTexture(gc);
+      glossTex.colorSpace = THREE.SRGBColorSpace;
+      glossTex.generateMipmaps = true;
+      glossTex.minFilter = THREE.LinearMipmapLinearFilter;
+      mesh.material = [
+        new THREE.MeshLambertMaterial({ color: cr }),       // +X right
+        new THREE.MeshLambertMaterial({ color: cl }),       // -X left
+        new THREE.MeshLambertMaterial({ color: ct }),       // +Y top
+        new THREE.MeshLambertMaterial({ color: cb }),       // -Y bottom
+        new THREE.MeshPhongMaterial({ map: glossTex, shininess: 2, specular: 0x050505 }),  // +Z front
+        new THREE.MeshLambertMaterial({ color: ck }),       // -Z back
+      ];
+      mesh.userData.frontMat = mesh.material[4];
+      mesh.userData.textureLoaded = true;
+      mesh.userData.loading = false;
+      activeLoads--;
+      drainQueue();
+    },
+    undefined,
+    () => {
+      mesh.userData.loading = false;
+      mesh.userData.failed = true;
+      activeLoads--;
+      drainQueue();
+    }
+  );
+}
+
+const frustum = new THREE.Frustum();
+const projMat = new THREE.Matrix4();
+
+function updatePriorities(frame) {
+  if (frame % 45 !== 0) return;
+  camera.updateMatrixWorld(true);
+  projMat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(projMat);
+
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+
+  albumMeshes.forEach((mesh, i) => {
+    if (mesh.userData.textureLoaded || mesh.userData.loading || mesh.userData.failed) return;
+    const mdir = mesh.position.clone().normalize();
+    const dot = mdir.dot(dir);
+    const visible = frustum.containsPoint(mesh.position);
+    enqueueTexture(i, visible ? dot + 3 : dot);
+  });
+  drainQueue();
+}
+
+function initTextureQueue() {
+  const dir = new THREE.Vector3(0, 0, -1);
+  albumMeshes.forEach((mesh, i) => {
+    const mdir = mesh.position.clone().normalize();
+    enqueueTexture(i, mdir.dot(dir));
+  });
+  drainQueue();
+}
+
+// ─── Animation ────────────────────────────────────────────────────────────────
+
+function initAnimationData() {
+  albumMeshes.forEach((mesh) => {
+    mesh.userData.basePos = mesh.position.clone();
+    mesh.userData.phase   = Math.random() * Math.PI * 2;
+  });
+}
+
+const normalScratch = new THREE.Vector3();
+const posScratch = new THREE.Vector3();
+
+function animateScene(elapsed, frame) {
+  albumGroup.scale.setScalar(1 + Math.sin(elapsed * 0.785) * 0.015);
+
+  if (frame % 2 === 0) {
+    albumMeshes.forEach((mesh) => {
+      const bp = mesh.userData.basePos;
+      const drift = Math.sin(elapsed * 0.25 + mesh.userData.phase) * 0.35;
+      normalScratch.copy(bp).normalize();
+      const driftPos = bp.clone().addScaledVector(normalScratch, drift);
+      mesh.position.lerp(driftPos, 0.12);
+    });
+  }
+}
+
+// ─── Raycasting & selection ───────────────────────────────────────────────────
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let pointerDown = null;
+let hoveredMesh = null;
+
+function setHover(mesh) {
+  if (hoveredMesh === mesh) return;
+  if (hoveredMesh?.userData.outline) hoveredMesh.userData.outline.visible = false;
+  hoveredMesh = mesh;
+  if (hoveredMesh?.userData.outline) hoveredMesh.userData.outline.visible = true;
+  renderer.domElement.style.cursor = mesh ? 'pointer' : '';
+}
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (pointerDown) return; // dragging — skip
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(albumGroup.children, false);
+  setHover(hits.length > 0 ? hits[0].object : null);
+});
+
+renderer.domElement.addEventListener('pointerleave', () => setHover(null));
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  pointerDown = { x: e.clientX, y: e.clientY, t: performance.now() };
+});
+
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!pointerDown) return;
+  const dx = e.clientX - pointerDown.x;
+  const dy = e.clientY - pointerDown.y;
+  const dt = performance.now() - pointerDown.t;
+  pointerDown = null;
+  if (Math.hypot(dx, dy) < 8 && dt < 300) {
+    doRaycast(e.clientX, e.clientY);
+  }
+});
+
+function doRaycast(cx, cy) {
+  pointer.x = (cx / window.innerWidth) * 2 - 1;
+  pointer.y = -(cy / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(albumGroup.children, false);
+  if (hits.length > 0) {
+    const album = hits[0].object.userData.album;
+    window.location.href = `./?album=${encodeURIComponent(album.path)}`;
+  }
+}
+
+// ─── Progress helpers ─────────────────────────────────────────────────────────
+
+function setProgress(pct) {
+  document.getElementById('loading-bar').style.width = `${pct}%`;
+}
+function setStatus(msg) {
+  document.getElementById('loading-status').textContent = msg;
+}
+
+// ─── Data loading ─────────────────────────────────────────────────────────────
+
+// Belt-and-suspenders: acervo-format.js is loaded classic (non-deferred, before
+// this module) specifically so decodeAcervo exists by the time it's needed, but
+// a flaky fetch or a stale cached shell can still leave it undefined.
+function ensureDecodeAcervo() {
+  if (typeof decodeAcervo === 'function') return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'js/acervo-format.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('failed to load js/acervo-format.js'));
+    document.head.appendChild(s);
+  });
+}
+
+async function loadAlbumData() {
+  const res = await fetch(_dataUrl);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ds = new DecompressionStream('gzip');
+  const decompressed = res.body.pipeThrough(ds);
+  const text = await new Response(decompressed).text();
+  await ensureDecodeAcervo();
+  return decodeAcervo(JSON.parse(text));
+}
+
+// ─── Render loop ──────────────────────────────────────────────────────────────
+
+// Timer replaces the deprecated Clock (r183). connect(document) pauses it while the
+// tab is hidden, which the old visibilitychange stop/start handler used to do by hand.
+const timer = new THREE.Timer();
+timer.connect(document);
+const TARGET_FRAME_MS = isMobile ? 1000 / 30 : 0;
+let lastFrameTime = 0;
+let frame = 0;
+
+function startRenderLoop() {
+  function tick(now) {
+    requestAnimationFrame(tick);
+    if (TARGET_FRAME_MS > 0 && now - lastFrameTime < TARGET_FRAME_MS) return;
+    lastFrameTime = now;
+    frame++;
+
+    controls.update();
+    const t = timer.update().getElapsed();
+    animateFire(t);
+    animateScene(t, frame);
+    updatePriorities(frame);
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ─── Atlas mode ───────────────────────────────────────────────────────────────
+
+let _atlasBase = null; // base URL that successfully served the atlas map
+
+async function tryLoadAtlas() {
+  // try meta base_url first, then KNOWN_ACERVOS fallback (handles cross-bucket cases)
+  for (const base of [...new Set([BASE_URL, _fallbackBaseUrl])].filter(Boolean)) {
+    try {
+      const res = await fetch(`${base}/3d-atlas/atlas-map.json.gz`);
+      if (!res.ok) continue;
+      const ds = new DecompressionStream('gzip');
+      const text = await new Response(res.body.pipeThrough(ds)).text();
+      _atlasBase = base;
+      return JSON.parse(text);
+    } catch {}
+  }
+  return null;
+}
+
+function applyAtlasMode(atlasData) {
+  const { tile, size, atlases, map } = atlasData;
+  const tpr = size / tile; // tiles per row (e.g. 64 for 4096/64)
+
+  return new Promise(resolve => {
+    let loaded = 0;
+    const textures = new Array(atlases.length).fill(null);
+
+    atlases.forEach((relPath, i) => {
+      texLoader.load(`${_atlasBase}/${relPath}`, tex => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.generateMipmaps = false;
+        tex.minFilter = THREE.LinearFilter;
+        tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+        textures[i] = tex;
+        if (++loaded === atlases.length) applyToMeshes();
+      }, undefined, () => { if (++loaded === atlases.length) applyToMeshes(); });
+    });
+
+    function applyToMeshes() {
+      albumMeshes.forEach(mesh => {
+        const entry = map[mesh.userData.album.path];
+        if (!entry) { mesh.userData.failed = true; return; } // no cover in atlas — skip CDN
+        const [atlasIdx, col, row, cr, cl, ct, cb, ck] = entry;
+        const tex = textures[atlasIdx];
+        if (!tex) return;
+
+        // clone geometry so each mesh gets its own UV for the front face
+        const geo = sharedGeo.clone();
+        const uv  = geo.attributes.uv;
+        const u0 = col / tpr,       u1 = (col + 1) / tpr;
+        const v1 = 1 - row / tpr,   v0 = 1 - (row + 1) / tpr;
+        // BoxGeometry front face (+Z) = uv vertices 16-19 (top-left, top-right, bottom-left, bottom-right)
+        uv.setXY(16, u0, v1); uv.setXY(17, u1, v1);
+        uv.setXY(18, u0, v0); uv.setXY(19, u1, v0);
+        uv.needsUpdate = true;
+        mesh.geometry = geo;
+
+        mesh.material = [
+          new THREE.MeshLambertMaterial({ color: cr }),
+          new THREE.MeshLambertMaterial({ color: cl }),
+          new THREE.MeshLambertMaterial({ color: ct }),
+          new THREE.MeshLambertMaterial({ color: cb }),
+          new THREE.MeshPhongMaterial({ map: tex, shininess: 2, specular: 0x050505 }),
+          new THREE.MeshLambertMaterial({ color: ck }),
+        ];
+        mesh.userData.frontMat = mesh.material[4];
+        mesh.userData.textureLoaded = true;
+      });
+      resolve();
+    }
+  });
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+async function main() {
+  try {
+    setStatus('Carregando álbuns...');
+    const dbData = await loadAlbumData();
+    BASE_URL = dbData.meta?.base_url || _fallbackBaseUrl || '';
+    const acervoTitle = dbData.meta?.title || 'Universo';
+    document.getElementById('loading-title').textContent = acervoTitle;
+    document.title = acervoTitle;
+    setProgress(30);
+
+    const albums = dbData.albums;
+    // Only place albums that have a confirmed cover image
+    const withCover = albums.filter(a => a.has_cover !== false);
+
+    // scale sphere so each album gets ~2× its own area regardless of collection size
+    SPHERE_RADIUS = Math.max(300, Math.ceil(PLANE_SIZE * Math.sqrt(withCover.length / (2 * Math.PI))));
+    roomMesh.geometry.dispose();
+    roomMesh.geometry = new THREE.BoxGeometry(SPHERE_RADIUS * 2.6, SPHERE_RADIUS * 2.6, SPHERE_RADIUS * 2.6);
+    controls.maxDistance = SPHERE_RADIUS * 0.85;
+    headSpot.shadow.camera.far = SPHERE_RADIUS * 3;
+    headSpot.shadow.camera.updateProjectionMatrix();
+    scene.fog.density = 0.21 / SPHERE_RADIUS;
+
+    setStatus(`Posicionando ${withCover.length} álbuns...`);
+    buildStarfield();
+    const positions = fibonacciPoints(withCover.length, SPHERE_RADIUS);
+    resolveOverlaps(positions, PLANE_SIZE);
+    buildAlbumMeshes(withCover, positions);
+    initAnimationData();
+    setProgress(60);
+
+    setStatus('Verificando atlas...');
+    const atlasData = await tryLoadAtlas();
+    setProgress(80);
+
+    startRenderLoop();
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setProgress(100);
+        const overlay = document.getElementById('loading');
+        overlay.style.opacity = '0';
+        overlay.style.pointerEvents = 'none';
+        setTimeout(() => overlay.remove(), 750);
+      });
+    });
+
+    if (atlasData) {
+      applyAtlasMode(atlasData); // downloads atlas WebPs; covers pop in as a batch
+    } else {
+      initTextureQueue();
+    }
+
+  } catch (err) {
+    setStatus(`Erro: ${err.message}`);
+    console.error(err);
+  }
+}
+
+main();

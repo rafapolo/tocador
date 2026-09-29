@@ -1,0 +1,260 @@
+    :root {
+      --bg:      #0f0e0c;
+      --surface: #1a1814;
+      --accent:  #d4a574;
+      --text:    #f5f1ed;
+      --dim:     #b8b0a8;
+      --border:  #3a3530;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .widget {
+      width: 320px;
+      height: 350px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 16px 14px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      position: relative;
+    }
+
+    /* ── Cover ─────────────────────────────────────────── */
+    .cover-wrap {
+      width: 190px;
+      height: 190px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: 0 6px 28px rgba(0,0,0,.6), 0 0 0 1px var(--border);
+      margin: 8px 0;
+    }
+
+    .cover-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Info ──────────────────────────────────────────── */
+    .info {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      text-align: center;
+      overflow: hidden;
+      line-height: 1.3;
+      gap: 5px;
+    }
+
+    .track-meta {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .01em;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+
+    .track-album {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+
+    .track-title {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+      opacity: .6;
+    }
+
+    .artist-link, .album-link {
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: color .15s;
+    }
+    .artist-link:hover, .album-link:hover { color: var(--accent); }
+
+    /* ── Marquee ───────────────────────────────────────── */
+    @keyframes marquee-scroll {
+      0%   { transform: translateX(0); }
+      10%  { transform: translateX(0); }
+      85%  { transform: translateX(var(--marquee-distance)); }
+      95%  { transform: translateX(var(--marquee-distance)); }
+      100% { transform: translateX(0); }
+    }
+    .marquee-active { overflow: hidden; text-overflow: clip; }
+    .marquee-active .marquee-inner {
+      display: inline-block;
+      white-space: nowrap;
+      animation: marquee-scroll var(--marquee-duration, 12s) linear infinite;
+      animation-delay: 1.5s;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .marquee-active .marquee-inner { animation: none; }
+    }
+
+    /* ── Progress ──────────────────────────────────────── */
+    .progress {
+      width: 100%;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      flex-shrink: 0;
+      cursor: pointer;
+      margin: 8px 0;
+      position: relative;
+    }
+    .progress:hover { height: 3px; }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      border-radius: 2px;
+      opacity: .65;
+      pointer-events: none;
+    }
+
+    /* ── Controls ──────────────────────────────────────── */
+    .controls {
+      flex-shrink: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .time {
+      font-size: 11px;
+      color: var(--dim);
+      opacity: .65;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+      min-width: 32px;
+    }
+    #time-total   { text-align: right; }
+    #time-current { text-align: left; }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: color .15s ease, transform .1s ease;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+    }
+    .btn:hover  { color: var(--text); }
+    .btn:active { transform: scale(.88); }
+
+    .btn-play {
+      width: 34px;
+      height: 34px;
+      background: var(--accent);
+      color: var(--bg);
+      box-shadow: 0 2px 10px rgba(212,165,116,.28);
+    }
+    .btn-play:hover { background: #dfb98a; color: var(--bg); }
+
+    /* ── Loading shimmer ───────────────────────────────── */
+    @keyframes shimmer {
+      0%, 100% { opacity: .5; }
+      50%       { opacity: 1;  }
+    }
+    .loading .cover-wrap,
+    .loading .track-title,
+    .loading .track-meta { animation: shimmer 1.4s ease-in-out infinite; }
+
+    /* ── Play button spinner ───────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: none;
+      width: 17px;
+      height: 17px;
+      border: 2.5px solid rgba(0,0,0,.25);
+      border-top-color: var(--bg);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .btn-loading .spinner { display: block; }
+    .btn-loading #icon-play,
+    .btn-loading #icon-pause { display: none !important; }
+
+    /* ── Offline error ─────────────────────────────────── */
+    #offline-msg {
+      display: none;
+      width: 100%;
+      text-align: center;
+      font-size: 11px;
+      color: var(--dim);
+      opacity: .7;
+      line-height: 1.5;
+    }
+    #offline-msg.visible { display: block; }
+
+    /* ── Tap-to-play overlay (autoplay blocked) ──────── */
+    #tap-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      border-radius: 6px;
+      background: rgba(15,14,12,.72);
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #tap-overlay.visible { display: flex; }
+    #tap-overlay svg { color: var(--accent); }
+    #tap-overlay span {
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: .04em;
+    }

@@ -140,24 +140,12 @@ const PLACEHOLDER_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/20
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const fold = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt');
-
-function parseArtists(str) {
-  if (!str) return [];
-  const raw = str.split(/; |, | e | & |&/).map(s => s.trim()).filter(Boolean);
-  const merged = [];
-  for (const p of raw) {
-    // Single uppercase letter after a separator = abbreviation fragment (e.g. "S; A" → "S/A")
-    if (/^[A-Z]$/.test(p) && merged.length > 0) merged[merged.length - 1] += '/' + p;
-    else merged.push(p.replace(/;(?! )/g, '/'));
-  }
-  return merged;
-}
 
 function artistLinksHTML(str) {
-  return parseArtists(str).map(p =>
-    `<span class="artist-link" data-artist="${p.replace(/"/g, '&quot;')}" role="button" tabindex="0" aria-label="Buscar por ${p.replace(/"/g, '&quot;')}">${p}</span>`
-  ).join(', ');
+  return parseArtists(str).map(p => {
+    const e = escapeHtml(p);
+    return `<span class="artist-link" data-artist="${e}" role="button" tabindex="0" aria-label="Buscar por ${e}">${e}</span>`;
+  }).join(', ');
 }
 
 function attachArtistHandlers(container) {
@@ -445,16 +433,6 @@ function updateMetaTags(album) {
   ldEl.textContent = JSON.stringify(ld);
 }
 
-function formatTime(seconds) {
-  // Upper bound guards against a huge-but-finite value (e.g. a browser clamping a
-  // seek to Infinity down to ~Number.MAX_VALUE) slipping past the isFinite check and
-  // rendering as a bizarre "2.99e+306:08"-style string instead of a real duration.
-  if (!seconds || isNaN(seconds) || !isFinite(seconds) || seconds > 1e7) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
 // Resume-playback-position persistence: remembers only the most recently
 // playing track, so a reload/restored session can continue where it left off
 // instead of always restarting a restored track at 0:00.
@@ -531,336 +509,6 @@ function toggleMobileDrawer() {
   document.getElementById('btn-tracklist')?.setAttribute('aria-expanded', String(isOpen));
 }
 
-// ── Virtual Grid ──────────────────────────────────────────────────────────
-// Renders only visible album cards; ~30 DOM nodes instead of 2,164.
-// INFO_HEIGHT: item-gap(16) + title(~17) + info-gap(8) + meta(~16) = 57px
-
-const INFO_HEIGHT = 57;
-
-class VirtualGrid {
-  constructor(container) {
-    this.container = container;
-    this.items = [];
-    this.colCount = 1;
-    this.itemWidth = 0;
-    this.rowHeight = 0;
-    this._padding = 24;
-    this._gap = 24;
-    this._nodes = new Map(); // index → DOM node
-    // Perf opt 3: free-list of recycled card nodes — reuse DOM instead of create/destroy on scroll.
-    // Before: every scroll event creates N new div+img+div+div nodes. After: reuses pooled nodes.
-    // Cap = 2 * colCount, refreshed after _layout(). Measured: ~65% fewer _makeNode calls on scroll.
-    this._pool = [];
-    this._poolCap = 8;
-    // Animate the "appearing" entrance only on content changes (setItems), not on
-    // scroll recycling — avoids a forced reflow per node and flicker while scrolling.
-    this._animateNext = false;
-
-    this.inner = document.createElement('div');
-    this.inner.className = 'albums-grid-inner';
-    container.appendChild(this.inner);
-
-    this._layout = this._layout.bind(this);
-    this._render = this._render.bind(this);
-    // Scroll fires far more often than the display refreshes (trackpads and
-    // smooth-scroll emit well above 60Hz). Coalesce to one _render per frame so
-    // a fast flick does the recycling work once per paint, not once per event.
-    // _render itself stays synchronous — _layout/setItems/refresh depend on that.
-    this._scrollRaf = 0;
-    this._onScroll = () => {
-      if (this._scrollRaf) return;
-      this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = 0; this._render(); });
-    };
-
-    let _layoutTimer;
-    new ResizeObserver(() => { clearTimeout(_layoutTimer); _layoutTimer = setTimeout(this._layout, 50); }).observe(container);
-    container.addEventListener('scroll', this._onScroll, { passive: true });
-  }
-
-  setItems(items) {
-    this.items = items;
-    this._nodes.clear();
-    this._pool = [];
-    this.inner.replaceChildren();
-    this.container.scrollTop = 0;
-    this._animateNext = true;
-    this._layout();
-  }
-
-  refresh() {
-    for (const [idx, node] of this._nodes) {
-      node.classList.toggle('active', this.items[idx] === selectedAlbum);
-    }
-    this._render();
-  }
-
-  scrollToSelected() {
-    if (!selectedAlbum) return;
-    const idx = this.items.indexOf(selectedAlbum);
-    if (idx < 0) return;
-    const row = Math.floor(idx / this.colCount);
-    this.container.scrollTop = this._padding + row * this.rowHeight;
-  }
-
-  _getConfig() {
-    const w = this.container.clientWidth;
-    if (w <= 480) return { minItem: 72, gap: 6,  padding: 6  };
-    if (w <= 768) return { minItem: 80, gap: 8,  padding: 8  };
-    return              { minItem: 140, gap: 24, padding: 24 };
-  }
-
-  _layout() {
-    const { minItem, gap, padding } = this._getConfig();
-    this._padding = padding;
-    this._gap = gap;
-    const usable = this.container.clientWidth - 2 * padding;
-    this.colCount = Math.max(1, Math.floor((usable + gap) / (minItem + gap)));
-    this.itemWidth = (usable - gap * (this.colCount - 1)) / this.colCount;
-    this.rowHeight = this.itemWidth + INFO_HEIGHT + gap;
-    this._poolCap = Math.max(8, this.colCount * 2);
-
-    const rows = Math.ceil(this.items.length / this.colCount);
-    const totalH = rows > 0 ? rows * this.rowHeight - gap + 2 * padding : 0;
-    this.inner.style.height = `${totalH}px`;
-
-    // Flush stale nodes — surviving nodes carry old absolute positions from previous layout
-    this._nodes.clear();
-    this._pool = [];
-    this.inner.replaceChildren();
-
-    this._render();
-  }
-
-  _makeNode(i, recycled) {
-    const album = this.items[i];
-    const { _padding: pad, _gap: gap } = this;
-    const col = i % this.colCount;
-    const row = Math.floor(i / this.colCount);
-
-    let item, cover, title, meta;
-    if (recycled) {
-      item  = recycled;
-      cover = item.querySelector('.album-cover-thumb');
-      title = item.querySelector('.album-item-title');
-      meta  = item.querySelector('.album-item-meta');
-    } else {
-      item  = document.createElement('a');
-      const info = document.createElement('div');
-      info.className = 'album-item-info';
-      cover = document.createElement('img');
-      cover.className = 'album-cover-thumb';
-      cover.decoding = 'async';
-      title = document.createElement('div');
-      title.className = 'album-item-title';
-      meta  = document.createElement('div');
-      meta.className = 'album-item-meta';
-      info.append(title, meta);
-      item.append(cover, info);
-    }
-
-    item.className = 'album-item';
-    if (selectedAlbum === album) item.classList.add('active');
-    item.dataset.albumIdx = i;
-    item.href = generateAlbumUrl(album);
-    item.style.cssText = `position:absolute;width:${this.itemWidth}px;top:${pad + row * this.rowHeight}px;left:${pad + col * (this.itemWidth + gap)}px`;
-    item.setAttribute('aria-label', `${album.name}, ${album.artists}, ${album.year || 'sem data'}`);
-    if (!item._keydownBound) {
-      item.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
-      });
-      item._keydownBound = true;
-    }
-
-    cover.alt = album.name;
-    cover.setAttribute('aria-hidden', 'true');
-    loadCoverImage(cover, album.cover);
-    title.textContent = album.name;
-    meta.textContent = (activeArtist && fold(album.artists) === fold(activeArtist))
-      ? `${album.year || '∞'}`
-      : `${album.artists} • ${album.year || '∞'}`;
-
-    return item;
-  }
-
-  _render() {
-    const animate = this._animateNext;
-    this._animateNext = false;
-    const { _padding: pad, _gap: gap } = this;
-    const scrollTop = this.container.scrollTop;
-    const viewH = this.container.clientHeight;
-    const BUFFER = 2;
-
-    const startRow = Math.max(0, Math.floor((scrollTop - pad) / this.rowHeight) - BUFFER);
-    const endRow   = Math.ceil((scrollTop + viewH - pad) / this.rowHeight) + BUFFER;
-    const startIdx = startRow * this.colCount;
-    const endIdx   = Math.min(this.items.length, endRow * this.colCount);
-
-    // Remove nodes that scrolled out of range — push to free-list for reuse
-    for (const [idx, node] of this._nodes) {
-      if (idx < startIdx || idx >= endIdx) {
-        node.remove();
-        this._nodes.delete(idx);
-        if (this._pool.length < this._poolCap) this._pool.push(node);
-      }
-    }
-
-    // Add nodes that scrolled into range — pop from free-list before creating new DOM
-    for (let i = startIdx; i < endIdx; i++) {
-      if (!this._nodes.has(i)) {
-        const node = this._makeNode(i, this._pool.pop());
-        this._nodes.set(i, node);
-        if (animate) {
-          node.classList.add('appearing');
-          node.addEventListener('animationend', () => node.classList.remove('appearing'), { once: true });
-        } else {
-          node.classList.remove('appearing');
-        }
-        this.inner.appendChild(node);
-      }
-    }
-  }
-}
-
-let virtualGrid = null;
-
-// ── Virtual List (Browse Panel) ───────────────────────────────────────────
-
-class VirtualList {
-  constructor(container) {
-    this.container = container;
-    this.items = [];
-    this._nodes = new Map();
-    this._pool = [];
-    this._selectedValue = null;
-
-    this.inner = document.createElement('div');
-    this.inner.className = 'browse-list-inner';
-    container.appendChild(this.inner);
-
-    this._render = this._render.bind(this);
-    // Same per-frame coalescing as VirtualGrid — see the note there.
-    this._scrollRaf = 0;
-    this._onScroll = () => {
-      if (this._scrollRaf) return;
-      this._scrollRaf = requestAnimationFrame(() => { this._scrollRaf = 0; this._render(); });
-    };
-    container.addEventListener('scroll', this._onScroll, { passive: true });
-    new ResizeObserver(this._render).observe(container);
-  }
-
-  get _rowHeight() { return isMobile() ? 44 : 36; }
-
-  setItems(items) {
-    this.items = items;
-    this._nodes.clear();
-    this._pool = [];
-    this.inner.replaceChildren();
-    this.container.scrollTop = 0;
-    this._updateHeight();
-    this._render();
-  }
-
-  updateItems(items, preserveScroll) {
-    const saved = this.container.scrollTop;
-    this.items = items;
-    this._nodes.clear();
-    this._pool = [];
-    this.inner.replaceChildren();
-    this._updateHeight();
-    this._render();
-    if (preserveScroll) this.container.scrollTop = saved;
-  }
-
-  refresh(selectedValue) {
-    this._selectedValue = selectedValue ?? null;
-    for (const [idx, node] of this._nodes) {
-      const item = this.items[idx];
-      const val = item?.fullName ?? item?.name;
-      const sel = val === this._selectedValue;
-      node.classList.toggle('selected', sel);
-      node.setAttribute('aria-selected', String(sel));
-    }
-  }
-
-  _updateHeight() {
-    this.inner.style.height = `${this.items.length * this._rowHeight}px`;
-  }
-
-  _render() {
-    const rh = this._rowHeight;
-    const scrollTop = this.container.scrollTop;
-    const viewH = this.container.clientHeight;
-    const BUFFER = 4;
-    const startIdx = Math.max(0, Math.floor(scrollTop / rh) - BUFFER);
-    const endIdx = Math.min(this.items.length, Math.ceil((scrollTop + viewH) / rh) + BUFFER);
-
-    for (const [idx, node] of this._nodes) {
-      if (idx < startIdx || idx >= endIdx) {
-        node.remove();
-        this._nodes.delete(idx);
-        if (this._pool.length < 50) this._pool.push(node);
-      }
-    }
-    for (let i = startIdx; i < endIdx; i++) {
-      if (!this._nodes.has(i)) {
-        const node = this._makeNode(i, this._pool.pop());
-        this._nodes.set(i, node);
-        this.inner.appendChild(node);
-      }
-    }
-  }
-
-  _makeNode(i, recycled) {
-    const item = this.items[i];
-    const rh = this._rowHeight;
-    const isFlat = !item.type;
-    let node, nameEl, countEl;
-
-    if (isFlat && recycled && !recycled.dataset.type) {
-      node = recycled;
-      nameEl = node.querySelector('.browse-name');
-      countEl = node.querySelector('.browse-count');
-    } else {
-      node = document.createElement('button');
-      node.setAttribute('role', 'option');
-      if (item.type === 'parent') {
-        const t = document.createElement('span');
-        t.className = 'browse-toggle'; t.setAttribute('aria-hidden', 'true');
-        node.appendChild(t);
-      } else if (item.type === 'child') {
-        const sp = document.createElement('span');
-        sp.className = 'browse-indent'; sp.setAttribute('aria-hidden', 'true');
-        node.appendChild(sp);
-      }
-      nameEl = document.createElement('span'); nameEl.className = 'browse-name';
-      countEl = document.createElement('span'); countEl.className = 'browse-count';
-      node.append(nameEl, countEl);
-    }
-
-    node.className = 'browse-item' + (item.type === 'child' ? ' browse-item--child' : '');
-    node.dataset.type = item.type || '';
-    node.style.cssText = `top:${i * rh}px`;
-    node.dataset.value = item.fullName ?? item.name;
-
-    const toggleEl = node.querySelector('.browse-toggle');
-    if (toggleEl) {
-      toggleEl.innerHTML = item.expanded
-        ? `<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor" aria-hidden="true"><polygon points="1,3 9,3 5,8"/></svg>`
-        : `<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor" aria-hidden="true"><polygon points="3,1 8,5 3,9"/></svg>`;
-    }
-
-    const val = item.fullName ?? item.name;
-    const sel = val === this._selectedValue;
-    node.classList.toggle('selected', sel);
-    node.setAttribute('aria-selected', String(sel));
-    nameEl.textContent = item.name;
-    countEl.textContent = item.count;
-    return node;
-  }
-}
-
-let virtualBrowseList = null;
-
 // ── Data ──────────────────────────────────────────────────────────────────
 
 function buildAlbums() {
@@ -885,8 +533,9 @@ function buildAlbums() {
         dedupedTracks[seenTitles.get(key)] = t;
       }
     }
+    const encodedPath = encodeURIComponent(album.path);
     const tracks = dedupedTracks.map((track, i) => {
-      const file = `${encodeURIComponent(album.path)}/${encodeURIComponent(track.file)}`;
+      const file = `${encodedPath}/${encodeURIComponent(track.file)}`;
       if (track.duration) durationCache.set(file, track.duration);
       const rawTrackArtist = track.artists ? track.artists.replace(/\x00/g, '; ') : null;
       const trackArtist = rawTrackArtist || album.artist;
@@ -902,7 +551,13 @@ function buildAlbums() {
     // activeArtist filter is a Set lookup instead of re-running parseArtists()
     // over every album and track on each filter pass.
     const artistKeys = new Set(parseArtists(album.artist).map(fold));
-    for (const t of tracks) for (const a of parseArtists(t.artists)) artistKeys.add(fold(a));
+    // Most tracks repeat the album artist (or each other): parse each distinct string once.
+    let lastArtists = album.artist;
+    for (const t of tracks) {
+      if (t.artists === lastArtists) continue;
+      lastArtists = t.artists;
+      for (const a of parseArtists(t.artists)) artistKeys.add(fold(a));
+    }
     return {
       name: album.title, artists: album.artist, year: album.year, path: album.path,
       cover: album.has_cover !== false ? `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg` : null,
@@ -1007,7 +662,7 @@ function buildArtistList() {
       const aLetter = /^\p{L}/u.test(a.name);
       const bLetter = /^\p{L}/u.test(b.name);
       if (aLetter !== bLetter) return aLetter ? -1 : 1;
-      return a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' });
+      return PT_COLLATOR.compare(a.name, b.name);
     });
   return _cachedArtists;
 }
@@ -1463,9 +1118,9 @@ function renderAlbumHeader() {
   const info = document.createElement('div');
   info.className = 'album-header-info';
   info.innerHTML = `
-    <h2>${selectedAlbum.name}</h2>
+    <h2>${escapeHtml(selectedAlbum.name)}</h2>
     <p><strong>${artistLinksHTML(selectedAlbum.artists)}</strong></p>
-    <p><span class="year-link" role="button" tabindex="0" aria-label="Filtrar álbuns de ${selectedAlbum.year}">${selectedAlbum.year}</span> • ${selectedAlbum.tracks.length} canções</p>
+    <p><span class="year-link" role="button" tabindex="0" aria-label="Filtrar álbuns de ${escapeHtml(selectedAlbum.year)}">${escapeHtml(selectedAlbum.year)}</span> • ${selectedAlbum.tracks.length} canções</p>
   `;
 
   const yearLinkEl = info.querySelector('.year-link');
@@ -1518,9 +1173,9 @@ function buildTrackItemsFragment(tracks, albumArtists) {
     const artistLabel = artistName ? `<div class="track-artist">${artistLinksHTML(artistName)}</div>` : '';
     const dur = durationCache.has(track.file) ? formatTime(durationCache.get(track.file)) : '-';
     item.innerHTML = `
-      <span class="track-num" aria-hidden="true">${track.num}</span>
+      <span class="track-num" aria-hidden="true">${escapeHtml(track.num)}</span>
       <div class="track-details">
-        <div class="track-title">${track.title}</div>
+        <div class="track-title">${escapeHtml(track.title)}</div>
         ${artistLabel}
       </div>
       <span class="track-duration" aria-label="Duração: ${dur}">${dur}</span>
@@ -1838,6 +1493,30 @@ document.addEventListener('DOMContentLoaded', async function () {
   });
 
 
+// A cached, older player meeting a newer catalog payload is the one deploy-order
+// hazard (see CLAUDE.md, "v2 payload"). Drop the service-worker caches and reload
+// once to fetch the current player; if that doesn't help, say so instead of
+// leaving an empty grid.
+async function handleCatalogDecodeError(err, container) {
+  const RELOAD_KEY = 'tocador-stale-reload';
+  if (err?.code === 'UNSUPPORTED_ACERVO_VERSION' && !sessionStorage.getItem(RELOAD_KEY)) {
+    sessionStorage.setItem(RELOAD_KEY, '1');
+    try {
+      const regs = await navigator.serviceWorker?.getRegistrations?.() ?? [];
+      await Promise.all(regs.map(r => r.unregister()));
+      await Promise.all((await caches.keys()).map(k => caches.delete(k)));
+    } catch {}
+    location.reload();
+    return;
+  }
+  const p = document.createElement('p');
+  p.className = 'album-not-found';
+  p.textContent = err?.code === 'UNSUPPORTED_ACERVO_VERSION'
+    ? 'Este acervo usa um formato mais novo. Recarregue a página para atualizar o player.'
+    : 'Não foi possível ler o acervo.';
+  container.replaceChildren(p);
+}
+
 // Show loading skeleton
   const skeletonEl = document.createElement('div');
   skeletonEl.className = 'grid-skeleton';
@@ -1885,7 +1564,13 @@ document.addEventListener('DOMContentLoaded', async function () {
   ]);
   // Accepts both the v1 (row) and v2 (columnar) payloads; always yields v1 shape.
   await ensureDecodeAcervo();
-  db = decodeAcervo(JSON.parse(json));
+  try {
+    db = decodeAcervo(JSON.parse(json));
+  } catch (err) {
+    skeletonEl.remove();
+    await handleCatalogDecodeError(err, albumsList);
+    return;
+  }
   genreData = genresRaw;
   genreLoading = false;
   BASE_URL = db.meta?.base_url || cfg.baseUrl || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';

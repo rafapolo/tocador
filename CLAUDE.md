@@ -6,7 +6,10 @@ Shared music player platform — the same player hosts multiple independent arch
 
 ### Frontend
 - **index.html** — Main web app; no build step, served from GitHub Pages or any static CDN
-- **js/ui.js** — All app logic: virtual grid, album/track rendering, playback, search/filter, acervo loading
+- **js/ui.js** — App logic: album/track rendering, playback, search/filter, acervo loading, URL state
+- **js/util.js** — Pure helpers (`fold`, `parseArtists`, `escapeHtml`, `formatTime`, `PT_COLLATOR`). Classic script, loaded before `ui.js`
+- **js/virtual-lists.js** — `VirtualGrid` (albums) and `VirtualList` (browse panel). Classic script; calls `ui.js` globals only at run time
+- **js/radio.js**, **js/3d.js**, **assets/radio.css**, **assets/3d.css** — the code and styles of `radio.html` / `3d.html`, kept out of the HTML so the service worker can cache them
 - **js/acervo-format.js** — `decodeAcervo()`: accepts the v1 or v2 payload, always returns the v1 shape. Loaded before `ui.js`, and also by `radio.html` / `3d.html`
 - **sw.js** / **manifest.json** — PWA: service worker (stale-while-revalidate for same-origin assets and `.json.gz` catalogs; never intercepts cdn.tocador.cc audio/covers so Range requests pass through) + installable app manifest
 - **assets/player.css** — Styling
@@ -14,8 +17,20 @@ Shared music player platform — the same player hosts multiple independent arch
 
 The app fetches the acervo `.json.gz` asynchronously on load, decompresses via native `DecompressionStream`, then renders into a virtual scrolling grid (~30 DOM nodes regardless of library size).
 
+**Untrusted catalog text.** Any `?acervo=<url>` catalog is third-party input. Everything from a
+catalog that goes into `innerHTML` must pass through `escapeHtml()` (`js/util.js`); `tests/security.spec.js`
+covers it. Prefer `textContent` where no markup is needed.
+
+**Adding a script or stylesheet.** `index.html`, `sw.js` (`SHELL`/`EXTRAS`) and the deploy minify step
+(`deploy.yml`) all list files. The uqt/hominiscanidae Pages workflows copy `tocador/js/*.js` and
+`tocador/assets/*` by glob, so new files there need no workflow change.
+
+**tocador.cc deploy extras** (`deploy.yml`): JS/CSS are minified in place with esbuild, and `sw.js`'s
+`CACHE` literal is rewritten to the commit SHA so each deploy installs a fresh worker and purges old
+caches. Neither happens in the uqt/hominiscanidae mirrors, which serve the source as-is.
+
 ### Backend / Infrastructure
-- **proxy.js** — Bun reverse proxy on port 9002 (behind nginx on 9001). Uses `Bun.S3Client` (native, no npm deps). CORS, MIME, Range, security hardening (path traversal, hotlink, rate limit, graceful shutdown). Zero production npm dependencies.
+- **proxy.js** + **lib/** — Bun reverse proxy on port 9002 (behind nginx on 9001). `lib/s3.js` (SigV4 signing, key handling, bucket routing) and `lib/access.js` (client-IP trust, hotlink allowlist, bot policy) are the stateless parts; counters, rate limits, metrics and the server stay in `proxy.js`. The Dockerfile copies both, and `deploy-proxy.yml` watches `lib/**`. Uses `Bun.S3Client` (native, no npm deps). CORS, MIME, Range, security hardening (path traversal, hotlink, rate limit, graceful shutdown). Zero production npm dependencies.
 - **haloy.yaml** — Deployment config; deploys proxy to `cdn.tocador.cc`
 - **Dockerfile** — Packages proxy.js for haloy deployment
 
@@ -106,7 +121,10 @@ archive has several albums per artist).
 third-party acervos keep working with no migration.
 
 **Deploy order matters**: publish the player before publishing a v2 catalog. A
-cached older `ui.js` cannot read v2 and will render an empty grid.
+cached older `ui.js` cannot read v2 and will render an empty grid. From this version on the
+player fails loudly instead: `decodeAcervo()` throws `UNSUPPORTED_ACERVO_VERSION` for a
+payload newer than it knows, and `ui.js` then drops the service-worker caches and reloads once
+(`sessionStorage` `tocador-stale-reload`), falling back to a "reload to update" message.
 
 ## Data Flow
 

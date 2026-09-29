@@ -75,6 +75,13 @@
 
   // Returns the v1 shape regardless of input version.
   function decodeAcervo(db) {
+    // A catalog newer than this decoder must fail loudly: guessing at an unknown
+    // layout renders an empty grid that looks like a broken archive.
+    if (db && db.v > 2) {
+      var err = new Error('Unsupported acervo payload version ' + db.v);
+      err.code = 'UNSUPPORTED_ACERVO_VERSION';
+      throw err;
+    }
     if (!db || db.v !== 2) return db;
     return decodeV2(db);
   }

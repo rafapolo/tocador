@@ -5,14 +5,22 @@
 // (cdn.tocador.cc) are never intercepted so Range requests pass straight
 // through to the proxy untouched.
 //
-// Bump CACHE when the shell changes in a way that must invalidate old copies;
-// day-to-day updates propagate anyway via revalidation on each visit.
+// tocador.cc's deploy rewrites the CACHE literal below with the commit SHA, so
+// every deploy changes sw.js, installs a fresh worker and drops the old caches
+// (no hand-bumping). The uqt/hominiscanidae mirrors copy sw.js unstamped and keep
+// this literal; bump it there if the shell changes in a way that must invalidate.
 const CACHE = 'tocador-v5';
-const SHELL = ['./', './index.html', './assets/player.css', './js/acervo-format.js', './js/ui.js', './manifest.json'];
+// Needed for the app to start offline.
+const SHELL = ['./', './index.html', './assets/player.css', './js/acervo-format.js', './js/util.js', './js/virtual-lists.js', './js/ui.js', './manifest.json'];
+// Best effort: radio.html isn't deployed to the mirrors at all, and a 404 here
+// must not fail the install.
+const EXTRAS = ['./radio.html', './js/radio.js', './assets/radio.css', './3d.html', './js/3d.js', './assets/3d.css'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(c => c.addAll(SHELL).then(() => Promise.allSettled(EXTRAS.map(u => c.add(u)))))
+      .then(() => self.skipWaiting())
   );
 });
 

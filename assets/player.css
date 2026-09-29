@@ -79,6 +79,9 @@ html {
 }
 
 body {
+  /* Pinch-zoom stays enabled (WCAG 1.4.4); this only stops double-tap-to-zoom
+     from delaying taps on controls. */
+  touch-action: manipulation;
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
