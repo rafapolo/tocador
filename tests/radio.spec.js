@@ -111,6 +111,17 @@ test('R6: prev button navigates to a previous track from history', async ({ page
 test.describe('radio heartbeat', () => {
   test.use({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' });
 
+  // These tests drive the heartbeat with synthetic play/pause events. The page's real
+  // <audio> would otherwise interleave its own (the mocked empty mp3 errors and the
+  // radio auto-advances), which made counts depend on machine load. Silence real playback.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      HTMLMediaElement.prototype.play = () => Promise.resolve();
+      HTMLMediaElement.prototype.pause = function () {};
+      HTMLMediaElement.prototype.load = function () {};
+    });
+  });
+
   test('R16: heartbeat posts the listener id and track:true once playback starts', async ({ page }) => {
     await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
     await gotoRadio(page);
