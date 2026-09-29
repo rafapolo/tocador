@@ -584,9 +584,16 @@ function startRenderLoop() {
 
 let _atlasBase = null; // base URL that successfully served the atlas map
 
+// Only these buckets have a 3d-atlas/ (script/build-3d-atlas.js --acervo homi). Probing the
+// others 404s on every load, which lands in the console as an error. Catalogs can opt in
+// with "atlas": true in meta.
+const ATLAS_BASES = new Set(['https://cdn.tocador.cc/indie']);
+let _metaAtlas = false;
+
 async function tryLoadAtlas() {
   // try meta base_url first, then KNOWN_ACERVOS fallback (handles cross-bucket cases)
   for (const base of [...new Set([BASE_URL, _fallbackBaseUrl])].filter(Boolean)) {
+    if (!_metaAtlas && !ATLAS_BASES.has(base)) continue;
     try {
       const res = await fetch(`${base}/3d-atlas/atlas-map.json.gz`);
       if (!res.ok) continue;
@@ -660,6 +667,7 @@ async function main() {
     setStatus('Carregando álbuns...');
     const dbData = await loadAlbumData();
     BASE_URL = dbData.meta?.base_url || _fallbackBaseUrl || '';
+    _metaAtlas = dbData.meta?.atlas === true;
     const acervoTitle = dbData.meta?.title || 'Universo';
     document.getElementById('loading-title').textContent = acervoTitle;
     document.title = acervoTitle;
