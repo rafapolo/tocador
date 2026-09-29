@@ -599,7 +599,8 @@ test('L60: canonical points at the static album page for a known acervo', async 
     .toHaveAttribute('content', 'https://tocador.cc/uqt/1971-chico-buarque-construcao/');
 });
 
-test('L61: share button copies the static album page URL', async ({ page, context }) => {
+test('L61: share button copies the static album page URL', async ({ page, context, browserName }) => {
+  test.skip(browserName === 'webkit', 'WebKit has no clipboard-write permission to grant');
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.addInitScript(() => { delete Navigator.prototype.share; });
   await gotoWithFixture(page, '/?acervo=uqt');
@@ -610,7 +611,8 @@ test('L61: share button copies the static album page URL', async ({ page, contex
     .toBe('https://tocador.cc/uqt/1971-chico-buarque-construcao/');
 });
 
-test('L63: share button names the loaded track with a #tN anchor', async ({ page, context }) => {
+test('L63: share button names the loaded track with a #tN anchor', async ({ page, context, browserName }) => {
+  test.skip(browserName === 'webkit', 'WebKit has no clipboard-write permission to grant');
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.addInitScript(() => { delete Navigator.prototype.share; });
   await gotoWithFixture(page, '/?acervo=uqt');

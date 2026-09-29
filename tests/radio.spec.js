@@ -131,8 +131,7 @@ test.describe('radio heartbeat', () => {
       curAlbum = { ...curAlbum, path: curAlbum.path + ' (other)' };
       audio.dispatchEvent(new Event('play'));
     });
-    await page.waitForTimeout(100);
-    expect(bodies.length).toBe(2);
+    await expect.poll(() => bodies.length).toBe(2); // a fixed 100ms wait flaked under full-suite load
     expect(bodies[1].track).toBe(true);
   });
 
