@@ -364,7 +364,8 @@ function fetchTexture(index) {
   mesh.userData.loading = true;
   activeLoads++;
 
-  const url = `${BASE_URL}/${encodeURI(mesh.userData.album.path)}/capa-min.jpg`;
+  // encodeURIComponent, not encodeURI: encodeURI leaves '#' alone and cuts "Hominis Canidae #NNN" paths short.
+  const url = `${BASE_URL}/${encodeURIComponent(mesh.userData.album.path)}/capa-min.jpg`;
   texLoader.load(
     url,
     (tex) => {
@@ -628,7 +629,10 @@ function applyAtlasMode(atlasData) {
     function applyToMeshes() {
       albumMeshes.forEach(mesh => {
         const entry = map[mesh.userData.album.path];
-        if (!entry) { mesh.userData.failed = true; return; } // no cover in atlas — skip CDN
+        // Not in the atlas (added after it was built, or its cover failed): leave the mesh to
+        // the per-cover loader instead of showing a blank tile. A cover that truly 404s is
+        // marked failed there.
+        if (!entry) return;
         const [atlasIdx, col, row, cr, cl, ct, cb, ck] = entry;
         const tex = textures[atlasIdx];
         if (!tex) return;

@@ -45,6 +45,7 @@ caches. Neither happens in the uqt/hominiscanidae mirrors, which serve the sourc
 - **dedup-albums.js** — Detects duplicate albums by track fingerprint
 - **convert-acervo-v2.js** — Rewrites a published `.json.gz` from the v1 to the v2 columnar payload, verifying the round-trip before writing
 - **build-album-pages.js** — Builds static per-album pages, per-acervo indexes and sitemaps at deploy (see *Generating an acervo*)
+- **build-3d-atlas.js** — Packs every album cover into 4096² WebP atlases + `atlas-map.json.gz` for `3d.html` and uploads them (`--acervo uqt|homi`, `--check` to compare the live atlas with the catalog, `--no-upload`). Re-run after every ETL: an album added later has no tile until then (the 3D view falls back to loading its cover individually). Aborts without uploading if any album with a cover ends up without a tile
 - **build-genre-index.js** — Reads `../hominiscanidae/data/genres.json`, majority-votes top-3 genre predictions per track → outputs `../hominiscanidae/data/homi-genres.json.gz` (~147 KB)
 
 ## Acervos

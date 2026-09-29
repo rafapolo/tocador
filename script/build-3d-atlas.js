@@ -8,6 +8,7 @@ const https = require('https');
 const http  = require('http');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const sharp = require('sharp');
+require('../js/acervo-format.js'); // defines global decodeAcervo: catalogs may be v1 or v2 (columnar)
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,9 @@ const localUnzipsArg = process.argv.find(a => a.startsWith('--local-unzips='))?.
   || (() => { const i = process.argv.indexOf('--local-unzips'); return i >= 0 ? process.argv[i+1] : null; })()
   || null;
 const LOCAL_UNZIPS = localUnzipsArg ? path.resolve(localUnzipsArg) : null;
+
+const CHECK_ONLY = process.argv.includes('--check');
+const NO_UPLOAD  = process.argv.includes('--no-upload');
 
 const BUCKET   = process.env.S3_BUCKET;
 const ENDPOINT = process.env.S3_ENDPOINT || 'https://hel1.your-objectstorage.com';
@@ -103,6 +107,11 @@ function fetchBuffer(url, redirects = 5) {
 async function fetchGzJson(url) {
   const buf = await fetchBuffer(url);
   return JSON.parse(zlib.gunzipSync(buf).toString('utf8'));
+}
+
+// The catalog, always in the v1 shape (db.albums[]) whatever version was published.
+async function fetchCatalog() {
+  return decodeAcervo(await fetchGzJson(dataUrl));
 }
 
 // ── Concurrency pool ──────────────────────────────────────────────────────────
@@ -171,14 +180,43 @@ function itunesArtwork(album) {
   return new Promise(resolve => { _itunesWaiting.push({ album, resolve }); _itunesNext(); });
 }
 
+// ── Completeness ──────────────────────────────────────────────────────────────
+
+// Every album the catalog says has a cover must have a tile. An album added by an ETL run
+// after the atlas was built has none, and the 3D view shows it as a blank card.
+function missingFromMap(albums, map) {
+  return albums.filter(a => a.has_cover !== false && !map[a.path]).map(a => a.path);
+}
+
+// --check: compare the atlas live on the CDN with the current catalog. Exits 1 on any gap.
+async function check() {
+  console.log(`acervo: ${acervoArg}  checking ${baseUrl}/3d-atlas/atlas-map.json.gz`);
+  const [db, live] = await Promise.all([
+    fetchCatalog(),
+    fetchGzJson(`${baseUrl}/3d-atlas/atlas-map.json.gz`),
+  ]);
+  const withCover = db.albums.filter(a => a.has_cover !== false);
+  const missing = missingFromMap(db.albums, live.map);
+  const known = new Set(db.albums.map(a => a.path));
+  const stale = Object.keys(live.map).filter(k => !known.has(k)).length;
+  console.log(`catalog: ${withCover.length} albums with covers; atlas: ${Object.keys(live.map).length} entries (${stale} stale)`);
+  if (!missing.length) { console.log('OK: every album with a cover is in the atlas.'); return; }
+  console.error(`MISSING: ${missing.length} album(s) have no atlas tile:`);
+  for (const m of missing.slice(0, 25)) console.error(`  ${m}`);
+  if (missing.length > 25) console.error(`  ... and ${missing.length - 25} more`);
+  console.error(`Rebuild with: bun script/build-3d-atlas.js --acervo ${acervoArg}`);
+  process.exit(1);
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
+  if (CHECK_ONLY) return check();
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
   console.log(`acervo: ${acervoArg}  base: ${baseUrl}`);
   console.log('Loading album data...');
-  const db = await fetchGzJson(dataUrl);
+  const db = await fetchCatalog();
   const albums = db.albums.filter(a => a.has_cover !== false);
   console.log(`Albums with covers: ${albums.length}`);
 
@@ -246,6 +284,16 @@ async function main() {
 
   console.log(`Done: ${done} ok, ${failed} failed`);
 
+  // Refuse to publish an atlas that leaves a covered album without a tile: the map is
+  // replaced wholesale, so a partial rebuild would blank albums that the old one had.
+  const gaps = missingFromMap(db.albums, atlasMap);
+  if (gaps.length) {
+    console.error(`ABORT: ${gaps.length} album(s) with a cover have no tile (CDN and iTunes both failed):`);
+    for (const g of gaps.slice(0, 25)) console.error(`  ${g}`);
+    console.error('Nothing was uploaded. Fix the covers (or re-run if the CDN was flaky) and try again.');
+    process.exit(1);
+  }
+
   // versioned filenames bypass nginx long-lived image cache on re-builds
   const version = Math.floor(Date.now() / 1000);
 
@@ -266,8 +314,8 @@ async function main() {
   fs.writeFileSync(mapPath, zlib.gzipSync(JSON.stringify(mapData), { level: 9 }));
   console.log(`Saved atlas-map.json.gz (${(fs.statSync(mapPath).size / 1024).toFixed(0)} KB)`);
 
-  if (!BUCKET) {
-    console.log('S3_BUCKET not set — skipping upload. Files in:', OUT_DIR);
+  if (!BUCKET || NO_UPLOAD) {
+    console.log(`${NO_UPLOAD ? '--no-upload' : 'S3_BUCKET not set'} — skipping upload. Files in:`, OUT_DIR);
     return;
   }
 
