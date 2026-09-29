@@ -59,7 +59,7 @@ jobs:
         # share globals, so this is a plain minify: esbuild leaves top-level names alone
         # outside a bundle/module. 3d.js is the one ES module.
         run: |
-          for f in js/acervo-format.js js/util.js js/virtual-lists.js js/ui.js js/radio.js; do
+          for f in js/acervo-format.js js/util.js js/virtual-lists.js js/ui.js js/url-meta.js js/browse.js js/album-view.js js/playback.js js/radio.js; do
             bunx esbuild@0.25.10 "$f" --minify --allow-overwrite --outfile="$f" --log-level=warning
           done
           bunx esbuild@0.25.10 js/3d.js --minify --format=esm --allow-overwrite --outfile=js/3d.js --log-level=warning
@@ -71,6 +71,17 @@ jobs:
         # A new CACHE name per deploy makes sw.js differ byte-wise, so browsers
         # install the new worker and it purges every older cache.
         run: sed -i "s/^const CACHE = '[^']*';/const CACHE = 'tocador-${GITHUB_SHA::8}';/" sw.js && grep -n "^const CACHE" sw.js
+
+      - name: Version asset URLs
+        # Pages serves everything with a 10-minute cache, so a browser without the
+        # service worker (first visit, private window) could pair fresh HTML with
+        # stale JS right after a deploy. ?v=<sha> on every local script/stylesheet
+        # reference makes each deploy a new URL. The service worker keys by pathname
+        # and is unaffected. Runs over every page, album pages included.
+        run: |
+          find . -name '*.html' -not -path './node_modules/*' -not -path './.git/*' -print0 \
+            | xargs -0 sed -i -E "s#((src|href)=\"/?(js|assets)/[A-Za-z0-9_.-]+\.(js|css))\"#\1?v=${GITHUB_SHA::8}\"#g"
+          grep -o 'src="[^"]*js/ui.js[^"]*"' index.html
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
