@@ -49,10 +49,13 @@ test('R3: time displays start at 00:00 or — before play', async ({ page }) => 
 test('R4: cover falls back to placeholder when image 404s', async ({ page }) => {
   await gotoRadio(page);
   const cover = page.locator('#cover');
-  const src = await cover.getAttribute('src');
-  // Either empty (not yet set) or data URI placeholder — never a broken URL
-  const isSafe = !src || src.startsWith('data:');
-  expect(isSafe).toBe(true);
+  // The src is the CDN URL until the (mocked) 404 arrives, then the placeholder: wait
+  // for the settled state rather than sampling it once (WebKit on CI loses that race).
+  // Either empty (not yet set) or data URI placeholder — never a broken URL.
+  await expect.poll(async () => {
+    const src = await cover.getAttribute('src');
+    return !src || src.startsWith('data:');
+  }).toBe(true);
 });
 
 test('R5: next button changes track title', async ({ page }) => {
