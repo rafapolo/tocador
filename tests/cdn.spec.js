@@ -4,6 +4,9 @@ const fs = require('fs');
 
 const CDN = 'https://cdn.tocador.cc';
 
+// These hit the live CDN, so one slow response is a network blip, not a regression.
+test.describe.configure({ retries: 2 });
+
 // All domains that host the player — audio requests from these must not 403
 const PLAYER_ORIGINS = [
   'https://rafapolo.github.io',

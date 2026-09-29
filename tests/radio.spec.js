@@ -19,6 +19,13 @@ async function gotoRadio(page, params = '') {
   await page.waitForSelector('.widget:not(.loading)', { timeout: 8000 });
 }
 
+// WebKit blocks autoplay, so radio shows its tap-to-listen overlay over the controls.
+// Tests that press controls tap it first, like a listener would. Chromium never shows it.
+async function tapIfBlocked(page) {
+  const overlay = page.locator('#tap-overlay.visible');
+  if (await overlay.count()) await overlay.click();
+}
+
 // ── R. Radio Widget ───────────────────────────────────────────────────────
 
 test('R1: radio widget removes .loading class after acervo loads', async ({ page }) => {
@@ -50,6 +57,7 @@ test('R4: cover falls back to placeholder when image 404s', async ({ page }) => 
 
 test('R5: next button changes track title', async ({ page }) => {
   await gotoRadio(page);
+  await tapIfBlocked(page);
   const title1 = await page.locator('#track-title').textContent();
   await page.click('#btn-next');
   await page.waitForTimeout(300);
@@ -105,8 +113,7 @@ test.describe('radio heartbeat', () => {
       route.fulfill({ status: 204 });
     });
     await page.evaluate(() => audio.dispatchEvent(new Event('play')));
-    await page.waitForTimeout(100);
-    expect(hbBody).toBeTruthy();
+    await expect.poll(() => hbBody).toBeTruthy();
     expect(typeof hbBody.id).toBe('string');
     expect(hbBody.id.length).toBeGreaterThan(0);
     expect(hbBody.track).toBe(true); // first heartbeat of a session is always a new track
@@ -121,9 +128,9 @@ test.describe('radio heartbeat', () => {
       route.fulfill({ status: 204 });
     });
     await page.evaluate(() => audio.dispatchEvent(new Event('play'))); // 1st: new track
-    await page.waitForTimeout(100);
+    await expect.poll(() => bodies.length).toBe(1);
     await page.evaluate(() => audio.dispatchEvent(new Event('play'))); // spurious repeat, same track
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(150); // negative check: nothing to poll for, so give a second post time to arrive
     expect(bodies.length).toBe(1); // startHeartbeat() no-ops while already running and the track hasn't changed
 
     await page.evaluate(() => {
@@ -135,7 +142,8 @@ test.describe('radio heartbeat', () => {
     expect(bodies[1].track).toBe(true);
   });
 
-  test('R18: heartbeat sends stop when playback pauses', async ({ page }) => {
+  test('R18: heartbeat sends stop when playback pauses', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', "Playwright can't observe navigator.sendBeacon (how stop is sent) in WebKit");
     await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
     await gotoRadio(page);
     const bodies = [];
@@ -144,10 +152,9 @@ test.describe('radio heartbeat', () => {
       route.fulfill({ status: 204 });
     });
     await page.evaluate(() => audio.dispatchEvent(new Event('play')));
-    await page.waitForTimeout(100);
+    await expect.poll(() => bodies.length).toBeGreaterThan(0);
     await page.evaluate(() => audio.dispatchEvent(new Event('pause')));
-    await page.waitForTimeout(100);
-    expect(bodies.some(b => b.stop === true)).toBe(true);
+    await expect.poll(() => bodies.some(b => b.stop === true)).toBe(true);
   });
 });
 
@@ -205,7 +212,7 @@ test('R13: audio src encodes # as %23 for albums with # in path', async ({ page 
   await page.evaluate(() => {
     const hashAlbum = albums.find(a => a.path.includes('#'));
     if (!hashAlbum) throw new Error('fixture has no album with # in path');
-    audio.src = '';
+    curSrc = null; // force playTrack to assign audio.src (audio.src = '' resolves to the page URL in WebKit)
     playTrack(hashAlbum, hashAlbum.tracks[0]);
   });
 
@@ -239,7 +246,7 @@ test('R15: radio filter selects albums with "hominis canidae" and encodes # corr
   await page.evaluate(() => {
     const hcAlbum = albums.find(a => a.path.toLowerCase().includes('hominis canidae #'));
     if (!hcAlbum) throw new Error('fixture has no Hominis Canidae # album');
-    audio.src = '';
+    curSrc = null; // force playTrack to assign audio.src (audio.src = '' resolves to the page URL in WebKit)
     playTrack(hcAlbum, hcAlbum.tracks[0]);
   });
 

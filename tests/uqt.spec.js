@@ -599,22 +599,31 @@ test('L60: canonical points at the static album page for a known acervo', async 
     .toHaveAttribute('content', 'https://tocador.cc/uqt/1971-chico-buarque-construcao/');
 });
 
-test('L61: share button copies the static album page URL', async ({ page, context, browserName }) => {
-  test.skip(browserName === 'webkit', 'WebKit has no clipboard-write permission to grant');
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.addInitScript(() => { delete Navigator.prototype.share; });
+// Records what the page copies instead of granting clipboard permissions, which
+// WebKit doesn't offer. navigator.share is removed so the player takes its copy path.
+async function stubClipboard(page) {
+  await page.addInitScript(() => {
+    delete Navigator.prototype.share;
+    window.__copied = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async t => { window.__copied = t; } },
+    });
+  });
+}
+
+test('L61: share button copies the static album page URL', async ({ page }) => {
+  await stubClipboard(page);
   await gotoWithFixture(page, '/?acervo=uqt');
   await page.locator('.album-item', { hasText: 'Construção' }).click();
   await page.locator('#album-header .album-share').click();
   await expect(page.locator('#toast')).toContainText('copiado');
-  expect(await page.evaluate(() => navigator.clipboard.readText()))
+  expect(await page.evaluate(() => window.__copied))
     .toBe('https://tocador.cc/uqt/1971-chico-buarque-construcao/');
 });
 
-test('L63: share button names the loaded track with a #tN anchor', async ({ page, context, browserName }) => {
-  test.skip(browserName === 'webkit', 'WebKit has no clipboard-write permission to grant');
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.addInitScript(() => { delete Navigator.prototype.share; });
+test('L63: share button names the loaded track with a #tN anchor', async ({ page }) => {
+  await stubClipboard(page);
   await gotoWithFixture(page, '/?acervo=uqt');
   await page.locator('.album-item', { hasText: 'Construção' }).click();
   const second = page.locator('#track-list .track-item').nth(1);
@@ -622,7 +631,7 @@ test('L63: share button names the loaded track with a #tN anchor', async ({ page
   const num = (await second.locator('.track-num').textContent()).trim();
   await page.locator('#album-header .album-share').click();
   await expect(page.locator('#toast')).toContainText('copiado');
-  expect(await page.evaluate(() => navigator.clipboard.readText()))
+  expect(await page.evaluate(() => window.__copied))
     .toBe(`https://tocador.cc/uqt/1971-chico-buarque-construcao/#t${num}`);
 });
 

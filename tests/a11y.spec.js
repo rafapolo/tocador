@@ -32,6 +32,32 @@ test('A11Y2: an open album (header + tracklist) has no axe violations', async ({
   expect(violations.map(v => `${v.id}: ${v.nodes.length} nodes`)).toEqual([]);
 });
 
+test('A11Y5: the browse panel (artist list) has no axe violations', async ({ page }) => {
+  // open() collapses the panel; this test wants it expanded.
+  await page.addInitScript(() => localStorage.setItem('tocador-browse-collapsed', 'false'));
+  await open(page, '/?acervo=uqt');
+  await page.waitForSelector('#browse-list .browse-item');
+  const { violations } = await scan(page);
+  expect(violations.map(v => `${v.id}: ${v.nodes.length} nodes`)).toEqual([]);
+});
+
+test('A11Y6: the keyboard-shortcuts modal has no axe violations', async ({ page }) => {
+  await open(page, '/?acervo=uqt');
+  await page.locator('#btn-shortcuts').click();
+  await page.waitForSelector('[role=dialog]:visible, .shortcuts-modal:visible');
+  const { violations } = await scan(page);
+  expect(violations.map(v => `${v.id}: ${v.nodes.length} nodes`)).toEqual([]);
+});
+
+test('A11Y7: the mobile layout (drawer + browse toggle) has no axe violations', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page, '/?acervo=uqt');
+  await page.locator('.album-item').first().click();
+  await page.waitForSelector('#drawer-track-list [data-track-idx]', { state: 'attached' });
+  const { violations } = await scan(page);
+  expect(violations.map(v => `${v.id}: ${v.nodes.length} nodes`)).toEqual([]);
+});
+
 test('A11Y3: pinch-zoom is not disabled by the viewport meta', async ({ page }) => {
   await open(page, '/?acervo=uqt');
   const content = await page.locator('meta[name=viewport]').getAttribute('content');
