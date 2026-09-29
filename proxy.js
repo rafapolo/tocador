@@ -1,225 +1,13 @@
 #!/usr/bin/env bun
 
 import { sigV4Encode, s3GetSigned, keyCandidates, isSafeKey, bucketFor, BUCKET } from './lib/s3.js';
+import { MAP_HARD_CAP, deviceCounts, rawIpCounts, incDevice, decDevice, incRawIp, decRawIp, heartbeatTokenBuckets, HEARTBEAT_BUCKET_CAP, HEARTBEAT_BUCKET_REFILL,
+  BUCKET_CAP, BUCKET_REFILL, deviceTokenBuckets, RAW_BUCKET_CAP, RAW_BUCKET_REFILL, rawIpTokenBuckets, RAW_CONCURRENCY_CAP,
+  REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL, reportTokenBuckets, takeFrom, deviceKey } from './lib/limits.js';
+import { state, RADIO_ID_RE, radioListeners, todayListenerIds, ensureToday, markOk, mark4xx, mark5xx,
+  UPSTREAM_FAIL_THRESHOLD, markUpstreamOk, markUpstreamFail, metricsJSON } from './lib/metrics.js';
 import { realIp, refererAllowed, blockedBot, goodBotRegex } from './lib/access.js';
 
-// §8 — concurrency tracking with hard caps, two tiers.
-// Mobile carriers put many distinct users behind one CGNAT IP, so limiting by
-// raw IP alone conflates them — a handful of people listening from the same
-// carrier trips a limit sized for one person. We fingerprint by IP + User-Agent
-// (already sent by every browser, no client changes needed) to give each real
-// listener their own budget, and keep a much looser raw-IP ceiling underneath
-// as a backstop against genuine abuse (e.g. UA spoofing from a single address).
-const MAP_HARD_CAP = 50_000;
-
-const deviceCounts = new Map();
-const deviceLastSeen = new Map();
-function incDevice(key) {
-  if (deviceCounts.size >= MAP_HARD_CAP && !deviceCounts.has(key)) return false;
-  deviceCounts.set(key, (deviceCounts.get(key) ?? 0) + 1);
-  deviceLastSeen.set(key, Date.now());
-  return true;
-}
-function decDevice(key) {
-  const n = (deviceCounts.get(key) ?? 1) - 1;
-  if (n <= 0) { deviceCounts.delete(key); deviceLastSeen.delete(key); }
-  else deviceCounts.set(key, n);
-}
-
-const rawIpCounts = new Map();
-const rawIpLastSeen = new Map();
-function incRawIp(ip) {
-  if (rawIpCounts.size >= MAP_HARD_CAP && !rawIpCounts.has(ip)) return false;
-  rawIpCounts.set(ip, (rawIpCounts.get(ip) ?? 0) + 1);
-  rawIpLastSeen.set(ip, Date.now());
-  return true;
-}
-function decRawIp(ip) {
-  const n = (rawIpCounts.get(ip) ?? 1) - 1;
-  if (n <= 0) { rawIpCounts.delete(ip); rawIpLastSeen.delete(ip); }
-  else rawIpCounts.set(ip, n);
-}
-setInterval(() => {
-  const cutoff = Date.now() - 5 * 60_000;
-  for (const [k, ts] of deviceLastSeen) if (ts < cutoff) { deviceCounts.delete(k); deviceLastSeen.delete(k); }
-  for (const [k, ts] of rawIpLastSeen) if (ts < cutoff) { rawIpCounts.delete(k); rawIpLastSeen.delete(k); }
-}, 60_000).unref();
-
-// §14 — radio "listening now" presence. radio.html beacons a heartbeat every
-// ~15s while its <audio> element is actually playing (not merely on the page),
-// keyed by a random id generated once per page load. A listener who vanishes
-// without a clean stop — tab killed, phone locked, network dropped — just ages
-// out here instead of needing an explicit disconnect; 40s tolerates a couple of
-// missed beats before /metrics stops counting them.
-const RADIO_HEARTBEAT_TIMEOUT_MS = 40_000;
-const RADIO_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
-const radioListeners = new Map(); // id -> lastSeen
-setInterval(() => {
-  const cutoff = Date.now() - RADIO_HEARTBEAT_TIMEOUT_MS;
-  for (const [id, ts] of radioListeners) if (ts < cutoff) radioListeners.delete(id);
-}, 10_000).unref();
-
-// Heartbeats are frequent by design (one every ~15s per real listener) but
-// still per-device rate limited so a misbehaving client can't grow the map —
-// cap comfortably above the real cadence rather than choking it.
-const HEARTBEAT_BUCKET_CAP = 6;
-const HEARTBEAT_BUCKET_REFILL = 1 / 10; // 1 token/10s after the initial burst
-const heartbeatTokenBuckets = new Map();
-
-// §16 — calendar-day stats for /metrics' `today`, reset at local midnight in
-// America/Sao_Paulo. Brazil dropped DST in 2019, so the offset is a fixed
-// UTC-3 — no tz database needed, just shift the clock before flooring to a day.
-const DAY_MS = 24 * 60 * 60_000;
-const SP_OFFSET_MS = 3 * 60 * 60_000; // America/Sao_Paulo = UTC-3, fixed
-const dayKeyNow = () => Math.floor((Date.now() - SP_OFFSET_MS) / DAY_MS);
-
-// radio.html ticks a heartbeat every 15s while actually playing (see
-// HEARTBEAT_INTERVAL_MS there) plus one extra at play-start and one at stop —
-// counting every accepted heartbeat as one tick and multiplying by the
-// interval is an estimate of listening time, not an exact watch-time log; it
-// over-counts short sessions slightly (the play-start tick doesn't represent
-// a full prior interval) the same way the old last_24h counters were already
-// approximate.
-const RADIO_HEARTBEAT_INTERVAL_SECONDS = 15;
-
-let todayDayKey = dayKeyNow();
-const todayListenerIds = new Set(); // ids seen today, any heartbeat (stop included)
-let todayHeartbeatTicks = 0;        // -> listeningHours estimate
-let todayTracksPlayed = 0;          // `track: true` heartbeats today
-let todayRequests = 0;              // all HTTP requests to the proxy today
-let todaySentBytes = 0;             // response bytes sent today (audio + covers)
-let listenersPeakToday = 0;         // max radioListeners.size observed today
-
-// Rolls the `today` counters over exactly once per calendar day, lazily —
-// called from anywhere that reads or writes them, so it fires on the first
-// request after local midnight rather than needing its own timer.
-function ensureToday() {
-  const k = dayKeyNow();
-  if (k === todayDayKey) return;
-  todayDayKey = k;
-  todayListenerIds.clear();
-  todayHeartbeatTicks = 0;
-  todayTracksPlayed = 0;
-  todayRequests = 0;
-  todaySentBytes = 0;
-  listenersPeakToday = radioListeners.size;
-}
-
-// §4 — token bucket rate limit (audio only).
-// Per-device: 30 req burst, 0.5 tokens/s refill (~30/min) — sized for one real
-// listener, same numbers as before this now applies per-device instead of per-IP.
-// Per-raw-IP backstop: far looser, only there to bound one address regardless
-// of how many (possibly spoofed) UAs it presents.
-const BUCKET_CAP = 30;
-const BUCKET_REFILL = 0.5;
-const deviceTokenBuckets = new Map();
-const RAW_BUCKET_CAP = 300;
-const RAW_BUCKET_REFILL = 5;
-const rawIpTokenBuckets = new Map();
-const RAW_CONCURRENCY_CAP = 50;
-
-// /report-error rate limit: client already caps itself to 3 reports per page
-// load, but a misbehaving or malicious client could otherwise spam GitHub
-// issue creation indefinitely — cap per raw IP regardless.
-const REPORT_BUCKET_CAP = 5;
-const REPORT_BUCKET_REFILL = 1 / 60; // 1 token/min after the initial burst
-const reportTokenBuckets = new Map();
-
-function takeFrom(map, key, cap, refill) {
-  const now = Date.now();
-  const b = map.get(key);
-  if (!b) { map.set(key, { tokens: cap - 1, last: now }); return true; }
-  const elapsed = (now - b.last) / 1000;
-  b.tokens = Math.min(cap, b.tokens + elapsed * refill);
-  b.last = now;
-  if (b.tokens < 1) return false;
-  b.tokens -= 1;
-  return true;
-}
-setInterval(() => {
-  const cutoff = Date.now() - 10 * 60_000;
-  for (const [k, b] of deviceTokenBuckets) if (b.last < cutoff) deviceTokenBuckets.delete(k);
-  for (const [k, b] of rawIpTokenBuckets) if (b.last < cutoff) rawIpTokenBuckets.delete(k);
-  for (const [k, b] of reportTokenBuckets) if (b.last < cutoff) reportTokenBuckets.delete(k);
-  for (const [k, b] of heartbeatTokenBuckets) if (b.last < cutoff) heartbeatTokenBuckets.delete(k);
-}, 5 * 60_000).unref();
-
-// FNV-1a 32-bit — cheap, fixed-size fingerprint derived from the User-Agent.
-// Only needs to separate concurrent listeners sharing a CGNAT IP, not resist
-// deliberate forgery; the raw-IP backstop above covers that case.
-function hashString(str) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0).toString(36);
-}
-function deviceKey(ip, req) {
-  const ua = req.headers.get('user-agent') ?? '';
-  return `${ip}#${hashString(ua.slice(0, 256))}`;
-}
-
-// §13 — observability: event-loop lag + aggregate counters
-let activeRequests = 0;
-let eventLoopLag = 0;
-let _lastTick = Date.now();
-const counters = { ok: 0, c4xx: 0, c5xx: 0 };
-// Every counted request also counts toward today.requests — one place so the
-// 10s rolling window (counters) and the calendar-day total (today) can't drift.
-function markOk()   { counters.ok++;   ensureToday(); todayRequests++; }
-function mark4xx()  { counters.c4xx++; ensureToday(); todayRequests++; }
-function mark5xx()  { counters.c5xx++; ensureToday(); todayRequests++; }
-
-// §13 — upstream reachability. A 404 from S3 still proves the link is alive, so
-// only connection-level failures count. Tracked as a streak because a single
-// blip is noise; a sustained run means every request is a black hole and the
-// node must be pulled from rotation.
-const UPSTREAM_FAIL_THRESHOLD = 5;
-let upstreamFailStreak = 0;
-const markUpstreamOk = () => { upstreamFailStreak = 0; };
-const markUpstreamFail = () => { upstreamFailStreak++; };
-
-setInterval(() => {
-  const now = Date.now(); eventLoopLag = now - _lastTick - 1000; _lastTick = now;
-}, 1000).unref();
-
-setInterval(() => {
-  if (counters.ok + counters.c4xx + counters.c5xx > 0) {
-    console.log(`[stats] active=${activeRequests} 2xx=${counters.ok} 4xx=${counters.c4xx} 5xx=${counters.c5xx} lag=${eventLoopLag}ms devices=${deviceCounts.size} ips=${rawIpCounts.size}`);
-    counters.ok = counters.c4xx = counters.c5xx = 0;
-  }
-}, 10_000).unref();
-
-function metricsJSON() {
-  ensureToday();
-  const m = process.memoryUsage();
-  return {
-    listeners: {
-      now: radioListeners.size,
-      peakToday: listenersPeakToday,
-    },
-    today: {
-      uniqueListeners: todayListenerIds.size,
-      // heartbeat ticks * interval — see the estimate caveat at §16 above.
-      listeningHours: Math.round(todayHeartbeatTicks * RADIO_HEARTBEAT_INTERVAL_SECONDS / 3600 * 10) / 10,
-      tracksPlayed: todayTracksPlayed,
-      requests: todayRequests,
-      sent_MB: Math.round(todaySentBytes / 1_000_000 * 10) / 10,
-    },
-    activeRequests,
-    ipMapSize: rawIpCounts.size,
-    deviceMapSize: deviceCounts.size,
-    eventLoopLagMs: eventLoopLag,
-    upstreamFailStreak,
-    memory: { rssBytes: m.rss, heapUsedBytes: m.heapUsed },
-    // ok/4xx/5xx are a 10s rolling window, not a running total — counters
-    // reset in the [stats] log tick above.
-    requestsLast10s: { ok: counters.ok, c4xx: counters.c4xx, c5xx: counters.c5xx },
-    uptimeSeconds: Math.round(process.uptime()),
-    timestamp: new Date().toISOString(),
-  };
-}
 
 // §15 — public /metrics auth. The password is fixed (md5("tocador.cc/metrics")),
 // not a per-user secret, so a plain string compare is fine functionally — this
@@ -322,7 +110,7 @@ async function signedPassthrough(bucket, path, rangeHeader, isHead) {
   // file on a plain GET, just the requested slice on a 206 Range response.
   if (!isHead && fwdHeaders['content-length']) {
     ensureToday();
-    todaySentBytes += Number(fwdHeaders['content-length']);
+    state.todaySentBytes += Number(fwdHeaders['content-length']);
   }
   return new Response(isHead ? null : r.body, { status: isHead ? 200 : r.status, headers: fwdHeaders });
 }
@@ -343,7 +131,7 @@ let _server;
 function gracefulShutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`[shutdown] ${signal} — draining (${activeRequests} active)`);
+  console.log(`[shutdown] ${signal} — draining (${state.activeRequests} active)`);
   _server?.stop(false);
   setTimeout(() => { console.error('[shutdown] drain timeout, forcing exit'); process.exit(1); }, 25_000).unref();
 }
@@ -395,11 +183,11 @@ _server = Bun.serve({
 
     // §13 — enriched health: reports saturation and event-loop lag; haloy removes node before it becomes a black hole
     if (url.pathname === '/health') {
-      const upstreamDown = upstreamFailStreak >= UPSTREAM_FAIL_THRESHOLD;
-      const degraded = shuttingDown || activeRequests >= MAX_CONCURRENT * 0.9 || eventLoopLag > 500 || upstreamDown;
+      const upstreamDown = state.upstreamFailStreak >= UPSTREAM_FAIL_THRESHOLD;
+      const degraded = shuttingDown || state.activeRequests >= MAX_CONCURRENT * 0.9 || state.eventLoopLag > 500 || upstreamDown;
       markOk();
       return new Response(
-        JSON.stringify({ status: degraded ? 'degraded' : 'ok', activeRequests, eventLoopLag, upstreamFailStreak }),
+        JSON.stringify({ status: degraded ? 'degraded' : 'ok', activeRequests: state.activeRequests, eventLoopLag: state.eventLoopLag, upstreamFailStreak: state.upstreamFailStreak }),
         { status: degraded ? 503 : 200, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } }
       );
     }
@@ -546,13 +334,13 @@ _server = Bun.serve({
       if (payload?.stop === true) radioListeners.delete(id);
       else if (radioListeners.size < MAP_HARD_CAP || radioListeners.has(id)) radioListeners.set(id, Date.now());
       ensureToday();
-      if (radioListeners.size > listenersPeakToday) listenersPeakToday = radioListeners.size;
+      if (radioListeners.size > state.listenersPeakToday) state.listenersPeakToday = radioListeners.size;
       // today.uniqueListeners: even the stop beacon proves this id was
       // listening moments ago, so it still counts — only radioListeners (the
       // "now" count) removes it early.
       if (todayListenerIds.size < MAP_HARD_CAP || todayListenerIds.has(id)) todayListenerIds.add(id);
-      todayHeartbeatTicks++;
-      if (payload?.track === true) todayTracksPlayed++;
+      state.todayHeartbeatTicks++;
+      if (payload?.track === true) state.todayTracksPlayed++;
       markOk();
       return new Response(null, { status: 204, headers: corsBase });
     }
@@ -622,13 +410,13 @@ _server = Bun.serve({
     }
 
     // Global concurrency ceiling
-    if (activeRequests >= MAX_CONCURRENT) {
+    if (state.activeRequests >= MAX_CONCURRENT) {
       if (device) { decDevice(device); decRawIp(ip); }
       mark5xx();
       return new Response('Too Many Requests', { status: 503, headers: corsBase });
     }
 
-    activeRequests++;
+    state.activeRequests++;
     try {
       const bucket = bucketFor(path);
 
@@ -652,7 +440,7 @@ _server = Bun.serve({
       if (code >= 500) { mark5xx(); markUpstreamFail(); } else mark4xx();
       return new Response(err?.name ?? 'Error', { status: code, headers: corsBase });
     } finally {
-      activeRequests--;
+      state.activeRequests--;
       if (device) { decDevice(device); decRawIp(ip); }
     }
   },

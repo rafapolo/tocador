@@ -6,7 +6,8 @@ Shared music player platform — the same player hosts multiple independent arch
 
 ### Frontend
 - **index.html** — Main web app; no build step, served from GitHub Pages or any static CDN
-- **js/ui.js** — App logic: album/track rendering, playback, search/filter, acervo loading, URL state
+- **js/ui.js** — Shared state (`let`s), data build, filtering, and the `DOMContentLoaded` init/acervo load
+- **js/url-meta.js**, **js/browse.js**, **js/album-view.js**, **js/playback.js** — the rest of the app, split by concern (URL/meta/share, browse panel + shortcuts, decade buttons + album/track rendering, playback). Classic scripts loaded after `ui.js`; they share its global scope, so state stays declared at the top of `ui.js`
 - **js/util.js** — Pure helpers (`fold`, `parseArtists`, `escapeHtml`, `formatTime`, `PT_COLLATOR`). Classic script, loaded before `ui.js`
 - **js/virtual-lists.js** — `VirtualGrid` (albums) and `VirtualList` (browse panel). Classic script; calls `ui.js` globals only at run time
 - **js/radio.js**, **js/3d.js**, **assets/radio.css**, **assets/3d.css** — the code and styles of `radio.html` / `3d.html`, kept out of the HTML so the service worker can cache them
@@ -30,7 +31,7 @@ covers it. Prefer `textContent` where no markup is needed.
 caches. Neither happens in the uqt/hominiscanidae mirrors, which serve the source as-is.
 
 ### Backend / Infrastructure
-- **proxy.js** + **lib/** — Bun reverse proxy on port 9002 (behind nginx on 9001). `lib/s3.js` (SigV4 signing, key handling, bucket routing) and `lib/access.js` (client-IP trust, hotlink allowlist, bot policy) are the stateless parts; counters, rate limits, metrics and the server stay in `proxy.js`. The Dockerfile copies both, and `deploy-proxy.yml` watches `lib/**`. Uses `Bun.S3Client` (native, no npm deps). CORS, MIME, Range, security hardening (path traversal, hotlink, rate limit, graceful shutdown). Zero production npm dependencies.
+- **proxy.js** + **lib/** — Bun reverse proxy on port 9002 (behind nginx on 9001). `lib/s3.js` (SigV4 signing, key handling, bucket routing), `lib/access.js` (client-IP trust, hotlink allowlist, bot policy), `lib/limits.js` (token buckets, concurrency caps, device fingerprint) and `lib/metrics.js` (request counters, upstream health, radio presence, day stats; the old top-level `let` counters live on its exported `state` object) hold the logic; `proxy.js` is routing, the request handler and startup. The Dockerfile copies both, and `deploy-proxy.yml` watches `lib/**`. Uses `Bun.S3Client` (native, no npm deps). CORS, MIME, Range, security hardening (path traversal, hotlink, rate limit, graceful shutdown). Zero production npm dependencies.
 - **haloy.yaml** — Deployment config; deploys proxy to `cdn.tocador.cc`
 - **Dockerfile** — Packages proxy.js for haloy deployment
 
