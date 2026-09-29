@@ -1,5 +1,8 @@
 #!/usr/bin/env bun
 
+import { sigV4Encode, s3GetSigned, keyCandidates, isSafeKey, bucketFor, BUCKET } from './lib/s3.js';
+import { realIp, refererAllowed, blockedBot, goodBotRegex } from './lib/access.js';
+
 // §8 — concurrency tracking with hard caps, two tiers.
 // Mobile carriers put many distinct users behind one CGNAT IP, so limiting by
 // raw IP alone conflates them — a handful of people listening from the same
@@ -286,80 +289,10 @@ function cacheControlFor(key) {
   return 'public, max-age=3600';
 }
 
-// Minimal AWS Signature V4 — used only for S3 keys Bun's client fails on (# and ?)
-const S3_ENDPOINT  = process.env.S3_ENDPOINT  ?? '';
-const S3_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID ?? '';
-const S3_SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY ?? '';
-const S3_REGION    = 'hel1';
-
-async function hmacSHA256(key, data) {
-  const k = typeof key === 'string' ? new TextEncoder().encode(key) : key;
-  const cryptoKey = await crypto.subtle.importKey('raw', k, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data)));
-}
-async function sha256hex(data) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-// SigV4 requires encoding all chars except A-Z a-z 0-9 - _ . ~
-// encodeURIComponent leaves ! ' ( ) * unencoded; add them manually
-function sigV4Encode(str) {
-  return encodeURIComponent(str).replace(/[!'()*]/g, c =>
-    '%' + c.charCodeAt(0).toString(16).toUpperCase()
-  );
-}
-
-async function s3GetSigned(bucket, key, rangeHeader) {
-  const now = new Date();
-  const amzDate  = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
-  const dateStamp = amzDate.slice(0, 8);
-  const encodedKey = key.split('/').map(sigV4Encode).join('/');
-  const url = new URL(`/${bucket}/${encodedKey}`, S3_ENDPOINT);
-  const host = url.host;
-
-  const payloadHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-  const headers = { host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate };
-  if (rangeHeader) headers['range'] = rangeHeader;
-
-  const signedHeaders = Object.keys(headers).sort().join(';');
-  const canonicalHeaders = Object.entries(headers).sort(([a], [b]) => a < b ? -1 : 1)
-    .map(([k, v]) => `${k}:${v}\n`).join('');
-  const canonicalUri = url.pathname;
-  const canonicalRequest = `GET\n${canonicalUri}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
-
-  const credScope = `${dateStamp}/${S3_REGION}/s3/aws4_request`;
-  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credScope}\n${await sha256hex(canonicalRequest)}`;
-
-  let sigKey = await hmacSHA256(`AWS4${S3_SECRET_KEY}`, dateStamp);
-  sigKey = await hmacSHA256(sigKey, S3_REGION);
-  sigKey = await hmacSHA256(sigKey, 's3');
-  sigKey = await hmacSHA256(sigKey, 'aws4_request');
-  const sig = Array.from(await hmacSHA256(sigKey, stringToSign)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-  const auth = `AWS4-HMAC-SHA256 Credential=${S3_ACCESS_KEY}/${credScope}, SignedHeaders=${signedHeaders}, Signature=${sig}`;
-  return fetch(url.href, { headers: { ...headers, Authorization: auth } });
-}
-
 // Forward a request to S3 via one signed fetch, passing S3's own headers
 // (Content-Range with total size, Content-Length, ETag) straight through.
 // Used for keys Bun's S3Client mishandles (# ?) and for open-ended Range
 // requests, where it saves the separate stat() round trip.
-// macOS writes accented filenames decomposed (NFD, "c\u0327"); most other sources
-// compose them (NFC, "\u00e7"). Those are two different byte sequences, so they are
-// two different S3 keys for what looks like the same name. Neither bucket is
-// uniform: sambaraiz/uqt is mostly NFD with ~93 NFC keys, indie/indie is mostly
-// NFC with a couple of NFD ones — so no single blanket normalization is correct.
-// Try exactly what the client asked for first (one round trip for every key that
-// exists), and only fall back to the other forms on a 404.
-function keyCandidates(key) {
-  const out = [key];
-  for (const form of ['NFC', 'NFD']) {
-    const alt = key.normalize(form);
-    if (!out.includes(alt)) out.push(alt);
-  }
-  return out;
-}
-
 async function signedPassthrough(bucket, path, rangeHeader, isHead) {
   let r;
   for (const key of keyCandidates(path)) {
@@ -394,121 +327,11 @@ async function signedPassthrough(bucket, path, rangeHeader, isHead) {
   return new Response(isHead ? null : r.body, { status: isHead ? 200 : r.status, headers: fwdHeaders });
 }
 
-// §1 — path traversal guard: reject .., ., NUL, backslash, empty segments
-function isSafeKey(key) {
-  if (key.length === 0 || key.length > 1024) return false;
-  if (key.includes('\0') || key.includes('\\')) return false;
-  for (const seg of key.split('/')) {
-    if (seg === '..' || seg === '.' || seg === '') return false;
-  }
-  return true;
-}
 
 // §6 — Range header regex (hoisted to avoid per-request allocation)
 const RANGE_RE = /^bytes=(\d{0,15})-(\d{0,15})$/;
 
-// §3 — XFF trust boundary: only believe X-Forwarded-For from trusted proxies
-const TRUSTED_PROXIES = new Set(
-  (process.env.TRUSTED_PROXY_IPS ?? '127.0.0.1,::1').split(',').filter(Boolean)
-);
-function realIp(req, server) {
-  const sock = server.requestIP(req);
-  const remoteIp = sock?.address ?? '0.0.0.0';
-  if (!TRUSTED_PROXIES.has(remoteIp)) return remoteIp;
-  const xff = req.headers.get('x-forwarded-for');
-  if (!xff) return remoteIp;
-  return xff.split(',', 1)[0].trim().slice(0, 64) || remoteIp;
-}
 
-// §5 — hotlink protection: audio only; images (covers) are explicitly exempt
-const ALLOWED_ORIGINS = new Set([
-  'https://rafapolo.github.io',
-  'https://cdn.tocador.cc',
-  'https://radio.tocador.cc',
-  'https://tocador.cc',
-  'http://localhost:9001',
-]);
-// No Referer/Origin at all is refused: every browser sends at least the origin for a
-// cross-origin <audio> request (strict-origin-when-cross-origin), so a bare request is
-// curl, a download manager or a scraper. Our own server-side checks set one explicitly.
-function refererAllowed(req) {
-  const ref = req.headers.get('referer') ?? req.headers.get('origin');
-  if (!ref) return false;
-  try {
-    const u = new URL(ref);
-    return ALLOWED_ORIGINS.has(`${u.protocol}//${u.host}`);
-  } catch { return false; }
-}
-
-// Legitimate crawlers we want to let through — Google indexing + og:image rendering
-const goodBotRegex = /googlebot|googleother|google-inspectiontool|google-extended|adsbot-google|mediapartners-google|google-read-aloud|apis-google/i;
-
-// Link-preview crawlers. Album pages on tocador.cc name a cover here as og:image, and a
-// preview bot refused it shows no picture — so these may fetch images, which are public
-// anyway (no hotlink check), and nothing else: audio stays off limits to them. They used
-// to get covers only by luck, when nginx already held one cached from a browser.
-const previewBotRegex = /facebookexternalhit|facebookcatalog|meta-externalagent|twitterbot|linkedinbot|discordbot|pinterestbot|slackbot|telegrambot|whatsapp|redditbot|bluesky|cardyb|mastodon|skypeuripreview|iframely|embedly|applebot/i;
-const IMAGE_PATH_RE = /\.(?:jpe?g|png|webp)$/i;
-
-// Whether the proxy turns this user agent away from this path.
-function blockedBot(ua, pathname) {
-  if (!botRegex.test(ua) || goodBotRegex.test(ua)) return false;
-  return !(previewBotRegex.test(ua) && IMAGE_PATH_RE.test(pathname));
-}
-
-const botRegex = new RegExp([
-  // automation & headless browsers
-  'scrapy', 'selenium(?:-webdriver)?', 'puppeteer', 'playwright', 'phantomjs', 'casperjs',
-  'headless\\s*(?:chrome|browser)?', 'headlesschrome',
-  'automation\\s*tool', 'automated\\s*browser', 'bot\\s*automation',
-  'httpclient', 'http\\s*client', 'axios\\/\\d+', 'node-fetch', 'got\\/\\d+',
-  'mechanize', 'urllib', 'requests\\/\\d+', 'okhttp', 'retrofit', 'wget\\/', 'httrack', 'aria2', 'lftp', 'webcopy',
-  'web\\s*scraper', 'data\\s*scraper', 'content\\s*scraper',
-  'mass\\s*(?:crawl|scrape|download)', 'bulk\\s*(?:crawl|download|fetch)',
-  'site\\s*crawler', 'link\\s*crawler',
-  'botkit', 'dialogflow', 'rasa', 'botpress',
-  'datacenter\\s*proxy', 'residential\\s*proxy', 'rotating\\s*proxy', 'proxy\\s*(?:rotation|pool)',
-  'tor\\s*exit', 'tor\\s+network',
-  'jsdom', 'cheerio', 'python-requests', 'python\\s*urllib', 'aiohttp', 'go-http-client', 'java\\/\\d+\\.\\d+',
-  'aws\\s*lambda', 'google\\s*cloud\\s*functions', 'azure\\s*functions',
-  'bot\\s*engine', 'crawler\\s*engine', 'spider\\s*engine',
-  'auto\\s*fetch', 'auto\\s*scrape', 'auto\\s*crawl',
-  // search engines (Google crawlers intentionally absent — we want sitemap indexing;
-  // goodBotRegex still exempts them from the generic 'bot' catch-all below)
-  'bingbot', 'msnbot', 'adidxbot', 'bingpreview',
-  'slurp', 'duckduckbot', 'baiduspider', 'yandexbot', 'sogou', 'exabot',
-  'applebot', 'petalbot', 'bytespider', 'seznambot', 'qwantify', 'mojeek', 'neevabot',
-  '360spider', 'haosouspider', 'sosospider',
-  // archive
-  'ia_archiver', 'archive\\.org_bot',
-  // social media crawlers
-  'facebookexternalhit', 'facebookcatalog',
-  'twitterbot', 'linkedinbot', 'discordbot', 'pinterestbot', 'slackbot', 'telegrambot', 'whatsapp',
-  // SEO / analytics tools
-  'semrushbot', 'ahrefsbot', 'mj12bot', 'dotbot', 'rogerbot',
-  'screaming\\s*frog', 'sistrix', 'serpstat', 'similarweb', 'netcraft', 'dataforseo', 'netsystemsresearch',
-  // AI / LLM crawlers
-  'gptbot', 'chatgpt-user', 'openai-searchbot', 'claudebot', 'claude-web', 'anthropic-ai', 'cohere-ai', 'ccbot', 'amazonbot', 'diffbot',
-  // security scanners
-  'censys', 'shodan', 'masscan', 'zgrab', 'nuclei', 'nikto', 'sqlmap', 'wfuzz', 'dirbuster', 'gobuster', 'ffuf', 'nmap\\s*scripting',
-  'openvas', 'qualys', 'tenable', 'acunetix', 'burpsuite', 'zap(?:\\s*proxy)?',
-  // feed readers
-  'feedfetcher', 'feedly', 'inoreader', 'newsblur',
-  // generic catch-all
-  'bot', 'crawler', 'spider',
-].join('|'), 'i');
-
-const BUCKET = process.env.S3_BUCKET;
-const BUCKET_MAP = Object.fromEntries(
-  (process.env.S3_BUCKET_MAP ?? '').split(',').filter(Boolean)
-    .map(e => { const [p, b] = e.split(':'); return [p, b]; })
-);
-function bucketFor(key) {
-  for (const [prefix, bucket] of Object.entries(BUCKET_MAP)) {
-    if (key.startsWith(prefix)) return bucket;
-  }
-  return BUCKET;
-}
 
 const PORT = Number(process.env.PORT) || 9001;
 const MAX_CONCURRENT = 400;

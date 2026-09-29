@@ -9,6 +9,7 @@ RUN apk add --no-cache nginx
 WORKDIR /app
 
 COPY proxy.js .
+COPY lib ./lib
 COPY nginx.conf /etc/nginx/nginx.conf
 RUN mkdir -p /var/cache/nginx/images /var/lib/nginx/tmp
 

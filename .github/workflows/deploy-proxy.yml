@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'proxy.js'
+      - 'lib/**'
       - 'package*.json'
       - 'Dockerfile'
       - 'haloy.yaml'
