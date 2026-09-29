@@ -23,7 +23,11 @@ async function gotoRadio(page, params = '') {
 // Tests that press controls tap it first, like a listener would. Chromium never shows it.
 async function tapIfBlocked(page) {
   const overlay = page.locator('#tap-overlay.visible');
-  if (await overlay.count()) await overlay.click();
+  if (!(await overlay.count())) return;
+  // The overlay can dismiss itself (playback starting) while the click is in flight;
+  // then the goal is already met, so a failed click is fine as long as it's gone.
+  await overlay.click({ timeout: 2000 }).catch(() => {});
+  await expect(page.locator('#tap-overlay.visible')).toHaveCount(0);
 }
 
 // ── R. Radio Widget ───────────────────────────────────────────────────────
