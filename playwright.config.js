@@ -25,11 +25,13 @@ module.exports = defineConfig({
     },
     // Safari/iOS is where a PWA audio player breaks first (background audio,
     // mediaSession, Range handling), so the playback and UI specs run on WebKit too.
-    // Not run here: cdn.spec.js (live CDN, browser-independent).
+    // Not run here: cdn.spec.js (live CDN, browser-independent) and radio.spec.js (whether
+    // WebKit lets radio autoplay differs between macOS and Linux CI, so its initial state
+    // isn't deterministic; radio has no Safari-specific code the main player doesn't share).
     {
       name: 'webkit',
       use: { browserName: 'webkit' },
-      testIgnore: ['**/*.test.js', '**/cdn.spec.js'],
+      testIgnore: ['**/*.test.js', '**/cdn.spec.js', '**/radio.spec.js'],
     },
   ],
   reporter: [['list']],
