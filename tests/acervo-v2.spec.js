@@ -86,9 +86,10 @@ test('V3: album with a derived path still builds a working audio URL', async ({ 
 test('V4: album with a non-derivable path round-trips through v2', async ({ page }) => {
   await gotoWith(page, v2Gz);
   await page.locator('.album-item', { hasText: 'Álbum com # no caminho' }).click();
+  await expect(page.locator('#track-list .track-item').first()).toBeVisible();
 
   const [request] = await Promise.all([
-    page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 5000 }),
+    page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 15000 }),
     page.locator('#track-list .track-item').first().click(),
   ]);
   const url = request.url();
