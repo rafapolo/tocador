@@ -46,7 +46,8 @@ caches. Neither happens in the uqt/hominiscanidae mirrors, which serve the sourc
 - **convert-acervo-v2.js** — Rewrites a published `.json.gz` from the v1 to the v2 columnar payload, verifying the round-trip before writing
 - **build-album-pages.js** — Builds static per-album pages, per-acervo indexes and sitemaps at deploy (see *Generating an acervo*)
 - **build-3d-atlas.js** — Packs every album cover into 4096² WebP atlases + `atlas-map.json.gz` for `3d.html` and uploads them (`--acervo uqt|homi`, `--check` to compare the live atlas with the catalog, `--no-upload`). Re-run after every ETL: an album added later has no tile until then (the 3D view falls back to loading its cover individually). Aborts without uploading if any album with a cover ends up without a tile
-- **build-genre-index.js** — Reads `../hominiscanidae/data/genres.json`, majority-votes top-3 genre predictions per track → outputs `../hominiscanidae/data/homi-genres.json.gz` (~147 KB)
+- **analyze-tracks.py** — Slim, resumable audio analysis (Essentia + TF, multiprocess). One JSONL line per track in `data/features/<acervo>.jsonl` (gitignored): BPM, key, loudness, genre/instrument/mood top-k, voice/dance/acoustic/happy/sad/relaxed… probabilities, and the 1280-d EffNet embedding, all from a 45 s centre clip. The JSONL *is* the checkpoint: Ctrl-C pauses, rerunning resumes, and rerunning after an ETL only does the new MP3s (key = `<album path>/<file>`, NFC). One progress bar for the whole acervo with ETA. `--acervo homi|uqt`, `--dry-run`, `--limit N`, `--retry-errors`, `--compact` → `.json.gz` + `.emb.f16` for the MCP. ~3 tracks/s on 9 workers (≈5 h homi, ≈2.5 h uqt)
+- **build-genre-index.js** — Reads `data/genres/genres.json` (raw Essentia predictions, gitignored, 30 MB; `extract-genres.py` writes it), majority-votes top-3 genre predictions per track → outputs `data/homi-genres.json.gz` (~147 KB, committed here and served at `https://tocador.cc/data/homi-genres.json.gz`; the hominiscanidae repo holds no genre data)
 
 ## Acervos
 
@@ -161,7 +162,7 @@ copies apart, list the wrong folder's path in `acervo.json` → `"exclude": [...
 bun script/build-genre-index.js
 ```
 
-Then commit and push in each repo (including `data/homi-genres.json.gz`). CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`, `--s3-prefix`, `--v2`) override config when passed.
+Then commit and push in each repo, and in tocador for `data/homi-genres.json.gz`. CLI flags (`--title`, `--subtitle`, `--base-url`, `--hours`, `--s3-prefix`, `--v2`) override config when passed.
 The generator writes no sitemaps: `--sitemap-url`/`--sitemap-out` were removed and now exit with an
 error (a leftover `sitemap_url` key in a music dir's `acervo.json` is ignored).
 

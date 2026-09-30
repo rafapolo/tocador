@@ -5,7 +5,6 @@ js/uqt-albums.js
 data/uqt-albums.js
 data/uqt-albums.json.gz
 data/homi-albums.json.gz
-genres.json
 script/models/
 .env
 test-results/
@@ -25,3 +24,10 @@ tasks/
 /homi/
 /sitemap.xml
 /sitemap-albums-*.xml
+
+# raw genre predictions (30 MB) — only homi-genres.json.gz is served
+/data/genres/genres.json
+/data/genres/genres.discogs400.bak.json
+
+# per-track audio features (JSONL is the resumable checkpoint; compact output feeds the MCP)
+/data/features/

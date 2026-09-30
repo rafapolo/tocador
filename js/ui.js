@@ -129,7 +129,7 @@ const KNOWN_ACERVOS = {
     label: 'Hominis Canidae',
     data: 'https://rafapolo.github.io/hominiscanidae/data/homi-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/indie',
-    genres: 'https://rafapolo.github.io/hominiscanidae/data/homi-genres.json.gz',
+    genres: 'https://tocador.cc/data/homi-genres.json.gz',
   },
 };
 const DEFAULT_ACERVO = 'homi';
