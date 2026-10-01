@@ -2341,8 +2341,8 @@ audio {
   width: 100%;
   text-align: left;
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  align-items: center;
+  gap: 10px;
   background: var(--color-surface-light);
   border: 1px solid transparent;
   border-radius: 8px;
@@ -2352,6 +2352,8 @@ audio {
   cursor: pointer;
 }
 .chat-result:hover, .chat-result:focus-visible { border-color: var(--color-accent-dark); outline: none; }
+.chat-result .r-cover { width: 40px; height: 40px; flex-shrink: 0; object-fit: cover; border-radius: 6px; background: var(--color-surface); }
+.chat-result .r-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .chat-result .r-title { font-size: 0.86rem; }
 .chat-result .r-sub { font-size: 0.75rem; color: var(--color-text-muted); }
 

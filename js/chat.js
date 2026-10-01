@@ -349,9 +349,17 @@ function chatShowResults(box, hits, from) {
     const li = chatEl('li');
     const b = chatEl('button', 'chat-result');
     b.type = 'button';
-    b.appendChild(chatEl('span', 'r-title', a.name || a.path));
+    const img = chatEl('img', 'r-cover');
+    img.alt = '';                      // decorative: the title next to it names the album
+    img.loading = 'lazy';
+    img.width = img.height = 40;
+    loadCoverImage(img, a.cover);      // same loader as the grid: placeholder when the cover is missing
+    b.appendChild(img);
+    const text = chatEl('span', 'r-text');
+    text.appendChild(chatEl('span', 'r-title', a.name || a.path));
     const sub = [a.artists, a.year || null, fromTrack ? `faixa: ${fromTrack.title}` : null].filter(Boolean).join(' · ');
-    b.appendChild(chatEl('span', 'r-sub', sub));
+    text.appendChild(chatEl('span', 'r-sub', sub));
+    b.appendChild(text);
     b.addEventListener('click', () => { openAlbum(a); if (isMobile()) closeChat(); });
     li.appendChild(b);
     ul.appendChild(li);
