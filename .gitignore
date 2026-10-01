@@ -32,3 +32,4 @@ tasks/
 # per-track audio features (JSONL is the resumable checkpoint; compact output feeds the MCP)
 /data/features/
 __pycache__/
+/data/genres/
