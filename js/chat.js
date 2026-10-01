@@ -1,7 +1,7 @@
 // Chat panel: replaces the browse panel while open. v0 engine — no LLM, no model: it reads periods
 // (decades, years, ranges) and plain words from the sentence, searches the catalogue, and says what it
 // understood, what it set aside and why. The ontology and the text model (tasks/chat-musical.md) plug
-// into interpret() later. Classic script; uses ui.js / util.js globals at run time.
+// into chatInterpret() later. Classic script; uses ui.js / util.js globals at run time.
 
 const CHAT_PAGE = 8;
 // Words that are only politeness / filler in a request — never searched.
@@ -157,7 +157,7 @@ function chatParseWhen(t, when, notes) {
 // ── interpretation ───────────────────────────────────────────────────────
 
 // text -> { when, terms, notes, pending, clear, random, continuation }
-function interpret(raw) {
+function chatInterpret(raw) {
   const notes = [];
   let t = fold(raw).replace(/[^\p{L}\p{N}\s]/gu, ' ');
   const out = {
@@ -377,7 +377,7 @@ function chatAsk(raw) {
   if (!raw) return;
   chatSay(raw);
   const bot = chatEl('div', 'chat-msg bot');
-  const it = interpret(raw);
+  const it = chatInterpret(raw);
 
   if (it.clear) {
     chatClear();
@@ -424,7 +424,7 @@ function chatAsk(raw) {
       hits = relaxed.hits;
     }
   }
-  const spelling = chatSpelling(interpret(raw).terms);       // typos among the words as typed
+  const spelling = chatSpelling(chatInterpret(raw).terms);       // typos among the words as typed
   chatState.terms = it.terms;
   const lost = chatApplyToGrid(it.when, it.terms);
   const gridNotes = [];
