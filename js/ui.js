@@ -408,6 +408,36 @@ function filterAlbums() {
   renderActiveFilterChip();
 }
 
+// Open an album as if its grid card was clicked: header, track list, primed first track, address bar.
+// `item` is the grid card when there is one (the chat opens albums that may not be rendered).
+function openAlbum(album, item) {
+  if (!album || (selectedAlbum === album && currentTrack != null)) return;
+
+  document.querySelector('#albums-list .album-item.active')?.classList.remove('active');
+  item?.classList.add('active');
+
+  selectedAlbum = album;
+  renderedAlbum = null;
+  renderAlbumHeader();
+  renderTrackList();
+  renderMobileDrawer(album);
+  if (isMobile()) openMobileDrawer();
+
+  if (album.tracks.length > 0) {
+    const audio = document.getElementById('audio');
+    if (audio.paused) {
+      currentTrack = album.tracks[0];
+      updateNowPlaying();
+      const newSrc = `${BASE_URL}/${currentTrack.file}`;
+      if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
+    }
+  }
+
+  updateMetaTags(album);
+  const primedNum = currentTrack?.num || 1;
+  window.history.pushState({ album: album.path, t: primedNum }, '', generateAlbumUrl(album, primedNum));
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -418,32 +448,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const item = e.target.closest('[data-album-idx]');
     if (!item) return;
     e.preventDefault();
-    const album = filteredAlbums[parseInt(item.dataset.albumIdx)];
-    if (!album || (selectedAlbum === album && currentTrack != null)) return;
-
-    albumsList.querySelector('.album-item.active')?.classList.remove('active');
-    item.classList.add('active');
-
-    selectedAlbum = album;
-    renderedAlbum = null;
-    renderAlbumHeader();
-    renderTrackList();
-    renderMobileDrawer(album);
-    if (isMobile()) openMobileDrawer();
-
-    if (album.tracks.length > 0) {
-      const audio = document.getElementById('audio');
-      if (audio.paused) {
-        currentTrack = album.tracks[0];
-        updateNowPlaying();
-        const newSrc = `${BASE_URL}/${currentTrack.file}`;
-        if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
-      }
-    }
-
-    updateMetaTags(album);
-    const primedNum = currentTrack?.num || 1;
-    window.history.pushState({ album: album.path, t: primedNum }, '', generateAlbumUrl(album, primedNum));
+    openAlbum(filteredAlbums[parseInt(item.dataset.albumIdx)], item);
   });
 
   // Browser back/forward: restore album selection and search query from history state

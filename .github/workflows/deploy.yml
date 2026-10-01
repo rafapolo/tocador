@@ -65,7 +65,7 @@ jobs:
         # share globals, so this is a plain minify: esbuild leaves top-level names alone
         # outside a bundle/module. 3d.js is the one ES module.
         run: |
-          for f in js/acervo-format.js js/util.js js/virtual-lists.js js/ui.js js/url-meta.js js/browse.js js/album-view.js js/playback.js js/radio.js; do
+          for f in js/acervo-format.js js/util.js js/virtual-lists.js js/ui.js js/url-meta.js js/browse.js js/album-view.js js/playback.js js/chat.js js/radio.js; do
             bunx esbuild@0.25.10 "$f" --minify --allow-overwrite --outfile="$f" --log-level=warning
           done
           bunx esbuild@0.25.10 js/3d.js --minify --format=esm --allow-overwrite --outfile=js/3d.js --log-level=warning
