@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Patch
 import squarify
 
-SRC = "../hominiscanidae/data/genres.json"
+SRC = "data/genres/genres.json"
 OUT = "treemap-subgenres.png"
 
 with open(SRC) as f:

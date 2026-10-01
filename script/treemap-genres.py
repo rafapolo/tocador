@@ -9,7 +9,7 @@ from matplotlib.patches import Rectangle, Patch
 import matplotlib.colors as mcolors
 import squarify
 
-SRC = "../hominiscanidae/data/genres.json"
+SRC = "data/genres/genres.json"
 OUT = "treemap.png"
 
 with open(SRC) as f:

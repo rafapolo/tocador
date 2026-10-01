@@ -34,7 +34,7 @@ from pathlib import Path
 warnings.filterwarnings('ignore', message='resource_tracker.*')
 
 UNZIPS    = Path(os.environ.get('ARCHIVE_DIR', Path(__file__).parent.parent / 'unzips'))
-OUTPUT    = Path(os.environ.get('OUTPUT_FILE', Path(__file__).parent.parent / 'genres.json'))
+OUTPUT    = Path(os.environ.get('OUTPUT_FILE', Path(__file__).parent.parent / 'data' / 'genres' / 'genres.json'))
 MODEL_DIR = Path(__file__).parent / 'models'
 
 MODELS = {
