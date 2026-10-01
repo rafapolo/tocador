@@ -1137,6 +1137,12 @@ async function handleCatalogDecodeError(err, container) {
       case 'b':
         if (!e.metaKey && !e.ctrlKey && !e.altKey) toggleBrowsePanel();
         break;
+      case 'c':
+        if (!e.metaKey && !e.ctrlKey && !e.altKey && typeof chatIsOpen === 'function') {
+          e.preventDefault();      // otherwise the keypress that opens the chat is typed into its field
+          chatIsOpen() ? closeChat() : openChat();
+        }
+        break;
       case 'g':
         if (!e.metaKey && !e.ctrlKey && !e.altKey && genreData) {
           if (isMobile()) openBrowseDrawer();

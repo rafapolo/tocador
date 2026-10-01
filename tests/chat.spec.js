@@ -575,3 +575,34 @@ test('uma resposta longa abre mostrando o começo, não o fim', async ({ page })
   ]);
   expect(headBox.y).toBeGreaterThanOrEqual(logBox.y - 1);        // a primeira linha da resposta está visível
 });
+
+test('atalho C abre e fecha o chat; digitar "c" no campo não fecha; Ctrl+C não dispara', async ({ page }) => {
+  await boot(page);
+  await page.locator('body').press('c');
+  await expect(page.locator('#chat-panel')).toBeVisible();
+  await expect(page.locator('#chat-input')).toBeFocused();
+  await page.keyboard.type('cartola');                                  // contém "c": não pode alternar nada
+  await expect(page.locator('#chat-panel')).toBeVisible();
+  await expect(page.locator('#chat-input')).toHaveValue('cartola');
+  await page.click('#chat-log');                                         // tira o foco do campo
+  await page.keyboard.press('Control+c');
+  await expect(page.locator('#chat-panel')).toBeVisible();
+  await page.keyboard.press('c');
+  await expect(page.locator('#chat-panel')).toBeHidden();
+});
+
+test('o modal de atalhos lista o C', async ({ page }) => {
+  await boot(page);
+  await page.click('#btn-shortcuts');
+  await expect(page.locator('#shortcuts-modal')).toContainText('Conversar com o acervo');
+});
+
+test('digitar no chat não aciona atalhos do player (espaço não toca)', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await page.keyboard.type('anos 60 n p b g');                           // espaço, n, p, b, g
+  const paused = await page.evaluate(() => document.getElementById('audio').paused);
+  expect(paused).toBe(true);
+  await expect(page.locator('#chat-panel')).toBeVisible();
+  await expect(page.locator('#chat-input')).toHaveValue('anos 60 n p b g');
+});
