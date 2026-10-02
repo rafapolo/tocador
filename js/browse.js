@@ -364,28 +364,29 @@ function resolveAcervoKey(dataUrl, param) {
 // once at boot, and a bare ?acervo= correctly drops any album/artist deep link
 // pointing at the archive we're leaving.
 function renderAcervoSelect(activeKey) {
-  const select = document.getElementById('acervo-select');
-  if (!select) return;
-  const frag = document.createDocumentFragment();
-  if (!activeKey) {
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = db?.meta?.title || 'Acervo externo';
-    frag.append(opt);
+  // One switcher per side panel (navegação e Explorar), same options and behavior.
+  for (const select of document.querySelectorAll('.acervo-select')) {
+    const frag = document.createDocumentFragment();
+    if (!activeKey) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = db?.meta?.title || 'Acervo externo';
+      frag.append(opt);
+    }
+    for (const [key, entry] of Object.entries(KNOWN_ACERVOS)) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = entry.label || key;
+      frag.append(opt);
+    }
+    select.replaceChildren(frag);
+    select.value = activeKey || '';
+    select.addEventListener('change', () => {
+      const key = select.value;
+      if (!KNOWN_ACERVOS[key]) return;
+      location.href = `${APP_ROOT}?acervo=${encodeURIComponent(key)}`;
+    });
   }
-  for (const [key, entry] of Object.entries(KNOWN_ACERVOS)) {
-    const opt = document.createElement('option');
-    opt.value = key;
-    opt.textContent = entry.label || key;
-    frag.append(opt);
-  }
-  select.replaceChildren(frag);
-  select.value = activeKey || '';
-  select.addEventListener('change', () => {
-    const key = select.value;
-    if (!KNOWN_ACERVOS[key]) return;
-    location.href = `${APP_ROOT}?acervo=${encodeURIComponent(key)}`;
-  });
 }
 
 function applyArchiveMeta() {

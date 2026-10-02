@@ -135,9 +135,10 @@
             <aside class="browse-panel explorar-panel" id="explorar-panel" aria-label="Explorar o acervo" hidden>
                 <div class="browse-acervo">
                     <div class="browse-acervo-head">
-                        <span class="browse-acervo-label">Explorar</span>
-                        <button id="btn-explorar-close" class="browse-close" aria-label="Fechar painel">✕</button>
+                        <label for="explorar-acervo-select" class="browse-acervo-label">Acervo</label>
+                        <button id="btn-explorar-close" class="browse-close mobile-only" aria-label="Fechar painel">✕</button>
                     </div>
+                    <select id="explorar-acervo-select" class="acervo-select"></select>
                 </div>
                 <div class="browse-tabs" role="tablist" aria-label="Navegar por">
                     <button class="ex-tab" role="tab" data-ex-tab="artists" aria-selected="false">

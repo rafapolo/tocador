@@ -39,7 +39,7 @@ test('abre e fecha, trocando com o painel de navegação', async ({ page }) => {
   await abrir(page);
   await expect(page.locator('#browse-panel')).toBeHidden();
   await expect(page.locator('#explorar-panel .ex-tab.active')).toContainText('Explorar');
-  await page.click('#btn-explorar-close');
+  await page.locator('#explorar-panel [data-ex-tab="artists"]').click();
   await expect(page.locator('#explorar-panel')).toBeHidden();
   await expect(page.locator('#browse-panel')).toBeVisible();
 });
@@ -53,6 +53,14 @@ test('a aba Explorar fica em browse-tabs e as abas do painel voltam à lista', a
   await expect(page.locator('#explorar-panel')).toBeHidden();
   await expect(page.locator('#browse-panel')).toBeVisible();
   await expect(page.locator('.browse-tab[data-tab="artists"]')).toHaveClass(/active/);
+});
+
+test('o seletor de acervo continua no topo e o X só aparece no mobile', async ({ page }) => {
+  await boot(page);
+  await abrir(page);
+  await expect(page.locator('#explorar-acervo-select')).toBeVisible();
+  await expect(page.locator('#explorar-acervo-select option')).not.toHaveCount(0);
+  await expect(page.locator('#btn-explorar-close')).toBeHidden();
 });
 
 test('atalho E abre e Esc fecha', async ({ page }) => {
