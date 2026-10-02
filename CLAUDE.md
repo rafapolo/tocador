@@ -11,7 +11,7 @@ Shared music player platform — the same player hosts multiple independent arch
 - **js/util.js** — Pure helpers (`fold`, `parseArtists`, `escapeHtml`, `formatTime`, `PT_COLLATOR`). Classic script, loaded before `ui.js`
 - **js/virtual-lists.js** — `VirtualGrid` (albums) and `VirtualList` (browse panel). Classic script; calls `ui.js` globals only at run time
 - **js/radio.js**, **js/3d.js**, **assets/radio.css**, **assets/3d.css** — the code and styles of `radio.html` / `3d.html`, kept out of the HTML so the service worker can cache them
-- **js/chat.js** — Chat panel: the header button after `#btn-radio` swaps `.browse-panel` for `#chat-panel` (a drawer on mobile). v0 engine, no LLM: `chatInterpret()` reads periods (decades, years, ranges, "antes de 1980") and plain words; `chatSearch()` ANDs the words over title/artist/folder/tracks (words ≤3 letters match whole words only); words that match nothing together are set aside, never silently (`chatRelax`); typos get a "quis dizer" chip (`chatSpelling`); every answer has a **por quê?** block saying what was understood, ignored and applied to the grid. Opening a result goes through `openAlbum()` in `ui.js` (same path as a grid click). Tests: `tests/chat.spec.js`. The ontology/text-model plan is in `tasks/` (gitignored)
+- **js/chat.js** — Chat panel: the header button after `#btn-radio` swaps `.browse-panel` for `#chat-panel` (a drawer on mobile). v0 engine, no LLM: `chatInterpret()` reads periods (decades, years, ranges, "antes de 1980") and plain words; `chatSearch()` ANDs the words over title/artist/folder/tracks (words ≤3 letters match whole words only); words that match nothing together are set aside, never silently (`chatRelax`); typos get a "quis dizer" chip (`chatSpelling`); every answer has a **por quê?** block saying what was understood, ignored and applied to the grid. Opening a result goes through `openAlbum()` in `ui.js` (same path as a grid click). Tests: `tests/chat.spec.js`. Since M2 the engine is `js/consulta-pt.js` (see *Chat musical* below). The ontology/text-model plan is in `tasks/` (gitignored)
 - **js/acervo-format.js** — `decodeAcervo()`: accepts the v1 or v2 payload, always returns the v1 shape. Loaded before `ui.js`, and also by `radio.html` / `3d.html`
 - **sw.js** / **manifest.json** — PWA: service worker (stale-while-revalidate for same-origin assets and `.json.gz` catalogs; never intercepts cdn.tocador.cc audio/covers so Range requests pass through) + installable app manifest
 - **assets/player.css** — Styling
@@ -137,6 +137,57 @@ payload newer than it knows, and `ui.js` then drops the service-worker caches an
 3. User clicks album → primes first track (`audio.src`, `audio.load()`) without auto-playing, and the address bar becomes `/<alias>/<slug>/` (track as `#tN`)
 4. User presses play → constructs `{BASE_URL}/{encodeURIComponent(path)}/{encodeURIComponent(file)}`
 5. Proxy receives request, forwards to S3 with CORS + MIME headers
+
+## Chat musical (motor v1, marco M0–M5)
+
+O chat filtra por gênero, andamento, humor, instrumento, voz e época, **sem LLM e sem modelo de texto**: um parser
+determinístico lê a frase, um motor filtra os álbuns pelas features de áudio e o "por quê?" diz o que foi lido.
+
+**Arquivos**
+- **js/consulta-pt.js** — parser (`consultaInterpretar`: léxico da ontologia, `fold()`, n-gramas, erro de digitação ≤ 1 letra
+  em palavras ≥ 5 letras, negação "sem …", comparações "mais lento que X", referências "parecido com X"), recusa por categoria
+  (letra, biografia, plataforma, outra mídia, técnica musical, outros assuntos, impossível, contraditório, produto, idioma,
+  conversa, vago), agregação faixa → álbum (`consultaAgregar`), filtro (`consultaFiltrar`, `consultaRelativo`), explicação dos
+  filtros (`consultaExplicarFiltros`) e carga sob demanda (`consultaCarregar`). `consultaPalavrasDeNome(albums)` diz se uma
+  palavra é nome do catálogo (palavra inteira de artista/título em ≤ 30 álbuns): nome nunca bloqueia uma busca, mas também não
+  deixa "salário"/"dentista" passar por nome (a busca por trecho do chat chama quase tudo de nome).
+- **js/acervo-features.js** — `decodeFeatures()` lê `<acervo>-features.json.gz` (colunar, linha i = i-ésima faixa do catálogo, com
+  impressão digital que detecta catálogo trocado). Gerado por `script/build-features-web.js` a partir de `data/features/<acervo>.jsonl`.
+- **data/ontologia-musical.json** — gêneros pt-BR (com mapa das 400 classes Discogs), humores (sinais medidos), instrumentos,
+  formações, andamentos (faixas de BPM) e voz. Gerada por `script/build-ontologia.js`; invariantes em `tests/ontologia.test.js`.
+- **js/chat.js** — interface: recusas curtas, exemplos clicáveis por contexto (`chatExamples`), sugestões ao acaso quando nada
+  é entendido, "por quê?" recolhido. Todo texto do catálogo entra por `textContent`/`escapeHtml`.
+
+**Regras de comportamento**: resposta de 1–2 frases; recusa, "não entendi" e zero resultados sempre trazem 2–3 exemplos que
+funcionam; o "por quê?" traz, para cada filtro de áudio, o critério (ex.: lento = BPM até 80 + 15% mais lentos do acervo), o
+resumo medido sobre os álbuns devolvidos (mediana, mínimo e máximo), quantas faixas ficaram de fora (BPM pouco confiável, sem
+análise) e se o dado é **medido**, **inferido** (gênero, instrumento) ou **cultural** (só achado como texto).
+
+**Deploy** (a regra de sempre, vale para os três arquivos novos): `index.html` carrega `js/acervo-features.js` e
+`js/consulta-pt.js` (antes de `js/chat.js`); `sw.js` lista os scripts em `SHELL` e `data/ontologia-musical.json` em `EXTRAS`;
+`deploy.yml` lista os scripts na minificação. Os espelhos uqt/hominiscanidae copiam `tocador/js/*.js` por glob, mas **não**
+copiam `data/`: lá o chat busca a ontologia e as features em `https://tocador.cc/` (`_consultaBuscar`).
+
+**Ressalvas honestas**
+- **Features**: o chat procura `db.meta.features_url`, `data/<alias>-features.json.gz` e `data/features/<alias>-features.json.gz`.
+  Os `.json.gz` estão commitados em `data/` (homi 0,98 MB, uqt 0,49 MB), mas só chegam a produção quando este ramo for
+  integrado em `main` e o `deploy.yml` rodar. **Enquanto isso, em produção o chat roda sem áudio** (só ontologia e recusas).
+  Qualquer `?acervo=<url>` externo também roda sem áudio.
+- **M4 (codificador de texto) não passou o portão**: o marco sai **sem** `js/codificador.js`; os pesos ficam fora do git
+  (`data/modelo-texto/`). Frase que o parser não entende cai em sugestão de 3 álbuns ao acaso, nunca em chute.
+- **Recusa das negativas ainda abaixo da meta de 90%**: ~61% no conjunto retido (ver `tasks/proximos-passos.md`). As regras são
+  expressões regulares por categoria; impossível, contraditório, vago e "outros assuntos" sem palavra-chave são o que sobra.
+  A família D tem ~12% de "duvidoso" (pedidos válidos rotulados como negativos): nunca usar como negativa.
+- O gold (`data/qgen/gold/gold.jsonl`) foi usado para ajustar regras: os números dele são otimistas. A medida fora do ajuste é
+  `bun script/consulta-gold.js --train` (linhas pares ajustam, **linhas ímpares são o conjunto retido: não olhe os erros delas**).
+
+**Medir**
+```bash
+bun script/consulta-gold.js                       # gold (ajustado): tipo, recusa, gênero/humor/andamento
+bun script/consulta-gold.js --train --categorias  # família → tipo, fora do ajuste, ajuste × retido, falsos "fora"
+bun script/consulta-bench.js                      # latência (interpretação, busca) e tamanho nos acervos reais
+npx playwright test tests/chat-semente.spec.js    # frases-semente reais do usuário (data/qgen/real/semente.jsonl)
+```
 
 ## Common Tasks
 
