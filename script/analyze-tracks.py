@@ -154,6 +154,8 @@ def analyze(args):
             'key': k, 'scale': scale, 'key_strength': _r(kstr, 2),
             'loud_db': _r(loud, 1), 'dyn': _r(dyn, 2), 'onset_rate': _r(onset_rate, 2),
         }
+        if not 30 <= bpm <= 300:  # degenerate tempo (e.g. 738.3 on near-silent clips): keep it, but say so
+            rec['bpm_suspeito'] = True
         for name, (model, classes) in _M.heads.items():
             avg = np.mean(model(emb), axis=0)
             if name in BINARY_HEADS:
