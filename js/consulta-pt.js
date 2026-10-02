@@ -211,7 +211,7 @@ const _consultaVazia = () => ({
 });
 
 // text -> structured query. `isKnownWord(w)` (optional): words that exist in the catalogue are never "corrected".
-function consultaInterpretar(raw, lex, isKnownWord) {
+function consultaInterpretar(raw, lex, isKnownWord, isNameWord) {
   const q = _consultaVazia();
   let t = _consultaNorm(raw);
   const all = t.split(' ').filter(Boolean);
@@ -239,8 +239,11 @@ function consultaInterpretar(raw, lex, isKnownWord) {
   const periodoAntes = /\b(19|20)\d{2}\b|\banos? \d|\bdecada|\bseculo\b/.test(t);
   const comConceito = periodoAntes || consultaVarrer(all, lex, isKnownWord).some(h => !(h.facet === 'humor' && h.id === 'romântico' && all.length < 3));
   const entidadeCedo = _consultaEntidade(raw, lex, true);
+  // A word that names something in the catalogue (an artist, a title: "elis", "pixinguinha") makes the sentence a search.
+  const nome = all.some(w => w.length >= 4 && isNameWord?.(w));
   for (const [cat, re] of [...CONSULTA_FORA_FORTE, ...(comConceito ? CONSULTA_FORA.filter(x => x[0] === 'contraditorio') : CONSULTA_FORA)]) {
     if (!re.test(t)) continue;
+    if (nome && (cat === 'conversa' || cat === 'vago')) continue;
     if (cat === 'biografia' && !entidadeCedo && !/\b(biografia|quando (nasceu|morreu|se formou)|onde nasceu|nome (verdadeiro|real)|faleceu|enterro)\b/.test(t)) continue;
     if (cat === 'conversa' && (all.length > 4 || /\b(samba|choro|rock|forro|jazz|mpb|anos?)\b/.test(t)) && !/^(oi|ola|eai|e ai)\b[^a-z]*$/.test(t)) continue;
     q.tipo = 'fora_do_dominio'; q.categoria_fora = cat; q.conf = 0.8;
@@ -354,13 +357,13 @@ function consultaInterpretar(raw, lex, isKnownWord) {
   const periodo = /\b(19|20)\d{2}\b|\banos? \d|\bdecada|\bseculo\b/.test(t);
   const musical = /\b(musicas?|album|albuns|disco|discos|faixas?|cancao|cancoes|artistas?|bandas?|cantor[a]?|cantora|som|sons|ouvir|tocar|toca|playlist|show|grupo|compositor|sambista|ritmo|batida|melodia|instrumento|gravad[oa]|acervo)\b/.test(t);
   const pergunta = /^(como|qual|quais|quem|onde|por ?que|o que|quanto|quantos|quantas|vai|me (ajuda|indica|diz|fala|conta|explica)|tem (algum|alguma|como)|da pra|posso|consigo|aceitam|preciso|quero (ver|saber|comprar|assistir|ler|fazer|aprender)|pode)\b/.test(t) || /\?\s*$/.test(raw.trim()) || /\b(quem|qual|quanto|onde|por que)\b/.test(t) || /^(dicas|ajuda|me da|me de)\b/.test(t);
-  if (!q.conf && !periodo && !musical && pergunta && all.length >= 3 && q.tipo === 'busca') {
+  if (!q.conf && !periodo && !musical && !nome && pergunta && all.length >= 3 && q.tipo === 'busca') {
     q.tipo = 'fora_do_dominio'; q.categoria_fora = 'clima/esporte/outros'; q.conf = 0.5;
     q.notas.push(['fora do alcance', 'pergunta sobre outro assunto: nada na frase fala de música, gênero, época, andamento ou humor', 'cultural']);
     return q;
   }
   const vagas = new Set(['alguma', 'algum', 'qualquer', 'um', 'uma', 'ai', 'me', 'escolhe', 'escolha', 'nem', 'sei', 'coisa', 'algo', 'musica', 'quero', 'surpresa', 'tanto', 'faz', 'musicas', 'o', 'a']);
-  if (!q.conf && q.resto.length && q.resto.length <= 4 && q.resto.every(w => vagas.has(w))) {
+  if (!q.conf && !nome && q.resto.length && q.resto.length <= 4 && q.resto.every(w => vagas.has(w))) {
     q.tipo = 'fora_do_dominio'; q.categoria_fora = 'vago'; q.conf = 0.3;
     q.notas.push(['pedido vago', 'sem época, gênero, humor, andamento nem nome para filtrar', 'cultural']);
   }
@@ -378,6 +381,7 @@ const _consultaMedia = a => (a.length ? a.reduce((s, x) => s + x, 0) / a.length 
 // `db`: the decoded catalogue (row i of the features = i-th track of db, albums in order).
 // `f`: decodeFeatures() result. Returns per-album features plus the per-acervo quantiles used for "alto/baixo".
 function consultaAgregar(db, f, onto) {
+  if (!f) return { porAlbum: new Map(), cortes: {}, bpmCortes: null, onto, nAnalisados: 0, generosMedidos: new Set(), semFeatures: true };
   const discogs = new Map(Object.entries(onto.discogs.mapa));
   const instMap = new Map();                                       // essentia name -> [pt-BR instrument ids]
   for (const i of onto.instrumentos) for (const e of i.essentia || []) instMap.set(e, [...(instMap.get(e) || []), i.id]);
@@ -457,23 +461,25 @@ function _consultaAndamento(agg, ag, id) {
   };
 }
 
+// Graded 0..1 where >= 0.5 means "satisfies the level": the further past the cut, the closer to 1 (ranking).
 function _consultaNivel(v, corte, nivel) {
-  if (nivel === 'alto') return v >= corte.alto ? 1 : Math.max(0, 1 - (corte.alto - v) / Math.max(corte.alto, 0.01));
-  if (nivel === 'baixo') return v <= corte.baixo ? 1 : Math.max(0, 1 - (v - corte.baixo) / Math.max(1 - corte.baixo, 0.01));
-  return v >= corte.baixo && v <= corte.alto ? 1 : 0.5;
+  if (nivel === 'alto') return v >= corte.alto ? 0.5 + 0.5 * (v - corte.alto) / Math.max(1 - corte.alto, 0.01) : 0.5 * Math.max(0, v / Math.max(corte.alto, 0.01));
+  if (nivel === 'baixo') return v <= corte.baixo ? 0.5 + 0.5 * (corte.baixo - v) / Math.max(corte.baixo, 0.01) : 0.5 * Math.max(0, 1 - (v - corte.baixo) / Math.max(1 - corte.baixo, 0.01));
+  return v >= corte.baixo && v <= corte.alto ? 0.75 : 0.25;
 }
 
 function _consultaHumor(agg, ag, id) {
   const h = agg.onto.humores.find(x => x.id === id);
   if (!h || !ag?.n || !h.medido || !Object.keys(h.sinais).length) return null;
-  let score = 1;
+  const graus = [];
   const det = [];
   for (const [k, nivel] of Object.entries(h.sinais)) {
-    const s = _consultaNivel(ag.p[k], agg.cortes[k], nivel);
-    score = Math.min(score, s);
+    graus.push(_consultaNivel(ag.p[k], agg.cortes[k], nivel));
     det.push(`${k} ${ag.p[k].toFixed(2)} (${nivel})`);
   }
-  return { ok: score >= 0.999, score, evid: [`humor ${id}`, `medido nas faixas: ${det.join(', ')}; "alto/baixo" são relativos ao acervo (30% mais altos/baixos)`, 'medido', 0.6] };
+  const ok = graus.every(g => g >= 0.5);
+  const score = graus.reduce((s, g) => s + g, 0) / graus.length;
+  return { ok, score, evid: [`humor ${id}`, `medido nas faixas: ${det.join(', ')}; "alto/baixo" = entre os 30% mais altos/baixos do acervo, com piso absoluto`, 'medido', Math.min(1, score)] };
 }
 
 function _consultaTexto(a, palavras) {
@@ -587,9 +593,22 @@ function consultaFiltrar(q, agg, albums, base) {
   };
   let hits = run([...duros, ...moles]);
   const relaxados = [];
-  if (!hits.length && moles.length && duros.length) {
-    hits = run(duros);
-    for (const c of moles) relaxados.push(`${c.neg ? 'sem ' : ''}${c.tipo}: ${c.id}`);
+  // Nothing matches all of it: drop text-only facets (largest subset that still matches), never a measured one.
+  for (let size = moles.length - 1; size >= 0 && !hits.length && moles.length; size--) {
+    if (size === 0 && !duros.length) break;
+    const combos = [];
+    const rec = (start, cur) => {
+      if (cur.length === size) { combos.push([...cur]); return; }
+      for (let k = start; k < moles.length; k++) { cur.push(moles[k]); rec(k + 1, cur); cur.pop(); }
+    };
+    rec(0, []);
+    for (const combo of combos) {
+      hits = run([...duros, ...combo]);
+      if (hits.length) {
+        for (const c of moles) if (!combo.includes(c)) relaxados.push(`${c.neg ? 'sem ' : ''}${c.tipo}: ${c.id}`);
+        break;
+      }
+    }
   }
   return { hits, relaxados };
 }
@@ -614,12 +633,12 @@ function consultaRelativo(relacao, refAlbum, agg, albums, base) {
     if (!ag?.n) continue;
     if (cmp) {
       const d = cmp(ag);
-      if (d >= passo) hits.push({ a, score: d / (passo * 4), evid: [`${relacao.replace('_', ' ')} que "${refAlbum.name}"`, `medido: ${relacao.includes('lento') || relacao.includes('animado') ? `BPM mediano ${ag.bpm} contra ${ref.bpm} da referência` : `diferença de ${d.toFixed(2)} na probabilidade média`}`, 'medido', 0.6] });
+      if (d >= passo) hits.push({ a, score: d / (passo * 4), evid: [[`${relacao.replace('_', ' ')} que "${refAlbum.name}"`, `medido: ${relacao.includes('lento') || relacao.includes('animado') ? `BPM mediano ${ag.bpm} contra ${ref.bpm} da referência` : `diferença de ${d.toFixed(2)} na probabilidade média`}`, 'medido', 0.6]] });
     } else {                                                        // parecido / contrario / mesma_epoca…
       const va = _consultaVetor(ag), vr = _consultaVetor(ref);
       const dist = Math.sqrt(va.reduce((s, x, i) => s + (x - vr[i]) ** 2, 0));
       const dentro = relacao === 'contrario' ? dist >= 0.9 : dist <= 0.35;
-      if (dentro) hits.push({ a, score: relacao === 'contrario' ? dist : 1 - dist, evid: [`${relacao === 'contrario' ? 'contrário de' : 'parecido com'} "${refAlbum.name}"`, `inferido: distância ${dist.toFixed(2)} no vetor andamento + humor + voz + acústica; aproximação sem os embeddings`, 'inferido', 0.4] });
+      if (dentro) hits.push({ a, score: relacao === 'contrario' ? dist : 1 - dist, evid: [[`${relacao === 'contrario' ? 'contrário de' : 'parecido com'} "${refAlbum.name}"`, `inferido: distância ${dist.toFixed(2)} no vetor andamento + humor + voz + acústica; aproximação sem os embeddings`, 'inferido', 0.4]] });
     }
   }
   return { hits: hits.sort((x, y) => y.score - x.score) };
@@ -635,3 +654,49 @@ function consultaEvidencias(q, agg, a, pre) {
 }
 
 const consultaRotuloConfianca = c => (c >= 0.7 ? 'alta' : c >= 0.4 ? 'média' : 'baixa');
+
+// ── browser: load the ontology and (when published) the audio features, once, on demand ────────────
+
+let _consultaEstado = null;       // { lex, onto, agg, f, semFeatures } once loaded; false when the ontology is unreachable
+let _consultaPromessa = null;
+
+async function _consultaBuscar(rel) {
+  for (const base of [APP_ROOT, `${SITE_ORIGIN}/`]) {
+    try { const r = await fetch(base + rel); if (r.ok) return r; } catch {}
+  }
+  return null;
+}
+
+async function _consultaGz(resp) { return JSON.parse(await new Response(resp.body.pipeThrough(new DecompressionStream('gzip'))).text()); }
+
+// Never throws: v0 keeps working when the data is not published (mirrors, ?acervo=<url>) or does not match the catalogue.
+function consultaCarregar() {
+  if (_consultaPromessa) return _consultaPromessa;
+  _consultaPromessa = (async () => {
+    try {
+      const ro = await _consultaBuscar('data/ontologia-musical.json');
+      if (!ro) return (_consultaEstado = false);
+      const onto = await ro.json();
+      const lex = consultaLexico(onto);
+      let f = null;
+      const alias = typeof activeAcervoKey !== 'undefined' ? activeAcervoKey : null;
+      const urls = [db?.meta?.features_url, alias && `data/${alias}-features.json.gz`, alias && `data/features/${alias}-features.json.gz`].filter(Boolean);
+      for (const u of urls) {
+        const r = /^https?:/.test(u) ? await fetch(u).catch(() => null) : await _consultaBuscar(u);
+        if (!r?.ok) continue;
+        try {
+          const keys = [];
+          for (const a of db.albums) for (const t of a.tracks) keys.push(`${a.path}/${t.file}`.normalize('NFC'));
+          f = decodeFeatures(await _consultaGz(r), keys);
+          break;
+        } catch (e) { console.warn('features ignoradas:', e.message); }   // FEATURES_CATALOG_MISMATCH: catalogue changed after the build
+      }
+      return (_consultaEstado = { lex, onto, f, agg: consultaAgregar(db, f, onto), semFeatures: !f });
+    } catch (e) {
+      console.warn('consulta indisponível:', e);
+      return (_consultaEstado = false);
+    }
+  })();
+  return _consultaPromessa;
+}
+const consultaPronta = () => _consultaEstado || null;

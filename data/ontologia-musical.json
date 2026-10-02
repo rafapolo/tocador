@@ -369,7 +369,8 @@
     "funk americano",
     "r&b",
     "rnb",
-    "disco"
+    "disco music",
+    "discoteca"
    ]
   },
   {
@@ -389,7 +390,6 @@
    "nome": "ambient",
    "pai": "música eletrônica",
    "apelidos": [
-    "ambiente",
     "drone",
     "new age"
    ]

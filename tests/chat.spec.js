@@ -19,6 +19,7 @@ async function boot(page, url = '/') {
   await page.route('**/uqt-albums.json.gz', gz);
   await page.route('**/homi-albums.json.gz', gz);
   await page.route('**/*-genres.json.gz', r => r.fulfill({ status: 404 }));
+  await page.route('**/*-features.json.gz', r => r.fulfill({ status: 404 }));
   await page.route('**/*.mp3', r => r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: fixtureMp3 }));
   await page.route('**/capa-min.jpg', r => r.fulfill({ status: 404 }));
   await page.route('**/report-error', r => r.fulfill({ status: 204 }));
@@ -31,9 +32,13 @@ async function openChat(page) {
   await expect(page.locator('#chat-panel')).toBeVisible();
 }
 
+// Answers are async now (the engine loads its ontology on first use): wait for the reply to land.
 async function ask(page, text) {
+  const n = await page.locator('.chat-msg.bot').count();
   await page.fill('#chat-input', text);
   await page.press('#chat-input', 'Enter');
+  if (text.trim()) await expect(page.locator('.chat-msg.bot')).toHaveCount(n + 1);
+
 }
 
 const lastBot = page => page.locator('.chat-msg.bot').last();

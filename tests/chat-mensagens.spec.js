@@ -6,13 +6,17 @@
 //   RECUSA             não é busca → recusa com clareza, sem resultados nem sugestão
 //   CMD                comando do player sem nada carregado → "Ainda não há nada carregado"
 //   QUIS(x)            nenhum resultado, mas oferece o chip "quis dizer x"
-// Casos que dependem da ontologia/áudio (M2) só rodam com CHAT_FASE=m2.
+// Casos que dependem da ontologia/áudio (M2) rodam por padrão; CHAT_FASE=v0 os ignora.
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
 
 const fixtureGz = fs.readFileSync(path.join(__dirname, 'fixtures', 'albums.json.gz'));
-const FASE_M2 = process.env.CHAT_FASE === 'm2';
+const featuresGz = fs.readFileSync(path.join(__dirname, 'fixtures', 'albums-features.json.gz'));
+const FASE_M2 = process.env.CHAT_FASE !== 'v0';          // motor v1 pronto: ligado por padrão; CHAT_FASE=v0 volta ao comportamento sem áudio
+// same-origin fetches (the features file) would go through the service worker and skip page.route
+test.use({ serviceWorkers: 'block' });
+
 
 async function boot(page) {
   await page.addInitScript(() => localStorage.setItem('tocador-browse-collapsed', 'true'));
@@ -20,6 +24,9 @@ async function boot(page) {
   await page.route('**/uqt-albums.json.gz', gz);
   await page.route('**/homi-albums.json.gz', gz);
   await page.route('**/*-genres.json.gz', r => r.fulfill({ status: 404 }));
+  await page.route('**/*-features.json.gz', r => (FASE_M2
+    ? r.fulfill({ status: 200, headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body: featuresGz })
+    : r.fulfill({ status: 404 })));
   await page.route('**/*.mp3', r => r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: Buffer.alloc(16) }));
   await page.route('**/capa-min.jpg', r => r.fulfill({ status: 404 }));
   await page.route('**/report-error', r => r.fulfill({ status: 204 }));
@@ -33,8 +40,6 @@ async function boot(page) {
 //  - parser: "70s", "1960 a 1969", "animada" (feminino), "qualquer coisa", continuação com "so"
 //  - decisão pendente: "sei la", "algo legal", "algo pra dormir" — palavras desconhecidas hoje dão "Não achei
 //    nenhum álbum"; só o que for qualidade conhecida ou nada reconhecível sugere ao acaso.
-const GAPS = new Set(['70s', '1960 a 1969', 'musica animada', 'qualquer coisa', 'sei la', 'algo legal', 'algo pra dormir',
-  'elis regina → so 1976', 'getz → so anos 60']);
 
 const SORTEIO = Symbol('sorteio'), SUGERE = Symbol('sugere'), VAZIO = Symbol('vazio'), RECUSA = Symbol('recusa'), CMD = Symbol('cmd');
 const QUIS = x => ({ quis: x });
@@ -154,12 +159,17 @@ function registrar(titulo, casos, rodar) {
     for (const [msg, esp] of casos) {
       const chave = Array.isArray(msg) ? msg.join(' → ') : msg;
       const nome = `${JSON.stringify(chave).slice(0, 60)}`;
-      (GAPS.has(chave) && !FASE_M2 ? test.fixme : test)(nome, async ({ page }) => { await boot(page); await rodar(page, msg, esp); });
+      test(nome, async ({ page }) => { await boot(page); await rodar(page, msg, esp); });
     }
   });
 }
 
-const ask = async (page, t) => { await page.fill('#chat-input', t); await page.press('#chat-input', 'Enter'); };
+const ask = async (page, t) => { const text = t;
+  const n = await page.locator('.chat-msg.bot').count();
+  await page.fill('#chat-input', t);
+  await page.press('#chat-input', 'Enter');
+  if (text.trim()) await expect(page.locator('.chat-msg.bot')).toHaveCount(n + 1);
+};
 const bot = page => page.locator('.chat-msg.bot').last();
 const titulos = async page => (await bot(page).locator('.chat-result .r-title').allTextContents()).sort();
 const gridCount = page => page.locator('.albums-grid .album-item').count();
@@ -207,7 +217,18 @@ registrar('A. períodos', PERIODO, async (page, m, e) => { await ask(page, m); a
 registrar('B. artista, título, palavra', PALAVRA, async (page, m, e) => { await ask(page, m); await verificar(page, e); });
 registrar('C. jeito real de escrever', REAL, async (page, m, e) => { await ask(page, m); await verificar(page, e); });
 registrar('D. erros de digitação', TYPOS, async (page, m, e) => { await ask(page, m); await verificar(page, e); });
-registrar('E. não entendeu → sugere 3 ao acaso', SUGERE_CASOS, async (page, m, e) => { await ask(page, m); await verificar(page, e); });
+// Com o motor v1 e os dados de áudio (CHAT_FASE=m2), as qualidades soltas passam a ser entendidas: respondem e explicam.
+const ENTENDIDAS_M2 = new Set(['algo calmo e triste', 'triste', 'lento', 'algo pra dormir', 'musica animada', 'romantico', 'dancante', 'algo agitado',
+  'tranquilo', 'alegre e feliz', 'nostalgico', 'melancolico', 'instrumental', 'cantado', 'eletronico', 'pesado', 'agressivo', 'festivo']);
+registrar('E. não entendeu → sugere 3 ao acaso', SUGERE_CASOS, async (page, m, e) => {
+  await ask(page, m);
+  if (FASE_M2 && ENTENDIDAS_M2.has(m)) {
+    await expect(bot(page)).not.toContainText('Não entendi direito');
+    await expect(bot(page).locator('details.chat-why')).toBeVisible();
+    return;
+  }
+  await verificar(page, e);
+});
 registrar('F. zero resultados', ZERO, async (page, m, e) => { await ask(page, m); await verificar(page, e); });
 registrar('G. comandos e não-busca', COMANDOS, async (page, m, e) => { await ask(page, m); await verificar(page, e); });
 registrar('H. continuação', CONTINUACAO, async (page, ms, e) => {
