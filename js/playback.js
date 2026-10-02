@@ -70,7 +70,7 @@ function renderMobileDrawer(album) {
   if (!album) {
     if (titleEl) titleEl.textContent = '';
     if (metaEl)  metaEl.textContent  = '';
-    if (listEl)  listEl.replaceChildren();
+    if (listEl)  { listEl.replaceChildren(); renderTrackFilterNote(listEl, null); }
     return;
   }
 
@@ -80,6 +80,7 @@ function renderMobileDrawer(album) {
   if (!listEl) return;
 
   listEl.replaceChildren(buildTrackItemsFragment(album.tracks, album.artists));
+  renderTrackFilterNote(listEl, album.tracks);
 }
 
 function syncDrawerPlayingState() {

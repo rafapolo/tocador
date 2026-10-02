@@ -2303,5 +2303,9 @@ audio {
 
 .ex-tab[hidden] { display: none; }
 
-.track-item.filtered-out { opacity: 0.35; cursor: not-allowed; }
+/* Apaga só o conteúdo: opacity no <li> também apagava a borda e os separadores ficavam desiguais. */
+.track-item.filtered-out { cursor: not-allowed; }
+.track-item.filtered-out > * { opacity: 0.35; }
 .track-item.filtered-out:hover { background: none; }
+.track-filter-note { margin: 0; padding: 8px 16px; font-size: 0.75rem; line-height: 1.4; color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); }
+.track-filter-note button { background: none; border: 0; padding: 0; font: inherit; color: var(--color-accent); text-decoration: underline; cursor: pointer; }

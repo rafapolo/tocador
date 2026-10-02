@@ -144,6 +144,7 @@ function buildTrackItemsFragment(tracks, albumArtists) {
       item.setAttribute('aria-disabled', 'true');
       item.setAttribute('tabindex', '-1');
       item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title} (fora do filtro)`);
+      item.title = 'Fora do filtro do Explorar: não toca';
     }
 
     const artistName = track.artists && track.artists !== albumArtists ? track.artists : '';
@@ -166,6 +167,21 @@ function buildTrackItemsFragment(tracks, albumArtists) {
   return frag;
 }
 
+// Com o Explorar filtrando por faixa, uma linha antes da lista diz quantas tocam e por que as outras estão apagadas.
+function renderTrackFilterNote(listEl, tracks) {
+  const prev = listEl.previousElementSibling;
+  let note = prev?.classList.contains('track-filter-note') ? prev : null;
+  const fora = trackFilter && tracks ? tracks.filter(t => !trackAllowed(t)).length : 0;
+  if (!fora) { note?.remove(); return; }
+  if (!note) { note = document.createElement('p'); note.className = 'track-filter-note'; listEl.before(note); }
+  const dentro = tracks.length - fora;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'limpar filtro';
+  btn.addEventListener('click', () => { if (typeof explorarLimparTudo === 'function') explorarLimparTudo(); });
+  note.replaceChildren(`${dentro} de ${tracks.length} faixas passam no filtro do Explorar; as apagadas são puladas. `, btn);
+}
+
 function syncTrackPlayingState(container, tracks) {
   container.querySelectorAll('[data-track-idx]').forEach(item => {
     const isPlaying = tracks[parseInt(item.dataset.trackIdx)] === currentTrack;
@@ -181,6 +197,7 @@ function renderTrackList() {
   if (!selectedAlbum) {
     tracksPanel.classList.add('hidden');
     container.replaceChildren();
+    renderTrackFilterNote(container, null);
     renderedAlbum = null;
     return;
   }
@@ -195,6 +212,7 @@ function renderTrackList() {
 
   tracksPanel.scrollTop = 0;
   container.replaceChildren(buildTrackItemsFragment(selectedAlbum.tracks, selectedAlbum.artists));
+  renderTrackFilterNote(container, selectedAlbum.tracks);
   renderedAlbum = selectedAlbum;
   container.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
