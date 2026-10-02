@@ -138,6 +138,13 @@ function buildTrackItemsFragment(tracks, albumArtists) {
     item.setAttribute('tabindex', '0');
     item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title}`);
     if (currentTrack === track) { item.classList.add('playing'); item.setAttribute('aria-current', 'true'); }
+    if (!trackAllowed(track)) {
+      // Fora do filtro do Explorar: continua listada, mas não toca nem entra na sequência.
+      item.classList.add('filtered-out');
+      item.setAttribute('aria-disabled', 'true');
+      item.setAttribute('tabindex', '-1');
+      item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title} (fora do filtro)`);
+    }
 
     const artistName = track.artists && track.artists !== albumArtists ? track.artists : '';
     const artistLabel = artistName ? `<div class="track-artist">${artistLinksHTML(artistName)}</div>` : '';

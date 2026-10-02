@@ -1,14 +1,14 @@
 // Painel "Explorar": filtra os álbuns por características de áudio (andamento, dança, clima, timbre).
 // Classic script: shares ui.js's global scope. Loaded after browse.js and acervo-features.js; everything runs at call time.
 //
-// Os valores por álbum vêm das features por faixa (<acervo>-features.json.gz): média das faixas analisadas
-// (mediana para o andamento). O resultado vai para a grade por `activeAlbumSet`, como uma faceta a mais.
+// As features são por faixa (<acervo>-features.json.gz). Uma faixa passa se todos os sliders a aceitam; o álbum aparece
+// na grade se ao menos uma faixa passa (`activeAlbumSet`) e as demais faixas dele ficam desativadas (`trackFilter`).
 // data/resumo-acervo.json só entra no cabeçalho (totais do acervo).
 
 let _exPanel, _exLayout, _exBody, _exBtn, _exSearch, _exApply;
 let _exCarga = null;              // Promise do carregamento do acervo ativo
 let _exDb = null;                 // db a que a carga se refere
-let _exDados = null;              // { n, vals: {chave: Float32Array}, idx: Map<path, i>, analisados, resumo }
+let _exDados = null;              // { f, n, analisados, faixasAnalisadas, resumo }
 let _exFiltros = {};              // chave -> [lo, hi] (só os que estão fora do padrão)
 let _exVoz = 'any';               // 'any' | 'com' | 'sem'
 let _exQuery = '';
@@ -71,24 +71,20 @@ function _exCarregar() {
       } catch (e) { console.warn('features ignoradas:', e.message); }
     }
     if (!f) return null;
-    const n = db.albums.length;
-    const vals = {};
-    for (const k of ['bpm', ...EX_PROBS]) vals[k] = new Float32Array(n).fill(NaN);
-    const idx = new Map();
+    // A linha de features é por faixa: marca cada faixa do catálogo com a sua (`_row`), que as faixas da
+    // grade alcançam por `track.src._row`. Um álbum só vira "analisado" se tiver ao menos uma faixa analisada.
     let row = 0, analisados = 0;
-    db.albums.forEach((a, i) => {
-      idx.set(a.path.normalize('NFC'), i);
-      const rows = [];
-      for (let k = 0; k < a.tracks.length; k++, row++) if (f.has(row)) rows.push(row);
-      if (!rows.length) return;
-      analisados++;
-      vals.bpm[i] = _exMediana(rows.map(r => f.bpm[r]));
-      for (const k of EX_PROBS) vals[k][i] = (rows.reduce((s, r) => s + f[k][r], 0) / rows.length / 255) * 100;
-    });
+    for (const a of db.albums) {
+      let tem = false;
+      for (const t of a.tracks) { t._row = row; if (f.has(row)) tem = true; row++; }
+      if (tem) analisados++;
+    }
+    let faixasAnalisadas = 0;
+    for (let r = 0; r < f.n; r++) if (f.has(r)) faixasAnalisadas++;
     const rr = await _exBuscar('data/resumo-acervo.json');
     let resumo = null;
     try { resumo = (await rr?.json())?.acervos?.[key]?.catalogo || null; } catch { /* cabeçalho é opcional */ }
-    return { n, vals, idx, analisados, resumo };
+    return { f, n: db.albums.length, analisados, faixasAnalisadas, resumo };
   })();
   return _exCarga;
 }
@@ -104,14 +100,22 @@ function _exAtivos() {
   return out;
 }
 
-function _exPassa(i) {
-  const v = _exDados.vals;
+// Valor de uma característica numa faixa (linha r): probabilidades em 0–100, andamento em bpm.
+function _exValor(k, r) {
+  const f = _exDados.f;
+  return k === 'bpm' ? f.bpm[r] : (f[k][r] * 100) / 255;
+}
+
+// Faixa sem análise nunca passa quando há filtro.
+function _exPassaFaixa(r) {
+  const f = _exDados.f;
+  if (r === undefined || !f.has(r)) return false;
   for (const k in _exFiltros) {
-    const x = v[k][i], [lo, hi] = _exFiltros[k];
-    if (!(x >= lo && x <= hi)) return false;      // NaN (sem análise) também cai fora
+    const x = _exValor(k, r), [lo, hi] = _exFiltros[k];
+    if (x < lo || x > hi) return false;
   }
   if (_exVoz !== 'any') {
-    const x = v.voice[i];
+    const x = _exValor('voice', r);
     if (!(_exVoz === 'com' ? x >= 50 : x < 50)) return false;
   }
   return true;
@@ -131,15 +135,25 @@ function _exRotuloAtivo(d) {
   return `${d.nome} ${_exFaixaTexto(d, lo, hi)}`;
 }
 
+// A lista de faixas do álbum aberto (e a da gaveta mobile) mostra as faixas fora do filtro desativadas.
+function _exRefazerFaixas() {
+  if (!selectedAlbum) return;
+  renderedAlbum = null;
+  renderTrackList();
+  renderMobileDrawer(selectedAlbum);
+}
+
 // A contagem do rodapé acompanha o arrasto na hora; a grade só troca quando o arrasto dá uma pausa
 // (e sem a animação de entrada), senão os álbuns piscam a cada passo do slider.
 function _exCalcular() {
   const set = new Set();
+  let faixas = 0;
   for (const a of albums) {
-    const i = _exDados.idx.get(a.path.normalize('NFC'));
-    if (i !== undefined && _exPassa(i)) set.add(a);
+    let n = 0;
+    for (const t of a.tracks) if (_exPassaFaixa(t.src._row)) n++;
+    if (n) { set.add(a); faixas += n; }
   }
-  return set;
+  return { set, faixas };
 }
 
 function _exAplicar(quiet) {
@@ -147,13 +161,16 @@ function _exAplicar(quiet) {
   if (!_exDados) return;
   const ativos = _exAtivos();
   if (!ativos.length) {
+    trackFilter = null;
     if (activeAlbumSet) { activeAlbumSet = null; activeAlbumSetLabel = ''; filterAlbums(quiet); }
   } else {
     resetFacets('features');
-    activeAlbumSet = _exCalcular();
+    activeAlbumSet = _exCalcular().set;
+    trackFilter = t => _exPassaFaixa(t.src._row);
     activeAlbumSetLabel = ativos.length === 1 ? _exRotuloAtivo(ativos[0]) : `${ativos.length} características`;
     filterAlbums(quiet);
   }
+  _exRefazerFaixas();
   _exAtualizarRodape();
 }
 
@@ -161,13 +178,16 @@ function _exAgendar(imediato) {
   _exAtualizarUI();
   clearTimeout(_exTimer);
   if (imediato) { _exAplicar(false); return; }
-  _exAtualizarRodape(true);
+  _exAtualizarRodape();
   _exTimer = setTimeout(() => _exAplicar(true), 160);
 }
 
 // Chamado por resetFacets() quando outra faceta passa a mandar na grade.
 function explorarReset() {
   clearTimeout(_exTimer);
+  const tinha = !!trackFilter;
+  trackFilter = null;
+  if (tinha) _exRefazerFaixas();
   _exFiltros = {};
   _exVoz = 'any';
   if (_exDados) { _exSincronizar(); _exAtualizarUI(); _exAtualizarRodape(); }
@@ -188,12 +208,11 @@ function _exEl(tag, cls, txt) {
 }
 
 function _exSlider(d) {
-  const arr = _exDados.vals[d.k];
   const bins = new Array(EX_BINS).fill(0);
   const todos = [];
-  for (let i = 0; i < arr.length; i++) {
-    const x = arr[i];
-    if (x !== x) continue;
+  for (let r = 0; r < _exDados.f.n; r++) {
+    if (!_exDados.f.has(r)) continue;
+    const x = _exValor(d.k, r);
     todos.push(x);
     const b = Math.floor(((Math.min(Math.max(x, d.min), d.max) - d.min) / (d.max - d.min)) * EX_BINS);
     bins[Math.min(EX_BINS - 1, b)]++;
@@ -261,9 +280,8 @@ function _exConstruir() {
   _exCtl = {};
   const d = _exDados;
   const cab = _exEl('div', 'ex-resumo');
-  const faixas = d.resumo?.faixas_analisadas;
-  cab.textContent = `${d.analisados.toLocaleString('pt-BR')} de ${d.n.toLocaleString('pt-BR')} álbuns com análise de áudio` +
-    (faixas ? ` · ${faixas.toLocaleString('pt-BR')} faixas` : '');
+  cab.textContent = `${d.analisados.toLocaleString('pt-BR')} de ${d.n.toLocaleString('pt-BR')} álbuns com análise de áudio · ` +
+    `${d.faixasAnalisadas.toLocaleString('pt-BR')} faixas`;
   const chips = _exEl('div', 'ex-chips');
   chips.id = 'explorar-chips';
   _exBody.append(cab, chips);
@@ -326,13 +344,15 @@ function _exAtualizarUI() {
   }
 }
 
-function _exAtualizarRodape(vivo) {
+function _exAtualizarRodape() {
   if (!_exApply) return;
   const ativos = _exAtivos().length;
   if (!_exDados) { _exApply.hidden = true; return; }
   _exApply.hidden = false;
-  const n = !ativos ? null : vivo ? _exCalcular().size : activeAlbumSet ? activeAlbumSet.size : null;
-  _exApply.textContent = ativos && n !== null ? `ver ${n.toLocaleString('pt-BR')} álbum${n === 1 ? '' : 's'}` : 'ver todos os álbuns';
+  const c = !ativos ? null : _exCalcular();
+  const n = c ? c.set.size : null;
+  const pl = (x, um, varios) => `${x.toLocaleString('pt-BR')} ${x === 1 ? um : varios}`;
+  _exApply.textContent = c ? `ver ${pl(n, 'álbum', 'álbuns')} · ${pl(c.faixas, 'faixa', 'faixas')}` : 'ver todos os álbuns';
 }
 
 function _exFiltrarGrupos() {

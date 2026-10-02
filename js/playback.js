@@ -132,22 +132,30 @@ function updateNowPlaying() {
 function playNext() {
   if (shuffleOn) {
     if (!albums.length) return;
-    // Avoid flatMap allocation: pick a random album (weighted by track count), then a random track.
-    // Falls back to retry if the single track selected is currentTrack (rare; at most 1 retry).
     let nextAlbum, track;
-    const totalTracks = albums.reduce((s, a) => s + a.tracks.length, 0);
-    if (totalTracks <= 1) return;
-    let attempts = 0;
-    do {
-      let r = Math.floor(Math.random() * totalTracks);
-      for (let ai = 0; ai < albums.length; ai++) {
-        const tlen = albums[ai].tracks.length;
-        if (r < tlen) { nextAlbum = albums[ai]; track = albums[ai].tracks[r]; break; }
-        r -= tlen;
-      }
-      attempts++;
-    } while (track === currentTrack && attempts < 3);
-    if (track === currentTrack) return;
+    if (trackFilter) {
+      // Explorar is filtering: shuffle only among the tracks it lets through, inside the albums on the grid.
+      const pool = [];
+      for (const a of filteredAlbums) for (const t of a.tracks) if (t !== currentTrack && trackAllowed(t)) pool.push([a, t]);
+      if (!pool.length) return;
+      [nextAlbum, track] = pool[Math.floor(Math.random() * pool.length)];
+    } else {
+      // Avoid flatMap allocation: pick a random album (weighted by track count), then a random track.
+      // Falls back to retry if the single track selected is currentTrack (rare; at most 1 retry).
+      const totalTracks = albums.reduce((s, a) => s + a.tracks.length, 0);
+      if (totalTracks <= 1) return;
+      let attempts = 0;
+      do {
+        let r = Math.floor(Math.random() * totalTracks);
+        for (let ai = 0; ai < albums.length; ai++) {
+          const tlen = albums[ai].tracks.length;
+          if (r < tlen) { nextAlbum = albums[ai]; track = albums[ai].tracks[r]; break; }
+          r -= tlen;
+        }
+        attempts++;
+      } while (track === currentTrack && attempts < 3);
+      if (track === currentTrack) return;
+    }
     if (nextAlbum !== selectedAlbum) {
       selectedAlbum = nextAlbum;
       renderedAlbum = null;
@@ -164,10 +172,12 @@ function playNext() {
   if (!selectedAlbum || !currentTrack) return;
   const tracks = selectedAlbum.tracks;
   const idx = tracks.indexOf(currentTrack);
-  if (idx < tracks.length - 1) {
-    playTrack(tracks[idx + 1]);
+  const next = tracks.find((t, i) => i > idx && trackAllowed(t));
+  if (next) {
+    playTrack(next);
   } else if (repeatMode === 'all') {
-    playTrack(tracks[0]);
+    const first = tracks.find(trackAllowed);
+    if (first) playTrack(first);
   }
 }
 
@@ -181,6 +191,8 @@ function playPrevious() {
     return;
   }
   const idx = selectedAlbum.tracks.indexOf(currentTrack);
-  if (idx > 0) playTrack(selectedAlbum.tracks[idx - 1]);
+  let prev = null;
+  for (let i = idx - 1; i >= 0; i--) if (trackAllowed(selectedAlbum.tracks[i])) { prev = selectedAlbum.tracks[i]; break; }
+  if (prev) playTrack(prev);
   else if (audio) audio.currentTime = 0;
 }

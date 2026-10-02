@@ -86,6 +86,8 @@ let activeDecade = null;
 let activeYear = 0;
 let activeAlbumSet = null;      // Set of album objects chosen by the Explorar panel (audio features)
 let activeAlbumSetLabel = '';
+let trackFilter = null;         // (track) => bool while Explorar is filtering: tracks it rejects are shown disabled and skipped
+const trackAllowed = t => !trackFilter || trackFilter(t);
 let searchQuery = '';
 let shuffleOn = false;
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
@@ -321,6 +323,7 @@ function buildAlbums() {
         album: album.title, artists: trackArtist, year: album.year,
         titleLower: fold(track.title),
         artistsLower: fold(trackArtist),
+        src: track,              // catalog track (carries `_row` once the audio features load)
       };
     });
     const genre = genreData?.[album.path.normalize('NFC')] ?? null;
@@ -437,7 +440,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (album.tracks.length > 0) {
       const audio = document.getElementById('audio');
       if (audio.paused) {
-        currentTrack = album.tracks[0];
+        currentTrack = album.tracks.find(trackAllowed) ?? album.tracks[0];
         updateNowPlaying();
         const newSrc = `${BASE_URL}/${currentTrack.file}`;
         if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
@@ -488,13 +491,15 @@ document.addEventListener('DOMContentLoaded', async function () {
   // Delegated click: desktop track list
   document.querySelector('#track-list').addEventListener('click', e => {
     const item = e.target.closest('[data-track-idx]');
-    if (item && selectedAlbum) playTrack(selectedAlbum.tracks[parseInt(item.dataset.trackIdx)]);
+    const tr = item && selectedAlbum?.tracks[parseInt(item.dataset.trackIdx)];
+    if (tr && trackAllowed(tr)) playTrack(tr);
   });
 
   // Delegated click: mobile drawer track list
   document.querySelector('#drawer-track-list')?.addEventListener('click', e => {
     const item = e.target.closest('[data-track-idx]');
-    if (item && selectedAlbum) playTrack(selectedAlbum.tracks[parseInt(item.dataset.trackIdx)]);
+    const tr = item && selectedAlbum?.tracks[parseInt(item.dataset.trackIdx)];
+    if (tr && trackAllowed(tr)) playTrack(tr);
   });
 
 

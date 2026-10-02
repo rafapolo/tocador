@@ -2296,8 +2296,12 @@ audio {
 .ex-range input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--color-text); }
 .ex-radios { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8rem; }
 .ex-radio { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-.explorar-foot { padding: 10px 14px; border-top: 1px solid var(--color-border); }
+.explorar-foot { display: none; padding: 10px 14px; border-top: 1px solid var(--color-border); }
+@media (max-width: 768px) { .explorar-foot { display: block; } }
 .explorar-apply { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid currentColor; background: none; color: inherit; font: inherit; font-size: 0.85rem; cursor: pointer; }
 .explorar-apply[hidden] { display: none; }
 
 .ex-tab[hidden] { display: none; }
+
+.track-item.filtered-out { opacity: 0.35; cursor: not-allowed; }
+.track-item.filtered-out:hover { background: none; }

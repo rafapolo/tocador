@@ -9,11 +9,14 @@ const featuresGz = fx('albums-features.json.gz');
 // O service worker buscaria os arquivos reais e ignoraria o page.route.
 test.use({ serviceWorkers: 'block' });
 
-async function boot(page, { semFeatures = false } = {}) {
+// Features em que as faixas de um mesmo álbum divergem (ver fixtures/build-features-mistas.js).
+const mistasFile = fx('albums-features-mistas.json.gz');
+
+async function boot(page, { semFeatures = false, mistas = false } = {}) {
   await page.addInitScript(() => localStorage.clear());
   const gz = body => ({ status: 200, headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body });
   for (const f of ['uqt-albums.json.gz', 'homi-albums.json.gz']) await page.route(`**/${f}`, r => r.fulfill(gz(albumsGz)));
-  await page.route('**/*-features.json.gz', r => semFeatures ? r.fulfill({ status: 404 }) : r.fulfill(gz(featuresGz)));
+  await page.route('**/*-features.json.gz', r => semFeatures ? r.fulfill({ status: 404 }) : r.fulfill(gz(mistas ? mistasFile : featuresGz)));
   await page.route('**/resumo-acervo.json', r => r.fulfill({ status: 404 }));
   await page.route('**/*-genres.json.gz', r => r.fulfill({ status: 404 }));
   await page.route('**/*.mp3', r => r.fulfill({ status: 200, body: Buffer.alloc(0) }));
@@ -87,7 +90,7 @@ test('mover um slider filtra a grade, vira chip e limpa', async ({ page }) => {
   await expect(page.locator('.ex-chip').first()).toContainText('Andamento 100 bpm+');
   await expect(page.locator('#clear-all-filters')).toBeVisible();
   const n = parseInt(await page.locator('#search-count').textContent(), 10);
-  await expect(page.locator('#explorar-apply')).toContainText(`ver ${n} álbum`);
+  await expect(page.locator('#explorar-apply')).toContainText(`ver ${n} álbun`);
   await page.locator('.ex-chip', { hasText: 'Andamento' }).click();
   await expect(page.locator('#search-count')).not.toHaveClass(/visible/);
   await expect(page.locator('.ex-chip')).toHaveCount(0);
@@ -120,6 +123,32 @@ test('arrastar não dispara a animação de troca da grade (piscava a cada passo
   for (const v of [60, 80, 100, 110, 120]) await ajustar(page, 'Andamento', 'lo', v);
   await expect(page.locator('#search-count')).toHaveClass(/visible/);
   expect(await page.evaluate(() => window.__swaps)).toBe(0);
+});
+
+test('faixas fora do filtro ficam desativadas no álbum e não tocam', async ({ page }) => {
+  await boot(page, { mistas: true });
+  await abrir(page);
+  await ajustar(page, 'Andamento', 'lo', 120);
+  await expect(page.locator('#search-count')).toHaveClass(/visible/);
+  const itens = page.locator('.album-item');
+  const total = await itens.count();
+  let achou = false;
+  for (let i = 0; i < total && !achou; i++) {
+    await itens.nth(i).click();
+    await page.waitForSelector('#track-list .track-item');
+    const fora = await page.locator('#track-list .track-item.filtered-out').count();
+    const dentro = await page.locator('#track-list .track-item:not(.filtered-out)').count();
+    expect(dentro).toBeGreaterThan(0);               // o álbum só está na grade porque tem faixa dentro do filtro
+    if (fora > 0) {
+      achou = true;
+      await expect(page.locator('#track-list .track-item.filtered-out').first()).toHaveAttribute('aria-disabled', 'true');
+      await page.locator('#track-list .track-item.filtered-out').first().click({ force: true });
+      await expect(page.locator('#track-list .track-item.playing.filtered-out')).toHaveCount(0);
+    }
+  }
+  expect(achou).toBe(true);
+  await page.locator('.ex-chip-limpar').click();
+  await expect(page.locator('#track-list .track-item.filtered-out')).toHaveCount(0);
 });
 
 test('filtros combinam por E e a faixa impossível esvazia a grade', async ({ page }) => {
