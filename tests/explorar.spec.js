@@ -44,13 +44,13 @@ test('abre e fecha, trocando com o painel de navegação', async ({ page }) => {
   await expect(page.locator('#explorar-panel')).toBeHidden();
   await abrir(page);
   await expect(page.locator('#browse-panel')).toBeHidden();
-  await expect(page.locator('#explorar-panel .ex-tab.active')).toContainText('Explorar');
+  await expect(page.locator('#explorar-panel .ex-tab.active')).toContainText('Pegada');
   await page.locator('#explorar-panel [data-ex-tab="artists"]').click();
   await expect(page.locator('#explorar-panel')).toBeHidden();
   await expect(page.locator('#browse-panel')).toBeVisible();
 });
 
-test('a aba Explorar fica em browse-tabs e as abas do painel voltam à lista', async ({ page }) => {
+test('a aba Pegada fica em browse-tabs e as abas do painel voltam à lista', async ({ page }) => {
   await boot(page);
   await expect(page.locator('.browse-tabs #btn-explorar')).toBeVisible();
   await expect(page.locator('.header-stats #btn-explorar')).toHaveCount(0);
@@ -248,7 +248,7 @@ test('faixas fora do filtro ficam desativadas no álbum, com legenda, e não toc
   await expect(page.locator('.track-filter-note')).toHaveCount(0);
 });
 
-test('o "limpar filtro" da legenda do álbum tira os filtros do Explorar', async ({ page }) => {
+test('o "limpar filtro" da legenda do álbum tira os filtros da Pegada', async ({ page }) => {
   await boot(page, { mistas: true });
   await abrir(page);
   await ajustar(page, 'Andamento', 'lo', 120);

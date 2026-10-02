@@ -139,12 +139,12 @@ function buildTrackItemsFragment(tracks, albumArtists) {
     item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title}`);
     if (currentTrack === track) { item.classList.add('playing'); item.setAttribute('aria-current', 'true'); }
     if (!trackAllowed(track)) {
-      // Fora do filtro do Explorar: continua listada, mas não toca nem entra na sequência.
+      // Fora do filtro da Pegada: continua listada, mas não toca nem entra na sequência.
       item.classList.add('filtered-out');
       item.setAttribute('aria-disabled', 'true');
       item.setAttribute('tabindex', '-1');
       item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title} (fora do filtro)`);
-      item.title = 'Fora do filtro do Explorar: não toca';
+      item.title = 'Fora do filtro da Pegada: não toca';
     }
 
     const artistName = track.artists && track.artists !== albumArtists ? track.artists : '';
@@ -179,7 +179,7 @@ function renderTrackFilterNote(listEl, tracks) {
   btn.type = 'button';
   btn.textContent = 'limpar filtro';
   btn.addEventListener('click', () => { if (typeof explorarLimparTudo === 'function') explorarLimparTudo(); });
-  note.replaceChildren(`${dentro} de ${tracks.length} faixas passam no filtro do Explorar; as apagadas são puladas. `, btn);
+  note.replaceChildren(`${dentro} de ${tracks.length} faixas passam no filtro da Pegada; as apagadas são puladas. `, btn);
 }
 
 function syncTrackPlayingState(container, tracks) {
