@@ -1142,7 +1142,8 @@ async function handleCatalogDecodeError(err, container) {
         if (!e.metaKey && !e.ctrlKey && !e.altKey) toggleBrowsePanel();
         break;
       case 'e':
-        if (!e.metaKey && !e.ctrlKey && !e.altKey) toggleExplorar();
+        // preventDefault: o painel foca a própria busca, que receberia o "e" digitado.
+        if (!e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); toggleExplorar(); }
         break;
       case 'g':
         if (!e.metaKey && !e.ctrlKey && !e.altKey && genreData) {
