@@ -191,11 +191,12 @@ describe('recusa das negativas (M5)', () => {
     ['toca a música que vai ganhar o Grammy de 2040', 'impossivel'], ['o disco que o Cartola gravaria hoje', 'impossivel'],
     ['algo grave e agudo ao mesmo tempo', 'contraditorio'], ['samba sem samba', 'contraditorio'],
     ['sugestão de modelo em pt-br menor no navegador?', 'produto'], ['play something sad', 'idioma'],
+    ['mais melodico que legiao urbana', 'nao_medido'], ['mais bonito que Construção', 'nao_medido'],
     ['qualquer coisa', 'vago'], ['sei lá, manda algo', 'vago'],
   ])('%s → %s', (frase, esperado) => { expect(cat(frase)).toBe(esperado); });
 
   test('buscas parecidas NÃO são recusadas', () => {
-    for (const f of ['samba lento dos anos 60', 'violão dedilhado, folk de 2012', 'samba de 1987 com letra sobre broa', 'cartola',
+    for (const f of ['mais lento que legiao urbana', 'mais um pouco de samba', 'samba lento dos anos 60', 'violão dedilhado, folk de 2012', 'samba de 1987 com letra sobre broa', 'cartola',
       'Desafinado, só que mais calmo', 'Beth Carvalho sem letra, só instrumental', 'rap boom bap', 'mpb melancólica', 'pra ver o mar em silêncio'])
       expect(Q(f).tipo).not.toBe('fora_do_dominio');
   });

@@ -100,6 +100,7 @@ function chatExamples({ cat, q, it, raw, zero } = {}) {
   else if (q?.humor?.length && audio) ex = [`algo ${q.humor[0]} dos anos 70`, 'samba lento'];
   else if (q?.generos?.length) ex = [`${q.generos[0]} anos 70`, `${q.generos[0]} lento`];
   else if (q?.andamento && audio) ex = [`samba ${q.andamento}`, 'algo calmo'];
+  else if (cat === 'nao_medido') ex = audio ? [`mais lento que ${q.naoMedido.ref}`, `mais calmo que ${q.naoMedido.ref}`, `parecido com ${q.naoMedido.ref}`] : [q.naoMedido.ref, 'anos 70'];
   else if (cat === 'letra') ex = [artist ? `${artist} anos 70` : 'anos 70', audio ? 'samba lento' : 'me surpreenda'];
   else if (cat === 'biografia') ex = [artist || 'anos 70', 'anos 70'];
   else if (cat === 'tecnica_musical') ex = audio ? ['choro com bandolim', 'violão e voz'] : [artist || 'anos 70', 'anos 70'];
@@ -536,11 +537,12 @@ const CHAT_REFUSALS = {
   produto: 'Isso é sobre o chat, não sobre a música.',
   idioma: 'Entendo melhor português.',
   conversa: 'Oi! Eu busco e toco música do acervo.',
+  nao_medido: 'Ainda não meço isso no áudio.',
 };
 
 // One answer for a request the archive cannot do, with the engine's reasons in "por quê?".
 function chatRefuse(bot, q, it, raw) {
-  bot.appendChild(chatEl('p', null, CHAT_REFUSALS[q.categoria_fora] || 'Isso o acervo não faz.'));
+  bot.appendChild(chatEl('p', null, q.naoMedido ? `Ainda não meço "${q.naoMedido.adj}" no áudio. Comparo andamento, calma, peso, som acústico, dançável e humor.` : (CHAT_REFUSALS[q.categoria_fora] || 'Isso o acervo não faz.')));
   bot.appendChild(chatTryChips({ cat: q.categoria_fora, q, it, raw }));
   if (q.notas.length) {
     const d = chatEl('details', 'chat-why');

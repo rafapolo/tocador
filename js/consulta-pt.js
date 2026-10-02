@@ -294,6 +294,14 @@ function consultaInterpretar(raw, lex, isKnownWord, isNameWord) {
     return q;
   }
 
+  // "mais melódico que X": a comparison on a quality we do not measure. Never fall back to searching X as plain text
+  // (that returned only X, the very album being compared against).
+  const mNaoMedido = t.match(/\bmais (\w+) (?:que|q) (.+)$/);
+  if (mNaoMedido && !CONSULTA_COMPARATIVOS[mNaoMedido[1]] && !lex.map.has(mNaoMedido[1]) && !/^(de|do|da|um|uma|uns|umas|o|a|os|as|tarde|cedo|nada|isso|nunca)$/.test(mNaoMedido[1])) {
+    q.tipo = 'fora_do_dominio'; q.categoria_fora = 'nao_medido'; q.conf = 0.7; q.naoMedido = { adj: mNaoMedido[1], ref: mNaoMedido[2] };
+    q.notas.push(['comparação não medida', `não há medida de "${mNaoMedido[1]}" no áudio; comparo andamento, calma, peso, acústico, dançável, tristeza e alegria`, 'medido']);
+    return q;
+  }
   // 2. reference ("parecido com X", "o contrário de X") and comparison ("mais lento que X")
   let main = t, refTexto = null, relacao = null;
   const mc = t.match(CONSULTA_CONTRARIO_RE);

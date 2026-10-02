@@ -219,3 +219,10 @@ test('exemplos por contexto: humor pede humor com época', async ({ page }) => {
   await expect(bot(page)).toContainText('Não achei nenhum álbum');
   expect(await chips(page)).toContain('samba');
 });
+
+test('comparação com qualidade que não medimos: recusa dita e nunca devolve só a referência', async ({ page }) => {
+  await ask(page, 'mais melodico que Samba Animado');
+  await expect(bot(page)).toContainText('Ainda não meço "melodico" no áudio');
+  expect(await titulos(page)).toEqual([]);
+  expect(await chips(page)).toContain('mais lento que samba animado');
+});
