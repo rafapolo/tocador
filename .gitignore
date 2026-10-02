@@ -34,3 +34,6 @@ tasks/
 __pycache__/
 /data/genres/
 /data/qgen/
+
+# M4 text encoder: weights, index and report (regenerate with script/m4-train.py)
+/data/modelo-texto
