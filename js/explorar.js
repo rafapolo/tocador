@@ -171,6 +171,7 @@ function _exAplicar(quiet) {
     resetFacets('features');
     activeAlbumSet = _exCalcular().set;
     trackFilter = t => _exPassaFaixa(t.src._row);
+    trackFilterInfo = { frase: 'passam no filtro da Pegada', titulo: 'Fora do filtro da Pegada: não toca', limpar: explorarLimparTudo };
     activeAlbumSetLabel = ativos.length === 1 ? _exRotuloAtivo(ativos[0]) : `${ativos.length} características`;
     filterAlbums(quiet);
   }

@@ -87,6 +87,7 @@ let activeYear = 0;
 let activeAlbumSet = null;      // Set of album objects chosen by the Explorar panel (audio features)
 let activeAlbumSetLabel = '';
 let trackFilter = null;         // (track) => bool while Explorar is filtering: tracks it rejects are shown disabled and skipped
+let trackFilterInfo = null;     // { frase, titulo, limpar } — como a lista do álbum explica e desfaz o trackFilter ativo
 const trackAllowed = t => !trackFilter || trackFilter(t);
 let searchQuery = '';
 let shuffleOn = false;
@@ -412,6 +413,7 @@ function filterAlbums(quiet = false) {
 
   refreshBrowseCounts();
   renderActiveFilterChip();
+  if (typeof syncGenreTrackFilter === 'function') syncGenreTrackFilter();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────

@@ -139,12 +139,12 @@ function buildTrackItemsFragment(tracks, albumArtists) {
     item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title}`);
     if (currentTrack === track) { item.classList.add('playing'); item.setAttribute('aria-current', 'true'); }
     if (!trackAllowed(track)) {
-      // Fora do filtro da Pegada: continua listada, mas não toca nem entra na sequência.
+      // Fora do filtro ativo (Pegada ou gênero): continua listada, mas não toca nem entra na sequência.
       item.classList.add('filtered-out');
       item.setAttribute('aria-disabled', 'true');
       item.setAttribute('tabindex', '-1');
       item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title} (fora do filtro)`);
-      item.title = 'Fora do filtro da Pegada: não toca';
+      item.title = trackFilterInfo?.titulo || 'Fora do filtro: não toca';
     }
 
     const artistName = track.artists && track.artists !== albumArtists ? track.artists : '';
@@ -167,7 +167,7 @@ function buildTrackItemsFragment(tracks, albumArtists) {
   return frag;
 }
 
-// Com o Explorar filtrando por faixa, uma linha antes da lista diz quantas tocam e por que as outras estão apagadas.
+// Com a Pegada ou um gênero filtrando por faixa, uma linha antes da lista diz quantas tocam e por que as outras estão apagadas.
 function renderTrackFilterNote(listEl, tracks) {
   const prev = listEl.previousElementSibling;
   let note = prev?.classList.contains('track-filter-note') ? prev : null;
@@ -178,8 +178,8 @@ function renderTrackFilterNote(listEl, tracks) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'limpar filtro';
-  btn.addEventListener('click', () => { if (typeof explorarLimparTudo === 'function') explorarLimparTudo(); });
-  note.replaceChildren(`${dentro} de ${tracks.length} faixas passam no filtro da Pegada; as apagadas são puladas. `, btn);
+  btn.addEventListener('click', () => trackFilterInfo?.limpar?.());
+  note.replaceChildren(`${dentro} de ${tracks.length} faixas ${trackFilterInfo?.frase || 'passam no filtro'}; as apagadas são puladas. `, btn);
 }
 
 function syncTrackPlayingState(container, tracks) {

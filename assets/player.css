@@ -2347,3 +2347,6 @@ audio {
 .track-item.filtered-out:hover { background: none; }
 .track-filter-note { margin: 0; padding: 8px 16px; font-size: 0.75rem; line-height: 1.4; color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); }
 .track-filter-note button { background: none; border: 0; padding: 0; font: inherit; color: var(--color-accent); text-decoration: underline; cursor: pointer; }
+
+.browse-genre-note { padding-bottom: 8px; border-bottom: 1px solid var(--color-border); }
+.browse-genre-note[hidden] { display: none; }

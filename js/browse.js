@@ -112,7 +112,49 @@ function _applyBrowseItems(items, preserveScroll) {
   virtualBrowseList.refresh(activeVal);
 }
 
+// Os gêneros vêm do áudio (modelo treinado com o Discogs), não de etiqueta: a aba avisa disso.
+function renderGenreNote() {
+  const note = document.getElementById('browse-genre-note');
+  if (note) note.hidden = browseTab !== 'genres';
+}
+
+// Gênero escolhido: as faixas do álbum que não se encaixam ficam apagadas (como na Pegada). A faixa se encaixa quando
+// o gênero (ou, no pai, algum filho) está entre os 3 melhores palpites dela — a mesma conta que elege o gênero do álbum
+// em script/build-genre-index.js. Precisa das features por faixa; sem elas o gênero filtra só álbuns.
+let _genreTrackFilter = null;
+function syncGenreTrackFilter() {
+  if (!activeGenre) {
+    if (_genreTrackFilter && trackFilter === _genreTrackFilter) {
+      trackFilter = null;
+      trackFilterInfo = null;
+      if (typeof _exRefazerFaixas === 'function') _exRefazerFaixas();
+    }
+    _genreTrackFilter = null;
+    return;
+  }
+  const g = activeGenre;
+  if (typeof _exCarregar !== 'function') return;
+  _exCarregar().then(d => {
+    if (!d || activeGenre !== g) return;
+    const f = d.f, filho = g.includes('---');
+    const fn = t => {
+      const r = t.src?._row;
+      if (r === undefined || !f.has(r)) return false;
+      return f.genre(r).some(x => (filho ? x.name === g : x.name.startsWith(g + '---')));
+    };
+    _genreTrackFilter = fn;
+    trackFilter = fn;
+    trackFilterInfo = {
+      frase: 'combinam com o gênero escolhido',
+      titulo: 'Fora do gênero escolhido: não toca',
+      limpar: clearAllFilters,
+    };
+    if (typeof _exRefazerFaixas === 'function') _exRefazerFaixas();
+  });
+}
+
 function renderBrowsePanel() {
+  renderGenreNote();
   if (!virtualBrowseList) return;
   if (browseTab === 'genres') {
     const items = getGenreDisplayItems();

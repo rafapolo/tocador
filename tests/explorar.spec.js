@@ -12,7 +12,7 @@ test.use({ serviceWorkers: 'block' });
 // Features em que as faixas de um mesmo álbum divergem (ver fixtures/build-features-mistas.js).
 const mistasFile = fx('albums-features-mistas.json.gz');
 
-async function boot(page, { semFeatures = false, mistas = false } = {}) {
+async function boot(page, { semFeatures = false, mistas = false, generos = false, url = '/' } = {}) {
   // Limpa só na primeira carga da aba: um reload no meio do teste mantém o que o painel guardou.
   await page.addInitScript(() => {
     if (!sessionStorage.getItem('__limpo')) { localStorage.clear(); sessionStorage.setItem('__limpo', '1'); }
@@ -21,11 +21,13 @@ async function boot(page, { semFeatures = false, mistas = false } = {}) {
   for (const f of ['uqt-albums.json.gz', 'homi-albums.json.gz']) await page.route(`**/${f}`, r => r.fulfill(gz(albumsGz)));
   await page.route('**/*-features.json.gz', r => semFeatures ? r.fulfill({ status: 404 }) : r.fulfill(gz(mistas ? mistasFile : featuresGz)));
   await page.route('**/resumo-acervo.json', r => r.fulfill({ status: 404 }));
-  await page.route('**/*-genres.json.gz', r => r.fulfill({ status: 404 }));
+  // Índice de gêneros por álbum (o do homi): todos os álbuns de teste são Latin---Samba.
+  const indice = Object.fromEntries(JSON.parse(require('zlib').gunzipSync(albumsGz)).albums.map(a => [a.path.normalize('NFC'), 'Latin---Samba']));
+  await page.route('**/*-genres.json.gz', r => generos ? r.fulfill(gz(require('zlib').gzipSync(JSON.stringify(indice)))) : r.fulfill({ status: 404 }));
   await page.route('**/*.mp3', r => r.fulfill({ status: 200, body: Buffer.alloc(0) }));
   await page.route('**/capa-min.jpg', r => r.fulfill({ status: 404 }));
   await page.route('**/report-error', r => r.fulfill({ status: 204 }));
-  await page.goto('/');
+  await page.goto(url);
   await page.waitForSelector('.album-item', { timeout: 8000 });
 }
 
@@ -84,7 +86,7 @@ test('mostra os grupos e a cobertura da análise', async ({ page }) => {
   await abrir(page);
   for (const g of ['Ritmo', 'Clima', 'Timbre']) await expect(page.locator('.explorar-sec summary', { hasText: g })).toBeVisible();
   await expect(page.locator('.ex-resumo')).toContainText('álbuns com análise de áudio');
-  await expect(page.locator('.ex-ajuda')).toContainText('por faixa');
+  await expect(page.locator('#explorar-body .ex-ajuda')).toContainText('por faixa');
   await expect(page.locator('#explorar-status')).toContainText('nenhum filtro');
   await expect(page.locator('#explorar-apply')).toHaveText('ver todos os álbuns');
 });
@@ -258,6 +260,45 @@ test('o "limpar filtro" da legenda do álbum tira os filtros da Pegada', async (
   await expect(page.locator('.track-filter-note')).toHaveCount(0);
   await expect(page.locator('.ex-chip')).toHaveCount(0);
   await expect(page.locator('#search-count')).not.toHaveClass(/visible/);
+});
+
+test.describe('gêneros', () => {
+  test('a aba Gêneros avisa que o gênero vem do áudio (Discogs) e pode errar', async ({ page }) => {
+    await boot(page, { mistas: true, generos: true });
+    const nota = page.locator('#browse-genre-note');
+    await expect(nota).toBeHidden();
+    await page.locator('.browse-tab[data-tab="genres"]').click();
+    await expect(nota).toBeVisible();
+    await expect(nota).toContainText('Discogs');
+    await expect(nota).toContainText('podem não representar');
+    await page.locator('.browse-tab[data-tab="artists"]').click();
+    await expect(nota).toBeHidden();
+  });
+
+  test('escolher um gênero apaga as faixas que não se encaixam e limpar devolve', async ({ page }) => {
+    await boot(page, { mistas: true, generos: true, url: '/?genero=' + encodeURIComponent('Latin---Samba') });
+    const itens = page.locator('.album-item');
+    const total = await itens.count();
+    let achou = false;
+    for (let i = 0; i < total && !achou; i++) {
+      await itens.nth(i).click();
+      await page.waitForSelector('#track-list .track-item');
+      if (await page.locator('#track-list .track-item.filtered-out').count() > 0) achou = true;
+    }
+    expect(achou).toBe(true);
+    await expect(page.locator('#track-list .track-item:not(.filtered-out)').first()).toBeVisible();
+    await expect(page.locator('#tracks-panel .track-filter-note')).toContainText('combinam com o gênero escolhido');
+    await expect(page.locator('#track-list .track-item.filtered-out').first()).toHaveAttribute('title', /gênero escolhido/);
+    await page.locator('#tracks-panel .track-filter-note button').click();
+    await expect(page.locator('#track-list .track-item.filtered-out')).toHaveCount(0);
+  });
+
+  test('sem gênero escolhido nenhuma faixa fica apagada', async ({ page }) => {
+    await boot(page, { mistas: true, generos: true });
+    await page.locator('.album-item').first().click();
+    await page.waitForSelector('#track-list .track-item');
+    await expect(page.locator('#track-list .track-item.filtered-out')).toHaveCount(0);
+  });
 });
 
 test('filtros combinam por E e a faixa impossível esvazia a grade', async ({ page }) => {
