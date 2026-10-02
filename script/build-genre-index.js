@@ -7,6 +7,7 @@ const INPUT  = resolve(import.meta.dir, '../data/genres/genres.json');
 const OUTPUT = resolve(import.meta.dir, '../data/homi-genres.json.gz');
 
 const FEATURES = resolve(import.meta.dir, '../data/features/homi.jsonl');
+const CATALOG  = resolve(import.meta.dir, '../data/features/catalog-homi.json');   // bun script/features-integrity-dump.js
 
 // album -> vote counts. Fresh analysis (analyze-tracks.py) wins; the old genres.json
 // only fills albums that have not been analyzed yet.
@@ -51,6 +52,19 @@ if (await Bun.file(INPUT).exists()) {
   }
 }
 console.log(`${featured.size} albums from features (${fromFeatures} tracks), ${fromLegacy} from legacy genres.json`);
+
+// Folders the catalog generator collapsed as duplicates (or that left the archive) keep their features but
+// are not albums the player can open: drop them so the index has no dead keys.
+let dead = 0;
+if (await Bun.file(CATALOG).exists()) {
+  const catalogAlbums = new Set(JSON.parse(await Bun.file(CATALOG).text()).map(r => r.album.normalize('NFC')));
+  for (const album of [...votesByAlbum.keys()]) {
+    if (!catalogAlbums.has(album)) { votesByAlbum.delete(album); dead++; }
+  }
+  console.log(`${dead} albums dropped: not in ${CATALOG}`);
+} else {
+  console.log('no catalog-homi.json (run script/features-integrity-dump.js): dead keys are not filtered');
+}
 
 const index = {};
 let missing = 0;

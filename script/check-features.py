@@ -8,6 +8,7 @@ check-features.py — referential integrity of everything extracted from the aud
 Links checked, per acervo:
   features.jsonl  <->  catalog tracks      (key = "<album path>/<file>", NFC; NFD / case fallbacks reported)
   features.jsonl  ->   compact .json.gz + .emb.f16   (one embedding row per track, rows in range, same count)
+  aliases-<acervo>.json -> orphan features resolve to a catalog track (script/build-feature-aliases.py)
   homi-genres.json.gz -> catalog album paths
   data/qgen labels -> feature keys (track-grounded questions must point at a real analysed track)
 """
@@ -73,10 +74,22 @@ for ac in ['homi', 'uqt']:
             if f not in r or r[f] is None: bad['campo ausente: ' + f] += 1
         for f in ['voice', 'dance', 'acoustic', 'happy', 'sad', 'relaxed', 'aggressive', 'party', 'tonal']:
             if f in r and not (0 <= r[f] <= 1): bad['fora de [0,1]: ' + f] += 1
-        if 'bpm' in r and not (30 <= r['bpm'] <= 300): bad['bpm fora de 30–300'] += 1
+        if 'bpm' in r and not (30 <= r['bpm'] <= 300): bad['bpm fora de 30–300' + (' (marcado bpm_suspeito)' if r.get('bpm_suspeito') else ' SEM marca bpm_suspeito')] += 1
         if 'emb' not in r: bad['sem embedding'] += 1
     print('  campos:', dict(bad) if bad else 'todos presentes e dentro das faixas esperadas')
-    if any(k.startswith(('campo ausente', 'sem embedding', 'fora de')) for k in bad): hardfail(f'{ac}: campos ausentes ou inválidos {dict(bad)}')
+    if any(k.startswith(('campo ausente', 'sem embedding', 'fora de')) or k.endswith('SEM marca bpm_suspeito') for k in bad): hardfail(f'{ac}: campos ausentes ou inválidos {dict(bad)}')
+
+    # orphan features -> catalog track (script/build-feature-aliases.py); informative, never a hard link
+    ap_ = F / f'aliases-{ac}.json'
+    if ap_.exists():
+        al = json.load(open(ap_, encoding='utf-8'))
+        c = al['counts']
+        stale = [k for k in al['aliases'] if nfc(k) not in feats or nfc(al['aliases'][k]) not in cat_keys]
+        print(f'  aliases: {c["aliased"]:,} órfãs ligadas a uma faixa do catálogo, {c["ambiguous"]} ambíguas, {c["unmatched"]} sem par (de {c["orphans"]:,})')
+        if c['orphans'] != len(only_f) or stale:
+            hardfail(f'{ac}: aliases-{ac}.json desatualizado ({c["orphans"]} órfãs no arquivo, {len(only_f)} agora; {len(stale)} elos mortos) — rode build-feature-aliases.py')
+    else:
+        print(f'  aliases: ausente (python3 script/build-feature-aliases.py)')
 
     # compact files
     cj = F / f'{ac}.json.gz'; ce = F / f'{ac}.emb.f16'
