@@ -84,6 +84,8 @@ let selectedAlbum = null;
 let currentTrack = null;
 let activeDecade = null;
 let activeYear = 0;
+let activeAlbumSet = null;      // Set of album objects chosen by the Explorar panel (audio features)
+let activeAlbumSetLabel = '';
 let searchQuery = '';
 let shuffleOn = false;
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
@@ -368,6 +370,7 @@ function filterAlbums() {
   const q = fold(searchQuery);
   const ak = activeArtist ? fold(activeArtist) : null;
   filteredAlbums = albums.filter(album => {
+    if (activeAlbumSet && !activeAlbumSet.has(album)) return false;
     if (ak && !album.artistKeys.has(ak)) return false;
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
@@ -396,7 +399,7 @@ function filterAlbums() {
   _countEl ??= document.getElementById('search-count');
   _clearBtn ??= document.getElementById('search-clear');
   _emptyState ??= document.getElementById('empty-state');
-  const isFiltered = !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
+  const isFiltered = !!activeAlbumSet || !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
   if (_countEl) {
     _countEl.textContent = `${filteredAlbums.length} álbun${filteredAlbums.length !== 1 ? 's' : ''}`;
     _countEl.classList.toggle('visible', isFiltered);

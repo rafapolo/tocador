@@ -152,6 +152,7 @@ function refreshBrowseCounts() {
 // scrolled out of the strip on mobile, or an artist/genre picked in a drawer
 // that is now closed.
 function activeFilterLabel() {
+  if (activeAlbumSet) return activeAlbumSetLabel || 'Características';
   if (activeArtist) return activeArtist;
   if (activeGenre)  return activeGenre.includes('---') ? activeGenre.split('---')[1] : activeGenre;
   if (activeYear)   return String(activeYear);
@@ -180,7 +181,7 @@ function renderActiveFilterChip() {
   }
 }
 
-// The five filter facets (search, decade, year, artist, genre) are mutually
+// The six filter facets (search, decade, year, artist, genre, audio features) are mutually
 // exclusive: choosing one resets the other four. Cumulative filtering let a
 // stale facet silently empty the grid — picking an artist while a search was
 // still live returned zero albums with no visible reason why.
@@ -189,6 +190,11 @@ function renderActiveFilterChip() {
 // cleared along with its URL param and its chrome. This only ever clears, so
 // callers assign their own facet afterwards. Omit `keep` to clear all five.
 function resetFacets(keep) {
+  if (keep !== 'features' && activeAlbumSet) {
+    activeAlbumSet = null;
+    activeAlbumSetLabel = '';
+    if (typeof explorarReset === 'function') explorarReset();
+  }
   if (keep !== 'search' && searchQuery) {
     searchQuery = '';
     if (_searchInput) _searchInput.value = '';
