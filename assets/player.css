@@ -2286,17 +2286,19 @@ audio {
 .ex-feat-out.on { opacity: 1; font-weight: 600; }
 .ex-feat-med { font-size: 0.68rem; opacity: 0.5; margin-top: 2px; }
 .ex-hist { display: flex; align-items: flex-end; gap: 1px; height: 28px; }
-.ex-hist i { flex: 1; background: currentColor; opacity: 0.18; border-radius: 1px 1px 0 0; }
-.ex-hist i.in { opacity: 0.55; }
-.ex-range { position: relative; height: 20px; --a: 0%; --b: 100%; }
-.ex-track { position: absolute; left: 0; right: 0; top: 9px; height: 3px; border-radius: 2px; background: var(--color-border);
-  background: linear-gradient(to right, var(--color-border) var(--a), currentColor var(--a), currentColor var(--b), var(--color-border) var(--b)); }
-.ex-range input { position: absolute; inset: 0; width: 100%; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
-.ex-range input::-webkit-slider-runnable-track { background: none; height: 20px; }
-.ex-range input::-moz-range-track { background: none; }
-.ex-range input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 14px; height: 14px; margin-top: 3px; border-radius: 50%; background: var(--color-surface); border: 2px solid currentColor; cursor: grab; }
-.ex-range input::-moz-range-thumb { pointer-events: auto; width: 10px; height: 10px; border-radius: 50%; background: var(--color-surface); border: 2px solid currentColor; cursor: grab; }
-.ex-range input:focus-visible::-webkit-slider-thumb { outline: 2px solid currentColor; outline-offset: 2px; }
+.ex-hist i { flex: 1; background: var(--color-accent); opacity: 0.2; border-radius: 1px 1px 0 0; }
+.ex-hist i.in { opacity: 0.75; }
+.ex-range { position: relative; height: 24px; --a: 0%; --b: 100%; color: var(--color-accent); }
+.ex-track { position: absolute; left: 7px; right: 7px; top: 10px; height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, var(--color-surface-light) var(--a), var(--color-accent) var(--a), var(--color-accent) var(--b), var(--color-surface-light) var(--b)); }
+.ex-range input { position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; padding: 0; color: var(--color-accent); background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.ex-range input::-webkit-slider-runnable-track { background: none; height: 24px; }
+.ex-range input::-moz-range-track { background: none; height: 24px; }
+.ex-range input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 16px; height: 16px; margin-top: 4px; border-radius: 50%; background: var(--color-accent); border: 2px solid var(--color-bg); box-shadow: 0 0 0 1px var(--color-accent); cursor: grab; }
+.ex-range input::-moz-range-thumb { pointer-events: auto; width: 12px; height: 12px; border-radius: 50%; background: var(--color-accent); border: 2px solid var(--color-bg); box-shadow: 0 0 0 1px var(--color-accent); cursor: grab; }
+.ex-range input:active::-webkit-slider-thumb { cursor: grabbing; }
+.ex-range input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--color-text); }
+.ex-range input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--color-text); }
 .ex-radios { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8rem; }
 .ex-radio { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 .explorar-foot { padding: 10px 14px; border-top: 1px solid var(--color-border); }

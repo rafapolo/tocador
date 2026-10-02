@@ -70,6 +70,22 @@ test('mover um slider filtra a grade, vira chip e limpa', async ({ page }) => {
   await expect(page.locator('.ex-chip')).toHaveCount(0);
 });
 
+test('arrastar a alça com o mouse funciona e a alça fica visível', async ({ page }) => {
+  await boot(page);
+  await abrir(page);
+  const hi = page.locator('.ex-feat', { hasText: 'Andamento' }).locator('input.ex-hi');
+  const b = await hi.boundingBox();
+  await page.mouse.move(b.x + b.width - 7, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 5 });
+  await page.mouse.up();
+  expect(Number(await hi.inputValue())).toBeLessThan(200);
+  await expect(page.locator('.ex-chip').first()).toContainText('Andamento até');
+  // A alça herdava a cor preta do input e sumia no fundo escuro.
+  const cor = await hi.evaluate(el => getComputedStyle(el, '::-webkit-slider-thumb').backgroundColor);
+  expect(cor).not.toBe('rgb(0, 0, 0)');
+});
+
 test('filtros combinam por E e a faixa impossível esvazia a grade', async ({ page }) => {
   await boot(page);
   await abrir(page);
