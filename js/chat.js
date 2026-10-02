@@ -11,7 +11,9 @@ const CHAT_STOP = new Set(('me um uma uns umas o a os as de do da dos das no na 
   'faixas banda bandas artista artistas cantor cantora anos ano decada decadas epoca tempo dos seus suas meu minha mais ' +
   'menos muito pouco bem tipo estilo som sons favor obrigado obrigada valeu ola oi ei hey bom dia boa tarde noite ' +
   'gostaria poderia pode podes consegue sabe saber conhece conhecer existe existem quantos quantas quanto quantidade total ' +
-  'voce vc eu tu ele ela eles elas').split(' '));
+  'voce vc eu tu ele ela eles elas ' +
+  // how people actually type: q (que), pf/pfv (por favor), ai/ta (aí, tá), bora, btn, tb (também)…
+  'q pf pfv plmdds pls plz ai ta bora btn tb tbm vlw blz hmm ne').split(' '));
 // Qualities we cannot judge yet: said so instead of silently searching titles for them.
 const CHAT_PENDING = new Set(('lento lenta devagar rapido rapida acelerado animado agitado calmo calma tranquilo ' +
   'melancolico melancolica triste alegre feliz romantico romantica dancante festivo nostalgico agressivo pesado ' +
@@ -19,7 +21,7 @@ const CHAT_PENDING = new Set(('lento lenta devagar rapido rapida acelerado anima
 const CHAT_RANDOM = /\b(aleatori[oa]s?|surpreenda|surpreende|surpresa|sorteia|sorteie|qualquer um)\b/;
 
 let _chatPanel, _chatLog, _chatInput, _chatForm, _chatBtn, _chatLayout;
-const chatState = { terms: [] };   // what the last successful question searched, for follow-ups like "e nos anos 70?"
+const chatState = { terms: [], suggested: false };   // what the last successful question searched, for follow-ups like "e nos anos 70?"
 
 function chatEl(tag, cls, text) {
   const e = document.createElement(tag);
@@ -303,10 +305,11 @@ function chatSpelling(terms) {
 
 // ── answer ───────────────────────────────────────────────────────────────
 
-function chatApplyToGrid(when, terms) {
+function chatApplyToGrid(when, terms, set = null) {
   // The grid takes one substring, one decade and one year: apply what it can express exactly.
   const onlyDecade = when.decades.length === 1 && !when.years.length && when.from == null && when.to == null;
   const onlyYear = when.years.length === 1 && !when.decades.length && when.from == null && when.to == null;
+  activeAlbumSet = set;
   activeDecade = onlyDecade ? when.decades[0] : null;
   activeYear = onlyYear ? when.years[0] : 0;
   searchQuery = terms.length === 1 ? terms[0] : '';
@@ -342,7 +345,7 @@ function chatWhy(it, total, gridNote) {
   return d;
 }
 
-function chatShowResults(box, hits, from) {
+function chatShowResults(box, hits, from, onPick) {
   let ul = box.querySelector('.chat-results');
   if (!ul) { ul = chatEl('ul', 'chat-results'); box.insertBefore(ul, box.querySelector('.chat-why')); }
   for (const { a, fromTrack } of hits.slice(from, from + CHAT_PAGE)) {
@@ -360,7 +363,7 @@ function chatShowResults(box, hits, from) {
     const sub = [a.artists, a.year || null, fromTrack ? `faixa: ${fromTrack.title}` : null].filter(Boolean).join(' · ');
     text.appendChild(chatEl('span', 'r-sub', sub));
     b.appendChild(text);
-    b.addEventListener('click', () => { openAlbum(a); if (isMobile()) closeChat(); });
+    b.addEventListener('click', () => { onPick?.(); openAlbum(a); if (isMobile()) closeChat(); });
     li.appendChild(b);
     ul.appendChild(li);
   }
@@ -372,11 +375,108 @@ function chatPickRandom(hits, n) {
   return pool.slice(0, n);
 }
 
+// ── player commands and "did not understand" ────────────────────────────
+
+// Short imperatives that are not searches. Folded sentence, punctuation stripped.
+const CHAT_PLAYER_CMDS = [
+  ['pause', /^(pause|pausa|pausar|pare|parar|para|stop)$/],
+  ['resume', /^(resume|retomar|retoma|continua|continuar|despausa|play|toca|tocar|toque)$/],
+  ['next', /^(proxima|proximo|next|pula|pular|skip|avanca|avancar)( musica| faixa)?$/],
+  ['prev', /^(anterior|voltar|volta|previous|prev)( musica| faixa)?$/],
+];
+// Status questions about the work, not the archive: said plainly that this chat does not do that.
+const CHAT_NOT_SEARCH = /^(eta|rodando|rodou( tudo)?|status|ha t asks|tasks?|progresso|quanto falta|terminou|acabou)$/;
+
+function chatCommand(raw) {
+  const t = fold(raw).replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+  for (const [cmd, re] of CHAT_PLAYER_CMDS) if (re.test(t)) return { cmd };
+  if (CHAT_NOT_SEARCH.test(t)) return { cmd: 'refuse' };
+  return null;
+}
+
+function chatRunCommand(c) {
+  const audio = document.getElementById('audio');
+  if (c.cmd === 'refuse') return 'Isso eu não faço aqui: este chat busca e toca música do acervo. Tente um artista, um título ou uma época.';
+  if (!currentTrack) return 'Ainda não há nada carregado no player. Escolha um álbum primeiro.';
+  if (c.cmd === 'pause') {
+    if (audio.paused) return 'Já está pausado.';
+    document.getElementById('btn-play').click();
+    return 'Pausado.';
+  }
+  if (c.cmd === 'resume') {
+    if (!audio.paused) return 'Já está tocando.';
+    document.getElementById('btn-play').click();
+    return 'Tocando de novo.';
+  }
+  if (c.cmd === 'next') { playNext(); return 'Próxima faixa.'; }
+  playPrevious();
+  return 'Faixa anterior.';
+}
+
+// Counters stay in this browser (nothing is sent): how often a suggestion was opened vs. the person rephrased.
+function chatCount(key) {
+  try {
+    const k = 'tocador-chat-sugestoes';
+    const o = JSON.parse(localStorage.getItem(k) || '{}');
+    o[key] = (o[key] || 0) + 1;
+    localStorage.setItem(k, JSON.stringify(o));
+  } catch (_) {}
+}
+
+// Nothing understood: offer 3 random albums that could be close — sharing any word typed, else the period
+// asked for, else anything — and say which of the three it was. Same albums go to the grid.
+function chatLookalikes(it, n = 3) {
+  const words = [...it.terms, ...it.pending];
+  const inWhen = a => chatWhenEmpty(it.when) || chatWhenOk(a.year, it.when);
+  let pool = [], basis = 'nenhuma pista da frase bateu com o acervo; sorteei ao acaso no acervo todo';
+  if (words.length) {
+    pool = albums.filter(a => inWhen(a) && words.some(w => chatTermScore(a, w).score))
+                 .map(a => ({ a, fromTrack: words.map(w => chatTermScore(a, w).track).find(Boolean) || null }));
+    if (pool.length) basis = `sorteei entre álbuns que têm alguma de: ${words.join(', ')}`;
+  }
+  if (!pool.length && !chatWhenEmpty(it.when)) {
+    pool = albums.filter(inWhen).map(a => ({ a, fromTrack: null }));
+    if (pool.length) basis = 'sorteei entre álbuns do período pedido';
+  }
+  if (!pool.length) pool = albums.map(a => ({ a, fromTrack: null }));
+  return { shown: chatPickRandom(pool, n), basis };
+}
+
+function chatAddLookalikes(bot, it) {
+  if (!albums.length) return;
+  const wrap = chatEl('div', 'chat-lookalikes');
+  const render = () => {
+    const { shown, basis } = chatLookalikes(it);
+    wrap.replaceChildren();
+    wrap.appendChild(chatEl('p', 'tag', basis));
+    chatShowResults(wrap, shown, 0, () => { chatCount('clicou'); chatState.suggested = false; });
+    const more = chatEl('button', 'chat-chip', 'outras sugestões');
+    more.type = 'button';
+    more.addEventListener('click', () => { chatCount('outras'); render(); });
+    const row = chatEl('div', 'chat-chips');
+    row.appendChild(more);
+    wrap.appendChild(row);
+    chatApplyToGrid(chatNoWhen(), [], new Set(shown.map(h => h.a)));
+  };
+  bot.appendChild(chatEl('p', null, 'Não entendi direito. Talvez estes se pareçam:'));
+  bot.appendChild(wrap);
+  render();
+  chatCount('mostradas');
+  chatState.suggested = true;
+}
+
 function chatAsk(raw) {
   raw = raw.trim();
   if (!raw) return;
   chatSay(raw);
+  if (chatState.suggested) { chatCount('reformulou'); chatState.suggested = false; }
   const bot = chatEl('div', 'chat-msg bot');
+  const cmd = chatCommand(raw);
+  if (cmd) {
+    bot.appendChild(chatEl('p', null, chatRunCommand(cmd)));
+    chatAdd(bot);
+    return;
+  }
   const it = chatInterpret(raw);
 
   if (it.clear) {
@@ -397,7 +497,7 @@ function chatAsk(raw) {
     bot.appendChild(chatEl('p', null, it.pending.length
       ? `Ainda não sei filtrar por "${it.pending.join(', ')}". Posso procurar por artista, álbum, faixa ou época.`
       : 'Não achei o que procurar nessa frase. Tente um artista, um título ou uma época, como "anos 70".'));
-    bot.appendChild(chatSuggestions(['anos 60', 'anos 80', 'me surpreenda']));
+    chatAddLookalikes(bot, it);
     chatAdd(bot);
     return;
   }

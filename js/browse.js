@@ -189,6 +189,7 @@ function renderActiveFilterChip() {
 // cleared along with its URL param and its chrome. This only ever clears, so
 // callers assign their own facet afterwards. Omit `keep` to clear all five.
 function resetFacets(keep) {
+  activeAlbumSet = null;          // the chat's suggestion list is a facet too: any other filter replaces it
   if (keep !== 'search' && searchQuery) {
     searchQuery = '';
     if (_searchInput) _searchInput.value = '';

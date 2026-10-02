@@ -199,7 +199,8 @@ test('frase só com qualidades não decide nada e diz isso', async ({ page }) =>
   await openChat(page);
   await ask(page, 'algo calmo e triste');
   await expect(lastBot(page)).toContainText('Ainda não sei filtrar');
-  await expect(lastBot(page).locator('.chat-result')).toHaveCount(0);
+  await expect(lastBot(page)).toContainText('Não entendi direito');
+  await expect(lastBot(page).locator('.chat-result')).toHaveCount(3);
 });
 
 test('palavra que não existe no acervo é ignorada se sobra algo que casa, e a explicação diz', async ({ page }) => {
@@ -497,7 +498,7 @@ test('HTML digitado aparece como texto e não executa', async ({ page }) => {
   const payload = '<img src=x onerror=alert(1)><script>alert(2)</script>';
   await ask(page, payload);
   await expect(page.locator('.chat-msg.user').last()).toHaveText(payload);
-  expect(await page.locator('#chat-log img, #chat-log script').count()).toBe(0);
+  expect(await page.locator('#chat-log img:not(.r-cover), #chat-log script').count()).toBe(0);
   await page.waitForTimeout(300);
   expect(dialogs).toBe(0);
 });
@@ -605,4 +606,133 @@ test('digitar no chat não aciona atalhos do player (espaço não toca)', async 
   expect(paused).toBe(true);
   await expect(page.locator('#chat-panel')).toBeVisible();
   await expect(page.locator('#chat-input')).toHaveValue('anos 60 n p b g');
+});
+
+// ── Não entendeu: 3 álbuns ao acaso, também na grade ─────────────────────
+
+const gridTitles = page => page.locator('#albums-list .album-item').count();
+
+test('nada entendido: sugere 3 álbuns ao acaso, diz o critério e filtra a grade só com eles', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'me mostra o que tem');
+  await expect(lastBot(page)).toContainText('Não achei o que procurar');
+  await expect(lastBot(page)).toContainText('Não entendi direito');
+  await expect(lastBot(page)).toContainText('sorteei ao acaso');
+  await expect(lastBot(page).locator('.chat-result')).toHaveCount(3);
+  const shown = await resultTitles(page);
+  await expect(page.locator('#search-count')).toHaveText('3 álbuns');
+  expect(await gridTitles(page)).toBe(3);
+  const inGrid = await page.locator('#albums-list .album-item').allTextContents();
+  for (const t of shown) expect(inGrid.join('|')).toContain(t);
+});
+
+test('"outras sugestões" sorteia mais 3 e a grade acompanha', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'me mostra o que tem');
+  await lastBot(page).getByRole('button', { name: 'outras sugestões' }).click();
+  await expect(lastBot(page).locator('.chat-result')).toHaveCount(3);
+  await expect(page.locator('#search-count')).toHaveText('3 álbuns');
+});
+
+test('só qualidades: avisa que não sabe julgar e sugere 3 álbuns, não só um beco sem saída', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'q triste pf');
+  await expect(lastBot(page)).toContainText('Ainda não sei filtrar por "triste"');
+  await expect(lastBot(page).locator('.chat-result')).toHaveCount(3);
+  await expect(lastBot(page)).toContainText('sorteei');
+});
+
+test('zero resultados não sorteia nada: só a mensagem honesta', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'zzzxyz');
+  await expect(lastBot(page)).toContainText('Não achei nenhum álbum');
+  await expect(lastBot(page).locator('.chat-result')).toHaveCount(0);
+});
+
+test('outro filtro da grade (década) substitui a lista de sugestões', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'me mostra o que tem');
+  await expect(page.locator('#search-count')).toHaveText('3 álbuns');
+  await ask(page, 'anos 70');
+  await expect(page.locator('#search-count')).not.toHaveText('3 álbuns');
+});
+
+test('contadores locais: clicou numa sugestão e reformulou', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'me mostra o que tem');
+  await ask(page, 'chico');
+  let c = await page.evaluate(() => JSON.parse(localStorage.getItem('tocador-chat-sugestoes')));
+  expect(c.mostradas).toBe(1);
+  expect(c.reformulou).toBe(1);
+  await ask(page, 'me mostra o que tem');
+  await lastBot(page).locator('.chat-result').first().click();
+  c = await page.evaluate(() => JSON.parse(localStorage.getItem('tocador-chat-sugestoes')));
+  expect(c.clicou).toBe(1);
+});
+
+// ── Registro real: frases da seção 1 de tasks/proximos-passos.md ─────────
+
+test('abreviações e vícios não viram palavras de busca', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'q albuns do chico pf');
+  await expect(lastBot(page).locator('.r-title').first()).toHaveText('Construção');
+  await lastBot(page).locator('summary').click();
+  await expect(lastBot(page).locator('.chat-why')).toContainText('palavras: chico');
+});
+
+test('"bora" e "vc" não atrapalham: "vc tem samba? bora"', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'vc tem chico? bora');
+  await expect(lastBot(page).locator('.r-title').first()).toHaveText('Construção');
+});
+
+test('frase sem acento, com erro e em inglês misturado não quebra e responde', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  for (const f of ['funcionaria hospedado no github as pf today?', 'nao achao possivel q em todo hugginface nao haja um modelo so em pt',
+                   'q albuns atuais seriam "ritmo de São João" ??', 'are there music analise tools for a few tracks here?']) {
+    await ask(page, f);
+    await expect(lastBot(page)).not.toBeEmpty();
+    await expect(page.locator('#chat-input')).toBeEnabled();
+  }
+});
+
+test('"eta?" é recusado com clareza, sem sugerir música nem mexer na grade', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  const before = await page.locator('#search-count').textContent();
+  for (const f of ['eta?', 'rodou tudo', 'ha t asks?']) {
+    await ask(page, f);
+    await expect(lastBot(page)).toContainText('Isso eu não faço aqui');
+    await expect(lastBot(page).locator('.chat-result')).toHaveCount(0);
+  }
+  expect(await page.locator('#search-count').textContent()).toBe(before);
+});
+
+test('pause / resume / próxima controlam o player', async ({ page }) => {
+  await boot(page);
+  await openChat(page);
+  await ask(page, 'pause');
+  await expect(lastBot(page)).toContainText('nada carregado');
+  await page.locator('.album-item').first().click();
+  await page.click('#btn-play');
+  await expect.poll(() => page.evaluate(() => !document.getElementById('audio').paused)).toBe(true);
+  await ask(page, 'pause');
+  await expect(lastBot(page)).toContainText('Pausado');
+  await expect.poll(() => page.evaluate(() => document.getElementById('audio').paused)).toBe(true);
+  await ask(page, 'resume');
+  await expect(lastBot(page)).toContainText('Tocando de novo');
+  await expect.poll(() => page.evaluate(() => !document.getElementById('audio').paused)).toBe(true);
+  const t0 = await page.evaluate(() => currentTrack.title);
+  await ask(page, 'próxima');
+  await expect(lastBot(page)).toContainText('Próxima faixa');
+  await expect.poll(() => page.evaluate(() => currentTrack.title)).not.toBe(t0);
 });

@@ -85,6 +85,7 @@ let currentTrack = null;
 let activeDecade = null;
 let activeYear = 0;
 let searchQuery = '';
+let activeAlbumSet = null; // Set of album objects: the chat's suggestions; the grid shows exactly these
 let shuffleOn = false;
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
 let renderedAlbum = null;
@@ -368,6 +369,7 @@ function filterAlbums() {
   const q = fold(searchQuery);
   const ak = activeArtist ? fold(activeArtist) : null;
   filteredAlbums = albums.filter(album => {
+    if (activeAlbumSet && !activeAlbumSet.has(album)) return false;
     if (ak && !album.artistKeys.has(ak)) return false;
     if (activeGenre) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
@@ -396,7 +398,7 @@ function filterAlbums() {
   _countEl ??= document.getElementById('search-count');
   _clearBtn ??= document.getElementById('search-clear');
   _emptyState ??= document.getElementById('empty-state');
-  const isFiltered = !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
+  const isFiltered = !!activeAlbumSet || !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
   if (_countEl) {
     _countEl.textContent = `${filteredAlbums.length} álbun${filteredAlbums.length !== 1 ? 's' : ''}`;
     _countEl.classList.toggle('visible', isFiltered);
