@@ -1,0 +1,4323 @@
+{
+ "versao": 0,
+ "gerado_em": "2026-10-02",
+ "generos": [
+  {
+   "id": "samba",
+   "nome": "samba",
+   "pai": null,
+   "apelidos": [
+    "sambinha"
+   ]
+  },
+  {
+   "id": "samba de raiz",
+   "nome": "samba de raiz",
+   "pai": "samba",
+   "apelidos": [
+    "samba raiz",
+    "samba antigo",
+    "samba tradicional",
+    "partido alto",
+    "samba de breque"
+   ]
+  },
+  {
+   "id": "pagode",
+   "nome": "pagode",
+   "pai": "samba",
+   "apelidos": [
+    "pagode de mesa",
+    "pagodeiro"
+   ]
+  },
+  {
+   "id": "samba-canção",
+   "nome": "samba-canção",
+   "pai": "samba",
+   "apelidos": [
+    "samba cancao",
+    "sambacancao"
+   ]
+  },
+  {
+   "id": "choro",
+   "nome": "choro",
+   "pai": null,
+   "apelidos": [
+    "chorinho",
+    "choro tradicional"
+   ]
+  },
+  {
+   "id": "mpb",
+   "nome": "MPB",
+   "pai": null,
+   "apelidos": [
+    "musica popular brasileira"
+   ]
+  },
+  {
+   "id": "bossa nova",
+   "nome": "bossa nova",
+   "pai": "mpb",
+   "apelidos": [
+    "bossa"
+   ]
+  },
+  {
+   "id": "tropicália",
+   "nome": "tropicália",
+   "pai": "mpb",
+   "apelidos": [
+    "tropicalia",
+    "tropicalismo"
+   ]
+  },
+  {
+   "id": "canção de protesto",
+   "nome": "canção de protesto",
+   "pai": "mpb",
+   "apelidos": [
+    "musica de protesto",
+    "protesto"
+   ]
+  },
+  {
+   "id": "forró",
+   "nome": "forró",
+   "pai": null,
+   "apelidos": [
+    "forro",
+    "forro pe de serra",
+    "pe de serra"
+   ]
+  },
+  {
+   "id": "baião",
+   "nome": "baião",
+   "pai": "forró",
+   "apelidos": [
+    "baiao"
+   ]
+  },
+  {
+   "id": "xote",
+   "nome": "xote",
+   "pai": "forró",
+   "apelidos": [
+    "xote nordestino"
+   ]
+  },
+  {
+   "id": "xaxado",
+   "nome": "xaxado",
+   "pai": "forró",
+   "apelidos": []
+  },
+  {
+   "id": "axé",
+   "nome": "axé",
+   "pai": null,
+   "apelidos": [
+    "axe",
+    "axe music"
+   ]
+  },
+  {
+   "id": "frevo",
+   "nome": "frevo",
+   "pai": null,
+   "apelidos": [
+    "frevo de rua"
+   ]
+  },
+  {
+   "id": "maracatu",
+   "nome": "maracatu",
+   "pai": null,
+   "apelidos": [
+    "maracatu rural",
+    "maracatu nacao"
+   ]
+  },
+  {
+   "id": "manguebeat",
+   "nome": "manguebeat",
+   "pai": null,
+   "apelidos": [
+    "mangue beat",
+    "mangue"
+   ]
+  },
+  {
+   "id": "carimbó",
+   "nome": "carimbó",
+   "pai": null,
+   "apelidos": [
+    "carimbo"
+   ]
+  },
+  {
+   "id": "lundu",
+   "nome": "lundu",
+   "pai": null,
+   "apelidos": []
+  },
+  {
+   "id": "modinha",
+   "nome": "modinha",
+   "pai": null,
+   "apelidos": []
+  },
+  {
+   "id": "música caipira",
+   "nome": "música caipira",
+   "pai": null,
+   "apelidos": [
+    "caipira",
+    "musica sertaneja de raiz",
+    "viola caipira"
+   ]
+  },
+  {
+   "id": "sertanejo raiz",
+   "nome": "sertanejo raiz",
+   "pai": "música caipira",
+   "apelidos": [
+    "sertanejo",
+    "sertanejo antigo"
+   ]
+  },
+  {
+   "id": "brega",
+   "nome": "brega",
+   "pai": null,
+   "apelidos": [
+    "brega romantico",
+    "musica brega"
+   ]
+  },
+  {
+   "id": "rock",
+   "nome": "rock",
+   "pai": null,
+   "apelidos": [
+    "roque"
+   ]
+  },
+  {
+   "id": "rock brasileiro",
+   "nome": "rock brasileiro",
+   "pai": "rock",
+   "apelidos": [
+    "rock nacional",
+    "brock",
+    "rock br"
+   ]
+  },
+  {
+   "id": "jovem guarda",
+   "nome": "jovem guarda",
+   "pai": "rock",
+   "apelidos": [
+    "iê iê iê",
+    "ie ie ie"
+   ]
+  },
+  {
+   "id": "punk",
+   "nome": "punk",
+   "pai": "rock",
+   "apelidos": [
+    "punk rock"
+   ]
+  },
+  {
+   "id": "hardcore",
+   "nome": "hardcore",
+   "pai": "rock",
+   "apelidos": [
+    "hc"
+   ]
+  },
+  {
+   "id": "indie",
+   "nome": "indie",
+   "pai": "rock",
+   "apelidos": [
+    "indie rock",
+    "indie pop",
+    "alternativo",
+    "rock alternativo"
+   ]
+  },
+  {
+   "id": "psicodelia",
+   "nome": "psicodelia",
+   "pai": "rock",
+   "apelidos": [
+    "psicodelico",
+    "rock psicodelico",
+    "psych"
+   ]
+  },
+  {
+   "id": "rock experimental",
+   "nome": "rock experimental",
+   "pai": "rock",
+   "apelidos": [
+    "pos rock",
+    "post rock",
+    "math rock",
+    "krautrock"
+   ]
+  },
+  {
+   "id": "pós-punk",
+   "nome": "pós-punk",
+   "pai": "rock",
+   "apelidos": [
+    "pos punk",
+    "post punk",
+    "new wave",
+    "dark"
+   ]
+  },
+  {
+   "id": "shoegaze",
+   "nome": "shoegaze",
+   "pai": "rock",
+   "apelidos": [
+    "dream pop"
+   ]
+  },
+  {
+   "id": "metal",
+   "nome": "metal",
+   "pai": "rock",
+   "apelidos": [
+    "heavy metal",
+    "thrash",
+    "death metal",
+    "rock pesado"
+   ]
+  },
+  {
+   "id": "jazz",
+   "nome": "jazz",
+   "pai": null,
+   "apelidos": [
+    "jazzistico"
+   ]
+  },
+  {
+   "id": "blues",
+   "nome": "blues",
+   "pai": null,
+   "apelidos": []
+  },
+  {
+   "id": "folk",
+   "nome": "folk",
+   "pai": null,
+   "apelidos": [
+    "folk rock",
+    "cancao folk",
+    "musica folclorica"
+   ]
+  },
+  {
+   "id": "reggae",
+   "nome": "reggae",
+   "pai": null,
+   "apelidos": [
+    "ska",
+    "dub",
+    "roots reggae"
+   ]
+  },
+  {
+   "id": "rap",
+   "nome": "rap",
+   "pai": null,
+   "apelidos": [
+    "hip hop",
+    "hiphop",
+    "trap"
+   ]
+  },
+  {
+   "id": "funk carioca",
+   "nome": "funk carioca",
+   "pai": null,
+   "apelidos": [
+    "funk",
+    "baile funk",
+    "funk brasileiro",
+    "miami bass"
+   ]
+  },
+  {
+   "id": "soul e funk",
+   "nome": "soul e funk",
+   "pai": null,
+   "apelidos": [
+    "soul",
+    "funk americano",
+    "r&b",
+    "rnb",
+    "disco"
+   ]
+  },
+  {
+   "id": "música eletrônica",
+   "nome": "música eletrônica",
+   "pai": null,
+   "apelidos": [
+    "eletronica",
+    "eletronico",
+    "techno",
+    "house",
+    "electro"
+   ]
+  },
+  {
+   "id": "ambient",
+   "nome": "ambient",
+   "pai": "música eletrônica",
+   "apelidos": [
+    "ambiente",
+    "drone",
+    "new age"
+   ]
+  },
+  {
+   "id": "noise",
+   "nome": "noise",
+   "pai": null,
+   "apelidos": [
+    "barulho",
+    "industrial",
+    "harsh noise"
+   ]
+  },
+  {
+   "id": "vanguarda",
+   "nome": "vanguarda",
+   "pai": null,
+   "apelidos": [
+    "experimental",
+    "avant garde",
+    "musica experimental",
+    "musica concreta"
+   ]
+  },
+  {
+   "id": "pop",
+   "nome": "pop",
+   "pai": null,
+   "apelidos": [
+    "musica pop",
+    "synthpop",
+    "synth pop"
+   ]
+  },
+  {
+   "id": "música instrumental",
+   "nome": "música instrumental",
+   "pai": null,
+   "apelidos": [
+    "so instrumental",
+    "musica so instrumental"
+   ]
+  },
+  {
+   "id": "clássica",
+   "nome": "clássica",
+   "pai": null,
+   "apelidos": [
+    "classica",
+    "musica classica",
+    "erudito",
+    "erudita"
+   ]
+  },
+  {
+   "id": "latina",
+   "nome": "música latina",
+   "pai": null,
+   "apelidos": [
+    "latino",
+    "salsa",
+    "cumbia",
+    "tango",
+    "bolero"
+   ]
+  }
+ ],
+ "humores": [
+  {
+   "id": "melancólico",
+   "apelidos": [
+    "melancolico",
+    "triste",
+    "tristeza",
+    "chorosa",
+    "choroso",
+    "tristonho",
+    "blue"
+   ],
+   "sinais": {
+    "sad": "alto",
+    "happy": "baixo"
+   },
+   "medido": true
+  },
+  {
+   "id": "festivo",
+   "apelidos": [
+    "festa",
+    "festivo",
+    "pra festa",
+    "balada",
+    "animada pra festa"
+   ],
+   "sinais": {
+    "party": "alto",
+    "happy": "alto"
+   },
+   "medido": true
+  },
+  {
+   "id": "calmo",
+   "apelidos": [
+    "calma",
+    "calmo",
+    "tranquilo",
+    "tranquila",
+    "suave",
+    "pra relaxar",
+    "pra dormir",
+    "sossegado"
+   ],
+   "sinais": {
+    "relaxed": "alto",
+    "aggressive": "baixo"
+   },
+   "medido": true
+  },
+  {
+   "id": "agressivo",
+   "apelidos": [
+    "agressivo",
+    "agressiva",
+    "pesado",
+    "pesada",
+    "raivoso",
+    "furioso",
+    "raiva"
+   ],
+   "sinais": {
+    "aggressive": "alto"
+   },
+   "medido": true
+  },
+  {
+   "id": "dançante",
+   "apelidos": [
+    "dancante",
+    "dancavel",
+    "pra dancar",
+    "balanco",
+    "gingado"
+   ],
+   "sinais": {
+    "dance": "alto"
+   },
+   "medido": true
+  },
+  {
+   "id": "nostálgico",
+   "apelidos": [
+    "nostalgico",
+    "nostalgia",
+    "saudade",
+    "saudosista",
+    "memoria"
+   ],
+   "sinais": {},
+   "medido": false
+  },
+  {
+   "id": "romântico",
+   "apelidos": [
+    "romantico",
+    "romantica",
+    "amor",
+    "apaixonado",
+    "namorar"
+   ],
+   "sinais": {},
+   "medido": false
+  },
+  {
+   "id": "alegre",
+   "apelidos": [
+    "alegre",
+    "feliz",
+    "animado",
+    "pra cima",
+    "alegria",
+    "sorriso"
+   ],
+   "sinais": {
+    "happy": "alto"
+   },
+   "medido": true
+  },
+  {
+   "id": "sombrio",
+   "apelidos": [
+    "sombrio",
+    "sombria",
+    "escuro",
+    "escura",
+    "dark",
+    "tenebroso",
+    "soturno"
+   ],
+   "sinais": {
+    "happy": "baixo",
+    "sad": "alto",
+    "aggressive": "medio"
+   },
+   "medido": true
+  },
+  {
+   "id": "intimista",
+   "apelidos": [
+    "intimista",
+    "intimo",
+    "intima",
+    "aconchegante",
+    "voz e violao",
+    "quartinho"
+   ],
+   "sinais": {
+    "acoustic": "alto",
+    "relaxed": "alto"
+   },
+   "medido": true
+  },
+  {
+   "id": "contemplativo",
+   "apelidos": [
+    "contemplativo",
+    "contemplativa",
+    "meditativo",
+    "introspectivo",
+    "reflexivo",
+    "pra pensar"
+   ],
+   "sinais": {
+    "relaxed": "alto",
+    "dance": "baixo"
+   },
+   "medido": true
+  },
+  {
+   "id": "irônico",
+   "apelidos": [
+    "ironico",
+    "ironica",
+    "debochado",
+    "sarcastico",
+    "humor"
+   ],
+   "sinais": {},
+   "medido": false
+  },
+  {
+   "id": "sensual",
+   "apelidos": [
+    "sensual",
+    "sexy",
+    "sedutor",
+    "sedutora",
+    "quente"
+   ],
+   "sinais": {
+    "relaxed": "alto",
+    "dance": "medio"
+   },
+   "medido": true
+  },
+  {
+   "id": "épico",
+   "apelidos": [
+    "epico",
+    "epica",
+    "grandioso",
+    "grandiosa",
+    "monumental",
+    "cinematografico"
+   ],
+   "sinais": {},
+   "medido": false
+  }
+ ],
+ "instrumentos": [
+  {
+   "id": "violão",
+   "apelidos": [
+    "violao",
+    "violao de nylon",
+    "violao de aco"
+   ],
+   "essentia": [
+    "acousticguitar",
+    "classicalguitar",
+    "guitar"
+   ],
+   "medido": true
+  },
+  {
+   "id": "violão de sete cordas",
+   "apelidos": [
+    "sete cordas",
+    "7 cordas",
+    "violao 7 cordas"
+   ],
+   "essentia": [],
+   "medido": false
+  },
+  {
+   "id": "cavaquinho",
+   "apelidos": [
+    "cavaco"
+   ],
+   "essentia": [],
+   "medido": false
+  },
+  {
+   "id": "pandeiro",
+   "apelidos": [],
+   "essentia": [
+    "percussion"
+   ],
+   "medido": true
+  },
+  {
+   "id": "sanfona",
+   "apelidos": [
+    "acordeao",
+    "acordeon",
+    "gaita"
+   ],
+   "essentia": [
+    "accordion"
+   ],
+   "medido": true
+  },
+  {
+   "id": "piano",
+   "apelidos": [
+    "pianinho",
+    "piano eletrico"
+   ],
+   "essentia": [
+    "piano",
+    "electricpiano",
+    "rhodes"
+   ],
+   "medido": true
+  },
+  {
+   "id": "guitarra elétrica",
+   "apelidos": [
+    "guitarra",
+    "guitarras",
+    "guitarra eletrica"
+   ],
+   "essentia": [
+    "electricguitar"
+   ],
+   "medido": true
+  },
+  {
+   "id": "bateria",
+   "apelidos": [
+    "baterias",
+    "batera"
+   ],
+   "essentia": [
+    "drums"
+   ],
+   "medido": true
+  },
+  {
+   "id": "percussão",
+   "apelidos": [
+    "percussao",
+    "tambores",
+    "atabaque",
+    "surdo",
+    "tamborim"
+   ],
+   "essentia": [
+    "percussion",
+    "bongo"
+   ],
+   "medido": true
+  },
+  {
+   "id": "flauta",
+   "apelidos": [
+    "flautas",
+    "flautim"
+   ],
+   "essentia": [
+    "flute"
+   ],
+   "medido": true
+  },
+  {
+   "id": "bandolim",
+   "apelidos": [],
+   "essentia": [],
+   "medido": false
+  },
+  {
+   "id": "violino",
+   "apelidos": [
+    "rabeca",
+    "violinos"
+   ],
+   "essentia": [
+    "violin"
+   ],
+   "medido": true
+  },
+  {
+   "id": "sopros",
+   "apelidos": [
+    "sopro",
+    "metais",
+    "saxofone",
+    "sax",
+    "trompete",
+    "trombone",
+    "clarinete"
+   ],
+   "essentia": [
+    "saxophone",
+    "trumpet",
+    "trombone",
+    "brass",
+    "horn",
+    "oboe",
+    "clarinet"
+   ],
+   "medido": true
+  },
+  {
+   "id": "baixo",
+   "apelidos": [
+    "contrabaixo",
+    "baixo eletrico"
+   ],
+   "essentia": [
+    "bass",
+    "doublebass",
+    "acousticbassguitar"
+   ],
+   "medido": true
+  },
+  {
+   "id": "sintetizador",
+   "apelidos": [
+    "sintetizadores",
+    "synth",
+    "teclado",
+    "teclados"
+   ],
+   "essentia": [
+    "synthesizer",
+    "keyboard",
+    "pad",
+    "computer",
+    "drummachine",
+    "sampler"
+   ],
+   "medido": true
+  },
+  {
+   "id": "órgão",
+   "apelidos": [
+    "orgao",
+    "hammond"
+   ],
+   "essentia": [
+    "organ",
+    "pipeorgan"
+   ],
+   "medido": true
+  },
+  {
+   "id": "viola caipira",
+   "apelidos": [
+    "viola"
+   ],
+   "essentia": [],
+   "medido": false
+  },
+  {
+   "id": "cordas",
+   "apelidos": [
+    "orquestra de cordas",
+    "violoncelo",
+    "harpa"
+   ],
+   "essentia": [
+    "strings",
+    "cello",
+    "viola",
+    "harp",
+    "orchestra"
+   ],
+   "medido": true
+  },
+  {
+   "id": "coro",
+   "apelidos": [
+    "coral",
+    "vozes",
+    "corais"
+   ],
+   "essentia": [
+    "voice"
+   ],
+   "medido": true
+  }
+ ],
+ "formacoes": [
+  {
+   "id": "voz e violão",
+   "apelidos": [
+    "voz e violao",
+    "so voz e violao",
+    "voz violao"
+   ]
+  },
+  {
+   "id": "banda completa",
+   "apelidos": [
+    "banda",
+    "banda completa",
+    "conjunto de rock"
+   ]
+  },
+  {
+   "id": "orquestra",
+   "apelidos": [
+    "orquestral",
+    "orquestra"
+   ]
+  },
+  {
+   "id": "só instrumental",
+   "apelidos": [
+    "so instrumental",
+    "sem voz",
+    "sem cantor",
+    "instrumental"
+   ]
+  },
+  {
+   "id": "conjunto regional",
+   "apelidos": [
+    "regional",
+    "conjunto regional",
+    "regional de choro"
+   ]
+  },
+  {
+   "id": "duo",
+   "apelidos": [
+    "dupla",
+    "duo",
+    "dueto"
+   ]
+  },
+  {
+   "id": "coletânea",
+   "apelidos": [
+    "coletanea",
+    "compilacao",
+    "varios artistas"
+   ]
+  },
+  {
+   "id": "ao vivo",
+   "apelidos": [
+    "ao vivo",
+    "live",
+    "show gravado"
+   ]
+  }
+ ],
+ "andamentos": [
+  {
+   "id": "lento",
+   "bpm": [
+    0,
+    80
+   ],
+   "apelidos": [
+    "lenta",
+    "lentinho",
+    "devagar",
+    "arrastado",
+    "vagaroso"
+   ]
+  },
+  {
+   "id": "moderado",
+   "bpm": [
+    80,
+    105
+   ],
+   "apelidos": [
+    "moderada",
+    "meio termo",
+    "médio",
+    "medio",
+    "ritmo medio"
+   ]
+  },
+  {
+   "id": "animado",
+   "bpm": [
+    105,
+    130
+   ],
+   "apelidos": [
+    "animada",
+    "agitado",
+    "agitada",
+    "pra cima"
+   ]
+  },
+  {
+   "id": "acelerado",
+   "bpm": [
+    130,
+    300
+   ],
+   "apelidos": [
+    "acelerada",
+    "rapido",
+    "rapida",
+    "veloz",
+    "ligeiro",
+    "frenetico"
+   ]
+  }
+ ],
+ "voz": [
+  {
+   "id": "cantada",
+   "apelidos": [
+    "cantada",
+    "com voz",
+    "com letra",
+    "cantado"
+   ],
+   "medido": "voice >= 0.5"
+  },
+  {
+   "id": "instrumental",
+   "apelidos": [
+    "instrumental",
+    "sem voz",
+    "sem letra",
+    "sem cantor",
+    "so instrumental"
+   ],
+   "medido": "voice < 0.5"
+  }
+ ],
+ "traducoes": {
+  "música instrumental": {
+   "voz": "instrumental"
+  }
+ },
+ "discogs": {
+  "classes": [
+   "Blues---Boogie Woogie",
+   "Blues---Chicago Blues",
+   "Blues---Country Blues",
+   "Blues---Delta Blues",
+   "Blues---Electric Blues",
+   "Blues---Harmonica Blues",
+   "Blues---Jump Blues",
+   "Blues---Louisiana Blues",
+   "Blues---Modern Electric Blues",
+   "Blues---Piano Blues",
+   "Blues---Rhythm & Blues",
+   "Blues---Texas Blues",
+   "Brass & Military---Brass Band",
+   "Brass & Military---Marches",
+   "Brass & Military---Military",
+   "Children's---Educational",
+   "Children's---Nursery Rhymes",
+   "Children's---Story",
+   "Classical---Baroque",
+   "Classical---Choral",
+   "Classical---Classical",
+   "Classical---Contemporary",
+   "Classical---Impressionist",
+   "Classical---Medieval",
+   "Classical---Modern",
+   "Classical---Neo-Classical",
+   "Classical---Neo-Romantic",
+   "Classical---Opera",
+   "Classical---Post-Modern",
+   "Classical---Renaissance",
+   "Classical---Romantic",
+   "Electronic---Abstract",
+   "Electronic---Acid",
+   "Electronic---Acid House",
+   "Electronic---Acid Jazz",
+   "Electronic---Ambient",
+   "Electronic---Bassline",
+   "Electronic---Beatdown",
+   "Electronic---Berlin-School",
+   "Electronic---Big Beat",
+   "Electronic---Bleep",
+   "Electronic---Breakbeat",
+   "Electronic---Breakcore",
+   "Electronic---Breaks",
+   "Electronic---Broken Beat",
+   "Electronic---Chillwave",
+   "Electronic---Chiptune",
+   "Electronic---Dance-pop",
+   "Electronic---Dark Ambient",
+   "Electronic---Darkwave",
+   "Electronic---Deep House",
+   "Electronic---Deep Techno",
+   "Electronic---Disco",
+   "Electronic---Disco Polo",
+   "Electronic---Donk",
+   "Electronic---Downtempo",
+   "Electronic---Drone",
+   "Electronic---Drum n Bass",
+   "Electronic---Dub",
+   "Electronic---Dub Techno",
+   "Electronic---Dubstep",
+   "Electronic---Dungeon Synth",
+   "Electronic---EBM",
+   "Electronic---Electro",
+   "Electronic---Electro House",
+   "Electronic---Electroclash",
+   "Electronic---Euro House",
+   "Electronic---Euro-Disco",
+   "Electronic---Eurobeat",
+   "Electronic---Eurodance",
+   "Electronic---Experimental",
+   "Electronic---Freestyle",
+   "Electronic---Future Jazz",
+   "Electronic---Gabber",
+   "Electronic---Garage House",
+   "Electronic---Ghetto",
+   "Electronic---Ghetto House",
+   "Electronic---Glitch",
+   "Electronic---Goa Trance",
+   "Electronic---Grime",
+   "Electronic---Halftime",
+   "Electronic---Hands Up",
+   "Electronic---Happy Hardcore",
+   "Electronic---Hard House",
+   "Electronic---Hard Techno",
+   "Electronic---Hard Trance",
+   "Electronic---Hardcore",
+   "Electronic---Hardstyle",
+   "Electronic---Hi NRG",
+   "Electronic---Hip Hop",
+   "Electronic---Hip-House",
+   "Electronic---House",
+   "Electronic---IDM",
+   "Electronic---Illbient",
+   "Electronic---Industrial",
+   "Electronic---Italo House",
+   "Electronic---Italo-Disco",
+   "Electronic---Italodance",
+   "Electronic---Jazzdance",
+   "Electronic---Juke",
+   "Electronic---Jumpstyle",
+   "Electronic---Jungle",
+   "Electronic---Latin",
+   "Electronic---Leftfield",
+   "Electronic---Makina",
+   "Electronic---Minimal",
+   "Electronic---Minimal Techno",
+   "Electronic---Modern Classical",
+   "Electronic---Musique Concrète",
+   "Electronic---Neofolk",
+   "Electronic---New Age",
+   "Electronic---New Beat",
+   "Electronic---New Wave",
+   "Electronic---Noise",
+   "Electronic---Nu-Disco",
+   "Electronic---Power Electronics",
+   "Electronic---Progressive Breaks",
+   "Electronic---Progressive House",
+   "Electronic---Progressive Trance",
+   "Electronic---Psy-Trance",
+   "Electronic---Rhythmic Noise",
+   "Electronic---Schranz",
+   "Electronic---Sound Collage",
+   "Electronic---Speed Garage",
+   "Electronic---Speedcore",
+   "Electronic---Synth-pop",
+   "Electronic---Synthwave",
+   "Electronic---Tech House",
+   "Electronic---Tech Trance",
+   "Electronic---Techno",
+   "Electronic---Trance",
+   "Electronic---Tribal",
+   "Electronic---Tribal House",
+   "Electronic---Trip Hop",
+   "Electronic---Tropical House",
+   "Electronic---UK Garage",
+   "Electronic---Vaporwave",
+   "Folk, World, & Country---African",
+   "Folk, World, & Country---Bluegrass",
+   "Folk, World, & Country---Cajun",
+   "Folk, World, & Country---Canzone Napoletana",
+   "Folk, World, & Country---Catalan Music",
+   "Folk, World, & Country---Celtic",
+   "Folk, World, & Country---Country",
+   "Folk, World, & Country---Fado",
+   "Folk, World, & Country---Flamenco",
+   "Folk, World, & Country---Folk",
+   "Folk, World, & Country---Gospel",
+   "Folk, World, & Country---Highlife",
+   "Folk, World, & Country---Hillbilly",
+   "Folk, World, & Country---Hindustani",
+   "Folk, World, & Country---Honky Tonk",
+   "Folk, World, & Country---Indian Classical",
+   "Folk, World, & Country---Laïkó",
+   "Folk, World, & Country---Nordic",
+   "Folk, World, & Country---Pacific",
+   "Folk, World, & Country---Polka",
+   "Folk, World, & Country---Raï",
+   "Folk, World, & Country---Romani",
+   "Folk, World, & Country---Soukous",
+   "Folk, World, & Country---Séga",
+   "Folk, World, & Country---Volksmusik",
+   "Folk, World, & Country---Zouk",
+   "Folk, World, & Country---Éntekhno",
+   "Funk / Soul---Afrobeat",
+   "Funk / Soul---Boogie",
+   "Funk / Soul---Contemporary R&B",
+   "Funk / Soul---Disco",
+   "Funk / Soul---Free Funk",
+   "Funk / Soul---Funk",
+   "Funk / Soul---Gospel",
+   "Funk / Soul---Neo Soul",
+   "Funk / Soul---New Jack Swing",
+   "Funk / Soul---P.Funk",
+   "Funk / Soul---Psychedelic",
+   "Funk / Soul---Rhythm & Blues",
+   "Funk / Soul---Soul",
+   "Funk / Soul---Swingbeat",
+   "Funk / Soul---UK Street Soul",
+   "Hip Hop---Bass Music",
+   "Hip Hop---Boom Bap",
+   "Hip Hop---Bounce",
+   "Hip Hop---Britcore",
+   "Hip Hop---Cloud Rap",
+   "Hip Hop---Conscious",
+   "Hip Hop---Crunk",
+   "Hip Hop---Cut-up/DJ",
+   "Hip Hop---DJ Battle Tool",
+   "Hip Hop---Electro",
+   "Hip Hop---G-Funk",
+   "Hip Hop---Gangsta",
+   "Hip Hop---Grime",
+   "Hip Hop---Hardcore Hip-Hop",
+   "Hip Hop---Horrorcore",
+   "Hip Hop---Instrumental",
+   "Hip Hop---Jazzy Hip-Hop",
+   "Hip Hop---Miami Bass",
+   "Hip Hop---Pop Rap",
+   "Hip Hop---Ragga HipHop",
+   "Hip Hop---RnB/Swing",
+   "Hip Hop---Screw",
+   "Hip Hop---Thug Rap",
+   "Hip Hop---Trap",
+   "Hip Hop---Trip Hop",
+   "Hip Hop---Turntablism",
+   "Jazz---Afro-Cuban Jazz",
+   "Jazz---Afrobeat",
+   "Jazz---Avant-garde Jazz",
+   "Jazz---Big Band",
+   "Jazz---Bop",
+   "Jazz---Bossa Nova",
+   "Jazz---Contemporary Jazz",
+   "Jazz---Cool Jazz",
+   "Jazz---Dixieland",
+   "Jazz---Easy Listening",
+   "Jazz---Free Improvisation",
+   "Jazz---Free Jazz",
+   "Jazz---Fusion",
+   "Jazz---Gypsy Jazz",
+   "Jazz---Hard Bop",
+   "Jazz---Jazz-Funk",
+   "Jazz---Jazz-Rock",
+   "Jazz---Latin Jazz",
+   "Jazz---Modal",
+   "Jazz---Post Bop",
+   "Jazz---Ragtime",
+   "Jazz---Smooth Jazz",
+   "Jazz---Soul-Jazz",
+   "Jazz---Space-Age",
+   "Jazz---Swing",
+   "Latin---Afro-Cuban",
+   "Latin---Baião",
+   "Latin---Batucada",
+   "Latin---Beguine",
+   "Latin---Bolero",
+   "Latin---Boogaloo",
+   "Latin---Bossanova",
+   "Latin---Cha-Cha",
+   "Latin---Charanga",
+   "Latin---Compas",
+   "Latin---Cubano",
+   "Latin---Cumbia",
+   "Latin---Descarga",
+   "Latin---Forró",
+   "Latin---Guaguancó",
+   "Latin---Guajira",
+   "Latin---Guaracha",
+   "Latin---MPB",
+   "Latin---Mambo",
+   "Latin---Mariachi",
+   "Latin---Merengue",
+   "Latin---Norteño",
+   "Latin---Nueva Cancion",
+   "Latin---Pachanga",
+   "Latin---Porro",
+   "Latin---Ranchera",
+   "Latin---Reggaeton",
+   "Latin---Rumba",
+   "Latin---Salsa",
+   "Latin---Samba",
+   "Latin---Son",
+   "Latin---Son Montuno",
+   "Latin---Tango",
+   "Latin---Tejano",
+   "Latin---Vallenato",
+   "Non-Music---Audiobook",
+   "Non-Music---Comedy",
+   "Non-Music---Dialogue",
+   "Non-Music---Education",
+   "Non-Music---Field Recording",
+   "Non-Music---Interview",
+   "Non-Music---Monolog",
+   "Non-Music---Poetry",
+   "Non-Music---Political",
+   "Non-Music---Promotional",
+   "Non-Music---Radioplay",
+   "Non-Music---Religious",
+   "Non-Music---Spoken Word",
+   "Pop---Ballad",
+   "Pop---Bollywood",
+   "Pop---Bubblegum",
+   "Pop---Chanson",
+   "Pop---City Pop",
+   "Pop---Europop",
+   "Pop---Indie Pop",
+   "Pop---J-pop",
+   "Pop---K-pop",
+   "Pop---Kayōkyoku",
+   "Pop---Light Music",
+   "Pop---Music Hall",
+   "Pop---Novelty",
+   "Pop---Parody",
+   "Pop---Schlager",
+   "Pop---Vocal",
+   "Reggae---Calypso",
+   "Reggae---Dancehall",
+   "Reggae---Dub",
+   "Reggae---Lovers Rock",
+   "Reggae---Ragga",
+   "Reggae---Reggae",
+   "Reggae---Reggae-Pop",
+   "Reggae---Rocksteady",
+   "Reggae---Roots Reggae",
+   "Reggae---Ska",
+   "Reggae---Soca",
+   "Rock---AOR",
+   "Rock---Acid Rock",
+   "Rock---Acoustic",
+   "Rock---Alternative Rock",
+   "Rock---Arena Rock",
+   "Rock---Art Rock",
+   "Rock---Atmospheric Black Metal",
+   "Rock---Avantgarde",
+   "Rock---Beat",
+   "Rock---Black Metal",
+   "Rock---Blues Rock",
+   "Rock---Brit Pop",
+   "Rock---Classic Rock",
+   "Rock---Coldwave",
+   "Rock---Country Rock",
+   "Rock---Crust",
+   "Rock---Death Metal",
+   "Rock---Deathcore",
+   "Rock---Deathrock",
+   "Rock---Depressive Black Metal",
+   "Rock---Doo Wop",
+   "Rock---Doom Metal",
+   "Rock---Dream Pop",
+   "Rock---Emo",
+   "Rock---Ethereal",
+   "Rock---Experimental",
+   "Rock---Folk Metal",
+   "Rock---Folk Rock",
+   "Rock---Funeral Doom Metal",
+   "Rock---Funk Metal",
+   "Rock---Garage Rock",
+   "Rock---Glam",
+   "Rock---Goregrind",
+   "Rock---Goth Rock",
+   "Rock---Gothic Metal",
+   "Rock---Grindcore",
+   "Rock---Grunge",
+   "Rock---Hard Rock",
+   "Rock---Hardcore",
+   "Rock---Heavy Metal",
+   "Rock---Indie Rock",
+   "Rock---Industrial",
+   "Rock---Krautrock",
+   "Rock---Lo-Fi",
+   "Rock---Lounge",
+   "Rock---Math Rock",
+   "Rock---Melodic Death Metal",
+   "Rock---Melodic Hardcore",
+   "Rock---Metalcore",
+   "Rock---Mod",
+   "Rock---Neofolk",
+   "Rock---New Wave",
+   "Rock---No Wave",
+   "Rock---Noise",
+   "Rock---Noisecore",
+   "Rock---Nu Metal",
+   "Rock---Oi",
+   "Rock---Parody",
+   "Rock---Pop Punk",
+   "Rock---Pop Rock",
+   "Rock---Pornogrind",
+   "Rock---Post Rock",
+   "Rock---Post-Hardcore",
+   "Rock---Post-Metal",
+   "Rock---Post-Punk",
+   "Rock---Power Metal",
+   "Rock---Power Pop",
+   "Rock---Power Violence",
+   "Rock---Prog Rock",
+   "Rock---Progressive Metal",
+   "Rock---Psychedelic Rock",
+   "Rock---Psychobilly",
+   "Rock---Pub Rock",
+   "Rock---Punk",
+   "Rock---Rock & Roll",
+   "Rock---Rockabilly",
+   "Rock---Shoegaze",
+   "Rock---Ska",
+   "Rock---Sludge Metal",
+   "Rock---Soft Rock",
+   "Rock---Southern Rock",
+   "Rock---Space Rock",
+   "Rock---Speed Metal",
+   "Rock---Stoner Rock",
+   "Rock---Surf",
+   "Rock---Symphonic Rock",
+   "Rock---Technical Death Metal",
+   "Rock---Thrash",
+   "Rock---Twist",
+   "Rock---Viking Metal",
+   "Rock---Yé-Yé",
+   "Stage & Screen---Musical",
+   "Stage & Screen---Score",
+   "Stage & Screen---Soundtrack",
+   "Stage & Screen---Theme"
+  ],
+  "mapa": {
+   "Blues---Boogie Woogie": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Chicago Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Country Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Delta Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Electric Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Harmonica Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Jump Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Louisiana Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Modern Electric Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Piano Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Rhythm & Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Blues---Texas Blues": [
+    {
+     "genero": "blues",
+     "peso": 1
+    }
+   ],
+   "Brass & Military---Brass Band": [
+    {
+     "genero": "frevo",
+     "peso": 0.3
+    }
+   ],
+   "Brass & Military---Marches": [
+    {
+     "genero": "frevo",
+     "peso": 0.3
+    }
+   ],
+   "Classical---Baroque": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Choral": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Classical": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Contemporary": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Impressionist": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Medieval": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Modern": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Neo-Classical": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Neo-Romantic": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Opera": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Post-Modern": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Renaissance": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Classical---Romantic": [
+    {
+     "genero": "clássica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Abstract": [
+    {
+     "genero": "vanguarda",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Acid": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Acid House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Acid Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 0.6
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    },
+    {
+     "genero": "soul e funk",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---Ambient": [
+    {
+     "genero": "ambient",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---Bassline": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Beatdown": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Berlin-School": [
+    {
+     "genero": "ambient",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---Big Beat": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Bleep": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Breakbeat": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Breakcore": [
+    {
+     "genero": "noise",
+     "peso": 0.8
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Breaks": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Broken Beat": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Chillwave": [
+    {
+     "genero": "ambient",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---Chiptune": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Dance-pop": [
+    {
+     "genero": "pop",
+     "peso": 0.7
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.6
+    }
+   ],
+   "Electronic---Dark Ambient": [
+    {
+     "genero": "ambient",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---Darkwave": [
+    {
+     "genero": "pós-punk",
+     "peso": 0.6
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.4
+    }
+   ],
+   "Electronic---Deep House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Deep Techno": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Disco": [
+    {
+     "genero": "soul e funk",
+     "peso": 0.4
+    },
+    {
+     "genero": "pop",
+     "peso": 0.4
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Disco Polo": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Donk": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Downtempo": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Drone": [
+    {
+     "genero": "ambient",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---Drum n Bass": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Dub": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Dub Techno": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Dubstep": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Dungeon Synth": [
+    {
+     "genero": "ambient",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---EBM": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Electro": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Electro House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Electroclash": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Euro House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Euro-Disco": [
+    {
+     "genero": "soul e funk",
+     "peso": 0.4
+    },
+    {
+     "genero": "pop",
+     "peso": 0.4
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Eurobeat": [
+    {
+     "genero": "pop",
+     "peso": 0.7
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.6
+    }
+   ],
+   "Electronic---Eurodance": [
+    {
+     "genero": "pop",
+     "peso": 0.7
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.6
+    }
+   ],
+   "Electronic---Experimental": [
+    {
+     "genero": "vanguarda",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Freestyle": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Future Jazz": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Gabber": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Garage House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Ghetto": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Ghetto House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Glitch": [
+    {
+     "genero": "noise",
+     "peso": 0.8
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Goa Trance": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Grime": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Halftime": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Hands Up": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Happy Hardcore": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Hard House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Hard Techno": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Hard Trance": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Hardcore": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Hardstyle": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Hi NRG": [
+    {
+     "genero": "soul e funk",
+     "peso": 0.4
+    },
+    {
+     "genero": "pop",
+     "peso": 0.4
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Hip Hop": [
+    {
+     "genero": "rap",
+     "peso": 0.7
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.4
+    }
+   ],
+   "Electronic---Hip-House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---IDM": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Illbient": [
+    {
+     "genero": "ambient",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---Industrial": [
+    {
+     "genero": "noise",
+     "peso": 0.8
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Italo House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Italo-Disco": [
+    {
+     "genero": "soul e funk",
+     "peso": 0.4
+    },
+    {
+     "genero": "pop",
+     "peso": 0.4
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Italodance": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Jazzdance": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Juke": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Jumpstyle": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Jungle": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Latin": [
+    {
+     "genero": "latina",
+     "peso": 0.6
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Leftfield": [
+    {
+     "genero": "vanguarda",
+     "peso": 1
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Makina": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Minimal": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Minimal Techno": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Modern Classical": [
+    {
+     "genero": "clássica",
+     "peso": 0.6
+    },
+    {
+     "genero": "ambient",
+     "peso": 0.3
+    }
+   ],
+   "Electronic---Musique Concrète": [
+    {
+     "genero": "noise",
+     "peso": 0.8
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Neofolk": [
+    {
+     "genero": "folk",
+     "peso": 0.7
+    }
+   ],
+   "Electronic---New Age": [
+    {
+     "genero": "ambient",
+     "peso": 0.8
+    }
+   ],
+   "Electronic---New Beat": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---New Wave": [
+    {
+     "genero": "pós-punk",
+     "peso": 0.6
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.4
+    }
+   ],
+   "Electronic---Noise": [
+    {
+     "genero": "noise",
+     "peso": 0.8
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Nu-Disco": [
+    {
+     "genero": "soul e funk",
+     "peso": 0.4
+    },
+    {
+     "genero": "pop",
+     "peso": 0.4
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Power Electronics": [
+    {
+     "genero": "noise",
+     "peso": 0.8
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Progressive Breaks": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Progressive House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Progressive Trance": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Psy-Trance": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Rhythmic Noise": [
+    {
+     "genero": "noise",
+     "peso": 0.8
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Schranz": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Sound Collage": [
+    {
+     "genero": "noise",
+     "peso": 0.8
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.5
+    }
+   ],
+   "Electronic---Speed Garage": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Speedcore": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Synth-pop": [
+    {
+     "genero": "pop",
+     "peso": 0.7
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.6
+    }
+   ],
+   "Electronic---Synthwave": [
+    {
+     "genero": "pop",
+     "peso": 0.7
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.6
+    }
+   ],
+   "Electronic---Tech House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Tech Trance": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Techno": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Trance": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Tribal": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Tribal House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Trip Hop": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Tropical House": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---UK Garage": [
+    {
+     "genero": "música eletrônica",
+     "peso": 1
+    }
+   ],
+   "Electronic---Vaporwave": [
+    {
+     "genero": "pop",
+     "peso": 0.7
+    },
+    {
+     "genero": "música eletrônica",
+     "peso": 0.6
+    }
+   ],
+   "Folk, World, & Country---African": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Bluegrass": [
+    {
+     "genero": "música caipira",
+     "peso": 0.5
+    },
+    {
+     "genero": "sertanejo raiz",
+     "peso": 0.4
+    },
+    {
+     "genero": "folk",
+     "peso": 0.4
+    }
+   ],
+   "Folk, World, & Country---Cajun": [
+    {
+     "genero": "música caipira",
+     "peso": 0.5
+    },
+    {
+     "genero": "sertanejo raiz",
+     "peso": 0.4
+    },
+    {
+     "genero": "folk",
+     "peso": 0.4
+    }
+   ],
+   "Folk, World, & Country---Canzone Napoletana": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Catalan Music": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Celtic": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Country": [
+    {
+     "genero": "música caipira",
+     "peso": 0.5
+    },
+    {
+     "genero": "sertanejo raiz",
+     "peso": 0.4
+    },
+    {
+     "genero": "folk",
+     "peso": 0.4
+    }
+   ],
+   "Folk, World, & Country---Fado": [
+    {
+     "genero": "modinha",
+     "peso": 0.4
+    },
+    {
+     "genero": "folk",
+     "peso": 0.5
+    }
+   ],
+   "Folk, World, & Country---Flamenco": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Folk": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Gospel": [
+    {
+     "genero": "folk",
+     "peso": 0.4
+    },
+    {
+     "genero": "soul e funk",
+     "peso": 0.3
+    }
+   ],
+   "Folk, World, & Country---Highlife": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Hillbilly": [
+    {
+     "genero": "música caipira",
+     "peso": 0.5
+    },
+    {
+     "genero": "sertanejo raiz",
+     "peso": 0.4
+    },
+    {
+     "genero": "folk",
+     "peso": 0.4
+    }
+   ],
+   "Folk, World, & Country---Hindustani": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Honky Tonk": [
+    {
+     "genero": "música caipira",
+     "peso": 0.5
+    },
+    {
+     "genero": "sertanejo raiz",
+     "peso": 0.4
+    },
+    {
+     "genero": "folk",
+     "peso": 0.4
+    }
+   ],
+   "Folk, World, & Country---Indian Classical": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Laïkó": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Nordic": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Pacific": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Polka": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Raï": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Romani": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Soukous": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Séga": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Volksmusik": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Zouk": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Folk, World, & Country---Éntekhno": [
+    {
+     "genero": "folk",
+     "peso": 0.8
+    }
+   ],
+   "Funk / Soul---Afrobeat": [
+    {
+     "genero": "soul e funk",
+     "peso": 0.5
+    },
+    {
+     "genero": "jazz",
+     "peso": 0.3
+    }
+   ],
+   "Funk / Soul---Boogie": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---Contemporary R&B": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---Disco": [
+    {
+     "genero": "soul e funk",
+     "peso": 0.6
+    },
+    {
+     "genero": "pop",
+     "peso": 0.4
+    }
+   ],
+   "Funk / Soul---Free Funk": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---Funk": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---Gospel": [
+    {
+     "genero": "soul e funk",
+     "peso": 0.5
+    },
+    {
+     "genero": "folk",
+     "peso": 0.3
+    }
+   ],
+   "Funk / Soul---Neo Soul": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---New Jack Swing": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---P.Funk": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---Psychedelic": [
+    {
+     "genero": "psicodelia",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Funk / Soul---Rhythm & Blues": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---Soul": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---Swingbeat": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Funk / Soul---UK Street Soul": [
+    {
+     "genero": "soul e funk",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Bass Music": [
+    {
+     "genero": "funk carioca",
+     "peso": 0.6
+    },
+    {
+     "genero": "rap",
+     "peso": 0.5
+    }
+   ],
+   "Hip Hop---Boom Bap": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Bounce": [
+    {
+     "genero": "funk carioca",
+     "peso": 0.6
+    },
+    {
+     "genero": "rap",
+     "peso": 0.5
+    }
+   ],
+   "Hip Hop---Britcore": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Cloud Rap": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Conscious": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Crunk": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Cut-up/DJ": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---DJ Battle Tool": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Electro": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---G-Funk": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Gangsta": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Grime": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Hardcore Hip-Hop": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Horrorcore": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Instrumental": [
+    {
+     "genero": "rap",
+     "peso": 0.8
+    }
+   ],
+   "Hip Hop---Jazzy Hip-Hop": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Miami Bass": [
+    {
+     "genero": "funk carioca",
+     "peso": 0.6
+    },
+    {
+     "genero": "rap",
+     "peso": 0.5
+    }
+   ],
+   "Hip Hop---Pop Rap": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Ragga HipHop": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---RnB/Swing": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Screw": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Thug Rap": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Trap": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Hip Hop---Trip Hop": [
+    {
+     "genero": "música eletrônica",
+     "peso": 0.5
+    },
+    {
+     "genero": "rap",
+     "peso": 0.4
+    }
+   ],
+   "Hip Hop---Turntablism": [
+    {
+     "genero": "rap",
+     "peso": 1
+    }
+   ],
+   "Jazz---Afro-Cuban Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Afrobeat": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Avant-garde Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Big Band": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Bop": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Bossa Nova": [
+    {
+     "genero": "bossa nova",
+     "peso": 1
+    },
+    {
+     "genero": "jazz",
+     "peso": 0.4
+    }
+   ],
+   "Jazz---Contemporary Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Cool Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Dixieland": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Easy Listening": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Free Improvisation": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Free Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Fusion": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Gypsy Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Hard Bop": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Jazz-Funk": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Jazz-Rock": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Latin Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Modal": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Post Bop": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Ragtime": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Smooth Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Soul-Jazz": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Space-Age": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Jazz---Swing": [
+    {
+     "genero": "jazz",
+     "peso": 1
+    }
+   ],
+   "Latin---Afro-Cuban": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Baião": [
+    {
+     "genero": "baião",
+     "peso": 1
+    },
+    {
+     "genero": "forró",
+     "peso": 0.6
+    }
+   ],
+   "Latin---Batucada": [
+    {
+     "genero": "samba",
+     "peso": 0.6
+    },
+    {
+     "genero": "samba de raiz",
+     "peso": 0.4
+    },
+    {
+     "genero": "pagode",
+     "peso": 0.2
+    }
+   ],
+   "Latin---Beguine": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Bolero": [
+    {
+     "genero": "samba-canção",
+     "peso": 0.5
+    },
+    {
+     "genero": "brega",
+     "peso": 0.3
+    },
+    {
+     "genero": "latina",
+     "peso": 0.3
+    }
+   ],
+   "Latin---Boogaloo": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Bossanova": [
+    {
+     "genero": "bossa nova",
+     "peso": 1
+    },
+    {
+     "genero": "mpb",
+     "peso": 0.3
+    }
+   ],
+   "Latin---Cha-Cha": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Charanga": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Compas": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Cubano": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Cumbia": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Descarga": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Forró": [
+    {
+     "genero": "forró",
+     "peso": 1
+    }
+   ],
+   "Latin---Guaguancó": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Guajira": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Guaracha": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---MPB": [
+    {
+     "genero": "mpb",
+     "peso": 1
+    }
+   ],
+   "Latin---Mambo": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Mariachi": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Merengue": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Norteño": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Nueva Cancion": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Pachanga": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Porro": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Ranchera": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Reggaeton": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Rumba": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Salsa": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Samba": [
+    {
+     "genero": "samba",
+     "peso": 1
+    },
+    {
+     "genero": "samba de raiz",
+     "peso": 0.4
+    }
+   ],
+   "Latin---Son": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Son Montuno": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Tango": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Tejano": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Latin---Vallenato": [
+    {
+     "genero": "latina",
+     "peso": 1
+    }
+   ],
+   "Pop---Ballad": [
+    {
+     "genero": "pop",
+     "peso": 0.6
+    },
+    {
+     "genero": "mpb",
+     "peso": 0.3
+    }
+   ],
+   "Pop---Bollywood": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Bubblegum": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Chanson": [
+    {
+     "genero": "pop",
+     "peso": 0.6
+    },
+    {
+     "genero": "mpb",
+     "peso": 0.3
+    }
+   ],
+   "Pop---City Pop": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Europop": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Indie Pop": [
+    {
+     "genero": "indie",
+     "peso": 0.8
+    },
+    {
+     "genero": "pop",
+     "peso": 0.4
+    }
+   ],
+   "Pop---J-pop": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---K-pop": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Kayōkyoku": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Light Music": [
+    {
+     "genero": "pop",
+     "peso": 0.6
+    },
+    {
+     "genero": "mpb",
+     "peso": 0.3
+    }
+   ],
+   "Pop---Music Hall": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Novelty": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Parody": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Schlager": [
+    {
+     "genero": "pop",
+     "peso": 1
+    }
+   ],
+   "Pop---Vocal": [
+    {
+     "genero": "pop",
+     "peso": 0.6
+    },
+    {
+     "genero": "mpb",
+     "peso": 0.3
+    }
+   ],
+   "Reggae---Calypso": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Dancehall": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Dub": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Lovers Rock": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Ragga": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Reggae": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Reggae-Pop": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Rocksteady": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Roots Reggae": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Ska": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Reggae---Soca": [
+    {
+     "genero": "reggae",
+     "peso": 1
+    }
+   ],
+   "Rock---AOR": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Acid Rock": [
+    {
+     "genero": "psicodelia",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Acoustic": [
+    {
+     "genero": "folk",
+     "peso": 0.6
+    },
+    {
+     "genero": "indie",
+     "peso": 0.3
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Alternative Rock": [
+    {
+     "genero": "indie",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Arena Rock": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Art Rock": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Atmospheric Black Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Avantgarde": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Beat": [
+    {
+     "genero": "jovem guarda",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ],
+   "Rock---Black Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Blues Rock": [
+    {
+     "genero": "blues",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ],
+   "Rock---Brit Pop": [
+    {
+     "genero": "indie",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Classic Rock": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Coldwave": [
+    {
+     "genero": "pós-punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Country Rock": [
+    {
+     "genero": "folk",
+     "peso": 0.6
+    },
+    {
+     "genero": "indie",
+     "peso": 0.3
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Crust": [
+    {
+     "genero": "punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Death Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Deathcore": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Deathrock": [
+    {
+     "genero": "pós-punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Depressive Black Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Doo Wop": [
+    {
+     "genero": "jovem guarda",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ],
+   "Rock---Doom Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Dream Pop": [
+    {
+     "genero": "shoegaze",
+     "peso": 1
+    },
+    {
+     "genero": "indie",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Emo": [
+    {
+     "genero": "indie",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Ethereal": [
+    {
+     "genero": "shoegaze",
+     "peso": 1
+    },
+    {
+     "genero": "indie",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Experimental": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Folk Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Folk Rock": [
+    {
+     "genero": "folk",
+     "peso": 0.6
+    },
+    {
+     "genero": "indie",
+     "peso": 0.3
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Funeral Doom Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Funk Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Garage Rock": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Glam": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Goregrind": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Goth Rock": [
+    {
+     "genero": "pós-punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Gothic Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Grindcore": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Grunge": [
+    {
+     "genero": "indie",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Hard Rock": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Hardcore": [
+    {
+     "genero": "hardcore",
+     "peso": 1
+    }
+   ],
+   "Rock---Heavy Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Indie Rock": [
+    {
+     "genero": "indie",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Industrial": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Krautrock": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Lo-Fi": [
+    {
+     "genero": "indie",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Lounge": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Math Rock": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Melodic Death Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Melodic Hardcore": [
+    {
+     "genero": "hardcore",
+     "peso": 1
+    }
+   ],
+   "Rock---Metalcore": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Mod": [
+    {
+     "genero": "jovem guarda",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ],
+   "Rock---Neofolk": [
+    {
+     "genero": "folk",
+     "peso": 0.6
+    },
+    {
+     "genero": "indie",
+     "peso": 0.3
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---New Wave": [
+    {
+     "genero": "pós-punk",
+     "peso": 0.7
+    },
+    {
+     "genero": "pop",
+     "peso": 0.3
+    }
+   ],
+   "Rock---No Wave": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Noise": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Noisecore": [
+    {
+     "genero": "hardcore",
+     "peso": 1
+    }
+   ],
+   "Rock---Nu Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Oi": [
+    {
+     "genero": "punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Parody": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Pop Punk": [
+    {
+     "genero": "punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Pop Rock": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Pornogrind": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Post Rock": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Post-Hardcore": [
+    {
+     "genero": "hardcore",
+     "peso": 1
+    }
+   ],
+   "Rock---Post-Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Post-Punk": [
+    {
+     "genero": "pós-punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Power Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Power Pop": [
+    {
+     "genero": "indie",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Power Violence": [
+    {
+     "genero": "punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Prog Rock": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Progressive Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Psychedelic Rock": [
+    {
+     "genero": "psicodelia",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Psychobilly": [
+    {
+     "genero": "punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Pub Rock": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Punk": [
+    {
+     "genero": "punk",
+     "peso": 1
+    }
+   ],
+   "Rock---Rock & Roll": [
+    {
+     "genero": "jovem guarda",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ],
+   "Rock---Rockabilly": [
+    {
+     "genero": "jovem guarda",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ],
+   "Rock---Shoegaze": [
+    {
+     "genero": "shoegaze",
+     "peso": 1
+    },
+    {
+     "genero": "indie",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Ska": [
+    {
+     "genero": "reggae",
+     "peso": 0.7
+    },
+    {
+     "genero": "punk",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Sludge Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Soft Rock": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Southern Rock": [
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock",
+     "peso": 0.4
+    }
+   ],
+   "Rock---Space Rock": [
+    {
+     "genero": "psicodelia",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Speed Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Stoner Rock": [
+    {
+     "genero": "psicodelia",
+     "peso": 1
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Surf": [
+    {
+     "genero": "jovem guarda",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ],
+   "Rock---Symphonic Rock": [
+    {
+     "genero": "rock experimental",
+     "peso": 1
+    },
+    {
+     "genero": "vanguarda",
+     "peso": 0.3
+    }
+   ],
+   "Rock---Technical Death Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Thrash": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Twist": [
+    {
+     "genero": "jovem guarda",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ],
+   "Rock---Viking Metal": [
+    {
+     "genero": "metal",
+     "peso": 1
+    }
+   ],
+   "Rock---Yé-Yé": [
+    {
+     "genero": "jovem guarda",
+     "peso": 0.6
+    },
+    {
+     "genero": "rock brasileiro",
+     "peso": 0.5
+    }
+   ]
+  },
+  "ignorar": [
+   "Brass & Military---Military",
+   "Children's---Educational",
+   "Children's---Nursery Rhymes",
+   "Children's---Story",
+   "Non-Music---Audiobook",
+   "Non-Music---Comedy",
+   "Non-Music---Dialogue",
+   "Non-Music---Education",
+   "Non-Music---Field Recording",
+   "Non-Music---Interview",
+   "Non-Music---Monolog",
+   "Non-Music---Poetry",
+   "Non-Music---Political",
+   "Non-Music---Promotional",
+   "Non-Music---Radioplay",
+   "Non-Music---Religious",
+   "Non-Music---Spoken Word",
+   "Stage & Screen---Musical",
+   "Stage & Screen---Score",
+   "Stage & Screen---Soundtrack",
+   "Stage & Screen---Theme"
+  ]
+ },
+ "essentia": {
+  "instrumentos": [
+   "accordion",
+   "acousticbassguitar",
+   "acousticguitar",
+   "bass",
+   "beat",
+   "bell",
+   "bongo",
+   "brass",
+   "cello",
+   "clarinet",
+   "classicalguitar",
+   "computer",
+   "doublebass",
+   "drummachine",
+   "drums",
+   "electricguitar",
+   "electricpiano",
+   "flute",
+   "guitar",
+   "harmonica",
+   "harp",
+   "horn",
+   "keyboard",
+   "oboe",
+   "orchestra",
+   "organ",
+   "pad",
+   "percussion",
+   "piano",
+   "pipeorgan",
+   "rhodes",
+   "sampler",
+   "saxophone",
+   "strings",
+   "synthesizer",
+   "trombone",
+   "trumpet",
+   "viola",
+   "violin",
+   "voice"
+  ]
+ }
+}
