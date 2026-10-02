@@ -12,26 +12,29 @@ let _exDados = null;              // { f, n, analisados, faixasAnalisadas, resum
 let _exFiltros = {};              // chave -> [lo, hi] (só os que estão fora do padrão)
 let _exVoz = 'any';               // 'any' | 'com' | 'sem'
 let _exQuery = '';
-let _exCtl = {};                  // chave -> { lo, hi, out, hist, sec, def }
+let _exCtl = {};                  // chave -> { lo, hi, out, reset, hist, d } | voice -> { grp }
 let _exTimer = 0;
 
+const EX_FECHADOS = 'tocador-explorar-fechados';   // grupos recolhidos (localStorage)
+
 const EX_BINS = 24;
+// `busca`: outras palavras que a busca do painel aceita para a característica.
 const EX_GRUPOS = [
   ['Ritmo', true, [
-    { k: 'bpm', nome: 'Andamento', min: 40, max: 200, step: 1, un: ' bpm' },
-    { k: 'dance', nome: 'Dançabilidade', min: 0, max: 100, step: 1, un: '%' },
-    { k: 'party', nome: 'Festa', min: 0, max: 100, step: 1, un: '%' },
+    { k: 'bpm', nome: 'Andamento', min: 40, max: 200, step: 1, un: ' bpm', busca: 'bpm tempo velocidade rapido lento' },
+    { k: 'dance', nome: 'Dançabilidade', min: 0, max: 100, step: 1, un: '%', busca: 'dancar dancante' },
+    { k: 'party', nome: 'Festa', min: 0, max: 100, step: 1, un: '%', busca: 'animado' },
   ]],
   ['Clima', true, [
-    { k: 'happy', nome: 'Alegre', min: 0, max: 100, step: 1, un: '%' },
-    { k: 'sad', nome: 'Triste', min: 0, max: 100, step: 1, un: '%' },
-    { k: 'relaxed', nome: 'Relaxante', min: 0, max: 100, step: 1, un: '%' },
-    { k: 'aggressive', nome: 'Agressivo', min: 0, max: 100, step: 1, un: '%' },
+    { k: 'happy', nome: 'Alegre', min: 0, max: 100, step: 1, un: '%', busca: 'feliz humor' },
+    { k: 'sad', nome: 'Triste', min: 0, max: 100, step: 1, un: '%', busca: 'melancolico humor' },
+    { k: 'relaxed', nome: 'Relaxante', min: 0, max: 100, step: 1, un: '%', busca: 'calmo tranquilo humor' },
+    { k: 'aggressive', nome: 'Agressivo', min: 0, max: 100, step: 1, un: '%', busca: 'pesado raiva humor' },
   ]],
   ['Timbre', true, [
-    { k: 'voice', nome: 'Voz', voz: true },
-    { k: 'acoustic', nome: 'Acústico', min: 0, max: 100, step: 1, un: '%' },
-    { k: 'electronic', nome: 'Eletrônico', min: 0, max: 100, step: 1, un: '%' },
+    { k: 'voice', nome: 'Voz', voz: true, busca: 'vocal cantada instrumental' },
+    { k: 'acoustic', nome: 'Acústico', min: 0, max: 100, step: 1, un: '%', busca: 'acustico' },
+    { k: 'electronic', nome: 'Eletrônico', min: 0, max: 100, step: 1, un: '%', busca: 'eletronico sintetizador' },
   ]],
 ];
 const EX_PROBS = ['voice', 'dance', 'acoustic', 'electronic', 'happy', 'sad', 'relaxed', 'aggressive', 'party'];
@@ -50,6 +53,7 @@ async function _exGz(resp) {
   return JSON.parse(await new Response(resp.body.pipeThrough(new DecompressionStream('gzip'))).text());
 }
 
+const _exPl = (x, um, varios) => `${x.toLocaleString('pt-BR')} ${x === 1 ? um : varios}`;
 const _exMediana = a => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
 
 // Nunca lança: sem features publicadas (espelhos, ?acervo=<url>) o painel só avisa.
@@ -171,15 +175,58 @@ function _exAplicar(quiet) {
     filterAlbums(quiet);
   }
   _exRefazerFaixas();
-  _exAtualizarRodape();
+  const c = _exAtualizarContagem();
+  _exSugerir(c);
+  _exAnunciar(c);
 }
 
 function _exAgendar(imediato) {
   _exAtualizarUI();
   clearTimeout(_exTimer);
   if (imediato) { _exAplicar(false); return; }
-  _exAtualizarRodape();
+  _exAtualizarContagem();
   _exTimer = setTimeout(() => _exAplicar(true), 160);
+}
+
+// Leitor de tela: só depois que a grade troca, para não narrar cada passo do arrasto.
+function _exAnunciar(c) {
+  const el = document.getElementById('explorar-anuncio');
+  if (!el) return;
+  el.textContent = !c ? 'Sem filtros: todos os álbuns.'
+    : c.set.size ? `${_exPl(c.set.size, 'álbum', 'álbuns')} e ${_exPl(c.faixas, 'faixa', 'faixas')} passam nos filtros.`
+    : 'Nenhuma faixa passa em todos os filtros.';
+}
+
+// Grade vazia: diz quanto cada filtro, se tirado, devolveria. Só depois do arrasto (custa uma passada por filtro).
+function _exSugerir(c) {
+  const box = document.getElementById('explorar-sugestoes');
+  if (!box) return;
+  box.replaceChildren();
+  if (!c || c.set.size) { box.hidden = true; return; }
+  const opcoes = [];
+  for (const d of _exAtivos()) {
+    const salvo = d.voz ? _exVoz : _exFiltros[d.k];
+    if (d.voz) _exVoz = 'any'; else delete _exFiltros[d.k];
+    const n = _exCalcular().set.size;
+    if (d.voz) _exVoz = salvo; else _exFiltros[d.k] = salvo;
+    if (n) opcoes.push([d, n]);
+  }
+  if (!opcoes.length) { box.hidden = true; return; }
+  box.hidden = false;
+  box.append(_exEl('span', null, 'Tire um filtro:'));
+  for (const [d, n] of opcoes.sort((a, b) => b[1] - a[1]).slice(0, 3)) {
+    const b = _exEl('button', 'ex-sugestao', `${_exRotuloAtivo(d)} → ${_exPl(n, 'álbum', 'álbuns')}`);
+    b.type = 'button';
+    b.setAttribute('aria-label', `Remover ${_exRotuloAtivo(d)}: ${_exPl(n, 'álbum', 'álbuns')}`);
+    b.addEventListener('click', () => _exRemover(d));
+    box.append(b);
+  }
+}
+
+function _exRemover(d) {
+  if (d.voz) _exVoz = 'any'; else delete _exFiltros[d.k];
+  _exSincronizar();
+  _exAgendar(true);
 }
 
 // Chamado por resetFacets() quando outra faceta passa a mandar na grade.
@@ -190,7 +237,7 @@ function explorarReset() {
   if (tinha) _exRefazerFaixas();
   _exFiltros = {};
   _exVoz = 'any';
-  if (_exDados) { _exSincronizar(); _exAtualizarUI(); _exAtualizarRodape(); }
+  if (_exDados) { _exSincronizar(); _exAtualizarUI(); _exAtualizarContagem(); _exSugerir(null); }
 }
 
 function explorarLimparTudo() {
@@ -221,13 +268,25 @@ function _exSlider(d) {
   const med = todos.length ? _exMediana(todos) : null;
 
   const sec = _exEl('div', 'ex-feat');
+  sec.dataset.busca = `${d.nome} ${d.busca || ''}`;
   const head = _exEl('div', 'ex-feat-head');
   head.append(_exEl('span', 'ex-feat-nome', d.nome));
   const out = _exEl('span', 'ex-feat-out', 'qualquer');
-  head.append(out);
+  const reset = _exEl('button', 'ex-feat-reset', '✕');
+  reset.type = 'button';
+  reset.hidden = true;
+  reset.title = 'Voltar a qualquer valor';
+  reset.setAttribute('aria-label', `Limpar ${d.nome}`);
+  reset.addEventListener('click', () => { _exRemover(d); lo.focus(); });
+  head.append(out, reset);
   const hist = _exEl('div', 'ex-hist');
   hist.setAttribute('aria-hidden', 'true');
   bins.forEach(c => { const b = _exEl('i'); b.style.height = `${Math.max(4, Math.round((c / maxBin) * 100))}%`; hist.append(b); });
+  if (med !== null) {
+    const m = _exEl('b', 'ex-hist-med');
+    m.style.left = `${((Math.min(Math.max(med, d.min), d.max) - d.min) / (d.max - d.min)) * 100}%`;
+    hist.append(m);
+  }
   const wrap = _exEl('div', 'ex-range');
   const mk = (cls, v, label) => {
     const r = _exEl('input', cls);
@@ -243,20 +302,28 @@ function _exSlider(d) {
     if (a <= d.min && b >= d.max) delete _exFiltros[d.k]; else _exFiltros[d.k] = [a, b];
     _exAgendar();
   };
-  lo.addEventListener('input', () => mudou(lo));
-  hi.addEventListener('input', () => mudou(hi));
+  // Setas andam de 1 em 1; PageUp/PageDown e Shift+seta de 10 em 10; Delete volta a "qualquer".
+  const teclas = e => {
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); _exRemover(d); return; }
+    const dir = { PageUp: 1, PageDown: -1 }[e.key] ??
+      (e.shiftKey ? { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key] : undefined);
+    if (!dir) return;
+    e.preventDefault();
+    const r = e.currentTarget;
+    r.value = Math.min(d.max, Math.max(d.min, Number(r.value) + dir * 10 * d.step));
+    mudou(r);
+  };
+  for (const r of [lo, hi]) { r.addEventListener('input', () => mudou(r)); r.addEventListener('keydown', teclas); }
   wrap.append(_exEl('div', 'ex-track'), lo, hi);
   sec.append(head, hist, wrap);
-  if (med !== null) {
-    const m = _exEl('div', 'ex-feat-med', `mediana ${Math.round(med)}${d.un}`);
-    sec.append(m);
-  }
-  _exCtl[d.k] = { lo, hi, out, hist, d };
+  if (med !== null) sec.append(_exEl('div', 'ex-feat-med', `mediana ${Math.round(med)}${d.un}`));
+  _exCtl[d.k] = { lo, hi, out, reset, hist, d };
   return sec;
 }
 
 function _exVozCtl() {
   const sec = _exEl('div', 'ex-feat');
+  sec.dataset.busca = 'Voz vocal cantada instrumental tanto faz';
   const head = _exEl('div', 'ex-feat-head');
   head.append(_exEl('span', 'ex-feat-nome', 'Voz'));
   sec.append(head);
@@ -271,26 +338,57 @@ function _exVozCtl() {
     grp.append(lab);
   }
   sec.append(grp);
+  sec.append(_exEl('div', 'ex-feat-med', 'faixa com voz = 50% ou mais de chance de canto'));
   _exCtl.voice = { sec, grp };
   return sec;
+}
+
+function _exLerFechados() {
+  try { return new Set(JSON.parse(localStorage.getItem(EX_FECHADOS) || '[]')); } catch { return new Set(); }
+}
+
+function _exGravarFechados() {
+  const fechados = [..._exBody.querySelectorAll('.explorar-sec')].filter(s => !s.open).map(s => s.dataset.grupo);
+  try { localStorage.setItem(EX_FECHADOS, JSON.stringify(fechados)); } catch { /* só conveniência */ }
 }
 
 function _exConstruir() {
   _exBody.replaceChildren();
   _exCtl = {};
   const d = _exDados;
+  // Topo fixo: contagem viva, chips e sugestões ficam à vista enquanto os controles rolam.
+  const topo = _exEl('div', 'ex-topo');
+  const status = _exEl('div', 'ex-status');
+  status.id = 'explorar-status';
+  const anuncio = _exEl('div', 'sr-only');
+  anuncio.id = 'explorar-anuncio';
+  anuncio.setAttribute('role', 'status');
+  const chips = _exEl('div', 'ex-chips');
+  chips.id = 'explorar-chips';
+  const sug = _exEl('div', 'ex-sugestoes');
+  sug.id = 'explorar-sugestoes';
+  sug.hidden = true;
+  topo.append(status, chips, sug, anuncio);
+  const ajuda = _exEl('p', 'ex-ajuda',
+    'Filtra por faixa: o álbum aparece se uma faixa passar em todos os filtros; as outras ficam apagadas na lista dele.');
   const cab = _exEl('div', 'ex-resumo');
   cab.textContent = `${d.analisados.toLocaleString('pt-BR')} de ${d.n.toLocaleString('pt-BR')} álbuns com análise de áudio · ` +
     `${d.faixasAnalisadas.toLocaleString('pt-BR')} faixas`;
-  const chips = _exEl('div', 'ex-chips');
-  chips.id = 'explorar-chips';
-  _exBody.append(cab, chips);
+  const vazio = _exEl('p', 'explorar-empty ex-busca-vazia');
+  vazio.id = 'explorar-busca-vazia';
+  vazio.hidden = true;
+  _exBody.append(topo, ajuda, cab, vazio);
+  const fechados = _exLerFechados();
   for (const [nome, aberto, defs] of EX_GRUPOS) {
     const det = _exEl('details', 'explorar-sec');
-    det.open = aberto;
+    det.open = aberto && !fechados.has(nome);
     det.dataset.grupo = nome;
-    det.append(_exEl('summary', null, nome));
+    const sum = _exEl('summary');
+    sum.append(_exEl('span', null, nome), _exEl('span', 'ex-sec-n'));
+    det.append(sum);
     for (const def of defs) det.append(def.voz ? _exVozCtl() : _exSlider(def));
+    // A busca abre grupos sozinha; isso não conta como escolha do usuário.
+    det.addEventListener('toggle', () => { if (!_exQuery) _exGravarFechados(); });
     _exBody.append(det);
   }
   _exSincronizar();
@@ -314,6 +412,11 @@ function _exAtualizarUI() {
     const a = Number(c.lo.value), b = Number(c.hi.value), d = c.d;
     c.out.textContent = _exFaixaTexto(d, a, b);
     c.out.classList.toggle('on', !!_exFiltros[k]);
+    c.reset.hidden = !_exFiltros[k];
+    c.lo.setAttribute('aria-valuetext', a <= d.min ? 'sem limite' : `${a}${d.un}`);
+    c.hi.setAttribute('aria-valuetext', b >= d.max ? 'sem limite' : `${b}${d.un}`);
+    // Alças juntas na ponta de cima: a de baixo vem para a frente, senão fica presa sob a outra.
+    c.lo.style.zIndex = a > (d.min + d.max) / 2 ? 2 : '';
     const pa = (a - d.min) / (d.max - d.min), pb = (b - d.min) / (d.max - d.min);
     c.lo.parentElement.style.setProperty('--a', `${pa * 100}%`);
     c.lo.parentElement.style.setProperty('--b', `${pb * 100}%`);
@@ -322,18 +425,22 @@ function _exAtualizarUI() {
       bar.classList.toggle('in', m >= pa && m <= pb);
     });
   }
+  const ativos = _exAtivos();
+  _exBody.querySelectorAll('.explorar-sec').forEach(sec => {
+    const grupo = EX_GRUPOS.find(g => g[0] === sec.dataset.grupo);
+    const n = grupo ? grupo[2].filter(d => ativos.includes(d)).length : 0;
+    const el = sec.querySelector('.ex-sec-n');
+    el.textContent = n ? String(n) : '';
+    el.setAttribute('aria-label', n ? `${_exPl(n, 'filtro ativo', 'filtros ativos')}` : '');
+  });
   const chips = document.getElementById('explorar-chips');
   if (!chips) return;
   chips.replaceChildren();
-  for (const d of _exAtivos()) {
+  for (const d of ativos) {
     const b = _exEl('button', 'ex-chip', _exRotuloAtivo(d) + ' ✕');
     b.type = 'button';
     b.setAttribute('aria-label', `Remover filtro ${_exRotuloAtivo(d)}`);
-    b.addEventListener('click', () => {
-      if (d.voz) _exVoz = 'any'; else delete _exFiltros[d.k];
-      _exSincronizar();
-      _exAgendar(true);
-    });
+    b.addEventListener('click', () => _exRemover(d));
     chips.append(b);
   }
   if (chips.children.length) {
@@ -344,44 +451,72 @@ function _exAtualizarUI() {
   }
 }
 
-function _exAtualizarRodape() {
-  if (!_exApply) return;
-  const ativos = _exAtivos().length;
-  if (!_exDados) { _exApply.hidden = true; return; }
-  _exApply.hidden = false;
-  const c = !ativos ? null : _exCalcular();
-  const n = c ? c.set.size : null;
-  const pl = (x, um, varios) => `${x.toLocaleString('pt-BR')} ${x === 1 ? um : varios}`;
-  _exApply.textContent = c ? `ver ${pl(n, 'álbum', 'álbuns')} · ${pl(c.faixas, 'faixa', 'faixas')}` : 'ver todos os álbuns';
+// Contagem viva (acompanha o arrasto): topo do painel e, no mobile, o botão do rodapé. Devolve o cálculo.
+function _exAtualizarContagem() {
+  if (!_exDados) { if (_exApply) _exApply.hidden = true; return null; }
+  const c = _exAtivos().length ? _exCalcular() : null;
+  const st = document.getElementById('explorar-status');
+  if (st) {
+    st.classList.toggle('vazio', !!c && !c.set.size);
+    st.classList.toggle('on', !!c);
+    st.textContent = !c ? `${_exPl(_exDados.n, 'álbum', 'álbuns')} · nenhum filtro`
+      : c.set.size ? `${_exPl(c.set.size, 'álbum', 'álbuns')} · ${_exPl(c.faixas, 'faixa', 'faixas')} passam`
+      : 'Nenhuma faixa passa em todos os filtros';
+  }
+  if (c?.set.size) document.getElementById('explorar-sugestoes')?.setAttribute('hidden', '');
+  if (_exApply) {
+    _exApply.hidden = false;
+    _exApply.textContent = !c ? 'ver todos os álbuns'
+      : c.set.size ? `ver ${_exPl(c.set.size, 'álbum', 'álbuns')} · ${_exPl(c.faixas, 'faixa', 'faixas')}`
+      : 'nenhum álbum passa nos filtros';
+  }
+  return c;
 }
 
+// Busca por nome da característica, sinônimo (`busca`) ou nome do grupo. Sem busca, os grupos voltam ao estado salvo.
 function _exFiltrarGrupos() {
-  const q = fold(_exQuery);
+  const q = fold(_exQuery.trim());
+  const fechados = q ? null : _exLerFechados();
+  let total = 0;
   _exBody.querySelectorAll('.explorar-sec').forEach(sec => {
+    const doGrupo = !!q && fold(sec.dataset.grupo).includes(q);
     let alguma = false;
     sec.querySelectorAll('.ex-feat').forEach(f => {
-      const ok = !q || fold(f.querySelector('.ex-feat-nome')?.textContent || '').includes(q);
+      const ok = !q || doGrupo || fold(f.dataset.busca || '').includes(q);
       f.hidden = !ok;
-      alguma ||= ok;
+      if (ok) { alguma = true; total++; }
     });
     sec.hidden = !alguma;
     if (q && alguma) sec.open = true;
+    else if (fechados) sec.open = !fechados.has(sec.dataset.grupo);
   });
+  const vazio = document.getElementById('explorar-busca-vazia');
+  if (vazio) {
+    vazio.hidden = !!total;
+    vazio.textContent = total ? '' : `Nenhuma característica com “${_exQuery.trim()}”. Tente andamento, voz, alegre…`;
+  }
 }
 
 async function renderExplorar() {
   if (!_exBody) return;
+  if (!_exDados || _exDb !== db) {
+    const p = _exEl('p', 'explorar-empty explorar-carregando', 'Carregando a análise de áudio…');
+    p.setAttribute('role', 'status');
+    _exBody.replaceChildren(p);
+    if (_exApply) _exApply.hidden = true;
+  }
   const dados = await _exCarregar();
   if (!isExplorarOpen()) return;
   if (!dados) {
     _exDados = null;
     _exBody.replaceChildren(_exEl('p', 'explorar-empty', 'Este acervo ainda não tem análise de áudio publicada, então não dá para filtrar por características.'));
-    _exAtualizarRodape();
+    _exAtualizarContagem();
     return;
   }
   if (dados !== _exDados) { _exFiltros = {}; _exVoz = 'any'; _exDados = dados; _exConstruir(); }
+  else if (!_exBody.querySelector('.ex-feat')) _exConstruir();
   _exAtualizarUI();
-  _exAtualizarRodape();
+  _exAtualizarContagem();
 }
 
 // A faixa de abas daqui espelha a do painel de navegação (a aba Gêneros só existe com índice de gêneros).
@@ -402,7 +537,9 @@ function openExplorar() {
     document.getElementById('browse-scrim')?.classList.add('open');
   }
   renderExplorar();
-  _exSearch?.focus();
+  // No mobile, focar a busca abriria o teclado virtual por cima dos controles.
+  if (isMobile()) _exPanel.querySelector('.ex-tab.active')?.focus({ preventScroll: true });
+  else _exSearch?.focus();
 }
 
 function closeExplorar() {
@@ -437,5 +574,11 @@ document.addEventListener('DOMContentLoaded', () => {
   _exSearch?.addEventListener('input', () => { _exQuery = _exSearch.value; if (_exDados) _exFiltrarGrupos(); });
   document.getElementById('explorar-clear')?.addEventListener('click', () => {
     _exSearch.value = ''; _exQuery = ''; if (_exDados) _exFiltrarGrupos(); _exSearch.focus();
+  });
+  // Enter na busca leva ao primeiro controle que sobrou.
+  _exSearch?.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    _exBody.querySelector('.ex-feat:not([hidden]) input')?.focus();
   });
 });

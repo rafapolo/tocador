@@ -2261,45 +2261,83 @@ audio {
 /* ── Explorar panel ────────────────────────────────────────────────────── */
 .app-layout.explorar-mode #browse-panel { display: none; }
 .explorar-panel[hidden] { display: none; }
-.explorar-body { flex: 1; overflow-y: auto; padding: 0 0 12px; }
-.explorar-empty { padding: 16px 14px; font-size: 0.85rem; opacity: 0.7; }
-.ex-resumo { padding: 8px 14px; font-size: 0.72rem; opacity: 0.65; }
-.ex-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px; }
+/* --ex-thumb: diâmetro da alça; histograma e trilha recuam metade dele para alinhar valor e barra. */
+.explorar-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 0 12px; --ex-thumb: 16px; }
+.explorar-empty { padding: 16px 14px; font-size: 0.85rem; color: var(--color-text-secondary); }
+.ex-busca-vazia[hidden] { display: none; }
+.ex-topo { position: sticky; top: 0; z-index: 3; background: var(--color-surface); padding: 8px 14px 0; border-bottom: 1px solid var(--color-border); }
+.ex-status { font-size: 0.8rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; padding-bottom: 8px; }
+.ex-status.on { color: var(--color-text); font-weight: 600; }
+.ex-status.vazio { color: var(--color-accent); }
+.ex-ajuda { margin: 0; padding: 10px 14px 0; font-size: 0.74rem; line-height: 1.45; color: var(--color-text-muted); }
+.ex-resumo { padding: 4px 14px 10px; font-size: 0.72rem; color: var(--color-text-muted); }
+.ex-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .ex-chips:not(:empty) { padding-bottom: 8px; }
-.ex-chip { background: var(--color-border); color: inherit; border: 0; border-radius: 999px; padding: 3px 9px; font: inherit; font-size: 0.72rem; cursor: pointer; }
-.ex-chip:hover { outline: 1px solid currentColor; }
-.ex-chip-limpar { background: none; text-decoration: underline; }
+.ex-chip { background: var(--color-surface-light); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 999px; padding: 3px 9px; font: inherit; font-size: 0.72rem; cursor: pointer; }
+.ex-chip:hover { border-color: var(--color-accent); }
+.ex-chip-limpar { background: none; border-color: transparent; color: var(--color-text-secondary); text-decoration: underline; }
+.ex-sugestoes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 8px; font-size: 0.72rem; color: var(--color-text-secondary); }
+.ex-sugestoes[hidden] { display: none; }
+.ex-sugestao { background: none; color: var(--color-accent); border: 1px dashed var(--color-accent-dark); border-radius: 999px; padding: 3px 9px; font: inherit; cursor: pointer; }
+.ex-sugestao:hover { border-style: solid; }
 .explorar-sec { border-top: 1px solid var(--color-border); }
 .explorar-sec[hidden], .ex-feat[hidden] { display: none; }
-.explorar-sec > summary { cursor: pointer; padding: 10px 14px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; list-style: none; }
+.explorar-sec > summary { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 10px 14px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; list-style: none; }
+.explorar-sec > summary:hover { color: var(--color-accent); }
+.explorar-sec > summary:focus-visible { outline-offset: -2px; }
 .explorar-sec > summary::-webkit-details-marker { display: none; }
-.explorar-sec > summary::before { content: '▸ '; }
-.explorar-sec[open] > summary::before { content: '▾ '; }
+.explorar-sec > summary::before { content: '▸'; width: 0.8em; }
+.explorar-sec[open] > summary::before { content: '▾'; }
+.ex-sec-n:not(:empty) { background: var(--color-accent); color: var(--color-bg); border-radius: 999px; min-width: 1.4em; padding: 0 5px; font-size: 0.68rem; letter-spacing: 0; text-align: center; }
 .ex-feat { padding: 4px 14px 12px; }
-.ex-feat-head { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 4px; }
-.ex-feat-out { opacity: 0.55; font-variant-numeric: tabular-nums; }
-.ex-feat-out.on { opacity: 1; font-weight: 600; }
-.ex-feat-med { font-size: 0.68rem; opacity: 0.5; margin-top: 2px; }
-.ex-hist { display: flex; align-items: flex-end; gap: 1px; height: 28px; }
-.ex-hist i { flex: 1; background: var(--color-accent); opacity: 0.2; border-radius: 1px 1px 0 0; }
-.ex-hist i.in { opacity: 0.75; }
+.ex-feat-head { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; margin-bottom: 4px; min-height: 22px; }
+.ex-feat-nome { flex: 1; }
+.ex-feat-out { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.ex-feat-out.on { color: var(--color-accent); font-weight: 600; }
+.ex-feat-reset { background: none; border: 0; color: var(--color-text-secondary); font: inherit; font-size: 0.75rem; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; }
+.ex-feat-reset:hover { background: var(--color-surface-light); color: var(--color-text); }
+.ex-feat-reset[hidden] { display: none; }
+.ex-feat-med { font-size: 0.68rem; color: var(--color-text-muted); margin-top: 2px; }
+.ex-hist { position: relative; display: flex; align-items: flex-end; gap: 1px; height: 32px; margin: 0 calc(var(--ex-thumb) / 2); }
+.ex-hist i { flex: 1; background: var(--color-accent); opacity: 0.18; border-radius: 1px 1px 0 0; }
+.ex-hist i.in { opacity: 0.8; }
+/* Mediana do acervo: traço fino sobre o histograma (o texto "mediana …" fica embaixo). */
+.ex-hist-med { position: absolute; top: -2px; bottom: 0; width: 0; border-left: 1px dashed var(--color-text-secondary); opacity: 0.7; pointer-events: none; }
 .ex-range { position: relative; height: 24px; --a: 0%; --b: 100%; color: var(--color-accent); }
-.ex-track { position: absolute; left: 7px; right: 7px; top: 10px; height: 4px; border-radius: 2px;
+.ex-track { position: absolute; left: calc(var(--ex-thumb) / 2); right: calc(var(--ex-thumb) / 2); top: calc(50% - 2px); height: 4px; border-radius: 2px;
   background: linear-gradient(to right, var(--color-surface-light) var(--a), var(--color-accent) var(--a), var(--color-accent) var(--b), var(--color-surface-light) var(--b)); }
-.ex-range input { position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; padding: 0; color: var(--color-accent); background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
-.ex-range input::-webkit-slider-runnable-track { background: none; height: 24px; }
-.ex-range input::-moz-range-track { background: none; height: 24px; }
-.ex-range input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 16px; height: 16px; margin-top: 4px; border-radius: 50%; background: var(--color-accent); border: 2px solid var(--color-bg); box-shadow: 0 0 0 1px var(--color-accent); cursor: grab; }
-.ex-range input::-moz-range-thumb { pointer-events: auto; width: 12px; height: 12px; border-radius: 50%; background: var(--color-accent); border: 2px solid var(--color-bg); box-shadow: 0 0 0 1px var(--color-accent); cursor: grab; }
+.ex-range input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; color: var(--color-accent); background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.ex-range input:focus { outline: none; }
+.ex-range input::-webkit-slider-runnable-track { background: none; height: 100%; }
+.ex-range input::-moz-range-track { background: none; height: 100%; }
+.ex-range input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: var(--ex-thumb); height: var(--ex-thumb); margin-top: calc((24px - var(--ex-thumb)) / 2); border-radius: 50%; background: var(--color-accent); border: 2px solid var(--color-bg); box-shadow: 0 0 0 1px var(--color-accent); cursor: grab; }
+.ex-range input::-moz-range-thumb { pointer-events: auto; width: calc(var(--ex-thumb) - 4px); height: calc(var(--ex-thumb) - 4px); border-radius: 50%; background: var(--color-accent); border: 2px solid var(--color-bg); box-shadow: 0 0 0 1px var(--color-accent); cursor: grab; }
 .ex-range input:active::-webkit-slider-thumb { cursor: grabbing; }
-.ex-range input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--color-text); }
-.ex-range input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--color-text); }
-.ex-radios { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8rem; }
-.ex-radio { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.ex-range input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text); }
+.ex-range input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text); }
+/* Voz: botões segmentados. O rádio nativo cobre o rótulo inteiro (invisível), então clique, toque e teclado continuam nativos. */
+.ex-radios { display: flex; gap: 4px; font-size: 0.8rem; }
+.ex-radio { position: relative; flex: 1; text-align: center; padding: 6px 4px; border: 1px solid var(--color-border); border-radius: 6px; color: var(--color-text-secondary); cursor: pointer; }
+.ex-radio input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.ex-radio:hover { border-color: var(--color-accent-dark); color: var(--color-text); }
+.ex-radio:has(input:checked) { border-color: var(--color-accent); background: var(--color-surface-light); color: var(--color-text); font-weight: 600; }
+.ex-radio:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .explorar-foot { display: none; padding: 10px 14px; border-top: 1px solid var(--color-border); }
-@media (max-width: 768px) { .explorar-foot { display: block; } }
 .explorar-apply { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid currentColor; background: none; color: inherit; font: inherit; font-size: 0.85rem; cursor: pointer; }
 .explorar-apply[hidden] { display: none; }
+@media (max-width: 768px) {
+  .explorar-body { --ex-thumb: 26px; }
+  .ex-range { height: 36px; }
+  .ex-range input::-webkit-slider-thumb { margin-top: calc((36px - var(--ex-thumb)) / 2); }
+  .ex-feat-reset { width: 36px; height: 36px; margin: -7px -8px -7px 0; }
+  .ex-radio { padding: 11px 4px; }
+  .ex-chip, .ex-sugestao { padding: 7px 12px; }
+  .explorar-foot { display: block; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .explorar-apply { padding: 12px; font-weight: 600; background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ex-hist i { transition: opacity 0.12s; }
+}
 
 .ex-tab[hidden] { display: none; }
 
