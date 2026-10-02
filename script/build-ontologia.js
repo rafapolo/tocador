@@ -48,7 +48,7 @@ const G = [
   ['punk', 'punk', 'rock', ['punk rock']],
   ['hardcore', 'hardcore', 'rock', ['hc']],
   ['indie', 'indie', 'rock', ['indie rock', 'indie pop', 'alternativo', 'rock alternativo']],
-  ['psicodelia', 'psicodelia', 'rock', ['psicodelico', 'rock psicodelico', 'psych']],
+  ['psicodelia', 'psicodelia', 'rock', ['psicodelico', 'psicodelica', 'rock psicodelico', 'psych', 'psychedelic']],
   ['rock experimental', 'rock experimental', 'rock', ['pos rock', 'post rock', 'math rock', 'krautrock']],
   ['pós-punk', 'pós-punk', 'rock', ['pos punk', 'post punk', 'new wave', 'dark']],
   ['shoegaze', 'shoegaze', 'rock', ['dream pop']],
@@ -159,20 +159,20 @@ for (const c of DISCOGS) {
 
 // ── humores: sinais medidos (probabilidades 0–1 do modelo) e/ou marcados como culturais ──────────────
 const H = [
-  ['melancólico', ['melancolico', 'triste', 'tristeza', 'chorosa', 'choroso', 'tristonho', 'blue'], { sad: 'alto', happy: 'baixo' }],
-  ['festivo', ['festa', 'festivo', 'pra festa', 'balada', 'animada pra festa'], { party: 'alto', happy: 'alto' }],
-  ['calmo', ['calma', 'calmo', 'tranquilo', 'tranquila', 'suave', 'pra relaxar', 'pra dormir', 'sossegado'], { relaxed: 'alto', aggressive: 'baixo' }],
-  ['agressivo', ['agressivo', 'agressiva', 'pesado', 'pesada', 'raivoso', 'furioso', 'raiva'], { aggressive: 'alto' }],
-  ['dançante', ['dancante', 'dancavel', 'pra dancar', 'balanco', 'gingado'], { dance: 'alto' }],
-  ['nostálgico', ['nostalgico', 'nostalgia', 'saudade', 'saudosista', 'memoria'], {}],
-  ['romântico', ['romantico', 'romantica', 'amor', 'apaixonado', 'namorar'], {}],
-  ['alegre', ['alegre', 'feliz', 'animado', 'pra cima', 'alegria', 'sorriso'], { happy: 'alto' }],
-  ['sombrio', ['sombrio', 'sombria', 'escuro', 'escura', 'dark', 'tenebroso', 'soturno'], { happy: 'baixo', sad: 'alto', aggressive: 'medio' }],
-  ['intimista', ['intimista', 'intimo', 'intima', 'aconchegante', 'voz e violao', 'quartinho'], { acoustic: 'alto', relaxed: 'alto' }],
-  ['contemplativo', ['contemplativo', 'contemplativa', 'meditativo', 'introspectivo', 'reflexivo', 'pra pensar'], { relaxed: 'alto', dance: 'baixo' }],
-  ['irônico', ['ironico', 'ironica', 'debochado', 'sarcastico', 'humor'], {}],
+  ['melancólico', ['melancolico', 'triste', 'tristeza', 'chorosa', 'choroso', 'tristonho', 'blue', 'pra chorar', 'chorar', 'magoado', 'magoada', 'lagrimas', 'depressivo', 'sofrencia', 'dor de cotovelo', 'deprimente'], { sad: 'alto', happy: 'baixo' }],
+  ['festivo', ['festa', 'festivo', 'pra festa', 'balada', 'animada pra festa', 'empolgacao', 'empolgante', 'bagunca', 'churrasco', 'comemoracao', 'festa total', 'comemorar'], { party: 'alto', happy: 'alto' }],
+  ['calmo', ['calma', 'calmo', 'tranquilo', 'tranquila', 'suave', 'pra relaxar', 'pra dormir', 'sossegado', 'relaxado', 'relaxada', 'relaxante', 'relax', 'de fundo', 'silencio', 'sossego', 'mansa', 'manso', 'chill', 'lofi', 'pra estudar', 'pra trabalhar', 'pra jantar', 'deitar', 'preguicoso', 'preguicosa', 'paz', 'pra acalmar'], { relaxed: 'alto', aggressive: 'baixo' }],
+  ['agressivo', ['agressivo', 'agressiva', 'pesado', 'pesada', 'raivoso', 'furioso', 'raiva', 'explosivo', 'explosive', 'barulho', 'barulhento', 'barulhenta', 'sujo', 'suja', 'peso', 'pesadao', 'energico', 'energica', 'pogar', 'porrada', 'brutal', 'violento', 'gritado', 'gritaria', 'sinistro'], { aggressive: 'alto' }],
+  ['dançante', ['dancante', 'dancavel', 'pra dancar', 'balanco', 'gingado', 'dancar', 'danca', 'baile', 'pista', 'pista de danca', 'agarradinho', 'coladinho', 'forrozear', 'rebolar', 'ginga', 'groove', 'dancinha'], { dance: 'alto' }],
+  ['nostálgico', ['nostalgico', 'nostalgia', 'saudade', 'saudosista', 'memoria', 'saudoso', 'saudosa', 'de antigamente', 'antigamente', 'lembrar', 'lembrando', 'lembranca', 'lembrancas', 'velhos tempos', 'tempo antigo', 'anos dourados', 'passado'], {}],
+  ['romântico', ['romantico', 'romantica', 'amor', 'apaixonado', 'namorar', 'a dois', 'namorada', 'namorado', 'casal', 'crush', 'paixao', 'amada', 'amado', 'amar', 'pra namorar'], {}],
+  ['alegre', ['alegre', 'feliz', 'animado', 'pra cima', 'alegria', 'sorriso', 'levanta o astral', 'astral', 'sorrir', 'divertido', 'bem humorado', 'leve', 'otimista', 'malandro', 'pra rir', 'rir'], { happy: 'alto' }],
+  ['sombrio', ['sombrio', 'sombria', 'escuro', 'escura', 'dark', 'tenebroso', 'soturno', 'sinistra', 'fabrica abandonada', 'assustador', 'assustadora', 'macabro', 'gotico', 'noite escura'], { happy: 'baixo', sad: 'alto', aggressive: 'medio' }],
+  ['intimista', ['intimista', 'intimo', 'intima', 'aconchegante', 'voz e violao', 'quartinho', 'sozinho', 'sozinha', 'gravacao caseira', 'caseiro', 'caseira'], { acoustic: 'alto', relaxed: 'alto' }],
+  ['contemplativo', ['contemplativo', 'contemplativa', 'meditativo', 'introspectivo', 'reflexivo', 'pra pensar', 'espiritual', 'prece', 'preces', 'janela', 'madrugada', 'viajando', 'pra pensar na vida'], { relaxed: 'alto', dance: 'baixo' }],
+  ['irônico', ['ironico', 'ironica', 'debochado', 'sarcastico', 'humor', 'engracado', 'engracada', 'comico', 'satira', 'satirico', 'sarcasmo', 'piada'], {}],
   ['sensual', ['sensual', 'sexy', 'sedutor', 'sedutora', 'quente'], { relaxed: 'alto', dance: 'medio' }],
-  ['épico', ['epico', 'epica', 'grandioso', 'grandiosa', 'monumental', 'cinematografico'], {}],
+  ['épico', ['epico', 'epica', 'grandioso', 'grandiosa', 'monumental', 'cinematografico', 'epopeia', 'hino', 'trilha epica'], {}],
 ];
 
 // ── instrumentos: nome pt-BR → classes do modelo mtg_jamendo_instrument (vazio = não medido) ───────────
@@ -216,10 +216,10 @@ const ontologia = {
     { id: 'ao vivo', apelidos: ['ao vivo', 'live', 'show gravado'] },
   ],
   andamentos: [
-    { id: 'lento', bpm: [0, 80], apelidos: ['lenta', 'lentinho', 'devagar', 'arrastado', 'vagaroso'] },
+    { id: 'lento', bpm: [0, 80], apelidos: ['lenta', 'lentinho', 'devagar', 'arrastado', 'vagaroso', 'quase parado', 'meio parado', 'parado', 'downtempo', 'lentissimo', 'lentissima', 'arrastada'] },
     { id: 'moderado', bpm: [80, 105], apelidos: ['moderada', 'meio termo', 'médio', 'medio', 'ritmo medio'] },
-    { id: 'animado', bpm: [105, 130], apelidos: ['animada', 'agitado', 'agitada', 'pra cima'] },
-    { id: 'acelerado', bpm: [130, 300], apelidos: ['acelerada', 'rapido', 'rapida', 'veloz', 'ligeiro', 'frenetico'] },
+    { id: 'animado', bpm: [105, 130], apelidos: ['animada', 'agitado', 'agitada', 'pra cima', 'animadao', 'uptime', 'fast', 'academia', 'treinar', 'treino', 'malhar', 'energia alta'] },
+    { id: 'acelerado', bpm: [130, 300], apelidos: ['acelerada', 'rapido', 'rapida', 'veloz', 'ligeiro', 'frenetico', 'corrida', 'correria', 'rapidissimo'] },
   ],
   voz: [
     { id: 'cantada', apelidos: ['cantada', 'com voz', 'com letra', 'cantado'], medido: 'voice >= 0.5' },

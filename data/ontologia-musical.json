@@ -258,8 +258,10 @@
    "pai": "rock",
    "apelidos": [
     "psicodelico",
+    "psicodelica",
     "rock psicodelico",
-    "psych"
+    "psych",
+    "psychedelic"
    ]
   },
   {
@@ -466,7 +468,16 @@
     "chorosa",
     "choroso",
     "tristonho",
-    "blue"
+    "blue",
+    "pra chorar",
+    "chorar",
+    "magoado",
+    "magoada",
+    "lagrimas",
+    "depressivo",
+    "sofrencia",
+    "dor de cotovelo",
+    "deprimente"
    ],
    "sinais": {
     "sad": "alto",
@@ -481,7 +492,14 @@
     "festivo",
     "pra festa",
     "balada",
-    "animada pra festa"
+    "animada pra festa",
+    "empolgacao",
+    "empolgante",
+    "bagunca",
+    "churrasco",
+    "comemoracao",
+    "festa total",
+    "comemorar"
    ],
    "sinais": {
     "party": "alto",
@@ -499,7 +517,26 @@
     "suave",
     "pra relaxar",
     "pra dormir",
-    "sossegado"
+    "sossegado",
+    "relaxado",
+    "relaxada",
+    "relaxante",
+    "relax",
+    "de fundo",
+    "silencio",
+    "sossego",
+    "mansa",
+    "manso",
+    "chill",
+    "lofi",
+    "pra estudar",
+    "pra trabalhar",
+    "pra jantar",
+    "deitar",
+    "preguicoso",
+    "preguicosa",
+    "paz",
+    "pra acalmar"
    ],
    "sinais": {
     "relaxed": "alto",
@@ -516,7 +553,25 @@
     "pesada",
     "raivoso",
     "furioso",
-    "raiva"
+    "raiva",
+    "explosivo",
+    "explosive",
+    "barulho",
+    "barulhento",
+    "barulhenta",
+    "sujo",
+    "suja",
+    "peso",
+    "pesadao",
+    "energico",
+    "energica",
+    "pogar",
+    "porrada",
+    "brutal",
+    "violento",
+    "gritado",
+    "gritaria",
+    "sinistro"
    ],
    "sinais": {
     "aggressive": "alto"
@@ -530,7 +585,19 @@
     "dancavel",
     "pra dancar",
     "balanco",
-    "gingado"
+    "gingado",
+    "dancar",
+    "danca",
+    "baile",
+    "pista",
+    "pista de danca",
+    "agarradinho",
+    "coladinho",
+    "forrozear",
+    "rebolar",
+    "ginga",
+    "groove",
+    "dancinha"
    ],
    "sinais": {
     "dance": "alto"
@@ -544,7 +611,19 @@
     "nostalgia",
     "saudade",
     "saudosista",
-    "memoria"
+    "memoria",
+    "saudoso",
+    "saudosa",
+    "de antigamente",
+    "antigamente",
+    "lembrar",
+    "lembrando",
+    "lembranca",
+    "lembrancas",
+    "velhos tempos",
+    "tempo antigo",
+    "anos dourados",
+    "passado"
    ],
    "sinais": {},
    "medido": false
@@ -556,7 +635,17 @@
     "romantica",
     "amor",
     "apaixonado",
-    "namorar"
+    "namorar",
+    "a dois",
+    "namorada",
+    "namorado",
+    "casal",
+    "crush",
+    "paixao",
+    "amada",
+    "amado",
+    "amar",
+    "pra namorar"
    ],
    "sinais": {},
    "medido": false
@@ -569,7 +658,17 @@
     "animado",
     "pra cima",
     "alegria",
-    "sorriso"
+    "sorriso",
+    "levanta o astral",
+    "astral",
+    "sorrir",
+    "divertido",
+    "bem humorado",
+    "leve",
+    "otimista",
+    "malandro",
+    "pra rir",
+    "rir"
    ],
    "sinais": {
     "happy": "alto"
@@ -585,7 +684,14 @@
     "escura",
     "dark",
     "tenebroso",
-    "soturno"
+    "soturno",
+    "sinistra",
+    "fabrica abandonada",
+    "assustador",
+    "assustadora",
+    "macabro",
+    "gotico",
+    "noite escura"
    ],
    "sinais": {
     "happy": "baixo",
@@ -602,7 +708,12 @@
     "intima",
     "aconchegante",
     "voz e violao",
-    "quartinho"
+    "quartinho",
+    "sozinho",
+    "sozinha",
+    "gravacao caseira",
+    "caseiro",
+    "caseira"
    ],
    "sinais": {
     "acoustic": "alto",
@@ -618,7 +729,14 @@
     "meditativo",
     "introspectivo",
     "reflexivo",
-    "pra pensar"
+    "pra pensar",
+    "espiritual",
+    "prece",
+    "preces",
+    "janela",
+    "madrugada",
+    "viajando",
+    "pra pensar na vida"
    ],
    "sinais": {
     "relaxed": "alto",
@@ -633,7 +751,14 @@
     "ironica",
     "debochado",
     "sarcastico",
-    "humor"
+    "humor",
+    "engracado",
+    "engracada",
+    "comico",
+    "satira",
+    "satirico",
+    "sarcasmo",
+    "piada"
    ],
    "sinais": {},
    "medido": false
@@ -661,7 +786,10 @@
     "grandioso",
     "grandiosa",
     "monumental",
-    "cinematografico"
+    "cinematografico",
+    "epopeia",
+    "hino",
+    "trilha epica"
    ],
    "sinais": {},
    "medido": false
@@ -979,7 +1107,14 @@
     "lentinho",
     "devagar",
     "arrastado",
-    "vagaroso"
+    "vagaroso",
+    "quase parado",
+    "meio parado",
+    "parado",
+    "downtempo",
+    "lentissimo",
+    "lentissima",
+    "arrastada"
    ]
   },
   {
@@ -1006,7 +1141,15 @@
     "animada",
     "agitado",
     "agitada",
-    "pra cima"
+    "pra cima",
+    "animadao",
+    "uptime",
+    "fast",
+    "academia",
+    "treinar",
+    "treino",
+    "malhar",
+    "energia alta"
    ]
   },
   {
@@ -1021,7 +1164,10 @@
     "rapida",
     "veloz",
     "ligeiro",
-    "frenetico"
+    "frenetico",
+    "corrida",
+    "correria",
+    "rapidissimo"
    ]
   }
  ],
