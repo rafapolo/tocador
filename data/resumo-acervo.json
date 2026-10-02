@@ -1,0 +1,8885 @@
+{
+ "versao": 1,
+ "descricao": "Resumo agregado das features de áudio, gêneros, anos e metadados dos acervos",
+ "vocabulario": {
+  "generos": [
+   {
+    "id": "samba",
+    "nome": "samba",
+    "pai": null,
+    "apelidos": [
+     "sambinha"
+    ]
+   },
+   {
+    "id": "samba de raiz",
+    "nome": "samba de raiz",
+    "pai": "samba",
+    "apelidos": [
+     "samba raiz",
+     "samba antigo",
+     "samba tradicional",
+     "partido alto",
+     "samba de breque"
+    ]
+   },
+   {
+    "id": "pagode",
+    "nome": "pagode",
+    "pai": "samba",
+    "apelidos": [
+     "pagode de mesa",
+     "pagodeiro"
+    ]
+   },
+   {
+    "id": "samba-canção",
+    "nome": "samba-canção",
+    "pai": "samba",
+    "apelidos": [
+     "samba cancao",
+     "sambacancao"
+    ]
+   },
+   {
+    "id": "choro",
+    "nome": "choro",
+    "pai": null,
+    "apelidos": [
+     "chorinho",
+     "choro tradicional"
+    ]
+   },
+   {
+    "id": "mpb",
+    "nome": "MPB",
+    "pai": null,
+    "apelidos": [
+     "musica popular brasileira"
+    ]
+   },
+   {
+    "id": "bossa nova",
+    "nome": "bossa nova",
+    "pai": "mpb",
+    "apelidos": [
+     "bossa"
+    ]
+   },
+   {
+    "id": "tropicália",
+    "nome": "tropicália",
+    "pai": "mpb",
+    "apelidos": [
+     "tropicalia",
+     "tropicalismo"
+    ]
+   },
+   {
+    "id": "canção de protesto",
+    "nome": "canção de protesto",
+    "pai": "mpb",
+    "apelidos": [
+     "musica de protesto",
+     "protesto"
+    ]
+   },
+   {
+    "id": "forró",
+    "nome": "forró",
+    "pai": null,
+    "apelidos": [
+     "forro",
+     "forro pe de serra",
+     "pe de serra"
+    ]
+   },
+   {
+    "id": "baião",
+    "nome": "baião",
+    "pai": "forró",
+    "apelidos": [
+     "baiao"
+    ]
+   },
+   {
+    "id": "xote",
+    "nome": "xote",
+    "pai": "forró",
+    "apelidos": [
+     "xote nordestino"
+    ]
+   },
+   {
+    "id": "xaxado",
+    "nome": "xaxado",
+    "pai": "forró",
+    "apelidos": []
+   },
+   {
+    "id": "axé",
+    "nome": "axé",
+    "pai": null,
+    "apelidos": [
+     "axe",
+     "axe music"
+    ]
+   },
+   {
+    "id": "frevo",
+    "nome": "frevo",
+    "pai": null,
+    "apelidos": [
+     "frevo de rua"
+    ]
+   },
+   {
+    "id": "maracatu",
+    "nome": "maracatu",
+    "pai": null,
+    "apelidos": [
+     "maracatu rural",
+     "maracatu nacao"
+    ]
+   },
+   {
+    "id": "manguebeat",
+    "nome": "manguebeat",
+    "pai": null,
+    "apelidos": [
+     "mangue beat",
+     "mangue"
+    ]
+   },
+   {
+    "id": "carimbó",
+    "nome": "carimbó",
+    "pai": null,
+    "apelidos": [
+     "carimbo"
+    ]
+   },
+   {
+    "id": "lundu",
+    "nome": "lundu",
+    "pai": null,
+    "apelidos": []
+   },
+   {
+    "id": "modinha",
+    "nome": "modinha",
+    "pai": null,
+    "apelidos": []
+   },
+   {
+    "id": "música caipira",
+    "nome": "música caipira",
+    "pai": null,
+    "apelidos": [
+     "caipira",
+     "musica sertaneja de raiz",
+     "viola caipira"
+    ]
+   },
+   {
+    "id": "sertanejo raiz",
+    "nome": "sertanejo raiz",
+    "pai": "música caipira",
+    "apelidos": [
+     "sertanejo",
+     "sertanejo antigo"
+    ]
+   },
+   {
+    "id": "brega",
+    "nome": "brega",
+    "pai": null,
+    "apelidos": [
+     "brega romantico",
+     "musica brega"
+    ]
+   },
+   {
+    "id": "rock",
+    "nome": "rock",
+    "pai": null,
+    "apelidos": [
+     "roque"
+    ]
+   },
+   {
+    "id": "rock brasileiro",
+    "nome": "rock brasileiro",
+    "pai": "rock",
+    "apelidos": [
+     "rock nacional",
+     "brock",
+     "rock br"
+    ]
+   },
+   {
+    "id": "jovem guarda",
+    "nome": "jovem guarda",
+    "pai": "rock",
+    "apelidos": [
+     "iê iê iê",
+     "ie ie ie"
+    ]
+   },
+   {
+    "id": "punk",
+    "nome": "punk",
+    "pai": "rock",
+    "apelidos": [
+     "punk rock"
+    ]
+   },
+   {
+    "id": "hardcore",
+    "nome": "hardcore",
+    "pai": "rock",
+    "apelidos": [
+     "hc"
+    ]
+   },
+   {
+    "id": "indie",
+    "nome": "indie",
+    "pai": "rock",
+    "apelidos": [
+     "indie rock",
+     "indie pop",
+     "alternativo",
+     "rock alternativo"
+    ]
+   },
+   {
+    "id": "psicodelia",
+    "nome": "psicodelia",
+    "pai": "rock",
+    "apelidos": [
+     "psicodelico",
+     "psicodelica",
+     "rock psicodelico",
+     "psych",
+     "psychedelic"
+    ]
+   },
+   {
+    "id": "rock experimental",
+    "nome": "rock experimental",
+    "pai": "rock",
+    "apelidos": [
+     "pos rock",
+     "post rock",
+     "math rock",
+     "krautrock"
+    ]
+   },
+   {
+    "id": "pós-punk",
+    "nome": "pós-punk",
+    "pai": "rock",
+    "apelidos": [
+     "pos punk",
+     "post punk",
+     "new wave",
+     "dark"
+    ]
+   },
+   {
+    "id": "shoegaze",
+    "nome": "shoegaze",
+    "pai": "rock",
+    "apelidos": [
+     "dream pop"
+    ]
+   },
+   {
+    "id": "metal",
+    "nome": "metal",
+    "pai": "rock",
+    "apelidos": [
+     "heavy metal",
+     "thrash",
+     "death metal",
+     "rock pesado"
+    ]
+   },
+   {
+    "id": "jazz",
+    "nome": "jazz",
+    "pai": null,
+    "apelidos": [
+     "jazzistico"
+    ]
+   },
+   {
+    "id": "blues",
+    "nome": "blues",
+    "pai": null,
+    "apelidos": []
+   },
+   {
+    "id": "folk",
+    "nome": "folk",
+    "pai": null,
+    "apelidos": [
+     "folk rock",
+     "cancao folk",
+     "musica folclorica"
+    ]
+   },
+   {
+    "id": "reggae",
+    "nome": "reggae",
+    "pai": null,
+    "apelidos": [
+     "ska",
+     "dub",
+     "roots reggae"
+    ]
+   },
+   {
+    "id": "rap",
+    "nome": "rap",
+    "pai": null,
+    "apelidos": [
+     "hip hop",
+     "hiphop",
+     "trap"
+    ]
+   },
+   {
+    "id": "funk carioca",
+    "nome": "funk carioca",
+    "pai": null,
+    "apelidos": [
+     "funk",
+     "baile funk",
+     "funk brasileiro",
+     "miami bass"
+    ]
+   },
+   {
+    "id": "soul e funk",
+    "nome": "soul e funk",
+    "pai": null,
+    "apelidos": [
+     "soul",
+     "funk americano",
+     "r&b",
+     "rnb",
+     "disco music",
+     "discoteca"
+    ]
+   },
+   {
+    "id": "música eletrônica",
+    "nome": "música eletrônica",
+    "pai": null,
+    "apelidos": [
+     "eletronica",
+     "eletronico",
+     "techno",
+     "house",
+     "electro"
+    ]
+   },
+   {
+    "id": "ambient",
+    "nome": "ambient",
+    "pai": "música eletrônica",
+    "apelidos": [
+     "drone",
+     "new age"
+    ]
+   },
+   {
+    "id": "noise",
+    "nome": "noise",
+    "pai": null,
+    "apelidos": [
+     "barulho",
+     "industrial",
+     "harsh noise"
+    ]
+   },
+   {
+    "id": "vanguarda",
+    "nome": "vanguarda",
+    "pai": null,
+    "apelidos": [
+     "experimental",
+     "avant garde",
+     "musica experimental",
+     "musica concreta"
+    ]
+   },
+   {
+    "id": "pop",
+    "nome": "pop",
+    "pai": null,
+    "apelidos": [
+     "musica pop",
+     "synthpop",
+     "synth pop"
+    ]
+   },
+   {
+    "id": "música instrumental",
+    "nome": "música instrumental",
+    "pai": null,
+    "apelidos": [
+     "so instrumental",
+     "musica so instrumental"
+    ]
+   },
+   {
+    "id": "clássica",
+    "nome": "clássica",
+    "pai": null,
+    "apelidos": [
+     "classica",
+     "musica classica",
+     "erudito",
+     "erudita"
+    ]
+   },
+   {
+    "id": "latina",
+    "nome": "música latina",
+    "pai": null,
+    "apelidos": [
+     "latino",
+     "salsa",
+     "cumbia",
+     "tango",
+     "bolero"
+    ]
+   }
+  ],
+  "humores": [
+   {
+    "id": "melancólico",
+    "apelidos": [
+     "melancolico",
+     "triste",
+     "tristeza",
+     "chorosa",
+     "choroso",
+     "tristonho",
+     "blue",
+     "pra chorar",
+     "chorar",
+     "magoado",
+     "magoada",
+     "lagrimas",
+     "depressivo",
+     "sofrencia",
+     "dor de cotovelo",
+     "deprimente"
+    ],
+    "sinais": {
+     "sad": "alto",
+     "happy": "baixo"
+    },
+    "medido": true
+   },
+   {
+    "id": "festivo",
+    "apelidos": [
+     "festa",
+     "festivo",
+     "pra festa",
+     "balada",
+     "animada pra festa",
+     "empolgacao",
+     "empolgante",
+     "bagunca",
+     "churrasco",
+     "comemoracao",
+     "festa total",
+     "comemorar"
+    ],
+    "sinais": {
+     "party": "alto",
+     "happy": "alto"
+    },
+    "medido": true
+   },
+   {
+    "id": "calmo",
+    "apelidos": [
+     "calma",
+     "calmo",
+     "tranquilo",
+     "tranquila",
+     "suave",
+     "pra relaxar",
+     "pra dormir",
+     "sossegado",
+     "relaxado",
+     "relaxada",
+     "relaxante",
+     "relax",
+     "de fundo",
+     "silencio",
+     "sossego",
+     "mansa",
+     "manso",
+     "chill",
+     "lofi",
+     "pra estudar",
+     "pra trabalhar",
+     "pra jantar",
+     "deitar",
+     "preguicoso",
+     "preguicosa",
+     "paz",
+     "pra acalmar"
+    ],
+    "sinais": {
+     "relaxed": "alto",
+     "aggressive": "baixo"
+    },
+    "medido": true
+   },
+   {
+    "id": "agressivo",
+    "apelidos": [
+     "agressivo",
+     "agressiva",
+     "pesado",
+     "pesada",
+     "raivoso",
+     "furioso",
+     "raiva",
+     "explosivo",
+     "explosive",
+     "barulho",
+     "barulhento",
+     "barulhenta",
+     "sujo",
+     "suja",
+     "peso",
+     "pesadao",
+     "energico",
+     "energica",
+     "pogar",
+     "porrada",
+     "brutal",
+     "violento",
+     "gritado",
+     "gritaria",
+     "sinistro"
+    ],
+    "sinais": {
+     "aggressive": "alto"
+    },
+    "medido": true
+   },
+   {
+    "id": "dançante",
+    "apelidos": [
+     "dancante",
+     "dancavel",
+     "pra dancar",
+     "balanco",
+     "gingado",
+     "dancar",
+     "danca",
+     "baile",
+     "pista",
+     "pista de danca",
+     "agarradinho",
+     "coladinho",
+     "forrozear",
+     "rebolar",
+     "ginga",
+     "groove",
+     "dancinha"
+    ],
+    "sinais": {
+     "dance": "alto"
+    },
+    "medido": true
+   },
+   {
+    "id": "nostálgico",
+    "apelidos": [
+     "nostalgico",
+     "nostalgia",
+     "saudade",
+     "saudosista",
+     "memoria",
+     "saudoso",
+     "saudosa",
+     "de antigamente",
+     "antigamente",
+     "lembrar",
+     "lembrando",
+     "lembranca",
+     "lembrancas",
+     "velhos tempos",
+     "tempo antigo",
+     "anos dourados",
+     "passado"
+    ],
+    "sinais": {},
+    "medido": false
+   },
+   {
+    "id": "romântico",
+    "apelidos": [
+     "romantico",
+     "romantica",
+     "amor",
+     "apaixonado",
+     "namorar",
+     "a dois",
+     "namorada",
+     "namorado",
+     "casal",
+     "crush",
+     "paixao",
+     "amada",
+     "amado",
+     "amar",
+     "pra namorar"
+    ],
+    "sinais": {},
+    "medido": false
+   },
+   {
+    "id": "alegre",
+    "apelidos": [
+     "alegre",
+     "feliz",
+     "animado",
+     "pra cima",
+     "alegria",
+     "sorriso",
+     "levanta o astral",
+     "astral",
+     "sorrir",
+     "divertido",
+     "bem humorado",
+     "leve",
+     "otimista",
+     "malandro",
+     "pra rir",
+     "rir"
+    ],
+    "sinais": {
+     "happy": "alto"
+    },
+    "medido": true
+   },
+   {
+    "id": "sombrio",
+    "apelidos": [
+     "sombrio",
+     "sombria",
+     "escuro",
+     "escura",
+     "dark",
+     "tenebroso",
+     "soturno",
+     "sinistra",
+     "fabrica abandonada",
+     "assustador",
+     "assustadora",
+     "macabro",
+     "gotico",
+     "noite escura"
+    ],
+    "sinais": {
+     "happy": "baixo",
+     "sad": "alto",
+     "aggressive": "medio"
+    },
+    "medido": true
+   },
+   {
+    "id": "intimista",
+    "apelidos": [
+     "intimista",
+     "intimo",
+     "intima",
+     "aconchegante",
+     "voz e violao",
+     "quartinho",
+     "sozinho",
+     "sozinha",
+     "gravacao caseira",
+     "caseiro",
+     "caseira"
+    ],
+    "sinais": {
+     "acoustic": "alto",
+     "relaxed": "alto"
+    },
+    "medido": true
+   },
+   {
+    "id": "contemplativo",
+    "apelidos": [
+     "contemplativo",
+     "contemplativa",
+     "meditativo",
+     "introspectivo",
+     "reflexivo",
+     "pra pensar",
+     "espiritual",
+     "prece",
+     "preces",
+     "janela",
+     "madrugada",
+     "viajando",
+     "pra pensar na vida"
+    ],
+    "sinais": {
+     "relaxed": "alto",
+     "dance": "baixo"
+    },
+    "medido": true
+   },
+   {
+    "id": "irônico",
+    "apelidos": [
+     "ironico",
+     "ironica",
+     "debochado",
+     "sarcastico",
+     "humor",
+     "engracado",
+     "engracada",
+     "comico",
+     "satira",
+     "satirico",
+     "sarcasmo",
+     "piada"
+    ],
+    "sinais": {},
+    "medido": false
+   },
+   {
+    "id": "sensual",
+    "apelidos": [
+     "sensual",
+     "sexy",
+     "sedutor",
+     "sedutora",
+     "quente"
+    ],
+    "sinais": {
+     "relaxed": "alto",
+     "dance": "medio"
+    },
+    "medido": true
+   },
+   {
+    "id": "épico",
+    "apelidos": [
+     "epico",
+     "epica",
+     "grandioso",
+     "grandiosa",
+     "monumental",
+     "cinematografico",
+     "epopeia",
+     "hino",
+     "trilha epica"
+    ],
+    "sinais": {},
+    "medido": false
+   }
+  ],
+  "instrumentos": [
+   {
+    "id": "violão",
+    "apelidos": [
+     "violao",
+     "violao de nylon",
+     "violao de aco"
+    ],
+    "essentia": [
+     "acousticguitar",
+     "classicalguitar",
+     "guitar"
+    ],
+    "medido": true
+   },
+   {
+    "id": "violão de sete cordas",
+    "apelidos": [
+     "sete cordas",
+     "7 cordas",
+     "violao 7 cordas"
+    ],
+    "essentia": [],
+    "medido": false
+   },
+   {
+    "id": "cavaquinho",
+    "apelidos": [
+     "cavaco"
+    ],
+    "essentia": [],
+    "medido": false
+   },
+   {
+    "id": "pandeiro",
+    "apelidos": [],
+    "essentia": [
+     "percussion"
+    ],
+    "medido": true
+   },
+   {
+    "id": "sanfona",
+    "apelidos": [
+     "acordeao",
+     "acordeon",
+     "gaita"
+    ],
+    "essentia": [
+     "accordion"
+    ],
+    "medido": true
+   },
+   {
+    "id": "piano",
+    "apelidos": [
+     "pianinho",
+     "piano eletrico"
+    ],
+    "essentia": [
+     "piano",
+     "electricpiano",
+     "rhodes"
+    ],
+    "medido": true
+   },
+   {
+    "id": "guitarra elétrica",
+    "apelidos": [
+     "guitarra",
+     "guitarras",
+     "guitarra eletrica"
+    ],
+    "essentia": [
+     "electricguitar"
+    ],
+    "medido": true
+   },
+   {
+    "id": "bateria",
+    "apelidos": [
+     "baterias",
+     "batera"
+    ],
+    "essentia": [
+     "drums"
+    ],
+    "medido": true
+   },
+   {
+    "id": "percussão",
+    "apelidos": [
+     "percussao",
+     "tambores",
+     "atabaque",
+     "surdo",
+     "tamborim"
+    ],
+    "essentia": [
+     "percussion",
+     "bongo"
+    ],
+    "medido": true
+   },
+   {
+    "id": "flauta",
+    "apelidos": [
+     "flautas",
+     "flautim"
+    ],
+    "essentia": [
+     "flute"
+    ],
+    "medido": true
+   },
+   {
+    "id": "bandolim",
+    "apelidos": [],
+    "essentia": [],
+    "medido": false
+   },
+   {
+    "id": "violino",
+    "apelidos": [
+     "rabeca",
+     "violinos"
+    ],
+    "essentia": [
+     "violin"
+    ],
+    "medido": true
+   },
+   {
+    "id": "sopros",
+    "apelidos": [
+     "sopro",
+     "metais",
+     "saxofone",
+     "sax",
+     "trompete",
+     "trombone",
+     "clarinete"
+    ],
+    "essentia": [
+     "saxophone",
+     "trumpet",
+     "trombone",
+     "brass",
+     "horn",
+     "oboe",
+     "clarinet"
+    ],
+    "medido": true
+   },
+   {
+    "id": "baixo",
+    "apelidos": [
+     "contrabaixo",
+     "baixo eletrico"
+    ],
+    "essentia": [
+     "bass",
+     "doublebass",
+     "acousticbassguitar"
+    ],
+    "medido": true
+   },
+   {
+    "id": "sintetizador",
+    "apelidos": [
+     "sintetizadores",
+     "synth",
+     "teclado",
+     "teclados"
+    ],
+    "essentia": [
+     "synthesizer",
+     "keyboard",
+     "pad",
+     "computer",
+     "drummachine",
+     "sampler"
+    ],
+    "medido": true
+   },
+   {
+    "id": "órgão",
+    "apelidos": [
+     "orgao",
+     "hammond"
+    ],
+    "essentia": [
+     "organ",
+     "pipeorgan"
+    ],
+    "medido": true
+   },
+   {
+    "id": "viola caipira",
+    "apelidos": [
+     "viola"
+    ],
+    "essentia": [],
+    "medido": false
+   },
+   {
+    "id": "cordas",
+    "apelidos": [
+     "orquestra de cordas",
+     "violoncelo",
+     "harpa"
+    ],
+    "essentia": [
+     "strings",
+     "cello",
+     "viola",
+     "harp",
+     "orchestra"
+    ],
+    "medido": true
+   },
+   {
+    "id": "coro",
+    "apelidos": [
+     "coral",
+     "vozes",
+     "corais"
+    ],
+    "essentia": [
+     "voice"
+    ],
+    "medido": true
+   }
+  ],
+  "formacoes": [
+   {
+    "id": "voz e violão",
+    "apelidos": [
+     "voz e violao",
+     "so voz e violao",
+     "voz violao"
+    ]
+   },
+   {
+    "id": "banda completa",
+    "apelidos": [
+     "banda",
+     "banda completa",
+     "conjunto de rock"
+    ]
+   },
+   {
+    "id": "orquestra",
+    "apelidos": [
+     "orquestral",
+     "orquestra"
+    ]
+   },
+   {
+    "id": "só instrumental",
+    "apelidos": [
+     "so instrumental",
+     "sem voz",
+     "sem cantor",
+     "instrumental"
+    ]
+   },
+   {
+    "id": "conjunto regional",
+    "apelidos": [
+     "regional",
+     "conjunto regional",
+     "regional de choro"
+    ]
+   },
+   {
+    "id": "duo",
+    "apelidos": [
+     "dupla",
+     "duo",
+     "dueto"
+    ]
+   },
+   {
+    "id": "coletânea",
+    "apelidos": [
+     "coletanea",
+     "compilacao",
+     "varios artistas"
+    ]
+   },
+   {
+    "id": "ao vivo",
+    "apelidos": [
+     "ao vivo",
+     "live",
+     "show gravado"
+    ]
+   }
+  ],
+  "andamentos": [
+   {
+    "id": "lento",
+    "bpm": [
+     0,
+     80
+    ],
+    "apelidos": [
+     "lenta",
+     "lentinho",
+     "devagar",
+     "arrastado",
+     "vagaroso",
+     "quase parado",
+     "meio parado",
+     "parado",
+     "downtempo",
+     "lentissimo",
+     "lentissima",
+     "arrastada"
+    ]
+   },
+   {
+    "id": "moderado",
+    "bpm": [
+     80,
+     105
+    ],
+    "apelidos": [
+     "moderada",
+     "meio termo",
+     "médio",
+     "medio",
+     "ritmo medio"
+    ]
+   },
+   {
+    "id": "animado",
+    "bpm": [
+     105,
+     130
+    ],
+    "apelidos": [
+     "animada",
+     "agitado",
+     "agitada",
+     "pra cima",
+     "animadao",
+     "uptime",
+     "fast",
+     "academia",
+     "treinar",
+     "treino",
+     "malhar",
+     "energia alta"
+    ]
+   },
+   {
+    "id": "acelerado",
+    "bpm": [
+     130,
+     300
+    ],
+    "apelidos": [
+     "acelerada",
+     "rapido",
+     "rapida",
+     "veloz",
+     "ligeiro",
+     "frenetico",
+     "corrida",
+     "correria",
+     "rapidissimo"
+    ]
+   }
+  ],
+  "voz": [
+   {
+    "id": "cantada",
+    "apelidos": [
+     "cantada",
+     "com voz",
+     "com letra",
+     "cantado"
+    ],
+    "medido": "voice >= 0.5"
+   },
+   {
+    "id": "instrumental",
+    "apelidos": [
+     "instrumental",
+     "sem voz",
+     "sem letra",
+     "sem cantor",
+     "so instrumental"
+    ],
+    "medido": "voice < 0.5"
+   }
+  ]
+ },
+ "acervos": {
+  "uqt": {
+   "meta": {
+    "title": "Acervo UQT",
+    "subtitle": "100 anos de MPB",
+    "hours": "1815",
+    "base_url": "https://cdn.tocador.cc/uqt"
+   },
+   "catalogo": {
+    "albuns": 2159,
+    "faixas": 26891,
+    "artistas": 1156,
+    "faixas_analisadas": 28792,
+    "faixas_com_erro": 75,
+    "ano_min": 1933,
+    "ano_max": 2012,
+    "albuns_sem_ano": 11,
+    "albuns_por_ano": {
+     "1933": 1,
+     "1954": 2,
+     "1955": 7,
+     "1956": 7,
+     "1957": 16,
+     "1958": 8,
+     "1959": 16,
+     "1960": 15,
+     "1961": 19,
+     "1962": 23,
+     "1963": 29,
+     "1964": 23,
+     "1965": 39,
+     "1966": 33,
+     "1967": 31,
+     "1968": 44,
+     "1969": 39,
+     "1970": 45,
+     "1971": 28,
+     "1972": 35,
+     "1973": 49,
+     "1974": 43,
+     "1975": 51,
+     "1976": 50,
+     "1977": 54,
+     "1978": 57,
+     "1979": 44,
+     "1980": 47,
+     "1981": 30,
+     "1982": 26,
+     "1983": 26,
+     "1984": 27,
+     "1985": 33,
+     "1986": 38,
+     "1987": 34,
+     "1988": 23,
+     "1989": 30,
+     "1990": 19,
+     "1991": 28,
+     "1992": 26,
+     "1993": 41,
+     "1994": 25,
+     "1995": 19,
+     "1996": 24,
+     "1997": 23,
+     "1998": 23,
+     "1999": 26,
+     "2000": 60,
+     "2001": 32,
+     "2002": 32,
+     "2003": 49,
+     "2004": 69,
+     "2005": 64,
+     "2006": 66,
+     "2007": 74,
+     "2008": 66,
+     "2009": 85,
+     "2010": 127,
+     "2011": 28,
+     "2012": 20
+    },
+    "albuns_por_decada": {
+     "1930": 1,
+     "1950": 56,
+     "1960": 295,
+     "1970": 456,
+     "1980": 314,
+     "1990": 254,
+     "2000": 597,
+     "2010": 175
+    },
+    "artistas_mais_albuns": [
+     {
+      "nome": "Martinho da Vila",
+      "n": 41
+     },
+     {
+      "nome": "Alcione",
+      "n": 39
+     },
+     {
+      "nome": "Beth Carvalho",
+      "n": 36
+     },
+     {
+      "nome": "Bezerra da Silva",
+      "n": 28
+     },
+     {
+      "nome": "Elza Soares",
+      "n": 28
+     },
+     {
+      "nome": "Fundo de Quintal",
+      "n": 27
+     },
+     {
+      "nome": "Zeca Pagodinho",
+      "n": 27
+     },
+     {
+      "nome": "Luiz Ayrão",
+      "n": 22
+     },
+     {
+      "nome": "Noite Ilustrada",
+      "n": 22
+     },
+     {
+      "nome": "Paulinho da Viola",
+      "n": 21
+     },
+     {
+      "nome": "João Nogueira",
+      "n": 20
+     },
+     {
+      "nome": "Various Artists",
+      "n": 18
+     },
+     {
+      "nome": "Roberto Ribeiro",
+      "n": 17
+     },
+     {
+      "nome": "Leci Brandão",
+      "n": 16
+     },
+     {
+      "nome": "Clara Nunes",
+      "n": 15
+     },
+     {
+      "nome": "Jamelão",
+      "n": 15
+     },
+     {
+      "nome": "Jorge Aragão",
+      "n": 15
+     },
+     {
+      "nome": "Almir Guinéto",
+      "n": 13
+     },
+     {
+      "nome": "Os Originais do Samba",
+      "n": 13
+     },
+     {
+      "nome": "Cartola",
+      "n": 12
+     },
+     {
+      "nome": "Reinaldo",
+      "n": 12
+     },
+     {
+      "nome": "Tim Maia",
+      "n": 11
+     },
+     {
+      "nome": "Ataulfo Alves",
+      "n": 10
+     },
+     {
+      "nome": "Escolas de Samba Enredos",
+      "n": 10
+     },
+     {
+      "nome": "Maria Bethania",
+      "n": 10
+     },
+     {
+      "nome": "Jorge Ben",
+      "n": 9
+     },
+     {
+      "nome": "Jorginho do Império",
+      "n": 9
+     },
+     {
+      "nome": "Marçal",
+      "n": 9
+     },
+     {
+      "nome": "Mart’nália",
+      "n": 9
+     },
+     {
+      "nome": "Candeia",
+      "n": 8
+     }
+    ]
+   },
+   "generos": {
+    "familias_por_faixa": [
+     {
+      "nome": "Latin",
+      "n": 16338
+     },
+     {
+      "nome": "Folk, World, & Country",
+      "n": 4950
+     },
+     {
+      "nome": "Jazz",
+      "n": 2778
+     },
+     {
+      "nome": "Pop",
+      "n": 1260
+     },
+     {
+      "nome": "Rock",
+      "n": 1054
+     },
+     {
+      "nome": "Electronic",
+      "n": 504
+     },
+     {
+      "nome": "Funk / Soul",
+      "n": 443
+     },
+     {
+      "nome": "Classical",
+      "n": 367
+     },
+     {
+      "nome": "Non-Music",
+      "n": 312
+     },
+     {
+      "nome": "Reggae",
+      "n": 278
+     },
+     {
+      "nome": "Blues",
+      "n": 180
+     },
+     {
+      "nome": "Stage & Screen",
+      "n": 177
+     },
+     {
+      "nome": "Brass & Military",
+      "n": 58
+     },
+     {
+      "nome": "Children's",
+      "n": 50
+     },
+     {
+      "nome": "Hip Hop",
+      "n": 43
+     }
+    ],
+    "top1_por_faixa": [
+     {
+      "nome": "Latin---Samba",
+      "n": 7939
+     },
+     {
+      "nome": "Latin---MPB",
+      "n": 3214
+     },
+     {
+      "nome": "Folk, World, & Country---Folk",
+      "n": 2919
+     },
+     {
+      "nome": "Latin---Batucada",
+      "n": 1791
+     },
+     {
+      "nome": "Latin---Bossanova",
+      "n": 1355
+     },
+     {
+      "nome": "Jazz---Bossa Nova",
+      "n": 928
+     },
+     {
+      "nome": "Latin---Forró",
+      "n": 623
+     },
+     {
+      "nome": "Pop---Vocal",
+      "n": 455
+     },
+     {
+      "nome": "Pop---Ballad",
+      "n": 427
+     },
+     {
+      "nome": "Jazz---Easy Listening",
+      "n": 418
+     },
+     {
+      "nome": "Folk, World, & Country---Flamenco",
+      "n": 382
+     },
+     {
+      "nome": "Folk, World, & Country---African",
+      "n": 377
+     },
+     {
+      "nome": "Latin---Nueva Cancion",
+      "n": 338
+     },
+     {
+      "nome": "Jazz---Contemporary Jazz",
+      "n": 284
+     },
+     {
+      "nome": "Folk, World, & Country---Fado",
+      "n": 263
+     },
+     {
+      "nome": "Folk, World, & Country---Éntekhno",
+      "n": 258
+     },
+     {
+      "nome": "Latin---Baião",
+      "n": 221
+     },
+     {
+      "nome": "Rock---Alternative Rock",
+      "n": 183
+     },
+     {
+      "nome": "Latin---Tango",
+      "n": 178
+     },
+     {
+      "nome": "Funk / Soul---Funk",
+      "n": 178
+     },
+     {
+      "nome": "Jazz---Gypsy Jazz",
+      "n": 176
+     },
+     {
+      "nome": "Rock---Pop Rock",
+      "n": 170
+     },
+     {
+      "nome": "Stage & Screen---Soundtrack",
+      "n": 169
+     },
+     {
+      "nome": "Funk / Soul---Soul",
+      "n": 166
+     },
+     {
+      "nome": "Folk, World, & Country---Laïkó",
+      "n": 164
+     },
+     {
+      "nome": "Jazz---Smooth Jazz",
+      "n": 151
+     },
+     {
+      "nome": "Jazz---Latin Jazz",
+      "n": 141
+     },
+     {
+      "nome": "Latin---Bolero",
+      "n": 135
+     },
+     {
+      "nome": "Electronic---Downtempo",
+      "n": 128
+     },
+     {
+      "nome": "Pop---Chanson",
+      "n": 127
+     },
+     {
+      "nome": "Rock---Indie Rock",
+      "n": 125
+     },
+     {
+      "nome": "Rock---Psychedelic Rock",
+      "n": 107
+     },
+     {
+      "nome": "Latin---Salsa",
+      "n": 104
+     },
+     {
+      "nome": "Electronic---Experimental",
+      "n": 103
+     },
+     {
+      "nome": "Pop---Bollywood",
+      "n": 99
+     },
+     {
+      "nome": "Jazz---Fusion",
+      "n": 96
+     },
+     {
+      "nome": "Reggae---Calypso",
+      "n": 95
+     },
+     {
+      "nome": "Classical---Contemporary",
+      "n": 86
+     },
+     {
+      "nome": "Folk, World, & Country---Catalan Music",
+      "n": 84
+     },
+     {
+      "nome": "Folk, World, & Country---Zouk",
+      "n": 80
+     },
+     {
+      "nome": "Reggae---Reggae",
+      "n": 68
+     },
+     {
+      "nome": "Folk, World, & Country---Canzone Napoletana",
+      "n": 67
+     },
+     {
+      "nome": "Jazz---Dixieland",
+      "n": 65
+     },
+     {
+      "nome": "Jazz---Ragtime",
+      "n": 65
+     },
+     {
+      "nome": "Non-Music---Spoken Word",
+      "n": 65
+     },
+     {
+      "nome": "Non-Music---Comedy",
+      "n": 64
+     },
+     {
+      "nome": "Jazz---Cool Jazz",
+      "n": 61
+     },
+     {
+      "nome": "Rock---Ska",
+      "n": 61
+     },
+     {
+      "nome": "Jazz---Swing",
+      "n": 59
+     },
+     {
+      "nome": "Non-Music---Poetry",
+      "n": 58
+     },
+     {
+      "nome": "Folk, World, & Country---Soukous",
+      "n": 57
+     },
+     {
+      "nome": "Rock---Punk",
+      "n": 56
+     },
+     {
+      "nome": "Folk, World, & Country---Séga",
+      "n": 52
+     },
+     {
+      "nome": "Folk, World, & Country---Raï",
+      "n": 52
+     },
+     {
+      "nome": "Pop---Kayōkyoku",
+      "n": 52
+     },
+     {
+      "nome": "Jazz---Afrobeat",
+      "n": 51
+     },
+     {
+      "nome": "Electronic---Ambient",
+      "n": 50
+     },
+     {
+      "nome": "Latin---Beguine",
+      "n": 48
+     },
+     {
+      "nome": "Latin---Cubano",
+      "n": 47
+     },
+     {
+      "nome": "Classical---Baroque",
+      "n": 46
+     },
+     {
+      "nome": "Jazz---Afro-Cuban Jazz",
+      "n": 46
+     },
+     {
+      "nome": "Electronic---House",
+      "n": 46
+     },
+     {
+      "nome": "Latin---Mariachi",
+      "n": 45
+     },
+     {
+      "nome": "Latin---Compas",
+      "n": 45
+     },
+     {
+      "nome": "Jazz---Hard Bop",
+      "n": 42
+     },
+     {
+      "nome": "Classical---Post-Modern",
+      "n": 38
+     },
+     {
+      "nome": "Latin---Rumba",
+      "n": 38
+     },
+     {
+      "nome": "Blues---Modern Electric Blues",
+      "n": 38
+     },
+     {
+      "nome": "Classical---Romantic",
+      "n": 35
+     },
+     {
+      "nome": "Blues---Piano Blues",
+      "n": 34
+     },
+     {
+      "nome": "Rock---Neofolk",
+      "n": 34
+     },
+     {
+      "nome": "Classical---Neo-Romantic",
+      "n": 33
+     },
+     {
+      "nome": "Blues---Delta Blues",
+      "n": 33
+     },
+     {
+      "nome": "Rock---Folk Rock",
+      "n": 33
+     },
+     {
+      "nome": "Latin---Cumbia",
+      "n": 32
+     },
+     {
+      "nome": "Rock---Blues Rock",
+      "n": 32
+     },
+     {
+      "nome": "Classical---Impressionist",
+      "n": 31
+     },
+     {
+      "nome": "Reggae---Soca",
+      "n": 31
+     },
+     {
+      "nome": "Brass & Military---Marches",
+      "n": 30
+     },
+     {
+      "nome": "Classical---Modern",
+      "n": 30
+     },
+     {
+      "nome": "Jazz---Post Bop",
+      "n": 30
+     },
+     {
+      "nome": "Jazz---Jazz-Funk",
+      "n": 30
+     },
+     {
+      "nome": "Electronic---Latin",
+      "n": 30
+     },
+     {
+      "nome": "Folk, World, & Country---Pacific",
+      "n": 29
+     },
+     {
+      "nome": "Jazz---Big Band",
+      "n": 29
+     },
+     {
+      "nome": "Rock---Rock & Roll",
+      "n": 29
+     },
+     {
+      "nome": "Reggae---Ska",
+      "n": 28
+     },
+     {
+      "nome": "Funk / Soul---Disco",
+      "n": 27
+     },
+     {
+      "nome": "Folk, World, & Country---Celtic",
+      "n": 27
+     },
+     {
+      "nome": "Jazz---Modal",
+      "n": 25
+     },
+     {
+      "nome": "Classical---Choral",
+      "n": 25
+     },
+     {
+      "nome": "Funk / Soul---Gospel",
+      "n": 24
+     },
+     {
+      "nome": "Children's---Educational",
+      "n": 24
+     },
+     {
+      "nome": "Blues---Country Blues",
+      "n": 23
+     },
+     {
+      "nome": "Rock---Yé-Yé",
+      "n": 23
+     },
+     {
+      "nome": "Folk, World, & Country---Nordic",
+      "n": 23
+     },
+     {
+      "nome": "Electronic---Synth-pop",
+      "n": 23
+     },
+     {
+      "nome": "Latin---Cha-Cha",
+      "n": 22
+     },
+     {
+      "nome": "Non-Music---Monolog",
+      "n": 21
+     },
+     {
+      "nome": "Non-Music---Audiobook",
+      "n": 21
+     },
+     {
+      "nome": "Pop---Music Hall",
+      "n": 21
+     },
+     {
+      "nome": "Jazz---Bop",
+      "n": 20
+     },
+     {
+      "nome": "Latin---Mambo",
+      "n": 20
+     },
+     {
+      "nome": "Folk, World, & Country---Polka",
+      "n": 20
+     },
+     {
+      "nome": "Rock---Beat",
+      "n": 20
+     },
+     {
+      "nome": "Pop---City Pop",
+      "n": 19
+     },
+     {
+      "nome": "Reggae---Reggae-Pop",
+      "n": 19
+     },
+     {
+      "nome": "Brass & Military---Brass Band",
+      "n": 18
+     },
+     {
+      "nome": "Pop---Light Music",
+      "n": 18
+     },
+     {
+      "nome": "Latin---Boogaloo",
+      "n": 18
+     },
+     {
+      "nome": "Latin---Vallenato",
+      "n": 18
+     },
+     {
+      "nome": "Electronic---Future Jazz",
+      "n": 18
+     },
+     {
+      "nome": "Rock---Acoustic",
+      "n": 18
+     },
+     {
+      "nome": "Folk, World, & Country---Country",
+      "n": 17
+     },
+     {
+      "nome": "Folk, World, & Country---Indian Classical",
+      "n": 17
+     },
+     {
+      "nome": "Folk, World, & Country---Romani",
+      "n": 17
+     },
+     {
+      "nome": "Hip Hop---Gangsta",
+      "n": 17
+     },
+     {
+      "nome": "Children's---Nursery Rhymes",
+      "n": 16
+     },
+     {
+      "nome": "Rock---Doo Wop",
+      "n": 15
+     },
+     {
+      "nome": "Latin---Afro-Cuban",
+      "n": 15
+     },
+     {
+      "nome": "Non-Music---Field Recording",
+      "n": 15
+     },
+     {
+      "nome": "Jazz---Jazz-Rock",
+      "n": 15
+     },
+     {
+      "nome": "Non-Music---Radioplay",
+      "n": 15
+     },
+     {
+      "nome": "Blues---Texas Blues",
+      "n": 14
+     },
+     {
+      "nome": "Funk / Soul---Neo Soul",
+      "n": 14
+     },
+     {
+      "nome": "Blues---Rhythm & Blues",
+      "n": 13
+     },
+     {
+      "nome": "Jazz---Free Jazz",
+      "n": 13
+     },
+     {
+      "nome": "Rock---New Wave",
+      "n": 13
+     },
+     {
+      "nome": "Electronic---Drum n Bass",
+      "n": 13
+     },
+     {
+      "nome": "Pop---Schlager",
+      "n": 12
+     },
+     {
+      "nome": "Latin---Tejano",
+      "n": 12
+     },
+     {
+      "nome": "Rock---Prog Rock",
+      "n": 12
+     },
+     {
+      "nome": "Non-Music---Dialogue",
+      "n": 12
+     },
+     {
+      "nome": "Reggae---Ragga",
+      "n": 12
+     },
+     {
+      "nome": "Electronic---New Age",
+      "n": 12
+     },
+     {
+      "nome": "Latin---Reggaeton",
+      "n": 12
+     },
+     {
+      "nome": "Classical---Classical",
+      "n": 11
+     },
+     {
+      "nome": "Rock---Twist",
+      "n": 11
+     },
+     {
+      "nome": "Jazz---Soul-Jazz",
+      "n": 11
+     },
+     {
+      "nome": "Non-Music---Religious",
+      "n": 11
+     },
+     {
+      "nome": "Latin---Son",
+      "n": 11
+     },
+     {
+      "nome": "Rock---Lounge",
+      "n": 11
+     },
+     {
+      "nome": "Classical---Medieval",
+      "n": 11
+     },
+     {
+      "nome": "Pop---Parody",
+      "n": 11
+     },
+     {
+      "nome": "Folk, World, & Country---Gospel",
+      "n": 10
+     },
+     {
+      "nome": "Rock---Psychobilly",
+      "n": 10
+     },
+     {
+      "nome": "Brass & Military---Military",
+      "n": 10
+     },
+     {
+      "nome": "Electronic---Disco Polo",
+      "n": 10
+     },
+     {
+      "nome": "Funk / Soul---Afrobeat",
+      "n": 10
+     },
+     {
+      "nome": "Children's---Story",
+      "n": 10
+     },
+     {
+      "nome": "Jazz---Avant-garde Jazz",
+      "n": 10
+     },
+     {
+      "nome": "Rock---Surf",
+      "n": 9
+     },
+     {
+      "nome": "Classical---Opera",
+      "n": 9
+     },
+     {
+      "nome": "Latin---Guajira",
+      "n": 9
+     },
+     {
+      "nome": "Latin---Norteño",
+      "n": 9
+     },
+     {
+      "nome": "Folk, World, & Country---Bluegrass",
+      "n": 9
+     },
+     {
+      "nome": "Non-Music---Interview",
+      "n": 9
+     },
+     {
+      "nome": "Rock---Lo-Fi",
+      "n": 9
+     },
+     {
+      "nome": "Jazz---Free Improvisation",
+      "n": 9
+     },
+     {
+      "nome": "Folk, World, & Country---Hindustani",
+      "n": 8
+     },
+     {
+      "nome": "Non-Music---Promotional",
+      "n": 8
+     },
+     {
+      "nome": "Reggae---Rocksteady",
+      "n": 8
+     },
+     {
+      "nome": "Electronic---Electro",
+      "n": 8
+     },
+     {
+      "nome": "Classical---Neo-Classical",
+      "n": 8
+     },
+     {
+      "nome": "Non-Music---Political",
+      "n": 7
+     },
+     {
+      "nome": "Rock---Hard Rock",
+      "n": 7
+     },
+     {
+      "nome": "Rock---Power Pop",
+      "n": 7
+     },
+     {
+      "nome": "Rock---AOR",
+      "n": 7
+     },
+     {
+      "nome": "Funk / Soul---New Jack Swing",
+      "n": 7
+     },
+     {
+      "nome": "Electronic---Jazzdance",
+      "n": 7
+     },
+     {
+      "nome": "Rock---Brit Pop",
+      "n": 7
+     },
+     {
+      "nome": "Latin---Porro",
+      "n": 6
+     },
+     {
+      "nome": "Folk, World, & Country---Highlife",
+      "n": 6
+     },
+     {
+      "nome": "Rock---Heavy Metal",
+      "n": 6
+     },
+     {
+      "nome": "Reggae---Dub",
+      "n": 6
+     },
+     {
+      "nome": "Hip Hop---G-Funk",
+      "n": 6
+     },
+     {
+      "nome": "Blues---Electric Blues",
+      "n": 6
+     },
+     {
+      "nome": "Non-Music---Education",
+      "n": 6
+     },
+     {
+      "nome": "Pop---K-pop",
+      "n": 6
+     },
+     {
+      "nome": "Latin---Ranchera",
+      "n": 5
+     },
+     {
+      "nome": "Pop---Novelty",
+      "n": 5
+     },
+     {
+      "nome": "Latin---Merengue",
+      "n": 5
+     },
+     {
+      "nome": "Latin---Pachanga",
+      "n": 5
+     },
+     {
+      "nome": "Latin---Guaguancó",
+      "n": 5
+     },
+     {
+      "nome": "Latin---Guaracha",
+      "n": 5
+     },
+     {
+      "nome": "Blues---Louisiana Blues",
+      "n": 5
+     },
+     {
+      "nome": "Blues---Jump Blues",
+      "n": 5
+     },
+     {
+      "nome": "Rock---Southern Rock",
+      "n": 5
+     },
+     {
+      "nome": "Funk / Soul---P.Funk",
+      "n": 5
+     },
+     {
+      "nome": "Folk, World, & Country---Cajun",
+      "n": 5
+     },
+     {
+      "nome": "Rock---Funk Metal",
+      "n": 5
+     },
+     {
+      "nome": "Reggae---Dancehall",
+      "n": 5
+     },
+     {
+      "nome": "Pop---Indie Pop",
+      "n": 5
+     },
+     {
+      "nome": "Hip Hop---RnB/Swing",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Deep House",
+      "n": 5
+     },
+     {
+      "nome": "Stage & Screen---Musical",
+      "n": 4
+     },
+     {
+      "nome": "Rock---Parody",
+      "n": 4
+     },
+     {
+      "nome": "Latin---Son Montuno",
+      "n": 4
+     },
+     {
+      "nome": "Classical---Renaissance",
+      "n": 4
+     },
+     {
+      "nome": "Blues---Boogie Woogie",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Big Beat",
+      "n": 4
+     },
+     {
+      "nome": "Hip Hop---Conscious",
+      "n": 4
+     },
+     {
+      "nome": "Blues---Chicago Blues",
+      "n": 4
+     },
+     {
+      "nome": "Folk, World, & Country---Volksmusik",
+      "n": 3
+     },
+     {
+      "nome": "Jazz---Space-Age",
+      "n": 3
+     },
+     {
+      "nome": "Rock---Mod",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Vaporwave",
+      "n": 3
+     },
+     {
+      "nome": "Folk, World, & Country---Hillbilly",
+      "n": 3
+     },
+     {
+      "nome": "Reggae---Roots Reggae",
+      "n": 3
+     },
+     {
+      "nome": "Rock---Garage Rock",
+      "n": 3
+     },
+     {
+      "nome": "Funk / Soul---Boogie",
+      "n": 3
+     },
+     {
+      "nome": "Rock---Soft Rock",
+      "n": 3
+     },
+     {
+      "nome": "Reggae---Lovers Rock",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Freestyle",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Acid Jazz",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Trip Hop",
+      "n": 3
+     },
+     {
+      "nome": "Funk / Soul---Contemporary R&B",
+      "n": 3
+     },
+     {
+      "nome": "Pop---J-pop",
+      "n": 3
+     },
+     {
+      "nome": "Latin---Charanga",
+      "n": 2
+     },
+     {
+      "nome": "Latin---Descarga",
+      "n": 2
+     },
+     {
+      "nome": "Funk / Soul---Rhythm & Blues",
+      "n": 2
+     },
+     {
+      "nome": "Stage & Screen---Theme",
+      "n": 2
+     },
+     {
+      "nome": "Stage & Screen---Score",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Chiptune",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Country Rock",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Techno",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Power Electronics",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Breakbeat",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Broken Beat",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Industrial",
+      "n": 2
+     },
+     {
+      "nome": "Hip Hop---Pop Rap",
+      "n": 2
+     },
+     {
+      "nome": "Funk / Soul---Swingbeat",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Math Rock",
+      "n": 2
+     },
+     {
+      "nome": "Hip Hop---Trap",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Tropical House",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Dub",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Dream Pop",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Dungeon Synth",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Illbient",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Rockabilly",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Noise",
+      "n": 2
+     },
+     {
+      "nome": "Folk, World, & Country---Honky Tonk",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Art Rock",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Cut-up/DJ",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Disco",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Euro-Disco",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Goth Rock",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Post-Punk",
+      "n": 1
+     },
+     {
+      "nome": "Blues---Harmonica Blues",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Coldwave",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Hi NRG",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Ragga HipHop",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Musique Concrète",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Neofolk",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Bounce",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Tribal",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Jungle",
+      "n": 1
+     },
+     {
+      "nome": "Funk / Soul---Free Funk",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Hardcore",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Beatdown",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Cloud Rap",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Electroclash",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Speed Garage",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Turntablism",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Grime",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Experimental",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Boom Bap",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Avantgarde",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Nu-Disco",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Sound Collage",
+      "n": 1
+     },
+     {
+      "nome": "Funk / Soul---Psychedelic",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Euro House",
+      "n": 1
+     },
+     {
+      "nome": "Rock---No Wave",
+      "n": 1
+     }
+    ],
+    "top3_por_faixa": [
+     {
+      "nome": "Latin---Samba",
+      "n": 16819
+     },
+     {
+      "nome": "Latin---MPB",
+      "n": 16721
+     },
+     {
+      "nome": "Latin---Bossanova",
+      "n": 13937
+     },
+     {
+      "nome": "Latin---Batucada",
+      "n": 9699
+     },
+     {
+      "nome": "Folk, World, & Country---Folk",
+      "n": 8212
+     },
+     {
+      "nome": "Jazz---Bossa Nova",
+      "n": 7721
+     },
+     {
+      "nome": "Latin---Forró",
+      "n": 3386
+     },
+     {
+      "nome": "Folk, World, & Country---African",
+      "n": 2828
+     },
+     {
+      "nome": "Jazz---Latin Jazz",
+      "n": 2712
+     },
+     {
+      "nome": "Pop---Ballad",
+      "n": 2596
+     },
+     {
+      "nome": "Pop---Vocal",
+      "n": 2563
+     },
+     {
+      "nome": "Latin---Nueva Cancion",
+      "n": 2115
+     },
+     {
+      "nome": "Jazz---Easy Listening",
+      "n": 1809
+     },
+     {
+      "nome": "Latin---Baião",
+      "n": 1693
+     },
+     {
+      "nome": "Folk, World, & Country---Éntekhno",
+      "n": 1601
+     },
+     {
+      "nome": "Folk, World, & Country---Flamenco",
+      "n": 1552
+     },
+     {
+      "nome": "Folk, World, & Country---Fado",
+      "n": 1301
+     },
+     {
+      "nome": "Jazz---Contemporary Jazz",
+      "n": 1242
+     },
+     {
+      "nome": "Electronic---Latin",
+      "n": 1238
+     },
+     {
+      "nome": "Rock---Pop Rock",
+      "n": 1203
+     },
+     {
+      "nome": "Funk / Soul---Funk",
+      "n": 1190
+     },
+     {
+      "nome": "Stage & Screen---Soundtrack",
+      "n": 1181
+     },
+     {
+      "nome": "Pop---Chanson",
+      "n": 1120
+     },
+     {
+      "nome": "Rock---Folk Rock",
+      "n": 1067
+     },
+     {
+      "nome": "Electronic---House",
+      "n": 1012
+     },
+     {
+      "nome": "Latin---Tango",
+      "n": 873
+     },
+     {
+      "nome": "Latin---Bolero",
+      "n": 824
+     },
+     {
+      "nome": "Rock---Alternative Rock",
+      "n": 820
+     },
+     {
+      "nome": "Jazz---Smooth Jazz",
+      "n": 803
+     },
+     {
+      "nome": "Folk, World, & Country---Laïkó",
+      "n": 795
+     },
+     {
+      "nome": "Funk / Soul---Soul",
+      "n": 792
+     },
+     {
+      "nome": "Jazz---Fusion",
+      "n": 640
+     },
+     {
+      "nome": "Jazz---Gypsy Jazz",
+      "n": 618
+     },
+     {
+      "nome": "Folk, World, & Country---Zouk",
+      "n": 597
+     },
+     {
+      "nome": "Latin---Salsa",
+      "n": 592
+     },
+     {
+      "nome": "Reggae---Calypso",
+      "n": 571
+     },
+     {
+      "nome": "Electronic---Downtempo",
+      "n": 570
+     },
+     {
+      "nome": "Rock---Indie Rock",
+      "n": 537
+     },
+     {
+      "nome": "Latin---Rumba",
+      "n": 535
+     },
+     {
+      "nome": "Rock---Psychedelic Rock",
+      "n": 523
+     },
+     {
+      "nome": "Folk, World, & Country---Celtic",
+      "n": 494
+     },
+     {
+      "nome": "Folk, World, & Country---Soukous",
+      "n": 485
+     },
+     {
+      "nome": "Electronic---Experimental",
+      "n": 470
+     },
+     {
+      "nome": "Classical---Contemporary",
+      "n": 404
+     },
+     {
+      "nome": "Reggae---Reggae-Pop",
+      "n": 391
+     },
+     {
+      "nome": "Latin---Cubano",
+      "n": 385
+     },
+     {
+      "nome": "Folk, World, & Country---Canzone Napoletana",
+      "n": 382
+     },
+     {
+      "nome": "Latin---Beguine",
+      "n": 374
+     },
+     {
+      "nome": "Jazz---Swing",
+      "n": 365
+     },
+     {
+      "nome": "Jazz---Jazz-Funk",
+      "n": 361
+     },
+     {
+      "nome": "Jazz---Afro-Cuban Jazz",
+      "n": 357
+     },
+     {
+      "nome": "Electronic---Ambient",
+      "n": 347
+     },
+     {
+      "nome": "Rock---Acoustic",
+      "n": 345
+     },
+     {
+      "nome": "Latin---Compas",
+      "n": 344
+     },
+     {
+      "nome": "Jazz---Post Bop",
+      "n": 334
+     },
+     {
+      "nome": "Pop---Bollywood",
+      "n": 330
+     },
+     {
+      "nome": "Jazz---Cool Jazz",
+      "n": 327
+     },
+     {
+      "nome": "Folk, World, & Country---Catalan Music",
+      "n": 318
+     },
+     {
+      "nome": "Jazz---Big Band",
+      "n": 308
+     },
+     {
+      "nome": "Rock---Neofolk",
+      "n": 305
+     },
+     {
+      "nome": "Latin---Afro-Cuban",
+      "n": 300
+     },
+     {
+      "nome": "Jazz---Dixieland",
+      "n": 297
+     },
+     {
+      "nome": "Reggae---Reggae",
+      "n": 284
+     },
+     {
+      "nome": "Folk, World, & Country---Pacific",
+      "n": 282
+     },
+     {
+      "nome": "Pop---Light Music",
+      "n": 280
+     },
+     {
+      "nome": "Non-Music---Spoken Word",
+      "n": 276
+     },
+     {
+      "nome": "Latin---Cumbia",
+      "n": 275
+     },
+     {
+      "nome": "Non-Music---Comedy",
+      "n": 266
+     },
+     {
+      "nome": "Folk, World, & Country---Hindustani",
+      "n": 257
+     },
+     {
+      "nome": "Pop---Kayōkyoku",
+      "n": 256
+     },
+     {
+      "nome": "Rock---Punk",
+      "n": 256
+     },
+     {
+      "nome": "Jazz---Ragtime",
+      "n": 253
+     },
+     {
+      "nome": "Jazz---Modal",
+      "n": 249
+     },
+     {
+      "nome": "Rock---Blues Rock",
+      "n": 249
+     },
+     {
+      "nome": "Latin---Mambo",
+      "n": 240
+     },
+     {
+      "nome": "Non-Music---Poetry",
+      "n": 240
+     },
+     {
+      "nome": "Folk, World, & Country---Raï",
+      "n": 236
+     },
+     {
+      "nome": "Latin---Mariachi",
+      "n": 231
+     },
+     {
+      "nome": "Jazz---Bop",
+      "n": 231
+     },
+     {
+      "nome": "Blues---Delta Blues",
+      "n": 225
+     },
+     {
+      "nome": "Jazz---Soul-Jazz",
+      "n": 225
+     },
+     {
+      "nome": "Rock---Ska",
+      "n": 224
+     },
+     {
+      "nome": "Electronic---Future Jazz",
+      "n": 221
+     },
+     {
+      "nome": "Blues---Country Blues",
+      "n": 215
+     },
+     {
+      "nome": "Jazz---Afrobeat",
+      "n": 211
+     },
+     {
+      "nome": "Reggae---Ska",
+      "n": 206
+     },
+     {
+      "nome": "Folk, World, & Country---Séga",
+      "n": 205
+     },
+     {
+      "nome": "Pop---Music Hall",
+      "n": 198
+     },
+     {
+      "nome": "Funk / Soul---Disco",
+      "n": 198
+     },
+     {
+      "nome": "Rock---Rock & Roll",
+      "n": 196
+     },
+     {
+      "nome": "Classical---Modern",
+      "n": 192
+     },
+     {
+      "nome": "Folk, World, & Country---Romani",
+      "n": 192
+     },
+     {
+      "nome": "Classical---Baroque",
+      "n": 184
+     },
+     {
+      "nome": "Jazz---Avant-garde Jazz",
+      "n": 182
+     },
+     {
+      "nome": "Blues---Modern Electric Blues",
+      "n": 181
+     },
+     {
+      "nome": "Classical---Post-Modern",
+      "n": 180
+     },
+     {
+      "nome": "Classical---Neo-Romantic",
+      "n": 178
+     },
+     {
+      "nome": "Jazz---Hard Bop",
+      "n": 177
+     },
+     {
+      "nome": "Classical---Romantic",
+      "n": 176
+     },
+     {
+      "nome": "Blues---Piano Blues",
+      "n": 170
+     },
+     {
+      "nome": "Jazz---Free Improvisation",
+      "n": 170
+     },
+     {
+      "nome": "Jazz---Space-Age",
+      "n": 169
+     },
+     {
+      "nome": "Folk, World, & Country---Country",
+      "n": 169
+     },
+     {
+      "nome": "Classical---Impressionist",
+      "n": 166
+     },
+     {
+      "nome": "Folk, World, & Country---Bluegrass",
+      "n": 164
+     },
+     {
+      "nome": "Pop---Parody",
+      "n": 161
+     },
+     {
+      "nome": "Folk, World, & Country---Gospel",
+      "n": 157
+     },
+     {
+      "nome": "Electronic---Synth-pop",
+      "n": 157
+     },
+     {
+      "nome": "Folk, World, & Country---Nordic",
+      "n": 155
+     },
+     {
+      "nome": "Classical---Classical",
+      "n": 151
+     },
+     {
+      "nome": "Non-Music---Monolog",
+      "n": 151
+     },
+     {
+      "nome": "Jazz---Jazz-Rock",
+      "n": 151
+     },
+     {
+      "nome": "Latin---Cha-Cha",
+      "n": 145
+     },
+     {
+      "nome": "Funk / Soul---Afrobeat",
+      "n": 143
+     },
+     {
+      "nome": "Non-Music---Religious",
+      "n": 142
+     },
+     {
+      "nome": "Funk / Soul---Gospel",
+      "n": 137
+     },
+     {
+      "nome": "Reggae---Soca",
+      "n": 136
+     },
+     {
+      "nome": "Classical---Neo-Classical",
+      "n": 135
+     },
+     {
+      "nome": "Folk, World, & Country---Polka",
+      "n": 135
+     },
+     {
+      "nome": "Children's---Nursery Rhymes",
+      "n": 130
+     },
+     {
+      "nome": "Non-Music---Radioplay",
+      "n": 130
+     },
+     {
+      "nome": "Latin---Son",
+      "n": 128
+     },
+     {
+      "nome": "Classical---Medieval",
+      "n": 126
+     },
+     {
+      "nome": "Rock---Prog Rock",
+      "n": 126
+     },
+     {
+      "nome": "Non-Music---Political",
+      "n": 125
+     },
+     {
+      "nome": "Rock---Soft Rock",
+      "n": 125
+     },
+     {
+      "nome": "Electronic---New Age",
+      "n": 124
+     },
+     {
+      "nome": "Brass & Military---Marches",
+      "n": 123
+     },
+     {
+      "nome": "Rock---Beat",
+      "n": 119
+     },
+     {
+      "nome": "Children's---Story",
+      "n": 117
+     },
+     {
+      "nome": "Funk / Soul---Neo Soul",
+      "n": 117
+     },
+     {
+      "nome": "Folk, World, & Country---Indian Classical",
+      "n": 112
+     },
+     {
+      "nome": "Non-Music---Dialogue",
+      "n": 111
+     },
+     {
+      "nome": "Non-Music---Audiobook",
+      "n": 111
+     },
+     {
+      "nome": "Children's---Educational",
+      "n": 110
+     },
+     {
+      "nome": "Rock---Doo Wop",
+      "n": 107
+     },
+     {
+      "nome": "Stage & Screen---Score",
+      "n": 107
+     },
+     {
+      "nome": "Stage & Screen---Musical",
+      "n": 106
+     },
+     {
+      "nome": "Latin---Boogaloo",
+      "n": 106
+     },
+     {
+      "nome": "Rock---Yé-Yé",
+      "n": 98
+     },
+     {
+      "nome": "Jazz---Free Jazz",
+      "n": 97
+     },
+     {
+      "nome": "Blues---Texas Blues",
+      "n": 90
+     },
+     {
+      "nome": "Non-Music---Field Recording",
+      "n": 90
+     },
+     {
+      "nome": "Latin---Reggaeton",
+      "n": 90
+     },
+     {
+      "nome": "Electronic---Neofolk",
+      "n": 90
+     },
+     {
+      "nome": "Latin---Ranchera",
+      "n": 87
+     },
+     {
+      "nome": "Pop---City Pop",
+      "n": 84
+     },
+     {
+      "nome": "Rock---Lounge",
+      "n": 83
+     },
+     {
+      "nome": "Rock---Brit Pop",
+      "n": 81
+     },
+     {
+      "nome": "Latin---Merengue",
+      "n": 78
+     },
+     {
+      "nome": "Blues---Rhythm & Blues",
+      "n": 78
+     },
+     {
+      "nome": "Latin---Guaracha",
+      "n": 78
+     },
+     {
+      "nome": "Folk, World, & Country---Highlife",
+      "n": 77
+     },
+     {
+      "nome": "Rock---Hard Rock",
+      "n": 77
+     },
+     {
+      "nome": "Funk / Soul---Psychedelic",
+      "n": 75
+     },
+     {
+      "nome": "Pop---Schlager",
+      "n": 73
+     },
+     {
+      "nome": "Rock---New Wave",
+      "n": 73
+     },
+     {
+      "nome": "Brass & Military---Military",
+      "n": 72
+     },
+     {
+      "nome": "Rock---Twist",
+      "n": 71
+     },
+     {
+      "nome": "Pop---Indie Pop",
+      "n": 69
+     },
+     {
+      "nome": "Stage & Screen---Theme",
+      "n": 68
+     },
+     {
+      "nome": "Latin---Guajira",
+      "n": 67
+     },
+     {
+      "nome": "Rock---Mod",
+      "n": 66
+     },
+     {
+      "nome": "Rock---Garage Rock",
+      "n": 66
+     },
+     {
+      "nome": "Rock---AOR",
+      "n": 66
+     },
+     {
+      "nome": "Rock---Acid Rock",
+      "n": 64
+     },
+     {
+      "nome": "Electronic---Acid Jazz",
+      "n": 62
+     },
+     {
+      "nome": "Electronic---Jazzdance",
+      "n": 60
+     },
+     {
+      "nome": "Reggae---Ragga",
+      "n": 60
+     },
+     {
+      "nome": "Classical---Choral",
+      "n": 59
+     },
+     {
+      "nome": "Rock---Lo-Fi",
+      "n": 59
+     },
+     {
+      "nome": "Latin---Vallenato",
+      "n": 57
+     },
+     {
+      "nome": "Brass & Military---Brass Band",
+      "n": 55
+     },
+     {
+      "nome": "Funk / Soul---Boogie",
+      "n": 55
+     },
+     {
+      "nome": "Rock---Experimental",
+      "n": 55
+     },
+     {
+      "nome": "Latin---Guaguancó",
+      "n": 54
+     },
+     {
+      "nome": "Blues---Chicago Blues",
+      "n": 54
+     },
+     {
+      "nome": "Latin---Tejano",
+      "n": 53
+     },
+     {
+      "nome": "Rock---Surf",
+      "n": 52
+     },
+     {
+      "nome": "Reggae---Rocksteady",
+      "n": 52
+     },
+     {
+      "nome": "Classical---Renaissance",
+      "n": 52
+     },
+     {
+      "nome": "Classical---Opera",
+      "n": 51
+     },
+     {
+      "nome": "Reggae---Dub",
+      "n": 51
+     },
+     {
+      "nome": "Blues---Electric Blues",
+      "n": 51
+     },
+     {
+      "nome": "Electronic---Drum n Bass",
+      "n": 50
+     },
+     {
+      "nome": "Electronic---Deep House",
+      "n": 49
+     },
+     {
+      "nome": "Rock---Parody",
+      "n": 47
+     },
+     {
+      "nome": "Rock---Psychobilly",
+      "n": 45
+     },
+     {
+      "nome": "Electronic---Electro",
+      "n": 45
+     },
+     {
+      "nome": "Hip Hop---Gangsta",
+      "n": 45
+     },
+     {
+      "nome": "Latin---Norteño",
+      "n": 44
+     },
+     {
+      "nome": "Pop---Novelty",
+      "n": 42
+     },
+     {
+      "nome": "Hip Hop---Conscious",
+      "n": 42
+     },
+     {
+      "nome": "Electronic---Disco",
+      "n": 41
+     },
+     {
+      "nome": "Latin---Pachanga",
+      "n": 40
+     },
+     {
+      "nome": "Latin---Descarga",
+      "n": 40
+     },
+     {
+      "nome": "Folk, World, & Country---Volksmusik",
+      "n": 40
+     },
+     {
+      "nome": "Blues---Louisiana Blues",
+      "n": 40
+     },
+     {
+      "nome": "Funk / Soul---Rhythm & Blues",
+      "n": 38
+     },
+     {
+      "nome": "Electronic---Trip Hop",
+      "n": 38
+     },
+     {
+      "nome": "Non-Music---Education",
+      "n": 38
+     },
+     {
+      "nome": "Non-Music---Interview",
+      "n": 36
+     },
+     {
+      "nome": "Reggae---Dancehall",
+      "n": 36
+     },
+     {
+      "nome": "Blues---Boogie Woogie",
+      "n": 34
+     },
+     {
+      "nome": "Rock---Ethereal",
+      "n": 34
+     },
+     {
+      "nome": "Rock---Power Pop",
+      "n": 34
+     },
+     {
+      "nome": "Latin---Porro",
+      "n": 33
+     },
+     {
+      "nome": "Blues---Harmonica Blues",
+      "n": 33
+     },
+     {
+      "nome": "Rock---Country Rock",
+      "n": 33
+     },
+     {
+      "nome": "Non-Music---Promotional",
+      "n": 32
+     },
+     {
+      "nome": "Rock---Southern Rock",
+      "n": 32
+     },
+     {
+      "nome": "Funk / Soul---P.Funk",
+      "n": 31
+     },
+     {
+      "nome": "Reggae---Roots Reggae",
+      "n": 31
+     },
+     {
+      "nome": "Electronic---Euro House",
+      "n": 31
+     },
+     {
+      "nome": "Hip Hop---RnB/Swing",
+      "n": 31
+     },
+     {
+      "nome": "Latin---Charanga",
+      "n": 30
+     },
+     {
+      "nome": "Hip Hop---Ragga HipHop",
+      "n": 30
+     },
+     {
+      "nome": "Electronic---Disco Polo",
+      "n": 30
+     },
+     {
+      "nome": "Folk, World, & Country---Cajun",
+      "n": 29
+     },
+     {
+      "nome": "Funk / Soul---New Jack Swing",
+      "n": 28
+     },
+     {
+      "nome": "Rock---Dream Pop",
+      "n": 28
+     },
+     {
+      "nome": "Electronic---Tribal",
+      "n": 27
+     },
+     {
+      "nome": "Funk / Soul---Contemporary R&B",
+      "n": 26
+     },
+     {
+      "nome": "Pop---Europop",
+      "n": 25
+     },
+     {
+      "nome": "Electronic---Musique Concrète",
+      "n": 25
+     },
+     {
+      "nome": "Blues---Jump Blues",
+      "n": 24
+     },
+     {
+      "nome": "Rock---Heavy Metal",
+      "n": 24
+     },
+     {
+      "nome": "Rock---Funk Metal",
+      "n": 24
+     },
+     {
+      "nome": "Folk, World, & Country---Hillbilly",
+      "n": 23
+     },
+     {
+      "nome": "Rock---Rockabilly",
+      "n": 22
+     },
+     {
+      "nome": "Pop---K-pop",
+      "n": 21
+     },
+     {
+      "nome": "Electronic---Industrial",
+      "n": 20
+     },
+     {
+      "nome": "Latin---Son Montuno",
+      "n": 20
+     },
+     {
+      "nome": "Rock---Classic Rock",
+      "n": 20
+     },
+     {
+      "nome": "Funk / Soul---Free Funk",
+      "n": 20
+     },
+     {
+      "nome": "Electronic---Abstract",
+      "n": 20
+     },
+     {
+      "nome": "Electronic---Broken Beat",
+      "n": 20
+     },
+     {
+      "nome": "Electronic---Breakbeat",
+      "n": 19
+     },
+     {
+      "nome": "Hip Hop---Trip Hop",
+      "n": 19
+     },
+     {
+      "nome": "Electronic---Italo-Disco",
+      "n": 19
+     },
+     {
+      "nome": "Hip Hop---G-Funk",
+      "n": 19
+     },
+     {
+      "nome": "Electronic---Techno",
+      "n": 18
+     },
+     {
+      "nome": "Electronic---Dub",
+      "n": 18
+     },
+     {
+      "nome": "Folk, World, & Country---Honky Tonk",
+      "n": 17
+     },
+     {
+      "nome": "Rock---Math Rock",
+      "n": 17
+     },
+     {
+      "nome": "Rock---Black Metal",
+      "n": 17
+     },
+     {
+      "nome": "Hip Hop---Jazzy Hip-Hop",
+      "n": 17
+     },
+     {
+      "nome": "Hip Hop---Pop Rap",
+      "n": 16
+     },
+     {
+      "nome": "Electronic---Big Beat",
+      "n": 16
+     },
+     {
+      "nome": "Electronic---New Wave",
+      "n": 15
+     },
+     {
+      "nome": "Electronic---Modern Classical",
+      "n": 15
+     },
+     {
+      "nome": "Electronic---Tropical House",
+      "n": 15
+     },
+     {
+      "nome": "Funk / Soul---Swingbeat",
+      "n": 13
+     },
+     {
+      "nome": "Hip Hop---Boom Bap",
+      "n": 13
+     },
+     {
+      "nome": "Electronic---Vaporwave",
+      "n": 12
+     },
+     {
+      "nome": "Electronic---Sound Collage",
+      "n": 12
+     },
+     {
+      "nome": "Rock---Emo",
+      "n": 12
+     },
+     {
+      "nome": "Rock---Pub Rock",
+      "n": 11
+     },
+     {
+      "nome": "Reggae---Lovers Rock",
+      "n": 10
+     },
+     {
+      "nome": "Rock---Arena Rock",
+      "n": 10
+     },
+     {
+      "nome": "Hip Hop---Hardcore Hip-Hop",
+      "n": 10
+     },
+     {
+      "nome": "Electronic---Jungle",
+      "n": 10
+     },
+     {
+      "nome": "Electronic---Nu-Disco",
+      "n": 10
+     },
+     {
+      "nome": "Electronic---Dungeon Synth",
+      "n": 9
+     },
+     {
+      "nome": "Rock---Symphonic Rock",
+      "n": 9
+     },
+     {
+      "nome": "Rock---Coldwave",
+      "n": 9
+     },
+     {
+      "nome": "Rock---Oi",
+      "n": 9
+     },
+     {
+      "nome": "Pop---J-pop",
+      "n": 9
+     },
+     {
+      "nome": "Rock---Post Rock",
+      "n": 9
+     },
+     {
+      "nome": "Electronic---Chiptune",
+      "n": 8
+     },
+     {
+      "nome": "Rock---Pop Punk",
+      "n": 8
+     },
+     {
+      "nome": "Electronic---Euro-Disco",
+      "n": 8
+     },
+     {
+      "nome": "Rock---Goth Rock",
+      "n": 8
+     },
+     {
+      "nome": "Rock---Post-Punk",
+      "n": 8
+     },
+     {
+      "nome": "Electronic---Power Electronics",
+      "n": 8
+     },
+     {
+      "nome": "Hip Hop---Bounce",
+      "n": 8
+     },
+     {
+      "nome": "Hip Hop---Screw",
+      "n": 8
+     },
+     {
+      "nome": "Pop---Bubblegum",
+      "n": 7
+     },
+     {
+      "nome": "Electronic---Berlin-School",
+      "n": 7
+     },
+     {
+      "nome": "Electronic---Freestyle",
+      "n": 7
+     },
+     {
+      "nome": "Hip Hop---Horrorcore",
+      "n": 7
+     },
+     {
+      "nome": "Rock---Nu Metal",
+      "n": 7
+     },
+     {
+      "nome": "Hip Hop---Instrumental",
+      "n": 6
+     },
+     {
+      "nome": "Rock---No Wave",
+      "n": 6
+     },
+     {
+      "nome": "Funk / Soul---UK Street Soul",
+      "n": 6
+     },
+     {
+      "nome": "Rock---Grunge",
+      "n": 6
+     },
+     {
+      "nome": "Electronic---Breaks",
+      "n": 6
+     },
+     {
+      "nome": "Electronic---Beatdown",
+      "n": 6
+     },
+     {
+      "nome": "Electronic---Garage House",
+      "n": 6
+     },
+     {
+      "nome": "Electronic---Noise",
+      "n": 6
+     },
+     {
+      "nome": "Electronic---Trance",
+      "n": 5
+     },
+     {
+      "nome": "Rock---Hardcore",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Hip-House",
+      "n": 5
+     },
+     {
+      "nome": "Hip Hop---Cloud Rap",
+      "n": 5
+     },
+     {
+      "nome": "Rock---Avantgarde",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Tribal House",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Illbient",
+      "n": 5
+     },
+     {
+      "nome": "Rock---Space Rock",
+      "n": 5
+     },
+     {
+      "nome": "Rock---Glam",
+      "n": 4
+     },
+     {
+      "nome": "Rock---Deathrock",
+      "n": 4
+     },
+     {
+      "nome": "Hip Hop---Turntablism",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Chillwave",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Dance-pop",
+      "n": 4
+     },
+     {
+      "nome": "Hip Hop---Trap",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Hip Hop",
+      "n": 4
+     },
+     {
+      "nome": "Hip Hop---Grime",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Eurodance",
+      "n": 4
+     },
+     {
+      "nome": "Rock---Stoner Rock",
+      "n": 4
+     },
+     {
+      "nome": "Rock---Shoegaze",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Glitch",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Bleep",
+      "n": 3
+     },
+     {
+      "nome": "Rock---Krautrock",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Leftfield",
+      "n": 3
+     },
+     {
+      "nome": "Rock---Art Rock",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---IDM",
+      "n": 3
+     },
+     {
+      "nome": "Rock---Viking Metal",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Darkwave",
+      "n": 3
+     },
+     {
+      "nome": "Hip Hop---Britcore",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Dubstep",
+      "n": 3
+     },
+     {
+      "nome": "Hip Hop---Thug Rap",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Rhythmic Noise",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Progressive House",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Hard House",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Hi NRG",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Goa Trance",
+      "n": 2
+     },
+     {
+      "nome": "Hip Hop---DJ Battle Tool",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Eurobeat",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Pornogrind",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Goregrind",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Jumpstyle",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Hands Up",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Doom Metal",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Drone",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Folk Metal",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Dark Ambient",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Progressive Breaks",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Grime",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Funeral Doom Metal",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Minimal",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Cut-up/DJ",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---EBM",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Bass Music",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Melodic Hardcore",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Death Metal",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Halftime",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Hardcore",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Industrial",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Grindcore",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Acid",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Psy-Trance",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Acid House",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Electroclash",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Hard Trance",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Speed Garage",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Crust",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Breakcore",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Melodic Death Metal",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Italodance",
+      "n": 1
+     },
+     {
+      "nome": "Hip Hop---Crunk",
+      "n": 1
+     }
+    ]
+   },
+   "instrumentos": [
+    {
+     "nome": "drums",
+     "n": 21988
+    },
+    {
+     "nome": "bass",
+     "n": 15058
+    },
+    {
+     "nome": "guitar",
+     "n": 10347
+    },
+    {
+     "nome": "piano",
+     "n": 8831
+    },
+    {
+     "nome": "electricguitar",
+     "n": 6556
+    },
+    {
+     "nome": "acousticguitar",
+     "n": 5850
+    },
+    {
+     "nome": "synthesizer",
+     "n": 4446
+    },
+    {
+     "nome": "percussion",
+     "n": 3868
+    },
+    {
+     "nome": "classicalguitar",
+     "n": 2875
+    },
+    {
+     "nome": "voice",
+     "n": 2649
+    },
+    {
+     "nome": "violin",
+     "n": 1129
+    },
+    {
+     "nome": "flute",
+     "n": 1057
+    },
+    {
+     "nome": "keyboard",
+     "n": 989
+    },
+    {
+     "nome": "cello",
+     "n": 221
+    },
+    {
+     "nome": "accordion",
+     "n": 152
+    },
+    {
+     "nome": "saxophone",
+     "n": 135
+    },
+    {
+     "nome": "electricpiano",
+     "n": 64
+    },
+    {
+     "nome": "harp",
+     "n": 60
+    },
+    {
+     "nome": "oboe",
+     "n": 38
+    },
+    {
+     "nome": "strings",
+     "n": 29
+    },
+    {
+     "nome": "doublebass",
+     "n": 12
+    },
+    {
+     "nome": "drummachine",
+     "n": 10
+    },
+    {
+     "nome": "beat",
+     "n": 4
+    },
+    {
+     "nome": "sampler",
+     "n": 3
+    },
+    {
+     "nome": "trumpet",
+     "n": 2
+    },
+    {
+     "nome": "orchestra",
+     "n": 2
+    },
+    {
+     "nome": "viola",
+     "n": 1
+    }
+   ],
+   "humores_essentia": [
+    {
+     "nome": "melodic",
+     "n": 17768
+    },
+    {
+     "nome": "love",
+     "n": 17714
+    },
+    {
+     "nome": "energetic",
+     "n": 13323
+    },
+    {
+     "nome": "happy",
+     "n": 11672
+    },
+    {
+     "nome": "relaxing",
+     "n": 5098
+    },
+    {
+     "nome": "film",
+     "n": 4495
+    },
+    {
+     "nome": "meditative",
+     "n": 3682
+    },
+    {
+     "nome": "ballad",
+     "n": 3678
+    },
+    {
+     "nome": "christmas",
+     "n": 3453
+    },
+    {
+     "nome": "adventure",
+     "n": 1251
+    },
+    {
+     "nome": "uplifting",
+     "n": 732
+    },
+    {
+     "nome": "deep",
+     "n": 439
+    },
+    {
+     "nome": "background",
+     "n": 411
+    },
+    {
+     "nome": "romantic",
+     "n": 387
+    },
+    {
+     "nome": "positive",
+     "n": 363
+    },
+    {
+     "nome": "upbeat",
+     "n": 340
+    },
+    {
+     "nome": "funny",
+     "n": 249
+    },
+    {
+     "nome": "documentary",
+     "n": 202
+    },
+    {
+     "nome": "dark",
+     "n": 171
+    },
+    {
+     "nome": "inspiring",
+     "n": 164
+    },
+    {
+     "nome": "corporate",
+     "n": 150
+    },
+    {
+     "nome": "drama",
+     "n": 149
+    },
+    {
+     "nome": "soft",
+     "n": 91
+    },
+    {
+     "nome": "epic",
+     "n": 79
+    },
+    {
+     "nome": "summer",
+     "n": 75
+    },
+    {
+     "nome": "sad",
+     "n": 49
+    },
+    {
+     "nome": "emotional",
+     "n": 43
+    },
+    {
+     "nome": "action",
+     "n": 41
+    },
+    {
+     "nome": "advertising",
+     "n": 25
+    },
+    {
+     "nome": "cool",
+     "n": 20
+    },
+    {
+     "nome": "slow",
+     "n": 16
+    },
+    {
+     "nome": "movie",
+     "n": 10
+    },
+    {
+     "nome": "soundscape",
+     "n": 9
+    },
+    {
+     "nome": "space",
+     "n": 8
+    },
+    {
+     "nome": "heavy",
+     "n": 4
+    },
+    {
+     "nome": "holiday",
+     "n": 3
+    },
+    {
+     "nome": "fun",
+     "n": 3
+    },
+    {
+     "nome": "motivational",
+     "n": 3
+    },
+    {
+     "nome": "dream",
+     "n": 2
+    },
+    {
+     "nome": "calm",
+     "n": 2
+    },
+    {
+     "nome": "retro",
+     "n": 1
+    },
+    {
+     "nome": "sport",
+     "n": 1
+    }
+   ],
+   "tom": {
+    "por_tom": [
+     {
+      "tom": "C",
+      "modo": "major",
+      "n": 4560
+     },
+     {
+      "tom": "G",
+      "modo": "major",
+      "n": 3953
+     },
+     {
+      "tom": "F",
+      "modo": "major",
+      "n": 3314
+     },
+     {
+      "tom": "D",
+      "modo": "major",
+      "n": 2571
+     },
+     {
+      "tom": "A",
+      "modo": "major",
+      "n": 1862
+     },
+     {
+      "tom": "Bb",
+      "modo": "major",
+      "n": 1522
+     },
+     {
+      "tom": "E",
+      "modo": "major",
+      "n": 1392
+     },
+     {
+      "tom": "Eb",
+      "modo": "major",
+      "n": 1369
+     },
+     {
+      "tom": "A",
+      "modo": "minor",
+      "n": 1018
+     },
+     {
+      "tom": "Ab",
+      "modo": "major",
+      "n": 961
+     },
+     {
+      "tom": "C",
+      "modo": "minor",
+      "n": 906
+     },
+     {
+      "tom": "G",
+      "modo": "minor",
+      "n": 837
+     },
+     {
+      "tom": "E",
+      "modo": "minor",
+      "n": 681
+     },
+     {
+      "tom": "D",
+      "modo": "minor",
+      "n": 674
+     },
+     {
+      "tom": "C#",
+      "modo": "major",
+      "n": 588
+     },
+     {
+      "tom": "F",
+      "modo": "minor",
+      "n": 558
+     },
+     {
+      "tom": "B",
+      "modo": "major",
+      "n": 427
+     },
+     {
+      "tom": "B",
+      "modo": "minor",
+      "n": 340
+     },
+     {
+      "tom": "C#",
+      "modo": "minor",
+      "n": 308
+     },
+     {
+      "tom": "F#",
+      "modo": "major",
+      "n": 301
+     },
+     {
+      "tom": "F#",
+      "modo": "minor",
+      "n": 256
+     },
+     {
+      "tom": "Bb",
+      "modo": "minor",
+      "n": 162
+     },
+     {
+      "tom": "Ab",
+      "modo": "minor",
+      "n": 132
+     },
+     {
+      "tom": "Eb",
+      "modo": "minor",
+      "n": 100
+     }
+    ]
+   },
+   "bpm_histograma_10": {
+    "60": 33,
+    "70": 416,
+    "80": 2898,
+    "90": 5224,
+    "100": 5554,
+    "110": 4161,
+    "120": 3272,
+    "130": 2467,
+    "140": 1923,
+    "150": 1243,
+    "160": 911,
+    "170": 517,
+    "180": 163,
+    "190": 10
+   },
+   "features_numericas": {
+    "bpm": {
+     "n": 28792,
+     "min": 62.5,
+     "p05": 84.6,
+     "p25": 97.5,
+     "p50": 110.4,
+     "p75": 130.0,
+     "p95": 162.1,
+     "max": 191.4,
+     "media": 115.259,
+     "desvio": 23.261
+    },
+    "bpm_conf": {
+     "n": 28792,
+     "min": -0.01,
+     "p05": 0.32,
+     "p25": 1.4,
+     "p50": 2.39,
+     "p75": 3.08,
+     "p95": 3.63,
+     "max": 4.3,
+     "media": 2.212,
+     "desvio": 1.042
+    },
+    "key_strength": {
+     "n": 28792,
+     "min": 0.0,
+     "p05": 0.55,
+     "p25": 0.69,
+     "p50": 0.77,
+     "p75": 0.84,
+     "p95": 0.91,
+     "max": 0.98,
+     "media": 0.757,
+     "desvio": 0.109
+    },
+    "loud_db": {
+     "n": 28792,
+     "min": -100.0,
+     "p05": -24.8,
+     "p25": -20.8,
+     "p50": -18.2,
+     "p75": -16.1,
+     "p95": -13.8,
+     "max": -7.1,
+     "media": -18.662,
+     "desvio": 3.623
+    },
+    "dyn": {
+     "n": 28792,
+     "min": 0.04,
+     "p05": 1.81,
+     "p25": 2.36,
+     "p50": 2.84,
+     "p75": 3.49,
+     "p95": 5.46,
+     "max": 49.31,
+     "media": 3.161,
+     "desvio": 1.537
+    },
+    "onset_rate": {
+     "n": 28792,
+     "min": 0.02,
+     "p05": 2.8,
+     "p25": 3.96,
+     "p50": 4.87,
+     "p75": 5.6,
+     "p95": 6.44,
+     "max": 8.64,
+     "media": 4.751,
+     "desvio": 1.144
+    },
+    "dur": {
+     "n": 28792,
+     "min": 7.0,
+     "p05": 117.0,
+     "p25": 162.0,
+     "p50": 196.0,
+     "p75": 238.0,
+     "p95": 329.0,
+     "max": 1874.0,
+     "media": 208.071,
+     "desvio": 84.666
+    },
+    "br": {
+     "n": 28792,
+     "min": 32,
+     "p05": 110.0,
+     "p25": 128.0,
+     "p50": 180.0,
+     "p75": 246.0,
+     "p95": 320.0,
+     "max": 320,
+     "media": 194.43,
+     "desvio": 77.679
+    },
+    "voice": {
+     "n": 28792,
+     "min": 0.0,
+     "p05": 0.064,
+     "p25": 0.601,
+     "p50": 0.842,
+     "p75": 0.941,
+     "p95": 0.988,
+     "max": 1.0,
+     "media": 0.724,
+     "desvio": 0.287
+    },
+    "dance": {
+     "n": 28792,
+     "min": 0.0,
+     "p05": 0.015,
+     "p25": 0.108,
+     "p50": 0.418,
+     "p75": 0.834,
+     "p95": 0.989,
+     "max": 1.0,
+     "media": 0.465,
+     "desvio": 0.356
+    },
+    "acoustic": {
+     "n": 28792,
+     "min": 0.001,
+     "p05": 0.168,
+     "p25": 0.56,
+     "p50": 0.797,
+     "p75": 0.93,
+     "p95": 0.987,
+     "max": 0.999,
+     "media": 0.714,
+     "desvio": 0.258
+    },
+    "electronic": {
+     "n": 28792,
+     "min": 0.0,
+     "p05": 0.01,
+     "p25": 0.033,
+     "p50": 0.076,
+     "p75": 0.175,
+     "p95": 0.469,
+     "max": 0.998,
+     "media": 0.135,
+     "desvio": 0.157
+    },
+    "happy": {
+     "n": 28792,
+     "min": 0.003,
+     "p05": 0.044,
+     "p25": 0.205,
+     "p50": 0.383,
+     "p75": 0.576,
+     "p95": 0.805,
+     "max": 0.997,
+     "media": 0.398,
+     "desvio": 0.236
+    },
+    "sad": {
+     "n": 28792,
+     "min": 0.002,
+     "p05": 0.119,
+     "p25": 0.319,
+     "p50": 0.521,
+     "p75": 0.75,
+     "p95": 0.922,
+     "max": 0.987,
+     "media": 0.527,
+     "desvio": 0.255
+    },
+    "relaxed": {
+     "n": 28792,
+     "min": 0.019,
+     "p05": 0.474,
+     "p25": 0.777,
+     "p50": 0.893,
+     "p75": 0.954,
+     "p95": 0.986,
+     "max": 0.999,
+     "media": 0.836,
+     "desvio": 0.168
+    },
+    "aggressive": {
+     "n": 28792,
+     "min": 0.0,
+     "p05": 0.0,
+     "p25": 0.001,
+     "p50": 0.002,
+     "p75": 0.006,
+     "p95": 0.046,
+     "max": 0.995,
+     "media": 0.013,
+     "desvio": 0.053
+    },
+    "party": {
+     "n": 28792,
+     "min": 0.0,
+     "p05": 0.003,
+     "p25": 0.03,
+     "p50": 0.148,
+     "p75": 0.421,
+     "p95": 0.823,
+     "max": 0.999,
+     "media": 0.255,
+     "desvio": 0.268
+    },
+    "tonal": {
+     "n": 28792,
+     "min": 0.0,
+     "p05": 0.008,
+     "p25": 0.079,
+     "p50": 0.237,
+     "p75": 0.477,
+     "p95": 0.783,
+     "max": 0.994,
+     "media": 0.298,
+     "desvio": 0.25
+    }
+   },
+   "features_por_decada": {
+    "1930": {
+     "bpm": 104.353,
+     "dance": 0.256,
+     "happy": 0.359,
+     "sad": 0.406,
+     "relaxed": 0.827,
+     "acoustic": 0.555,
+     "electronic": 0.098,
+     "voice": 0.573,
+     "loud_db": -19.142,
+     "faixas": 19
+    },
+    "1950": {
+     "bpm": 113.209,
+     "dance": 0.252,
+     "happy": 0.368,
+     "sad": 0.563,
+     "relaxed": 0.919,
+     "acoustic": 0.725,
+     "electronic": 0.094,
+     "voice": 0.585,
+     "loud_db": -19.346,
+     "faixas": 607
+    },
+    "1960": {
+     "bpm": 117.633,
+     "dance": 0.383,
+     "happy": 0.458,
+     "sad": 0.555,
+     "relaxed": 0.91,
+     "acoustic": 0.754,
+     "electronic": 0.125,
+     "voice": 0.644,
+     "loud_db": -18.919,
+     "faixas": 3405
+    },
+    "1970": {
+     "bpm": 114.984,
+     "dance": 0.484,
+     "happy": 0.488,
+     "sad": 0.474,
+     "relaxed": 0.826,
+     "acoustic": 0.697,
+     "electronic": 0.12,
+     "voice": 0.781,
+     "loud_db": -19.258,
+     "faixas": 4959
+    },
+    "1980": {
+     "bpm": 115.443,
+     "dance": 0.57,
+     "happy": 0.415,
+     "sad": 0.438,
+     "relaxed": 0.773,
+     "acoustic": 0.611,
+     "electronic": 0.155,
+     "voice": 0.762,
+     "loud_db": -19.526,
+     "faixas": 3541
+    },
+    "1990": {
+     "bpm": 114.705,
+     "dance": 0.548,
+     "happy": 0.362,
+     "sad": 0.495,
+     "relaxed": 0.796,
+     "acoustic": 0.664,
+     "electronic": 0.166,
+     "voice": 0.796,
+     "loud_db": -19.799,
+     "faixas": 3455
+    },
+    "2000": {
+     "bpm": 114.89,
+     "dance": 0.444,
+     "happy": 0.342,
+     "sad": 0.565,
+     "relaxed": 0.847,
+     "acoustic": 0.748,
+     "electronic": 0.134,
+     "voice": 0.69,
+     "loud_db": -18.017,
+     "faixas": 9035
+    },
+    "2010": {
+     "bpm": 115.47,
+     "dance": 0.428,
+     "happy": 0.38,
+     "sad": 0.597,
+     "relaxed": 0.84,
+     "acoustic": 0.776,
+     "electronic": 0.123,
+     "voice": 0.727,
+     "loud_db": -17.199,
+     "faixas": 3577
+    }
+   }
+  },
+  "homi": {
+   "meta": {
+    "title": "Hominis Canidae",
+    "subtitle": "HOMINISCANIDAEVERSO DESDE 2009",
+    "hours": "10449",
+    "base_url": "https://cdn.tocador.cc/indie"
+   },
+   "catalogo": {
+    "albuns": 6679,
+    "faixas": 52688,
+    "artistas": 5157,
+    "faixas_analisadas": 53694,
+    "faixas_com_erro": 24,
+    "ano_min": 1960,
+    "ano_max": 2026,
+    "albuns_sem_ano": 56,
+    "albuns_por_ano": {
+     "1960": 1,
+     "1963": 1,
+     "1964": 2,
+     "1965": 2,
+     "1967": 1,
+     "1968": 2,
+     "1969": 2,
+     "1970": 4,
+     "1971": 3,
+     "1972": 6,
+     "1973": 7,
+     "1974": 5,
+     "1975": 4,
+     "1976": 3,
+     "1977": 1,
+     "1978": 4,
+     "1979": 2,
+     "1980": 1,
+     "1982": 1,
+     "1984": 3,
+     "1986": 1,
+     "1987": 2,
+     "1988": 1,
+     "1990": 1,
+     "1991": 1,
+     "1992": 2,
+     "1993": 3,
+     "1995": 2,
+     "1996": 4,
+     "1997": 3,
+     "1998": 3,
+     "1999": 3,
+     "2000": 7,
+     "2001": 3,
+     "2002": 9,
+     "2003": 6,
+     "2004": 11,
+     "2005": 13,
+     "2006": 10,
+     "2007": 13,
+     "2008": 17,
+     "2009": 22,
+     "2010": 42,
+     "2011": 55,
+     "2012": 160,
+     "2013": 360,
+     "2014": 344,
+     "2015": 311,
+     "2016": 406,
+     "2017": 445,
+     "2018": 526,
+     "2019": 549,
+     "2020": 526,
+     "2021": 546,
+     "2022": 505,
+     "2023": 475,
+     "2024": 384,
+     "2025": 486,
+     "2026": 311
+    },
+    "albuns_por_decada": {
+     "1960": 11,
+     "1970": 39,
+     "1980": 9,
+     "1990": 22,
+     "2000": 111,
+     "2010": 3198,
+     "2020": 3233
+    },
+    "artistas_mais_albuns": [
+     {
+      "nome": "",
+      "n": 113
+     },
+     {
+      "nome": "Azymuth",
+      "n": 19
+     },
+     {
+      "nome": "Nosso Querido Figueiredo",
+      "n": 11
+     },
+     {
+      "nome": "Satanique Samba Trio",
+      "n": 10
+     },
+     {
+      "nome": "Vitor Brauer",
+      "n": 10
+     },
+     {
+      "nome": "Graxa",
+      "n": 9
+     },
+     {
+      "nome": "bruxa do mangue",
+      "n": 9
+     },
+     {
+      "nome": "Billy Ponzio",
+      "n": 8
+     },
+     {
+      "nome": "Giancarlo Rufatto",
+      "n": 8
+     },
+     {
+      "nome": "God Pussy",
+      "n": 8
+     },
+     {
+      "nome": "Lupe de Lupe",
+      "n": 8
+     },
+     {
+      "nome": "Boogarins",
+      "n": 7
+     },
+     {
+      "nome": "Emerson Faria",
+      "n": 7
+     },
+     {
+      "nome": "Giovanna Moraes",
+      "n": 7
+     },
+     {
+      "nome": "Guerrinha",
+      "n": 7
+     },
+     {
+      "nome": "Jair Naves",
+      "n": 7
+     },
+     {
+      "nome": "Kovtun",
+      "n": 7
+     },
+     {
+      "nome": "Verjault",
+      "n": 7
+     },
+     {
+      "nome": "Barulhista",
+      "n": 6
+     },
+     {
+      "nome": "Bonifrate",
+      "n": 6
+     },
+     {
+      "nome": "Borealis",
+      "n": 6
+     },
+     {
+      "nome": "Dunas",
+      "n": 6
+     },
+     {
+      "nome": "Eddie",
+      "n": 6
+     },
+     {
+      "nome": "Larva Serrote",
+      "n": 6
+     },
+     {
+      "nome": "Mahmundi",
+      "n": 6
+     },
+     {
+      "nome": "Obasquiat",
+      "n": 6
+     },
+     {
+      "nome": "Tentrio",
+      "n": 6
+     },
+     {
+      "nome": "Terno Rei",
+      "n": 6
+     },
+     {
+      "nome": "This Lonely Crowd",
+      "n": 6
+     },
+     {
+      "nome": "Arthuri",
+      "n": 5
+     }
+    ]
+   },
+   "generos": {
+    "familias_por_faixa": [
+     {
+      "nome": "Rock",
+      "n": 24146
+     },
+     {
+      "nome": "Electronic",
+      "n": 12512
+     },
+     {
+      "nome": "Hip Hop",
+      "n": 5465
+     },
+     {
+      "nome": "Folk, World, & Country",
+      "n": 4379
+     },
+     {
+      "nome": "Latin",
+      "n": 1783
+     },
+     {
+      "nome": "Jazz",
+      "n": 1568
+     },
+     {
+      "nome": "Funk / Soul",
+      "n": 1170
+     },
+     {
+      "nome": "Reggae",
+      "n": 811
+     },
+     {
+      "nome": "Pop",
+      "n": 530
+     },
+     {
+      "nome": "Non-Music",
+      "n": 468
+     },
+     {
+      "nome": "Blues",
+      "n": 439
+     },
+     {
+      "nome": "Classical",
+      "n": 258
+     },
+     {
+      "nome": "Stage & Screen",
+      "n": 72
+     },
+     {
+      "nome": "Brass & Military",
+      "n": 52
+     },
+     {
+      "nome": "Children's",
+      "n": 41
+     }
+    ],
+    "top1_por_faixa": [
+     {
+      "nome": "Rock---Indie Rock",
+      "n": 5838
+     },
+     {
+      "nome": "Rock---Alternative Rock",
+      "n": 4635
+     },
+     {
+      "nome": "Rock---Punk",
+      "n": 4247
+     },
+     {
+      "nome": "Electronic---Experimental",
+      "n": 3423
+     },
+     {
+      "nome": "Folk, World, & Country---Folk",
+      "n": 3096
+     },
+     {
+      "nome": "Electronic---Ambient",
+      "n": 2554
+     },
+     {
+      "nome": "Electronic---Downtempo",
+      "n": 1787
+     },
+     {
+      "nome": "Hip Hop---Cloud Rap",
+      "n": 1776
+     },
+     {
+      "nome": "Rock---Psychedelic Rock",
+      "n": 1492
+     },
+     {
+      "nome": "Hip Hop---Trap",
+      "n": 887
+     },
+     {
+      "nome": "Rock---Dream Pop",
+      "n": 582
+     },
+     {
+      "nome": "Electronic---House",
+      "n": 520
+     },
+     {
+      "nome": "Rock---Neofolk",
+      "n": 513
+     },
+     {
+      "nome": "Latin---Reggaeton",
+      "n": 499
+     },
+     {
+      "nome": "Electronic---Synth-pop",
+      "n": 462
+     },
+     {
+      "nome": "Rock---Black Metal",
+      "n": 443
+     },
+     {
+      "nome": "Latin---MPB",
+      "n": 442
+     },
+     {
+      "nome": "Hip Hop---Gangsta",
+      "n": 432
+     },
+     {
+      "nome": "Rock---Hardcore",
+      "n": 430
+     },
+     {
+      "nome": "Hip Hop---Boom Bap",
+      "n": 419
+     },
+     {
+      "nome": "Jazz---Afrobeat",
+      "n": 410
+     },
+     {
+      "nome": "Funk / Soul---Neo Soul",
+      "n": 392
+     },
+     {
+      "nome": "Hip Hop---Conscious",
+      "n": 384
+     },
+     {
+      "nome": "Folk, World, & Country---African",
+      "n": 330
+     },
+     {
+      "nome": "Electronic---Techno",
+      "n": 318
+     },
+     {
+      "nome": "Rock---Doom Metal",
+      "n": 317
+     },
+     {
+      "nome": "Rock---Heavy Metal",
+      "n": 315
+     },
+     {
+      "nome": "Jazz---Contemporary Jazz",
+      "n": 308
+     },
+     {
+      "nome": "Rock---Stoner Rock",
+      "n": 306
+     },
+     {
+      "nome": "Hip Hop---Instrumental",
+      "n": 303
+     },
+     {
+      "nome": "Funk / Soul---Funk",
+      "n": 291
+     },
+     {
+      "nome": "Hip Hop---Grime",
+      "n": 291
+     },
+     {
+      "nome": "Reggae---Reggae",
+      "n": 290
+     },
+     {
+      "nome": "Rock---Pop Rock",
+      "n": 288
+     },
+     {
+      "nome": "Rock---Math Rock",
+      "n": 272
+     },
+     {
+      "nome": "Electronic---Electro",
+      "n": 272
+     },
+     {
+      "nome": "Latin---Samba",
+      "n": 263
+     },
+     {
+      "nome": "Rock---Lo-Fi",
+      "n": 245
+     },
+     {
+      "nome": "Electronic---Noise",
+      "n": 245
+     },
+     {
+      "nome": "Electronic---Industrial",
+      "n": 214
+     },
+     {
+      "nome": "Hip Hop---Jazzy Hip-Hop",
+      "n": 214
+     },
+     {
+      "nome": "Rock---Ska",
+      "n": 213
+     },
+     {
+      "nome": "Rock---Shoegaze",
+      "n": 212
+     },
+     {
+      "nome": "Blues---Modern Electric Blues",
+      "n": 210
+     },
+     {
+      "nome": "Rock---Hard Rock",
+      "n": 203
+     },
+     {
+      "nome": "Rock---Post-Punk",
+      "n": 203
+     },
+     {
+      "nome": "Rock---Death Metal",
+      "n": 203
+     },
+     {
+      "nome": "Rock---Blues Rock",
+      "n": 197
+     },
+     {
+      "nome": "Electronic---Power Electronics",
+      "n": 187
+     },
+     {
+      "nome": "Folk, World, & Country---Flamenco",
+      "n": 186
+     },
+     {
+      "nome": "Rock---Post-Metal",
+      "n": 176
+     },
+     {
+      "nome": "Hip Hop---Hardcore Hip-Hop",
+      "n": 172
+     },
+     {
+      "nome": "Rock---Acoustic",
+      "n": 170
+     },
+     {
+      "nome": "Funk / Soul---Contemporary R&B",
+      "n": 157
+     },
+     {
+      "nome": "Electronic---Tropical House",
+      "n": 156
+     },
+     {
+      "nome": "Electronic---Vaporwave",
+      "n": 155
+     },
+     {
+      "nome": "Reggae---Dub",
+      "n": 147
+     },
+     {
+      "nome": "Hip Hop---Horrorcore",
+      "n": 145
+     },
+     {
+      "nome": "Pop---Ballad",
+      "n": 143
+     },
+     {
+      "nome": "Rock---Post Rock",
+      "n": 143
+     },
+     {
+      "nome": "Funk / Soul---Soul",
+      "n": 142
+     },
+     {
+      "nome": "Folk, World, & Country---Éntekhno",
+      "n": 136
+     },
+     {
+      "nome": "Folk, World, & Country---Fado",
+      "n": 134
+     },
+     {
+      "nome": "Rock---Sludge Metal",
+      "n": 131
+     },
+     {
+      "nome": "Rock---Folk Rock",
+      "n": 129
+     },
+     {
+      "nome": "Electronic---Drum n Bass",
+      "n": 126
+     },
+     {
+      "nome": "Latin---Bossanova",
+      "n": 125
+     },
+     {
+      "nome": "Electronic---Chillwave",
+      "n": 123
+     },
+     {
+      "nome": "Jazz---Bossa Nova",
+      "n": 122
+     },
+     {
+      "nome": "Jazz---Jazz-Funk",
+      "n": 120
+     },
+     {
+      "nome": "Rock---Noisecore",
+      "n": 119
+     },
+     {
+      "nome": "Electronic---Deep House",
+      "n": 119
+     },
+     {
+      "nome": "Pop---Indie Pop",
+      "n": 118
+     },
+     {
+      "nome": "Jazz---Fusion",
+      "n": 116
+     },
+     {
+      "nome": "Rock---Surf",
+      "n": 115
+     },
+     {
+      "nome": "Latin---Batucada",
+      "n": 111
+     },
+     {
+      "nome": "Jazz---Avant-garde Jazz",
+      "n": 104
+     },
+     {
+      "nome": "Reggae---Ska",
+      "n": 102
+     },
+     {
+      "nome": "Rock---Experimental",
+      "n": 99
+     },
+     {
+      "nome": "Reggae---Ragga",
+      "n": 96
+     },
+     {
+      "nome": "Electronic---Dubstep",
+      "n": 93
+     },
+     {
+      "nome": "Latin---Forró",
+      "n": 91
+     },
+     {
+      "nome": "Electronic---Trip Hop",
+      "n": 91
+     },
+     {
+      "nome": "Pop---K-pop",
+      "n": 90
+     },
+     {
+      "nome": "Rock---Prog Rock",
+      "n": 89
+     },
+     {
+      "nome": "Electronic---Neofolk",
+      "n": 89
+     },
+     {
+      "nome": "Classical---Contemporary",
+      "n": 87
+     },
+     {
+      "nome": "Electronic---Dungeon Synth",
+      "n": 86
+     },
+     {
+      "nome": "Funk / Soul---Afrobeat",
+      "n": 85
+     },
+     {
+      "nome": "Rock---Emo",
+      "n": 84
+     },
+     {
+      "nome": "Non-Music---Audiobook",
+      "n": 84
+     },
+     {
+      "nome": "Electronic---Juke",
+      "n": 84
+     },
+     {
+      "nome": "Jazz---Free Improvisation",
+      "n": 82
+     },
+     {
+      "nome": "Blues---Delta Blues",
+      "n": 82
+     },
+     {
+      "nome": "Rock---Crust",
+      "n": 82
+     },
+     {
+      "nome": "Electronic---Chiptune",
+      "n": 78
+     },
+     {
+      "nome": "Electronic---Synthwave",
+      "n": 77
+     },
+     {
+      "nome": "Non-Music---Comedy",
+      "n": 74
+     },
+     {
+      "nome": "Rock---Grindcore",
+      "n": 73
+     },
+     {
+      "nome": "Rock---Depressive Black Metal",
+      "n": 71
+     },
+     {
+      "nome": "Stage & Screen---Soundtrack",
+      "n": 70
+     },
+     {
+      "nome": "Rock---Garage Rock",
+      "n": 70
+     },
+     {
+      "nome": "Folk, World, & Country---Nordic",
+      "n": 70
+     },
+     {
+      "nome": "Non-Music---Poetry",
+      "n": 70
+     },
+     {
+      "nome": "Electronic---Grime",
+      "n": 69
+     },
+     {
+      "nome": "Non-Music---Spoken Word",
+      "n": 67
+     },
+     {
+      "nome": "Rock---Coldwave",
+      "n": 67
+     },
+     {
+      "nome": "Rock---Thrash",
+      "n": 66
+     },
+     {
+      "nome": "Rock---Melodic Hardcore",
+      "n": 65
+     },
+     {
+      "nome": "Hip Hop---Trip Hop",
+      "n": 65
+     },
+     {
+      "nome": "Folk, World, & Country---Zouk",
+      "n": 64
+     },
+     {
+      "nome": "Reggae---Dancehall",
+      "n": 63
+     },
+     {
+      "nome": "Rock---Ethereal",
+      "n": 62
+     },
+     {
+      "nome": "Rock---Metalcore",
+      "n": 62
+     },
+     {
+      "nome": "Rock---Nu Metal",
+      "n": 61
+     },
+     {
+      "nome": "Rock---Gothic Metal",
+      "n": 61
+     },
+     {
+      "nome": "Hip Hop---Ragga HipHop",
+      "n": 59
+     },
+     {
+      "nome": "Rock---Psychobilly",
+      "n": 57
+     },
+     {
+      "nome": "Non-Music---Radioplay",
+      "n": 57
+     },
+     {
+      "nome": "Hip Hop---G-Funk",
+      "n": 57
+     },
+     {
+      "nome": "Rock---Funeral Doom Metal",
+      "n": 57
+     },
+     {
+      "nome": "Latin---Nueva Cancion",
+      "n": 56
+     },
+     {
+      "nome": "Electronic---Breakcore",
+      "n": 55
+     },
+     {
+      "nome": "Electronic---Dance-pop",
+      "n": 55
+     },
+     {
+      "nome": "Rock---No Wave",
+      "n": 54
+     },
+     {
+      "nome": "Folk, World, & Country---Séga",
+      "n": 53
+     },
+     {
+      "nome": "Non-Music---Field Recording",
+      "n": 53
+     },
+     {
+      "nome": "Hip Hop---RnB/Swing",
+      "n": 53
+     },
+     {
+      "nome": "Pop---Vocal",
+      "n": 51
+     },
+     {
+      "nome": "Rock---Noise",
+      "n": 50
+     },
+     {
+      "nome": "Jazz---Free Jazz",
+      "n": 50
+     },
+     {
+      "nome": "Hip Hop---Pop Rap",
+      "n": 50
+     },
+     {
+      "nome": "Rock---Goth Rock",
+      "n": 49
+     },
+     {
+      "nome": "Jazz---Smooth Jazz",
+      "n": 48
+     },
+     {
+      "nome": "Classical---Post-Modern",
+      "n": 48
+     },
+     {
+      "nome": "Electronic---Nu-Disco",
+      "n": 48
+     },
+     {
+      "nome": "Rock---Deathcore",
+      "n": 48
+     },
+     {
+      "nome": "Electronic---Halftime",
+      "n": 47
+     },
+     {
+      "nome": "Rock---Melodic Death Metal",
+      "n": 47
+     },
+     {
+      "nome": "Folk, World, & Country---Raï",
+      "n": 46
+     },
+     {
+      "nome": "Brass & Military---Brass Band",
+      "n": 46
+     },
+     {
+      "nome": "Latin---Cumbia",
+      "n": 45
+     },
+     {
+      "nome": "Electronic---Illbient",
+      "n": 44
+     },
+     {
+      "nome": "Hip Hop---Turntablism",
+      "n": 43
+     },
+     {
+      "nome": "Electronic---Beatdown",
+      "n": 42
+     },
+     {
+      "nome": "Jazz---Jazz-Rock",
+      "n": 40
+     },
+     {
+      "nome": "Pop---Chanson",
+      "n": 39
+     },
+     {
+      "nome": "Electronic---Dark Ambient",
+      "n": 39
+     },
+     {
+      "nome": "Electronic---Darkwave",
+      "n": 39
+     },
+     {
+      "nome": "Blues---Country Blues",
+      "n": 38
+     },
+     {
+      "nome": "Electronic---Glitch",
+      "n": 38
+     },
+     {
+      "nome": "Rock---Progressive Metal",
+      "n": 36
+     },
+     {
+      "nome": "Electronic---IDM",
+      "n": 35
+     },
+     {
+      "nome": "Rock---Atmospheric Black Metal",
+      "n": 35
+     },
+     {
+      "nome": "Folk, World, & Country---Bluegrass",
+      "n": 34
+     },
+     {
+      "nome": "Rock---Deathrock",
+      "n": 33
+     },
+     {
+      "nome": "Classical---Neo-Classical",
+      "n": 33
+     },
+     {
+      "nome": "Folk, World, & Country---Laïkó",
+      "n": 32
+     },
+     {
+      "nome": "Rock---Viking Metal",
+      "n": 32
+     },
+     {
+      "nome": "Electronic---Disco Polo",
+      "n": 32
+     },
+     {
+      "nome": "Electronic---Future Jazz",
+      "n": 31
+     },
+     {
+      "nome": "Electronic---Dub",
+      "n": 31
+     },
+     {
+      "nome": "Electronic---Rhythmic Noise",
+      "n": 30
+     },
+     {
+      "nome": "Rock---Technical Death Metal",
+      "n": 30
+     },
+     {
+      "nome": "Electronic---Broken Beat",
+      "n": 29
+     },
+     {
+      "nome": "Funk / Soul---Free Funk",
+      "n": 28
+     },
+     {
+      "nome": "Pop---J-pop",
+      "n": 28
+     },
+     {
+      "nome": "Rock---Pop Punk",
+      "n": 28
+     },
+     {
+      "nome": "Reggae---Soca",
+      "n": 28
+     },
+     {
+      "nome": "Jazz---Easy Listening",
+      "n": 27
+     },
+     {
+      "nome": "Folk, World, & Country---Indian Classical",
+      "n": 27
+     },
+     {
+      "nome": "Rock---Country Rock",
+      "n": 27
+     },
+     {
+      "nome": "Rock---Funk Metal",
+      "n": 27
+     },
+     {
+      "nome": "Electronic---Hardcore",
+      "n": 27
+     },
+     {
+      "nome": "Jazz---Latin Jazz",
+      "n": 26
+     },
+     {
+      "nome": "Electronic---Progressive Breaks",
+      "n": 26
+     },
+     {
+      "nome": "Electronic---Psy-Trance",
+      "n": 26
+     },
+     {
+      "nome": "Reggae---Reggae-Pop",
+      "n": 25
+     },
+     {
+      "nome": "Electronic---New Age",
+      "n": 25
+     },
+     {
+      "nome": "Jazz---Gypsy Jazz",
+      "n": 25
+     },
+     {
+      "nome": "Folk, World, & Country---Country",
+      "n": 24
+     },
+     {
+      "nome": "Rock---Rock & Roll",
+      "n": 24
+     },
+     {
+      "nome": "Blues---Chicago Blues",
+      "n": 24
+     },
+     {
+      "nome": "Electronic---Freestyle",
+      "n": 24
+     },
+     {
+      "nome": "Latin---Tango",
+      "n": 24
+     },
+     {
+      "nome": "Funk / Soul---Psychedelic",
+      "n": 24
+     },
+     {
+      "nome": "Rock---Lounge",
+      "n": 23
+     },
+     {
+      "nome": "Rock---Brit Pop",
+      "n": 23
+     },
+     {
+      "nome": "Folk, World, & Country---Catalan Music",
+      "n": 23
+     },
+     {
+      "nome": "Electronic---Latin",
+      "n": 23
+     },
+     {
+      "nome": "Hip Hop---DJ Battle Tool",
+      "n": 23
+     },
+     {
+      "nome": "Folk, World, & Country---Soukous",
+      "n": 23
+     },
+     {
+      "nome": "Electronic---Bassline",
+      "n": 23
+     },
+     {
+      "nome": "Reggae---Rocksteady",
+      "n": 22
+     },
+     {
+      "nome": "Rock---Parody",
+      "n": 21
+     },
+     {
+      "nome": "Reggae---Roots Reggae",
+      "n": 21
+     },
+     {
+      "nome": "Electronic---Acid Jazz",
+      "n": 20
+     },
+     {
+      "nome": "Electronic---Breakbeat",
+      "n": 20
+     },
+     {
+      "nome": "Classical---Baroque",
+      "n": 20
+     },
+     {
+      "nome": "Rock---Southern Rock",
+      "n": 20
+     },
+     {
+      "nome": "Hip Hop---Bounce",
+      "n": 20
+     },
+     {
+      "nome": "Rock---Power Violence",
+      "n": 20
+     },
+     {
+      "nome": "Rock---Post-Hardcore",
+      "n": 20
+     },
+     {
+      "nome": "Pop---Parody",
+      "n": 20
+     },
+     {
+      "nome": "Hip Hop---Crunk",
+      "n": 20
+     },
+     {
+      "nome": "Electronic---Disco",
+      "n": 20
+     },
+     {
+      "nome": "Electronic---Berlin-School",
+      "n": 20
+     },
+     {
+      "nome": "Jazz---Afro-Cuban Jazz",
+      "n": 19
+     },
+     {
+      "nome": "Rock---Mod",
+      "n": 19
+     },
+     {
+      "nome": "Pop---City Pop",
+      "n": 19
+     },
+     {
+      "nome": "Hip Hop---Britcore",
+      "n": 19
+     },
+     {
+      "nome": "Latin---Salsa",
+      "n": 19
+     },
+     {
+      "nome": "Blues---Electric Blues",
+      "n": 19
+     },
+     {
+      "nome": "Folk, World, & Country---Volksmusik",
+      "n": 19
+     },
+     {
+      "nome": "Electronic---Electroclash",
+      "n": 19
+     },
+     {
+      "nome": "Rock---Folk Metal",
+      "n": 19
+     },
+     {
+      "nome": "Non-Music---Dialogue",
+      "n": 18
+     },
+     {
+      "nome": "Electronic---UK Garage",
+      "n": 18
+     },
+     {
+      "nome": "Electronic---Drone",
+      "n": 18
+     },
+     {
+      "nome": "Rock---Pornogrind",
+      "n": 18
+     },
+     {
+      "nome": "Children's---Nursery Rhymes",
+      "n": 18
+     },
+     {
+      "nome": "Electronic---Ghetto",
+      "n": 17
+     },
+     {
+      "nome": "Electronic---Speedcore",
+      "n": 17
+     },
+     {
+      "nome": "Rock---Power Metal",
+      "n": 16
+     },
+     {
+      "nome": "Rock---Goregrind",
+      "n": 16
+     },
+     {
+      "nome": "Blues---Louisiana Blues",
+      "n": 15
+     },
+     {
+      "nome": "Electronic---Trance",
+      "n": 15
+     },
+     {
+      "nome": "Funk / Soul---Disco",
+      "n": 15
+     },
+     {
+      "nome": "Electronic---Jungle",
+      "n": 15
+     },
+     {
+      "nome": "Classical---Impressionist",
+      "n": 15
+     },
+     {
+      "nome": "Rock---Pub Rock",
+      "n": 15
+     },
+     {
+      "nome": "Blues---Texas Blues",
+      "n": 15
+     },
+     {
+      "nome": "Latin---Pachanga",
+      "n": 15
+     },
+     {
+      "nome": "Latin---Norteño",
+      "n": 15
+     },
+     {
+      "nome": "Electronic---Electro House",
+      "n": 15
+     },
+     {
+      "nome": "Rock---Oi",
+      "n": 15
+     },
+     {
+      "nome": "Rock---New Wave",
+      "n": 14
+     },
+     {
+      "nome": "Electronic---Big Beat",
+      "n": 14
+     },
+     {
+      "nome": "Classical---Neo-Romantic",
+      "n": 14
+     },
+     {
+      "nome": "Latin---Compas",
+      "n": 13
+     },
+     {
+      "nome": "Electronic---Progressive House",
+      "n": 13
+     },
+     {
+      "nome": "Folk, World, & Country---Honky Tonk",
+      "n": 13
+     },
+     {
+      "nome": "Rock---Yé-Yé",
+      "n": 12
+     },
+     {
+      "nome": "Blues---Rhythm & Blues",
+      "n": 12
+     },
+     {
+      "nome": "Folk, World, & Country---Pacific",
+      "n": 12
+     },
+     {
+      "nome": "Folk, World, & Country---Romani",
+      "n": 12
+     },
+     {
+      "nome": "Non-Music---Monolog",
+      "n": 12
+     },
+     {
+      "nome": "Children's---Story",
+      "n": 12
+     },
+     {
+      "nome": "Jazz---Dixieland",
+      "n": 12
+     },
+     {
+      "nome": "Jazz---Soul-Jazz",
+      "n": 11
+     },
+     {
+      "nome": "Children's---Educational",
+      "n": 11
+     },
+     {
+      "nome": "Rock---Grunge",
+      "n": 11
+     },
+     {
+      "nome": "Blues---Boogie Woogie",
+      "n": 11
+     },
+     {
+      "nome": "Hip Hop---Bass Music",
+      "n": 11
+     },
+     {
+      "nome": "Funk / Soul---P.Funk",
+      "n": 11
+     },
+     {
+      "nome": "Electronic---Hip Hop",
+      "n": 11
+     },
+     {
+      "nome": "Classical---Modern",
+      "n": 11
+     },
+     {
+      "nome": "Rock---Symphonic Rock",
+      "n": 11
+     },
+     {
+      "nome": "Reggae---Lovers Rock",
+      "n": 10
+     },
+     {
+      "nome": "Folk, World, & Country---Celtic",
+      "n": 10
+     },
+     {
+      "nome": "Rock---Rockabilly",
+      "n": 10
+     },
+     {
+      "nome": "Rock---Industrial",
+      "n": 10
+     },
+     {
+      "nome": "Electronic---Abstract",
+      "n": 10
+     },
+     {
+      "nome": "Electronic---Tech Trance",
+      "n": 10
+     },
+     {
+      "nome": "Classical---Medieval",
+      "n": 10
+     },
+     {
+      "nome": "Classical---Choral",
+      "n": 10
+     },
+     {
+      "nome": "Non-Music---Political",
+      "n": 10
+     },
+     {
+      "nome": "Hip Hop---Screw",
+      "n": 10
+     },
+     {
+      "nome": "Non-Music---Religious",
+      "n": 9
+     },
+     {
+      "nome": "Electronic---Goa Trance",
+      "n": 9
+     },
+     {
+      "nome": "Folk, World, & Country---Highlife",
+      "n": 9
+     },
+     {
+      "nome": "Rock---Krautrock",
+      "n": 9
+     },
+     {
+      "nome": "Latin---Tejano",
+      "n": 9
+     },
+     {
+      "nome": "Electronic---EBM",
+      "n": 9
+     },
+     {
+      "nome": "Electronic---Tribal",
+      "n": 9
+     },
+     {
+      "nome": "Electronic---Jazzdance",
+      "n": 8
+     },
+     {
+      "nome": "Jazz---Ragtime",
+      "n": 8
+     },
+     {
+      "nome": "Latin---Cubano",
+      "n": 8
+     },
+     {
+      "nome": "Electronic---Minimal Techno",
+      "n": 8
+     },
+     {
+      "nome": "Rock---Space Rock",
+      "n": 8
+     },
+     {
+      "nome": "Jazz---Swing",
+      "n": 8
+     },
+     {
+      "nome": "Folk, World, & Country---Canzone Napoletana",
+      "n": 8
+     },
+     {
+      "nome": "Jazz---Cool Jazz",
+      "n": 8
+     },
+     {
+      "nome": "Electronic---Dub Techno",
+      "n": 8
+     },
+     {
+      "nome": "Funk / Soul---Boogie",
+      "n": 8
+     },
+     {
+      "nome": "Jazz---Big Band",
+      "n": 7
+     },
+     {
+      "nome": "Reggae---Calypso",
+      "n": 7
+     },
+     {
+      "nome": "Folk, World, & Country---Gospel",
+      "n": 7
+     },
+     {
+      "nome": "Latin---Afro-Cuban",
+      "n": 7
+     },
+     {
+      "nome": "Classical---Renaissance",
+      "n": 7
+     },
+     {
+      "nome": "Blues---Piano Blues",
+      "n": 7
+     },
+     {
+      "nome": "Electronic---Minimal",
+      "n": 7
+     },
+     {
+      "nome": "Funk / Soul---UK Street Soul",
+      "n": 7
+     },
+     {
+      "nome": "Jazz---Post Bop",
+      "n": 6
+     },
+     {
+      "nome": "Folk, World, & Country---Polka",
+      "n": 6
+     },
+     {
+      "nome": "Rock---Power Pop",
+      "n": 6
+     },
+     {
+      "nome": "Pop---Light Music",
+      "n": 6
+     },
+     {
+      "nome": "Rock---Beat",
+      "n": 6
+     },
+     {
+      "nome": "Electronic---Happy Hardcore",
+      "n": 6
+     },
+     {
+      "nome": "Non-Music---Promotional",
+      "n": 6
+     },
+     {
+      "nome": "Electronic---Sound Collage",
+      "n": 6
+     },
+     {
+      "nome": "Latin---Boogaloo",
+      "n": 5
+     },
+     {
+      "nome": "Folk, World, & Country---Cajun",
+      "n": 5
+     },
+     {
+      "nome": "Funk / Soul---Swingbeat",
+      "n": 5
+     },
+     {
+      "nome": "Latin---Rumba",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---New Beat",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Schranz",
+      "n": 5
+     },
+     {
+      "nome": "Latin---Porro",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Jumpstyle",
+      "n": 5
+     },
+     {
+      "nome": "Hip Hop---Electro",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Modern Classical",
+      "n": 5
+     },
+     {
+      "nome": "Funk / Soul---Gospel",
+      "n": 4
+     },
+     {
+      "nome": "Rock---Classic Rock",
+      "n": 4
+     },
+     {
+      "nome": "Rock---Art Rock",
+      "n": 4
+     },
+     {
+      "nome": "Latin---Baião",
+      "n": 4
+     },
+     {
+      "nome": "Pop---Bollywood",
+      "n": 4
+     },
+     {
+      "nome": "Blues---Harmonica Blues",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Hardstyle",
+      "n": 4
+     },
+     {
+      "nome": "Latin---Bolero",
+      "n": 4
+     },
+     {
+      "nome": "Brass & Military---Military",
+      "n": 4
+     },
+     {
+      "nome": "Non-Music---Education",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Hard Techno",
+      "n": 4
+     },
+     {
+      "nome": "Non-Music---Interview",
+      "n": 4
+     },
+     {
+      "nome": "Rock---Speed Metal",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Deep Techno",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Hard House",
+      "n": 4
+     },
+     {
+      "nome": "Rock---AOR",
+      "n": 4
+     },
+     {
+      "nome": "Pop---Schlager",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Ghetto House",
+      "n": 4
+     },
+     {
+      "nome": "Latin---Guajira",
+      "n": 4
+     },
+     {
+      "nome": "Electronic---Tribal House",
+      "n": 4
+     },
+     {
+      "nome": "Jazz---Space-Age",
+      "n": 3
+     },
+     {
+      "nome": "Jazz---Modal",
+      "n": 3
+     },
+     {
+      "nome": "Latin---Son",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---New Wave",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Tech House",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Hands Up",
+      "n": 3
+     },
+     {
+      "nome": "Latin---Beguine",
+      "n": 3
+     },
+     {
+      "nome": "Jazz---Hard Bop",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Euro House",
+      "n": 3
+     },
+     {
+      "nome": "Electronic---Eurobeat",
+      "n": 3
+     },
+     {
+      "nome": "Hip Hop---Miami Bass",
+      "n": 3
+     },
+     {
+      "nome": "Pop---Music Hall",
+      "n": 3
+     },
+     {
+      "nome": "Pop---Kayōkyoku",
+      "n": 2
+     },
+     {
+      "nome": "Latin---Mambo",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Bleep",
+      "n": 2
+     },
+     {
+      "nome": "Brass & Military---Marches",
+      "n": 2
+     },
+     {
+      "nome": "Jazz---Bop",
+      "n": 2
+     },
+     {
+      "nome": "Classical---Classical",
+      "n": 2
+     },
+     {
+      "nome": "Blues---Jump Blues",
+      "n": 2
+     },
+     {
+      "nome": "Electronic---Euro-Disco",
+      "n": 2
+     },
+     {
+      "nome": "Hip Hop---Cut-up/DJ",
+      "n": 2
+     },
+     {
+      "nome": "Latin---Mariachi",
+      "n": 2
+     },
+     {
+      "nome": "Pop---Europop",
+      "n": 2
+     },
+     {
+      "nome": "Latin---Merengue",
+      "n": 2
+     },
+     {
+      "nome": "Hip Hop---Thug Rap",
+      "n": 2
+     },
+     {
+      "nome": "Rock---Glam",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Soft Rock",
+      "n": 1
+     },
+     {
+      "nome": "Pop---Bubblegum",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Makina",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Speed Garage",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Musique Concrète",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Hard Trance",
+      "n": 1
+     },
+     {
+      "nome": "Latin---Vallenato",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Doo Wop",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Leftfield",
+      "n": 1
+     },
+     {
+      "nome": "Stage & Screen---Musical",
+      "n": 1
+     },
+     {
+      "nome": "Latin---Descarga",
+      "n": 1
+     },
+     {
+      "nome": "Classical---Romantic",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Breaks",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Progressive Trance",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Italodance",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Hip-House",
+      "n": 1
+     },
+     {
+      "nome": "Electronic---Acid",
+      "n": 1
+     },
+     {
+      "nome": "Funk / Soul---New Jack Swing",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Avantgarde",
+      "n": 1
+     },
+     {
+      "nome": "Stage & Screen---Score",
+      "n": 1
+     },
+     {
+      "nome": "Rock---Arena Rock",
+      "n": 1
+     }
+    ],
+    "top3_por_faixa": [
+     {
+      "nome": "Rock---Alternative Rock",
+      "n": 19190
+     },
+     {
+      "nome": "Rock---Indie Rock",
+      "n": 16791
+     },
+     {
+      "nome": "Electronic---Experimental",
+      "n": 10519
+     },
+     {
+      "nome": "Rock---Punk",
+      "n": 9648
+     },
+     {
+      "nome": "Electronic---Ambient",
+      "n": 8409
+     },
+     {
+      "nome": "Electronic---Downtempo",
+      "n": 7537
+     },
+     {
+      "nome": "Folk, World, & Country---Folk",
+      "n": 7353
+     },
+     {
+      "nome": "Rock---Psychedelic Rock",
+      "n": 7288
+     },
+     {
+      "nome": "Hip Hop---Cloud Rap",
+      "n": 3728
+     },
+     {
+      "nome": "Rock---Pop Rock",
+      "n": 3688
+     },
+     {
+      "nome": "Hip Hop---Trap",
+      "n": 3554
+     },
+     {
+      "nome": "Rock---Hardcore",
+      "n": 3539
+     },
+     {
+      "nome": "Rock---Dream Pop",
+      "n": 3510
+     },
+     {
+      "nome": "Rock---Folk Rock",
+      "n": 3171
+     },
+     {
+      "nome": "Hip Hop---Conscious",
+      "n": 2393
+     },
+     {
+      "nome": "Rock---Neofolk",
+      "n": 2313
+     },
+     {
+      "nome": "Electronic---House",
+      "n": 2226
+     },
+     {
+      "nome": "Electronic---Synth-pop",
+      "n": 2205
+     },
+     {
+      "nome": "Rock---Brit Pop",
+      "n": 2196
+     },
+     {
+      "nome": "Rock---Experimental",
+      "n": 2189
+     },
+     {
+      "nome": "Rock---Shoegaze",
+      "n": 2146
+     },
+     {
+      "nome": "Rock---Lo-Fi",
+      "n": 2129
+     },
+     {
+      "nome": "Hip Hop---Hardcore Hip-Hop",
+      "n": 2056
+     },
+     {
+      "nome": "Electronic---Electro",
+      "n": 2035
+     },
+     {
+      "nome": "Rock---Emo",
+      "n": 2001
+     },
+     {
+      "nome": "Rock---Hard Rock",
+      "n": 1957
+     },
+     {
+      "nome": "Rock---Heavy Metal",
+      "n": 1953
+     },
+     {
+      "nome": "Latin---MPB",
+      "n": 1952
+     },
+     {
+      "nome": "Pop---Indie Pop",
+      "n": 1882
+     },
+     {
+      "nome": "Hip Hop---Boom Bap",
+      "n": 1828
+     },
+     {
+      "nome": "Rock---Black Metal",
+      "n": 1821
+     },
+     {
+      "nome": "Electronic---Industrial",
+      "n": 1817
+     },
+     {
+      "nome": "Electronic---Abstract",
+      "n": 1748
+     },
+     {
+      "nome": "Hip Hop---Grime",
+      "n": 1707
+     },
+     {
+      "nome": "Rock---Acoustic",
+      "n": 1701
+     },
+     {
+      "nome": "Rock---Math Rock",
+      "n": 1697
+     },
+     {
+      "nome": "Latin---Reggaeton",
+      "n": 1653
+     },
+     {
+      "nome": "Rock---Doom Metal",
+      "n": 1615
+     },
+     {
+      "nome": "Hip Hop---Jazzy Hip-Hop",
+      "n": 1602
+     },
+     {
+      "nome": "Funk / Soul---Funk",
+      "n": 1569
+     },
+     {
+      "nome": "Rock---Post-Punk",
+      "n": 1553
+     },
+     {
+      "nome": "Rock---Stoner Rock",
+      "n": 1527
+     },
+     {
+      "nome": "Funk / Soul---Neo Soul",
+      "n": 1523
+     },
+     {
+      "nome": "Hip Hop---Pop Rap",
+      "n": 1517
+     },
+     {
+      "nome": "Rock---Pop Punk",
+      "n": 1492
+     },
+     {
+      "nome": "Rock---Post Rock",
+      "n": 1484
+     },
+     {
+      "nome": "Rock---Oi",
+      "n": 1456
+     },
+     {
+      "nome": "Electronic---Techno",
+      "n": 1447
+     },
+     {
+      "nome": "Hip Hop---Gangsta",
+      "n": 1438
+     },
+     {
+      "nome": "Rock---Blues Rock",
+      "n": 1377
+     },
+     {
+      "nome": "Folk, World, & Country---African",
+      "n": 1333
+     },
+     {
+      "nome": "Reggae---Reggae",
+      "n": 1295
+     },
+     {
+      "nome": "Funk / Soul---Soul",
+      "n": 1286
+     },
+     {
+      "nome": "Jazz---Afrobeat",
+      "n": 1281
+     },
+     {
+      "nome": "Electronic---Chillwave",
+      "n": 1229
+     },
+     {
+      "nome": "Pop---Ballad",
+      "n": 1221
+     },
+     {
+      "nome": "Electronic---Trip Hop",
+      "n": 1217
+     },
+     {
+      "nome": "Latin---Samba",
+      "n": 1165
+     },
+     {
+      "nome": "Electronic---Noise",
+      "n": 1161
+     },
+     {
+      "nome": "Jazz---Contemporary Jazz",
+      "n": 1140
+     },
+     {
+      "nome": "Rock---Ethereal",
+      "n": 1102
+     },
+     {
+      "nome": "Rock---Ska",
+      "n": 1102
+     },
+     {
+      "nome": "Hip Hop---Horrorcore",
+      "n": 1083
+     },
+     {
+      "nome": "Rock---Melodic Hardcore",
+      "n": 1064
+     },
+     {
+      "nome": "Electronic---Drone",
+      "n": 1062
+     },
+     {
+      "nome": "Rock---Garage Rock",
+      "n": 1059
+     },
+     {
+      "nome": "Electronic---Neofolk",
+      "n": 1035
+     },
+     {
+      "nome": "Hip Hop---Instrumental",
+      "n": 1022
+     },
+     {
+      "nome": "Rock---Grunge",
+      "n": 1013
+     },
+     {
+      "nome": "Latin---Bossanova",
+      "n": 993
+     },
+     {
+      "nome": "Funk / Soul---Contemporary R&B",
+      "n": 974
+     },
+     {
+      "nome": "Funk / Soul---Afrobeat",
+      "n": 972
+     },
+     {
+      "nome": "Rock---Sludge Metal",
+      "n": 949
+     },
+     {
+      "nome": "Rock---Space Rock",
+      "n": 932
+     },
+     {
+      "nome": "Jazz---Bossa Nova",
+      "n": 894
+     },
+     {
+      "nome": "Electronic---Deep House",
+      "n": 888
+     },
+     {
+      "nome": "Hip Hop---Trip Hop",
+      "n": 878
+     },
+     {
+      "nome": "Rock---Prog Rock",
+      "n": 873
+     },
+     {
+      "nome": "Rock---Death Metal",
+      "n": 871
+     },
+     {
+      "nome": "Rock---Post-Metal",
+      "n": 843
+     },
+     {
+      "nome": "Jazz---Fusion",
+      "n": 797
+     },
+     {
+      "nome": "Blues---Modern Electric Blues",
+      "n": 777
+     },
+     {
+      "nome": "Electronic---Power Electronics",
+      "n": 772
+     },
+     {
+      "nome": "Jazz---Jazz-Funk",
+      "n": 754
+     },
+     {
+      "nome": "Folk, World, & Country---Éntekhno",
+      "n": 740
+     },
+     {
+      "nome": "Reggae---Ska",
+      "n": 730
+     },
+     {
+      "nome": "Jazz---Avant-garde Jazz",
+      "n": 720
+     },
+     {
+      "nome": "Rock---Crust",
+      "n": 708
+     },
+     {
+      "nome": "Electronic---Dark Ambient",
+      "n": 699
+     },
+     {
+      "nome": "Hip Hop---RnB/Swing",
+      "n": 688
+     },
+     {
+      "nome": "Electronic---Tropical House",
+      "n": 664
+     },
+     {
+      "nome": "Rock---Noise",
+      "n": 654
+     },
+     {
+      "nome": "Folk, World, & Country---Flamenco",
+      "n": 637
+     },
+     {
+      "nome": "Pop---Vocal",
+      "n": 634
+     },
+     {
+      "nome": "Folk, World, & Country---Fado",
+      "n": 620
+     },
+     {
+      "nome": "Electronic---Vaporwave",
+      "n": 617
+     },
+     {
+      "nome": "Rock---Post-Hardcore",
+      "n": 617
+     },
+     {
+      "nome": "Electronic---IDM",
+      "n": 614
+     },
+     {
+      "nome": "Electronic---Grime",
+      "n": 598
+     },
+     {
+      "nome": "Electronic---Dance-pop",
+      "n": 589
+     },
+     {
+      "nome": "Rock---Grindcore",
+      "n": 586
+     },
+     {
+      "nome": "Electronic---Glitch",
+      "n": 572
+     },
+     {
+      "nome": "Reggae---Dub",
+      "n": 570
+     },
+     {
+      "nome": "Jazz---Free Improvisation",
+      "n": 566
+     },
+     {
+      "nome": "Electronic---Musique Concrète",
+      "n": 565
+     },
+     {
+      "nome": "Electronic---Drum n Bass",
+      "n": 545
+     },
+     {
+      "nome": "Rock---Thrash",
+      "n": 538
+     },
+     {
+      "nome": "Latin---Nueva Cancion",
+      "n": 537
+     },
+     {
+      "nome": "Classical---Contemporary",
+      "n": 536
+     },
+     {
+      "nome": "Hip Hop---Ragga HipHop",
+      "n": 530
+     },
+     {
+      "nome": "Electronic---Dubstep",
+      "n": 526
+     },
+     {
+      "nome": "Latin---Batucada",
+      "n": 519
+     },
+     {
+      "nome": "Electronic---Dungeon Synth",
+      "n": 508
+     },
+     {
+      "nome": "Electronic---Future Jazz",
+      "n": 505
+     },
+     {
+      "nome": "Electronic---Synthwave",
+      "n": 502
+     },
+     {
+      "nome": "Reggae---Ragga",
+      "n": 496
+     },
+     {
+      "nome": "Rock---Power Pop",
+      "n": 482
+     },
+     {
+      "nome": "Folk, World, & Country---Nordic",
+      "n": 474
+     },
+     {
+      "nome": "Reggae---Dancehall",
+      "n": 472
+     },
+     {
+      "nome": "Electronic---New Age",
+      "n": 469
+     },
+     {
+      "nome": "Electronic---Sound Collage",
+      "n": 467
+     },
+     {
+      "nome": "Non-Music---Spoken Word",
+      "n": 462
+     },
+     {
+      "nome": "Jazz---Latin Jazz",
+      "n": 459
+     },
+     {
+      "nome": "Rock---Surf",
+      "n": 454
+     },
+     {
+      "nome": "Rock---Nu Metal",
+      "n": 453
+     },
+     {
+      "nome": "Folk, World, & Country---Celtic",
+      "n": 442
+     },
+     {
+      "nome": "Rock---Goth Rock",
+      "n": 438
+     },
+     {
+      "nome": "Pop---K-pop",
+      "n": 431
+     },
+     {
+      "nome": "Stage & Screen---Soundtrack",
+      "n": 425
+     },
+     {
+      "nome": "Non-Music---Field Recording",
+      "n": 422
+     },
+     {
+      "nome": "Rock---No Wave",
+      "n": 419
+     },
+     {
+      "nome": "Rock---Coldwave",
+      "n": 419
+     },
+     {
+      "nome": "Rock---Gothic Metal",
+      "n": 402
+     },
+     {
+      "nome": "Rock---Rock & Roll",
+      "n": 398
+     },
+     {
+      "nome": "Electronic---Darkwave",
+      "n": 390
+     },
+     {
+      "nome": "Rock---Psychobilly",
+      "n": 386
+     },
+     {
+      "nome": "Rock---Depressive Black Metal",
+      "n": 382
+     },
+     {
+      "nome": "Rock---Krautrock",
+      "n": 380
+     },
+     {
+      "nome": "Rock---Noisecore",
+      "n": 379
+     },
+     {
+      "nome": "Hip Hop---Bounce",
+      "n": 378
+     },
+     {
+      "nome": "Hip Hop---G-Funk",
+      "n": 378
+     },
+     {
+      "nome": "Non-Music---Poetry",
+      "n": 360
+     },
+     {
+      "nome": "Electronic---Dub",
+      "n": 357
+     },
+     {
+      "nome": "Jazz---Jazz-Rock",
+      "n": 354
+     },
+     {
+      "nome": "Jazz---Free Jazz",
+      "n": 349
+     },
+     {
+      "nome": "Rock---Metalcore",
+      "n": 346
+     },
+     {
+      "nome": "Blues---Delta Blues",
+      "n": 341
+     },
+     {
+      "nome": "Electronic---Hip Hop",
+      "n": 341
+     },
+     {
+      "nome": "Jazz---Smooth Jazz",
+      "n": 337
+     },
+     {
+      "nome": "Reggae---Reggae-Pop",
+      "n": 337
+     },
+     {
+      "nome": "Rock---Atmospheric Black Metal",
+      "n": 337
+     },
+     {
+      "nome": "Rock---Deathrock",
+      "n": 331
+     },
+     {
+      "nome": "Classical---Neo-Classical",
+      "n": 330
+     },
+     {
+      "nome": "Rock---Southern Rock",
+      "n": 325
+     },
+     {
+      "nome": "Pop---Chanson",
+      "n": 316
+     },
+     {
+      "nome": "Electronic---Chiptune",
+      "n": 316
+     },
+     {
+      "nome": "Electronic---Berlin-School",
+      "n": 312
+     },
+     {
+      "nome": "Classical---Post-Modern",
+      "n": 312
+     },
+     {
+      "nome": "Funk / Soul---Psychedelic",
+      "n": 311
+     },
+     {
+      "nome": "Rock---Pub Rock",
+      "n": 309
+     },
+     {
+      "nome": "Rock---Progressive Metal",
+      "n": 302
+     },
+     {
+      "nome": "Rock---Melodic Death Metal",
+      "n": 297
+     },
+     {
+      "nome": "Reggae---Roots Reggae",
+      "n": 293
+     },
+     {
+      "nome": "Electronic---Nu-Disco",
+      "n": 293
+     },
+     {
+      "nome": "Electronic---Juke",
+      "n": 290
+     },
+     {
+      "nome": "Rock---Power Metal",
+      "n": 290
+     },
+     {
+      "nome": "Folk, World, & Country---Zouk",
+      "n": 284
+     },
+     {
+      "nome": "Electronic---Illbient",
+      "n": 284
+     },
+     {
+      "nome": "Blues---Country Blues",
+      "n": 275
+     },
+     {
+      "nome": "Hip Hop---Turntablism",
+      "n": 275
+     },
+     {
+      "nome": "Electronic---Beatdown",
+      "n": 275
+     },
+     {
+      "nome": "Rock---Funeral Doom Metal",
+      "n": 273
+     },
+     {
+      "nome": "Electronic---Breakcore",
+      "n": 271
+     },
+     {
+      "nome": "Folk, World, & Country---Country",
+      "n": 268
+     },
+     {
+      "nome": "Electronic---Latin",
+      "n": 261
+     },
+     {
+      "nome": "Folk, World, & Country---Bluegrass",
+      "n": 257
+     },
+     {
+      "nome": "Non-Music---Comedy",
+      "n": 254
+     },
+     {
+      "nome": "Electronic---Broken Beat",
+      "n": 254
+     },
+     {
+      "nome": "Folk, World, & Country---Soukous",
+      "n": 250
+     },
+     {
+      "nome": "Electronic---Rhythmic Noise",
+      "n": 249
+     },
+     {
+      "nome": "Rock---New Wave",
+      "n": 248
+     },
+     {
+      "nome": "Blues---Electric Blues",
+      "n": 248
+     },
+     {
+      "nome": "Electronic---Halftime",
+      "n": 243
+     },
+     {
+      "nome": "Hip Hop---Thug Rap",
+      "n": 239
+     },
+     {
+      "nome": "Latin---Forró",
+      "n": 233
+     },
+     {
+      "nome": "Rock---Funk Metal",
+      "n": 233
+     },
+     {
+      "nome": "Reggae---Rocksteady",
+      "n": 233
+     },
+     {
+      "nome": "Rock---Viking Metal",
+      "n": 228
+     },
+     {
+      "nome": "Rock---Lounge",
+      "n": 220
+     },
+     {
+      "nome": "Rock---Speed Metal",
+      "n": 219
+     },
+     {
+      "nome": "Electronic---Disco",
+      "n": 215
+     },
+     {
+      "nome": "Rock---Power Violence",
+      "n": 213
+     },
+     {
+      "nome": "Electronic---Hardcore",
+      "n": 213
+     },
+     {
+      "nome": "Rock---Mod",
+      "n": 211
+     },
+     {
+      "nome": "Non-Music---Audiobook",
+      "n": 211
+     },
+     {
+      "nome": "Folk, World, & Country---Laïkó",
+      "n": 208
+     },
+     {
+      "nome": "Latin---Cumbia",
+      "n": 207
+     },
+     {
+      "nome": "Non-Music---Radioplay",
+      "n": 206
+     },
+     {
+      "nome": "Electronic---Bassline",
+      "n": 204
+     },
+     {
+      "nome": "Hip Hop---Screw",
+      "n": 203
+     },
+     {
+      "nome": "Rock---Technical Death Metal",
+      "n": 203
+     },
+     {
+      "nome": "Rock---Parody",
+      "n": 195
+     },
+     {
+      "nome": "Rock---Folk Metal",
+      "n": 192
+     },
+     {
+      "nome": "Electronic---Minimal",
+      "n": 190
+     },
+     {
+      "nome": "Latin---Tango",
+      "n": 186
+     },
+     {
+      "nome": "Electronic---Breakbeat",
+      "n": 182
+     },
+     {
+      "nome": "Electronic---Acid Jazz",
+      "n": 180
+     },
+     {
+      "nome": "Rock---Deathcore",
+      "n": 180
+     },
+     {
+      "nome": "Jazz---Easy Listening",
+      "n": 179
+     },
+     {
+      "nome": "Pop---J-pop",
+      "n": 178
+     },
+     {
+      "nome": "Hip Hop---Crunk",
+      "n": 176
+     },
+     {
+      "nome": "Jazz---Gypsy Jazz",
+      "n": 174
+     },
+     {
+      "nome": "Rock---Country Rock",
+      "n": 170
+     },
+     {
+      "nome": "Rock---Acid Rock",
+      "n": 170
+     },
+     {
+      "nome": "Folk, World, & Country---Indian Classical",
+      "n": 163
+     },
+     {
+      "nome": "Folk, World, & Country---Raï",
+      "n": 159
+     },
+     {
+      "nome": "Jazz---Afro-Cuban Jazz",
+      "n": 158
+     },
+     {
+      "nome": "Folk, World, & Country---Séga",
+      "n": 158
+     },
+     {
+      "nome": "Jazz---Soul-Jazz",
+      "n": 157
+     },
+     {
+      "nome": "Folk, World, & Country---Catalan Music",
+      "n": 157
+     },
+     {
+      "nome": "Jazz---Post Bop",
+      "n": 147
+     },
+     {
+      "nome": "Electronic---Jungle",
+      "n": 147
+     },
+     {
+      "nome": "Funk / Soul---Free Funk",
+      "n": 144
+     },
+     {
+      "nome": "Brass & Military---Brass Band",
+      "n": 143
+     },
+     {
+      "nome": "Electronic---Electroclash",
+      "n": 142
+     },
+     {
+      "nome": "Electronic---Speedcore",
+      "n": 142
+     },
+     {
+      "nome": "Electronic---Big Beat",
+      "n": 141
+     },
+     {
+      "nome": "Rock---Soft Rock",
+      "n": 140
+     },
+     {
+      "nome": "Classical---Modern",
+      "n": 140
+     },
+     {
+      "nome": "Blues---Texas Blues",
+      "n": 136
+     },
+     {
+      "nome": "Funk / Soul---Disco",
+      "n": 131
+     },
+     {
+      "nome": "Rock---Art Rock",
+      "n": 131
+     },
+     {
+      "nome": "Children's---Story",
+      "n": 129
+     },
+     {
+      "nome": "Electronic---EBM",
+      "n": 128
+     },
+     {
+      "nome": "Pop---Parody",
+      "n": 126
+     },
+     {
+      "nome": "Folk, World, & Country---Romani",
+      "n": 125
+     },
+     {
+      "nome": "Blues---Chicago Blues",
+      "n": 125
+     },
+     {
+      "nome": "Rock---Goregrind",
+      "n": 123
+     },
+     {
+      "nome": "Rock---Rockabilly",
+      "n": 119
+     },
+     {
+      "nome": "Jazz---Modal",
+      "n": 117
+     },
+     {
+      "nome": "Blues---Rhythm & Blues",
+      "n": 117
+     },
+     {
+      "nome": "Folk, World, & Country---Highlife",
+      "n": 116
+     },
+     {
+      "nome": "Electronic---Trance",
+      "n": 116
+     },
+     {
+      "nome": "Electronic---Modern Classical",
+      "n": 114
+     },
+     {
+      "nome": "Electronic---Tribal",
+      "n": 109
+     },
+     {
+      "nome": "Electronic---Dub Techno",
+      "n": 109
+     },
+     {
+      "nome": "Reggae---Soca",
+      "n": 108
+     },
+     {
+      "nome": "Electronic---Ghetto",
+      "n": 108
+     },
+     {
+      "nome": "Folk, World, & Country---Gospel",
+      "n": 107
+     },
+     {
+      "nome": "Non-Music---Political",
+      "n": 107
+     },
+     {
+      "nome": "Electronic---Jazzdance",
+      "n": 107
+     },
+     {
+      "nome": "Electronic---Progressive Breaks",
+      "n": 107
+     },
+     {
+      "nome": "Rock---Industrial",
+      "n": 106
+     },
+     {
+      "nome": "Electronic---UK Garage",
+      "n": 105
+     },
+     {
+      "nome": "Electronic---Electro House",
+      "n": 105
+     },
+     {
+      "nome": "Classical---Medieval",
+      "n": 104
+     },
+     {
+      "nome": "Rock---Symphonic Rock",
+      "n": 102
+     },
+     {
+      "nome": "Electronic---Deep Techno",
+      "n": 101
+     },
+     {
+      "nome": "Reggae---Lovers Rock",
+      "n": 98
+     },
+     {
+      "nome": "Non-Music---Dialogue",
+      "n": 98
+     },
+     {
+      "nome": "Non-Music---Religious",
+      "n": 97
+     },
+     {
+      "nome": "Rock---AOR",
+      "n": 97
+     },
+     {
+      "nome": "Electronic---New Wave",
+      "n": 96
+     },
+     {
+      "nome": "Folk, World, & Country---Pacific",
+      "n": 95
+     },
+     {
+      "nome": "Electronic---Progressive House",
+      "n": 95
+     },
+     {
+      "nome": "Non-Music---Monolog",
+      "n": 92
+     },
+     {
+      "nome": "Latin---Baião",
+      "n": 91
+     },
+     {
+      "nome": "Hip Hop---DJ Battle Tool",
+      "n": 91
+     },
+     {
+      "nome": "Electronic---Disco Polo",
+      "n": 90
+     },
+     {
+      "nome": "Latin---Salsa",
+      "n": 89
+     },
+     {
+      "nome": "Children's---Nursery Rhymes",
+      "n": 89
+     },
+     {
+      "nome": "Blues---Louisiana Blues",
+      "n": 86
+     },
+     {
+      "nome": "Classical---Neo-Romantic",
+      "n": 85
+     },
+     {
+      "nome": "Electronic---Leftfield",
+      "n": 84
+     },
+     {
+      "nome": "Classical---Impressionist",
+      "n": 83
+     },
+     {
+      "nome": "Reggae---Calypso",
+      "n": 81
+     },
+     {
+      "nome": "Rock---Pornogrind",
+      "n": 81
+     },
+     {
+      "nome": "Children's---Educational",
+      "n": 80
+     },
+     {
+      "nome": "Electronic---Freestyle",
+      "n": 80
+     },
+     {
+      "nome": "Latin---Pachanga",
+      "n": 80
+     },
+     {
+      "nome": "Latin---Rumba",
+      "n": 78
+     },
+     {
+      "nome": "Pop---City Pop",
+      "n": 77
+     },
+     {
+      "nome": "Pop---Light Music",
+      "n": 75
+     },
+     {
+      "nome": "Rock---Classic Rock",
+      "n": 73
+     },
+     {
+      "nome": "Classical---Baroque",
+      "n": 73
+     },
+     {
+      "nome": "Blues---Harmonica Blues",
+      "n": 72
+     },
+     {
+      "nome": "Pop---Europop",
+      "n": 71
+     },
+     {
+      "nome": "Electronic---Breaks",
+      "n": 70
+     },
+     {
+      "nome": "Latin---Compas",
+      "n": 69
+     },
+     {
+      "nome": "Folk, World, & Country---Honky Tonk",
+      "n": 67
+     },
+     {
+      "nome": "Electronic---Ghetto House",
+      "n": 67
+     },
+     {
+      "nome": "Folk, World, & Country---Volksmusik",
+      "n": 66
+     },
+     {
+      "nome": "Electronic---Psy-Trance",
+      "n": 64
+     },
+     {
+      "nome": "Electronic---Acid",
+      "n": 63
+     },
+     {
+      "nome": "Funk / Soul---P.Funk",
+      "n": 62
+     },
+     {
+      "nome": "Rock---Arena Rock",
+      "n": 62
+     },
+     {
+      "nome": "Jazz---Swing",
+      "n": 61
+     },
+     {
+      "nome": "Stage & Screen---Score",
+      "n": 60
+     },
+     {
+      "nome": "Electronic---Tech House",
+      "n": 60
+     },
+     {
+      "nome": "Latin---Norteño",
+      "n": 60
+     },
+     {
+      "nome": "Electronic---Minimal Techno",
+      "n": 60
+     },
+     {
+      "nome": "Hip Hop---Bass Music",
+      "n": 59
+     },
+     {
+      "nome": "Jazz---Cool Jazz",
+      "n": 58
+     },
+     {
+      "nome": "Rock---Glam",
+      "n": 57
+     },
+     {
+      "nome": "Electronic---Goa Trance",
+      "n": 56
+     },
+     {
+      "nome": "Latin---Cubano",
+      "n": 55
+     },
+     {
+      "nome": "Latin---Afro-Cuban",
+      "n": 54
+     },
+     {
+      "nome": "Hip Hop---Cut-up/DJ",
+      "n": 54
+     },
+     {
+      "nome": "Electronic---Tech Trance",
+      "n": 54
+     },
+     {
+      "nome": "Folk, World, & Country---Cajun",
+      "n": 53
+     },
+     {
+      "nome": "Funk / Soul---Boogie",
+      "n": 53
+     },
+     {
+      "nome": "Jazz---Space-Age",
+      "n": 52
+     },
+     {
+      "nome": "Rock---Beat",
+      "n": 51
+     },
+     {
+      "nome": "Classical---Classical",
+      "n": 50
+     },
+     {
+      "nome": "Hip Hop---Britcore",
+      "n": 49
+     },
+     {
+      "nome": "Hip Hop---Electro",
+      "n": 49
+     },
+     {
+      "nome": "Jazz---Ragtime",
+      "n": 47
+     },
+     {
+      "nome": "Blues---Boogie Woogie",
+      "n": 46
+     },
+     {
+      "nome": "Hip Hop---Miami Bass",
+      "n": 45
+     },
+     {
+      "nome": "Latin---Bolero",
+      "n": 44
+     },
+     {
+      "nome": "Classical---Renaissance",
+      "n": 44
+     },
+     {
+      "nome": "Rock---Yé-Yé",
+      "n": 42
+     },
+     {
+      "nome": "Funk / Soul---Rhythm & Blues",
+      "n": 42
+     },
+     {
+      "nome": "Jazz---Dixieland",
+      "n": 42
+     },
+     {
+      "nome": "Folk, World, & Country---Canzone Napoletana",
+      "n": 41
+     },
+     {
+      "nome": "Funk / Soul---Gospel",
+      "n": 40
+     },
+     {
+      "nome": "Electronic---Progressive Trance",
+      "n": 39
+     },
+     {
+      "nome": "Electronic---Hard Techno",
+      "n": 39
+     },
+     {
+      "nome": "Classical---Choral",
+      "n": 39
+     },
+     {
+      "nome": "Jazz---Hard Bop",
+      "n": 38
+     },
+     {
+      "nome": "Non-Music---Education",
+      "n": 38
+     },
+     {
+      "nome": "Electronic---Euro House",
+      "n": 38
+     },
+     {
+      "nome": "Rock---Avantgarde",
+      "n": 38
+     },
+     {
+      "nome": "Pop---Schlager",
+      "n": 37
+     },
+     {
+      "nome": "Pop---Bollywood",
+      "n": 36
+     },
+     {
+      "nome": "Funk / Soul---UK Street Soul",
+      "n": 35
+     },
+     {
+      "nome": "Non-Music---Promotional",
+      "n": 34
+     },
+     {
+      "nome": "Electronic---Happy Hardcore",
+      "n": 33
+     },
+     {
+      "nome": "Electronic---Hands Up",
+      "n": 32
+     },
+     {
+      "nome": "Funk / Soul---Swingbeat",
+      "n": 31
+     },
+     {
+      "nome": "Pop---Bubblegum",
+      "n": 31
+     },
+     {
+      "nome": "Brass & Military---Military",
+      "n": 31
+     },
+     {
+      "nome": "Blues---Piano Blues",
+      "n": 30
+     },
+     {
+      "nome": "Folk, World, & Country---Hindustani",
+      "n": 29
+     },
+     {
+      "nome": "Electronic---Hardstyle",
+      "n": 29
+     },
+     {
+      "nome": "Electronic---Schranz",
+      "n": 29
+     },
+     {
+      "nome": "Electronic---Hard Trance",
+      "n": 29
+     },
+     {
+      "nome": "Latin---Mariachi",
+      "n": 28
+     },
+     {
+      "nome": "Non-Music---Interview",
+      "n": 28
+     },
+     {
+      "nome": "Electronic---Acid House",
+      "n": 28
+     },
+     {
+      "nome": "Electronic---Italo-Disco",
+      "n": 27
+     },
+     {
+      "nome": "Jazz---Big Band",
+      "n": 26
+     },
+     {
+      "nome": "Electronic---Bleep",
+      "n": 26
+     },
+     {
+      "nome": "Electronic---Gabber",
+      "n": 26
+     },
+     {
+      "nome": "Electronic---New Beat",
+      "n": 26
+     },
+     {
+      "nome": "Latin---Tejano",
+      "n": 25
+     },
+     {
+      "nome": "Folk, World, & Country---Polka",
+      "n": 24
+     },
+     {
+      "nome": "Electronic---Tribal House",
+      "n": 23
+     },
+     {
+      "nome": "Jazz---Bop",
+      "n": 23
+     },
+     {
+      "nome": "Latin---Mambo",
+      "n": 21
+     },
+     {
+      "nome": "Latin---Ranchera",
+      "n": 21
+     },
+     {
+      "nome": "Blues---Jump Blues",
+      "n": 21
+     },
+     {
+      "nome": "Latin---Porro",
+      "n": 20
+     },
+     {
+      "nome": "Electronic---Hard House",
+      "n": 20
+     },
+     {
+      "nome": "Electronic---Euro-Disco",
+      "n": 19
+     },
+     {
+      "nome": "Rock---Doo Wop",
+      "n": 18
+     },
+     {
+      "nome": "Pop---Kayōkyoku",
+      "n": 18
+     },
+     {
+      "nome": "Latin---Son",
+      "n": 18
+     },
+     {
+      "nome": "Electronic---Speed Garage",
+      "n": 18
+     },
+     {
+      "nome": "Classical---Romantic",
+      "n": 18
+     },
+     {
+      "nome": "Electronic---Eurobeat",
+      "n": 18
+     },
+     {
+      "nome": "Latin---Boogaloo",
+      "n": 17
+     },
+     {
+      "nome": "Latin---Beguine",
+      "n": 16
+     },
+     {
+      "nome": "Pop---Music Hall",
+      "n": 16
+     },
+     {
+      "nome": "Electronic---Jumpstyle",
+      "n": 16
+     },
+     {
+      "nome": "Rock---Twist",
+      "n": 15
+     },
+     {
+      "nome": "Latin---Guaguancó",
+      "n": 15
+     },
+     {
+      "nome": "Electronic---Hip-House",
+      "n": 14
+     },
+     {
+      "nome": "Brass & Military---Marches",
+      "n": 13
+     },
+     {
+      "nome": "Stage & Screen---Musical",
+      "n": 13
+     },
+     {
+      "nome": "Funk / Soul---New Jack Swing",
+      "n": 13
+     },
+     {
+      "nome": "Pop---Novelty",
+      "n": 12
+     },
+     {
+      "nome": "Folk, World, & Country---Hillbilly",
+      "n": 11
+     },
+     {
+      "nome": "Electronic---Eurodance",
+      "n": 11
+     },
+     {
+      "nome": "Latin---Guajira",
+      "n": 9
+     },
+     {
+      "nome": "Latin---Vallenato",
+      "n": 9
+     },
+     {
+      "nome": "Electronic---Garage House",
+      "n": 8
+     },
+     {
+      "nome": "Classical---Opera",
+      "n": 8
+     },
+     {
+      "nome": "Latin---Descarga",
+      "n": 7
+     },
+     {
+      "nome": "Electronic---Donk",
+      "n": 7
+     },
+     {
+      "nome": "Latin---Merengue",
+      "n": 7
+     },
+     {
+      "nome": "Latin---Cha-Cha",
+      "n": 6
+     },
+     {
+      "nome": "Latin---Son Montuno",
+      "n": 6
+     },
+     {
+      "nome": "Electronic---Makina",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Italodance",
+      "n": 5
+     },
+     {
+      "nome": "Electronic---Italo House",
+      "n": 5
+     },
+     {
+      "nome": "Latin---Charanga",
+      "n": 2
+     },
+     {
+      "nome": "Stage & Screen---Theme",
+      "n": 2
+     },
+     {
+      "nome": "Latin---Guaracha",
+      "n": 2
+     }
+    ]
+   },
+   "instrumentos": [
+    {
+     "nome": "bass",
+     "n": 43189
+    },
+    {
+     "nome": "drums",
+     "n": 42351
+    },
+    {
+     "nome": "electricguitar",
+     "n": 28630
+    },
+    {
+     "nome": "synthesizer",
+     "n": 15953
+    },
+    {
+     "nome": "guitar",
+     "n": 13002
+    },
+    {
+     "nome": "piano",
+     "n": 7953
+    },
+    {
+     "nome": "acousticguitar",
+     "n": 3733
+    },
+    {
+     "nome": "percussion",
+     "n": 1430
+    },
+    {
+     "nome": "beat",
+     "n": 906
+    },
+    {
+     "nome": "keyboard",
+     "n": 798
+    },
+    {
+     "nome": "voice",
+     "n": 772
+    },
+    {
+     "nome": "classicalguitar",
+     "n": 525
+    },
+    {
+     "nome": "computer",
+     "n": 405
+    },
+    {
+     "nome": "violin",
+     "n": 333
+    },
+    {
+     "nome": "drummachine",
+     "n": 288
+    },
+    {
+     "nome": "flute",
+     "n": 286
+    },
+    {
+     "nome": "sampler",
+     "n": 126
+    },
+    {
+     "nome": "cello",
+     "n": 112
+    },
+    {
+     "nome": "accordion",
+     "n": 109
+    },
+    {
+     "nome": "saxophone",
+     "n": 51
+    },
+    {
+     "nome": "electricpiano",
+     "n": 44
+    },
+    {
+     "nome": "harp",
+     "n": 35
+    },
+    {
+     "nome": "strings",
+     "n": 33
+    },
+    {
+     "nome": "oboe",
+     "n": 11
+    },
+    {
+     "nome": "orchestra",
+     "n": 4
+    },
+    {
+     "nome": "brass",
+     "n": 2
+    },
+    {
+     "nome": "trumpet",
+     "n": 1
+    }
+   ],
+   "humores_essentia": [
+    {
+     "nome": "energetic",
+     "n": 28379
+    },
+    {
+     "nome": "love",
+     "n": 26735
+    },
+    {
+     "nome": "melodic",
+     "n": 19711
+    },
+    {
+     "nome": "happy",
+     "n": 15895
+    },
+    {
+     "nome": "dark",
+     "n": 12932
+    },
+    {
+     "nome": "relaxing",
+     "n": 7983
+    },
+    {
+     "nome": "meditative",
+     "n": 6573
+    },
+    {
+     "nome": "heavy",
+     "n": 5260
+    },
+    {
+     "nome": "deep",
+     "n": 4971
+    },
+    {
+     "nome": "ballad",
+     "n": 4959
+    },
+    {
+     "nome": "film",
+     "n": 3804
+    },
+    {
+     "nome": "space",
+     "n": 2737
+    },
+    {
+     "nome": "uplifting",
+     "n": 2734
+    },
+    {
+     "nome": "epic",
+     "n": 2466
+    },
+    {
+     "nome": "soundscape",
+     "n": 2298
+    },
+    {
+     "nome": "sad",
+     "n": 1977
+    },
+    {
+     "nome": "slow",
+     "n": 1314
+    },
+    {
+     "nome": "background",
+     "n": 1266
+    },
+    {
+     "nome": "summer",
+     "n": 1095
+    },
+    {
+     "nome": "advertising",
+     "n": 881
+    },
+    {
+     "nome": "emotional",
+     "n": 829
+    },
+    {
+     "nome": "corporate",
+     "n": 741
+    },
+    {
+     "nome": "motivational",
+     "n": 668
+    },
+    {
+     "nome": "action",
+     "n": 634
+    },
+    {
+     "nome": "inspiring",
+     "n": 610
+    },
+    {
+     "nome": "adventure",
+     "n": 498
+    },
+    {
+     "nome": "positive",
+     "n": 480
+    },
+    {
+     "nome": "romantic",
+     "n": 416
+    },
+    {
+     "nome": "dream",
+     "n": 409
+    },
+    {
+     "nome": "christmas",
+     "n": 387
+    },
+    {
+     "nome": "upbeat",
+     "n": 345
+    },
+    {
+     "nome": "documentary",
+     "n": 290
+    },
+    {
+     "nome": "powerful",
+     "n": 159
+    },
+    {
+     "nome": "cool",
+     "n": 135
+    },
+    {
+     "nome": "party",
+     "n": 125
+    },
+    {
+     "nome": "sport",
+     "n": 111
+    },
+    {
+     "nome": "funny",
+     "n": 77
+    },
+    {
+     "nome": "drama",
+     "n": 49
+    },
+    {
+     "nome": "soft",
+     "n": 45
+    },
+    {
+     "nome": "retro",
+     "n": 31
+    },
+    {
+     "nome": "game",
+     "n": 28
+    },
+    {
+     "nome": "fun",
+     "n": 17
+    },
+    {
+     "nome": "calm",
+     "n": 16
+    },
+    {
+     "nome": "melancholic",
+     "n": 5
+    },
+    {
+     "nome": "holiday",
+     "n": 3
+    },
+    {
+     "nome": "movie",
+     "n": 1
+    },
+    {
+     "nome": "dramatic",
+     "n": 1
+    },
+    {
+     "nome": "trailer",
+     "n": 1
+    },
+    {
+     "nome": "children",
+     "n": 1
+    }
+   ],
+   "tom": {
+    "por_tom": [
+     {
+      "tom": "C",
+      "modo": "major",
+      "n": 6872
+     },
+     {
+      "tom": "G",
+      "modo": "major",
+      "n": 5622
+     },
+     {
+      "tom": "F",
+      "modo": "major",
+      "n": 4149
+     },
+     {
+      "tom": "D",
+      "modo": "major",
+      "n": 4018
+     },
+     {
+      "tom": "A",
+      "modo": "major",
+      "n": 3753
+     },
+     {
+      "tom": "E",
+      "modo": "major",
+      "n": 3367
+     },
+     {
+      "tom": "A",
+      "modo": "minor",
+      "n": 2762
+     },
+     {
+      "tom": "Eb",
+      "modo": "major",
+      "n": 2039
+     },
+     {
+      "tom": "Bb",
+      "modo": "major",
+      "n": 1989
+     },
+     {
+      "tom": "Ab",
+      "modo": "major",
+      "n": 1938
+     },
+     {
+      "tom": "E",
+      "modo": "minor",
+      "n": 1937
+     },
+     {
+      "tom": "C",
+      "modo": "minor",
+      "n": 1802
+     },
+     {
+      "tom": "C#",
+      "modo": "major",
+      "n": 1788
+     },
+     {
+      "tom": "B",
+      "modo": "major",
+      "n": 1553
+     },
+     {
+      "tom": "G",
+      "modo": "minor",
+      "n": 1452
+     },
+     {
+      "tom": "F#",
+      "modo": "major",
+      "n": 1352
+     },
+     {
+      "tom": "F",
+      "modo": "minor",
+      "n": 1350
+     },
+     {
+      "tom": "D",
+      "modo": "minor",
+      "n": 1169
+     },
+     {
+      "tom": "C#",
+      "modo": "minor",
+      "n": 1103
+     },
+     {
+      "tom": "F#",
+      "modo": "minor",
+      "n": 963
+     },
+     {
+      "tom": "B",
+      "modo": "minor",
+      "n": 928
+     },
+     {
+      "tom": "Ab",
+      "modo": "minor",
+      "n": 630
+     },
+     {
+      "tom": "Bb",
+      "modo": "minor",
+      "n": 589
+     },
+     {
+      "tom": "Eb",
+      "modo": "minor",
+      "n": 569
+     }
+    ]
+   },
+   "bpm_histograma_10": {
+    "50": 9,
+    "60": 270,
+    "70": 1455,
+    "80": 5063,
+    "90": 7944,
+    "100": 6815,
+    "110": 7234,
+    "120": 8582,
+    "130": 5158,
+    "140": 4137,
+    "150": 2989,
+    "160": 2252,
+    "170": 1451,
+    "180": 311,
+    "190": 16,
+    "730": 8
+   },
+   "features_numericas": {
+    "bpm": {
+     "n": 53694,
+     "min": 57.6,
+     "p05": 82.3,
+     "p25": 98.7,
+     "p50": 117.6,
+     "p75": 135.6,
+     "p95": 163.4,
+     "max": 738.3,
+     "media": 118.512,
+     "desvio": 26.084
+    },
+    "bpm_conf": {
+     "n": 53694,
+     "min": -0.04,
+     "p05": 0.24,
+     "p25": 1.29,
+     "p50": 2.2,
+     "p75": 2.91,
+     "p95": 3.6,
+     "max": 4.47,
+     "media": 2.079,
+     "desvio": 1.034
+    },
+    "key_strength": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.53,
+     "p25": 0.66,
+     "p50": 0.74,
+     "p75": 0.82,
+     "p95": 0.9,
+     "max": 0.98,
+     "media": 0.731,
+     "desvio": 0.115
+    },
+    "loud_db": {
+     "n": 53694,
+     "min": -100.0,
+     "p05": -23.4,
+     "p25": -18.7,
+     "p50": -16.3,
+     "p75": -14.5,
+     "p95": -12.2,
+     "max": -1.5,
+     "media": -16.921,
+     "desvio": 4.066
+    },
+    "dyn": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.95,
+     "p25": 1.6,
+     "p50": 2.22,
+     "p75": 3.02,
+     "p95": 5.43,
+     "max": 51.98,
+     "media": 2.591,
+     "desvio": 1.79
+    },
+    "onset_rate": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 1.64,
+     "p25": 2.98,
+     "p50": 3.73,
+     "p75": 4.53,
+     "p95": 5.58,
+     "max": 9.67,
+     "media": 3.723,
+     "desvio": 1.198
+    },
+    "dur": {
+     "n": 53694,
+     "min": 3.0,
+     "p05": 71.0,
+     "p25": 157.0,
+     "p50": 205.0,
+     "p75": 257.0,
+     "p95": 396.0,
+     "max": 7157.0,
+     "media": 221.536,
+     "desvio": 154.509
+    },
+    "br": {
+     "n": 53694,
+     "min": 24,
+     "p05": 128.0,
+     "p25": 192.0,
+     "p50": 259.0,
+     "p75": 280.0,
+     "p95": 320.0,
+     "max": 321,
+     "media": 240.129,
+     "desvio": 66.806
+    },
+    "voice": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.052,
+     "p25": 0.372,
+     "p50": 0.714,
+     "p75": 0.905,
+     "p95": 0.991,
+     "max": 1.0,
+     "media": 0.625,
+     "desvio": 0.315
+    },
+    "dance": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.035,
+     "p25": 0.199,
+     "p50": 0.507,
+     "p75": 0.871,
+     "p95": 0.997,
+     "max": 1.0,
+     "media": 0.523,
+     "desvio": 0.341
+    },
+    "acoustic": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.009,
+     "p25": 0.074,
+     "p50": 0.289,
+     "p75": 0.699,
+     "p95": 0.975,
+     "max": 0.999,
+     "media": 0.39,
+     "desvio": 0.338
+    },
+    "electronic": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.004,
+     "p25": 0.046,
+     "p50": 0.24,
+     "p75": 0.677,
+     "p95": 0.982,
+     "max": 1.0,
+     "media": 0.366,
+     "desvio": 0.347
+    },
+    "happy": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.017,
+     "p25": 0.091,
+     "p50": 0.262,
+     "p75": 0.513,
+     "p95": 0.818,
+     "max": 0.997,
+     "media": 0.322,
+     "desvio": 0.26
+    },
+    "sad": {
+     "n": 53694,
+     "min": 0.002,
+     "p05": 0.036,
+     "p25": 0.143,
+     "p50": 0.331,
+     "p75": 0.621,
+     "p95": 0.89,
+     "max": 0.984,
+     "media": 0.391,
+     "desvio": 0.279
+    },
+    "relaxed": {
+     "n": 53694,
+     "min": 0.002,
+     "p05": 0.041,
+     "p25": 0.35,
+     "p50": 0.683,
+     "p75": 0.887,
+     "p95": 0.974,
+     "max": 0.998,
+     "media": 0.605,
+     "desvio": 0.311
+    },
+    "aggressive": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.002,
+     "p25": 0.016,
+     "p50": 0.092,
+     "p75": 0.451,
+     "p95": 0.987,
+     "max": 1.0,
+     "media": 0.272,
+     "desvio": 0.337
+    },
+    "party": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.003,
+     "p25": 0.021,
+     "p50": 0.112,
+     "p75": 0.403,
+     "p95": 0.885,
+     "max": 1.0,
+     "media": 0.248,
+     "desvio": 0.289
+    },
+    "tonal": {
+     "n": 53694,
+     "min": 0.0,
+     "p05": 0.001,
+     "p25": 0.013,
+     "p50": 0.075,
+     "p75": 0.253,
+     "p95": 0.598,
+     "max": 0.998,
+     "media": 0.163,
+     "desvio": 0.198
+    }
+   },
+   "features_por_decada": {
+    "1960": {
+     "bpm": 124.314,
+     "dance": 0.292,
+     "happy": 0.372,
+     "sad": 0.6,
+     "relaxed": 0.926,
+     "acoustic": 0.763,
+     "electronic": 0.175,
+     "voice": 0.721,
+     "loud_db": -17.918,
+     "faixas": 124
+    },
+    "1970": {
+     "bpm": 123.41,
+     "dance": 0.286,
+     "happy": 0.531,
+     "sad": 0.483,
+     "relaxed": 0.662,
+     "acoustic": 0.6,
+     "electronic": 0.162,
+     "voice": 0.66,
+     "loud_db": -18.913,
+     "faixas": 407
+    },
+    "1980": {
+     "bpm": 124.449,
+     "dance": 0.473,
+     "happy": 0.43,
+     "sad": 0.379,
+     "relaxed": 0.618,
+     "acoustic": 0.42,
+     "electronic": 0.302,
+     "voice": 0.456,
+     "loud_db": -19.196,
+     "faixas": 72
+    },
+    "1990": {
+     "bpm": 120.157,
+     "dance": 0.57,
+     "happy": 0.349,
+     "sad": 0.239,
+     "relaxed": 0.351,
+     "acoustic": 0.238,
+     "electronic": 0.206,
+     "voice": 0.64,
+     "loud_db": -19.629,
+     "faixas": 260
+    },
+    "2000": {
+     "bpm": 120.872,
+     "dance": 0.502,
+     "happy": 0.386,
+     "sad": 0.341,
+     "relaxed": 0.54,
+     "acoustic": 0.399,
+     "electronic": 0.288,
+     "voice": 0.585,
+     "loud_db": -17.077,
+     "faixas": 1069
+    },
+    "2010": {
+     "bpm": 118.885,
+     "dance": 0.487,
+     "happy": 0.317,
+     "sad": 0.39,
+     "relaxed": 0.588,
+     "acoustic": 0.395,
+     "electronic": 0.336,
+     "voice": 0.608,
+     "loud_db": -16.863,
+     "faixas": 26078
+    },
+    "2020": {
+     "bpm": 117.772,
+     "dance": 0.57,
+     "happy": 0.32,
+     "sad": 0.392,
+     "relaxed": 0.627,
+     "acoustic": 0.379,
+     "electronic": 0.409,
+     "voice": 0.643,
+     "loud_db": -16.917,
+     "faixas": 23642
+    }
+   }
+  }
+ }
+}

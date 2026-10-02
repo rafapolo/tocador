@@ -11,10 +11,10 @@
 // this literal; bump it there if the shell changes in a way that must invalidate.
 const CACHE = 'tocador-v5';
 // Needed for the app to start offline.
-const SHELL = ['./', './index.html', './assets/player.css', './js/acervo-format.js', './js/util.js', './js/virtual-lists.js', './js/ui.js', './js/url-meta.js', './js/browse.js', './js/album-view.js', './js/playback.js', './manifest.json'];
+const SHELL = ['./', './index.html', './assets/player.css', './js/acervo-format.js', './js/util.js', './js/virtual-lists.js', './js/ui.js', './js/url-meta.js', './js/browse.js', './js/explorar.js', './js/album-view.js', './js/playback.js', './manifest.json'];
 // Best effort: radio.html isn't deployed to the mirrors at all, and a 404 here
 // must not fail the install.
-const EXTRAS = ['./radio.html', './js/radio.js', './assets/radio.css', './3d.html', './js/3d.js', './assets/3d.css'];
+const EXTRAS = ['./radio.html', './js/radio.js', './assets/radio.css', './3d.html', './js/3d.js', './assets/3d.css', './data/resumo-acervo.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

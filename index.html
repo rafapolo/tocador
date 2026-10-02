@@ -47,6 +47,7 @@
         <script src="js/ui.js" defer></script>
         <script src="js/url-meta.js" defer></script>
         <script src="js/browse.js" defer></script>
+        <script src="js/explorar.js" defer></script>
         <script src="js/album-view.js" defer></script>
         <script src="js/playback.js" defer></script>
         <script defer src="https://cloud.umami.is/script.js" data-website-id="9fad9893-55da-4e20-abbf-b79b12bf3146"></script>
@@ -82,6 +83,11 @@
                             <path d="M14 9 L18 4" stroke-linecap="round"/>
                         </svg>
                     </a>
+                    <button id="btn-explorar" title="Explorar o acervo (E)" class="btn-explorar" aria-label="Explorar o acervo" aria-pressed="false" aria-controls="explorar-panel">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16" aria-hidden="true">
+                            <line x1="4" y1="20" x2="4" y2="12"/><line x1="10" y1="20" x2="10" y2="5"/><line x1="16" y1="20" x2="16" y2="9"/><line x1="22" y1="20" x2="22" y2="15"/>
+                        </svg>
+                    </button>
                     <button id="btn-shortcuts" title="Atalhos de teclado" class="btn-shortcuts" aria-label="Ver atalhos de teclado">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16" aria-hidden="true">
                             <circle cx="12" cy="12" r="10"/>
@@ -124,6 +130,22 @@
                 <div class="browse-list" id="browse-list" role="listbox" aria-label="Artistas" aria-multiselectable="false"></div>
                 <p class="browse-empty" id="browse-empty" hidden>Nenhum resultado</p>
                 <a id="acervo-index-link" class="acervo-index-link" href="https://tocador.cc/homi/">Índice de álbuns</a>
+            </aside>
+
+            <aside class="browse-panel explorar-panel" id="explorar-panel" aria-label="Explorar o acervo" hidden>
+                <div class="browse-acervo">
+                    <div class="browse-acervo-head">
+                        <span class="browse-acervo-label">Explorar</span>
+                        <button id="btn-explorar-close" class="browse-close" aria-label="Fechar painel">✕</button>
+                    </div>
+                </div>
+                <div class="browse-search-wrap">
+                    <div class="browse-search-inner">
+                        <input class="browse-search" id="explorar-search" type="text" placeholder="Filtrar seções…" autocomplete="off" spellcheck="false" aria-label="Filtrar itens do painel" />
+                        <button id="explorar-clear" class="browse-clear" aria-label="Limpar filtro">✕</button>
+                    </div>
+                </div>
+                <div class="explorar-body" id="explorar-body"></div>
             </aside>
 
             <main class="main-content" id="main-content" tabindex="-1">
@@ -526,6 +548,7 @@
                 <li><kbd>/</kbd><span>Buscar</span></li>
                 <li><kbd>B</kbd><span>Painel artistas/gêneros</span></li>
                 <li><kbd>G</kbd><span>Aba de gêneros</span></li>
+                <li><kbd>E</kbd><span>Explorar o acervo</span></li>
                 <li><kbd>Esc</kbd><span>Fechar painel / limpar filtro</span></li>
                 <li><kbd>?</kbd><span>Esta ajuda</span></li>
             </ul>

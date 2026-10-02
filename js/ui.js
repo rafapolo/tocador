@@ -1093,6 +1093,7 @@ async function handleCatalogDecodeError(err, container) {
     // Escape: close shortcuts modal OR mobile browse drawer OR clear active panel filter
     if (e.key === 'Escape') {
       if (isShortcutsModalOpen()) { closeShortcutsModal(); return; }
+      if (typeof isExplorarOpen === 'function' && isExplorarOpen()) { closeExplorar(); return; }
       if (isMobile() && _browsePanelEl?.classList.contains('open')) {
         closeBrowseDrawer(); return;
       }
@@ -1131,6 +1132,9 @@ async function handleCatalogDecodeError(err, container) {
         break;
       case 'b':
         if (!e.metaKey && !e.ctrlKey && !e.altKey) toggleBrowsePanel();
+        break;
+      case 'e':
+        if (!e.metaKey && !e.ctrlKey && !e.altKey) toggleExplorar();
         break;
       case 'g':
         if (!e.metaKey && !e.ctrlKey && !e.altKey && genreData) {
