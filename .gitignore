@@ -33,3 +33,4 @@ tasks/
 /data/features/
 __pycache__/
 /data/genres/
+/data/qgen/
