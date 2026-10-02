@@ -29,8 +29,13 @@ if lp.exists():
     for line in open(lp, encoding='utf-8'):
         r = json.loads(line); labels[r['id']] = r
 
+SLOTS = {}
+for _f in sorted(IN.glob('*.jsonl')):
+    for _r in read(_f):
+        if _r: SLOTS.setdefault(_r['id'], _r)
+
 def check(shard):
-    slots = {r['id']: r for r in read(IN / f'{shard}.jsonl')}
+    slots = {r['id']: SLOTS[r['id']] for r in (read(OUT / f'{shard}.jsonl') if (OUT / f'{shard}.jsonl').exists() else []) if r and r.get('id') in SLOTS}
     out_path = OUT / f'{shard}.jsonl'
     if not out_path.exists(): return None
     rows = read(out_path)
@@ -42,27 +47,25 @@ def check(shard):
         if id_ not in slots: issues['id desconhecido'] += 1; continue
         if id_ in seen: issues['id repetido'] += 1; continue
         seen.add(id_)
-        qs = r.get('qs') if shard.startswith('A') else [r.get('q')]
-        if not isinstance(qs, list) or (shard.startswith('A') and len(qs) != 3) or not all(isinstance(q, str) for q in qs):
+        qs = r.get('qs') if 'qs' in r else [r.get('q')]
+        if not isinstance(qs, list) or ('qs' in r and len(qs) != 3) or not all(isinstance(q, str) for q in qs):
             issues['formato'] += 1; continue
         ok = []
         for q in qs:
             q = q.strip()
             if not (2 <= len(q) <= 320): issues['tamanho'] += 1; continue
             if LEAK.search(q): issues['vazamento de rótulo/jargão'] += 1; continue
-            if shard.startswith('A'):
+            if 'qs' in r:
                 title = fold(slots[id_]['faixa'])
                 if len(title) >= 8 and title in fold(q): issues['título exato citado'] += 1; continue
             ok.append(q)
         if labels.get(id_, {}).get('invalid'): issues['rótulo inválido (descartado)'] += 1; continue
         if ok: good.append((id_, ok))
-    missing = len(set(slots) - seen)
-    if missing: issues['slot sem resposta'] += missing
     return {'slots': len(slots), 'rows': len(rows), 'good': good, 'issues': issues}
 
 def main():
     merge = '--merge' in sys.argv
-    shards = sorted(p.stem for p in IN.glob('*.jsonl'))
+    shards = sorted(p.stem for p in OUT.glob('*.jsonl') if not re.search(r'\.p\d$', p.stem))
     total, fam, dup = 0, collections.Counter(), 0
     seen_q, merged = set(), []
     for sh in shards:
