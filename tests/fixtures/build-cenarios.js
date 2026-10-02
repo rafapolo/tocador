@@ -23,6 +23,8 @@ const A = [
   ['Quarteto de Cordas', 'Quarteto Nova', 2003, { bpm: 72, voice: 0.03, relaxed: 0.9, genre: [['Classical---Modern', 0.5]], inst: [['strings', 0.9], ['violin', 0.5]] }],
   ['Banda Instrumental', 'Os Eletricos', 1999, { bpm: 140, voice: 0.1, aggressive: 0.5, relaxed: 0.1, genre: [['Rock---Prog Rock', 0.6]], inst: [['drums', 0.7], ['bass', 0.6], ['electricguitar', 0.6]] }],
   ['Noites Tristes', 'Dolores Antiga', 1985, { bpm: 70, sad: 0.95, happy: 0.05, relaxed: 0.7, genre: [['Latin---Bolero', 0.6]] }],
+  // detector pouco confiável (bpm_conf 1) e só a 1ª faixa analisada: o "por quê?" conta as duas coisas (tests/chat-cenarios.spec.js)
+  ['Samba Incerto', 'Dupla da Esquina', 1996, { bpm: 70, bpm_conf: 1, soPrimeira: true }],
   ['Cantiga para Dormir', 'Vó Lalá', 1977, { bpm: 60, relaxed: 0.97, aggressive: 0.01, happy: 0.3, sad: 0.3, acoustic: 0.9, genre: [['Folk, World, & Country---Folk', 0.5]] }],
 ];
 
@@ -33,9 +35,11 @@ const album = ([title, artist, year]) => ({
 const db = { meta: { title: 'Cenários', base_url: 'https://cdn.test/x' }, albums: A.map(album) };
 const keys = catalogKeys(db);
 const rows = new Map();
-A.forEach(([, , , f], i) => db.albums[i].tracks.forEach(t => {
+A.forEach(([, , , f], i) => db.albums[i].tracks.forEach((t, ti) => {
+  if (f.soPrimeira && ti > 0) return;
   const k = `${db.albums[i].path}/${t.file}`.normalize('NFC');
-  rows.set(k, { k, ...base, ...f });
+  const { soPrimeira, ...feat } = f;
+  rows.set(k, { k, ...base, ...feat });
 }));
 const { payload } = encodeFeatures({ acervo: 'cenarios', keys, rows });
 fs.writeFileSync(path.join(dir, 'cenarios-albums.json.gz'), gzipSync(JSON.stringify(db)));

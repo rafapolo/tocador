@@ -70,12 +70,14 @@ function chatAdd(node) {
 
 function chatSay(text) { chatAdd(chatEl('div', 'chat-msg user', text)); }
 
-function chatSuggestions(list) {
+function chatSuggestions(list, label) {
   const row = chatEl('div', 'chat-chips');
+  if (label) row.setAttribute('aria-label', label);
+  row.setAttribute('role', 'group');
   for (const s of list) {
-    const label = typeof s === 'string' ? s : s.label;
+    const text = typeof s === 'string' ? s : s.label;
     const ask = typeof s === 'string' ? s : s.ask;
-    const b = chatEl('button', 'chat-chip', label);
+    const b = chatEl('button', 'chat-chip', text);
     b.type = 'button';
     b.addEventListener('click', () => chatAsk(ask));
     row.appendChild(b);
@@ -83,18 +85,51 @@ function chatSuggestions(list) {
   return row;
 }
 
+// 2–3 requests that work, chosen by what just happened: a refusal category, the words/period/mood the person used,
+// or nothing understood. Never the sentence just typed. Audio-based examples only when the audio data is loaded.
+function chatArtistExample() {
+  const a = (typeof albums !== 'undefined' && albums.length) ? albums[Math.floor(albums.length / 3)] : null;
+  return a ? (parseArtists(a.artists)[0] || a.name || '').toLowerCase() : '';
+}
+function chatExamples({ cat, q, it, raw, zero } = {}) {
+  const audio = !!consultaPronta()?.f;
+  const era = it?.when?.decades?.length ? `anos ${String(it.when.decades[0]).slice(-2)}` : null;
+  const artist = chatArtistExample();
+  let ex;
+  if (zero && (q?.generos?.length || q?.humor?.length || era)) ex = [q?.generos?.[0] || (q?.humor?.[0] && audio ? `algo ${q.humor[0]}` : null), era, 'me surpreenda'];   // the same request with less in it
+  else if (q?.humor?.length && audio) ex = [`algo ${q.humor[0]} dos anos 70`, 'samba lento'];
+  else if (q?.generos?.length) ex = [`${q.generos[0]} anos 70`, `${q.generos[0]} lento`];
+  else if (q?.andamento && audio) ex = [`samba ${q.andamento}`, 'algo calmo'];
+  else if (cat === 'letra') ex = [artist ? `${artist} anos 70` : 'anos 70', audio ? 'samba lento' : 'me surpreenda'];
+  else if (cat === 'biografia') ex = [artist || 'anos 70', 'anos 70'];
+  else if (cat === 'tecnica_musical') ex = audio ? ['choro com bandolim', 'violão e voz'] : [artist || 'anos 70', 'anos 70'];
+  else if (cat === 'contraditorio') ex = audio ? ['algo lento', 'algo animado'] : ['anos 70', 'me surpreenda'];
+  else if (cat === 'impossivel') ex = audio ? ['algo triste dos anos 70', 'samba lento'] : ['anos 70', 'me surpreenda'];
+  else if (era) ex = [era, 'me surpreenda'];
+  else ex = audio ? ['samba lento dos anos 60', 'algo calmo', 'me surpreenda'] : [artist || 'anos 70', 'anos 70', 'me surpreenda'];
+  const seen = new Set([fold(raw || '')]);
+  return ex.filter(x => x && !seen.has(fold(x)) && seen.add(fold(x))).slice(0, 3);
+}
+const chatTryChips = (opts) => chatSuggestions(chatExamples(opts), 'Exemplos que funcionam');
+
 function chatWelcome() {
   const m = chatEl('div', 'chat-msg bot');
-  m.appendChild(chatEl('p', null, 'Oi! Pergunte pelo que há no acervo: artista, álbum, faixa ou época.'));
   const audio = consultaPronta()?.f;
   m.appendChild(chatEl('p', null, audio
-    ? 'Entendo décadas, anos, intervalos ("de 1960 a 1970"), palavras de títulos, artistas e faixas, e também gênero, andamento, humor, instrumentos e voz — medidos no áudio. Ex.: "samba lento dos anos 60", "algo calmo sem bateria", "mais lento que" um álbum.'
-    : 'Por enquanto entendo décadas, anos, intervalos ("de 1960 a 1970", "antes de 1980") e palavras de títulos, artistas e faixas. Gêneros, andamento e humor chegam quando os dados de áudio do acervo estiverem publicados.'));
+    ? 'Oi! Peça por artista, época ou pelo som. Gênero, andamento e humor são medidos no áudio.'
+    : 'Oi! Peça por artista, álbum, faixa ou época.'));
   const ex = [];
   const first = (typeof albums !== 'undefined' && albums.length) ? albums[Math.floor(albums.length / 3)] : null;
-  if (first) ex.push(parseArtists(first.artists)[0] || first.name);
-  ex.push('anos 70', 'me surpreenda');
-  m.appendChild(chatSuggestions(ex.filter(Boolean)));
+  if (audio) {
+    ex.push('samba lento dos anos 60', 'algo calmo');
+    const ref = first && (first.name || '').trim();
+    if (ref && ref.length <= 28) ex.push(`mais lento que ${ref}`);
+    ex.push('anos 70');
+  } else {
+    if (first) ex.push(parseArtists(first.artists)[0] || first.name);
+    ex.push('anos 70', 'me surpreenda');
+  }
+  m.appendChild(chatSuggestions(ex.filter(Boolean), 'Exemplos que funcionam'));
   chatAdd(m);
 }
 
@@ -402,7 +437,7 @@ const CHAT_PLAYER_CMDS = [
 const CHAT_NOT_SEARCH = /^(eta|rodando|rodou( tudo)?|status|ha t asks|tasks?|progresso|quanto falta|terminou|acabou)$/;
 
 function chatCommand(raw) {
-  const t = fold(raw).replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+  const t = fold(raw).replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\b(pf|pfv|por favor|ai|ae|agora|essa|esta)\b/g, ' ').replace(/\s+/g, ' ').trim();   // "pula essa", "pausa pf"
   for (const [cmd, re] of CHAT_PLAYER_CMDS) if (re.test(t)) return { cmd };
   if (CHAT_NOT_SEARCH.test(t)) return { cmd: 'refuse' };
   return null;
@@ -410,7 +445,7 @@ function chatCommand(raw) {
 
 function chatRunCommand(c) {
   const audio = document.getElementById('audio');
-  if (c.cmd === 'refuse') return 'Isso eu não faço aqui: este chat busca e toca música do acervo. Tente um artista, um título ou uma época.';
+  if (c.cmd === 'refuse') return 'Isso eu não faço aqui. Busco e toco música do acervo.';
   if (!currentTrack) return 'Ainda não há nada carregado no player. Escolha um álbum primeiro.';
   if (c.cmd === 'pause') {
     if (audio.paused) return 'Já está pausado.';
@@ -456,7 +491,7 @@ function chatLookalikes(it, n = 3) {
   return { shown: chatPickRandom(pool, n), basis };
 }
 
-function chatAddLookalikes(bot, it) {
+function chatAddLookalikes(bot, it, lead) {
   if (!albums.length) return;
   const wrap = chatEl('div', 'chat-lookalikes');
   const render = () => {
@@ -472,7 +507,7 @@ function chatAddLookalikes(bot, it) {
     wrap.appendChild(row);
     chatApplyToGrid(chatNoWhen(), [], new Set(shown.map(h => h.a)));
   };
-  bot.appendChild(chatEl('p', null, 'Não entendi direito. Talvez estes se pareçam:'));
+  bot.appendChild(chatEl('p', null, `Não entendi direito. ${lead ? `${lead} ` : ''}Talvez estes se pareçam:`));
   bot.appendChild(wrap);
   render();
   chatCount('mostradas');
@@ -490,21 +525,23 @@ function chatRefreshWelcome() {
 }
 
 const CHAT_REFUSALS = {
-  letra: 'O acervo não tem letras — só o áudio dos álbuns. Posso buscar por artista, título, época, gênero, andamento, humor ou instrumento.',
-  biografia: 'Não tenho biografias nem dados sobre a vida dos artistas — só o áudio dos álbuns (artista, título, ano e o som).',
-  plataforma: 'Isso é de outro serviço; aqui eu só busco e toco o que está no acervo.',
-  outra_midia: 'O acervo só tem áudio de álbuns: não tem vídeos, filmes, séries nem livros.',
-  tecnica_musical: 'Não ensino técnica nem teoria musical; busco e toco música do acervo.',
-  'clima/esporte/outros': 'Esse assunto está fora do acervo: eu só busco e toco música.',
-  impossivel: 'Esse pedido não dá para cumprir: nenhum álbum do acervo pode atendê-lo.',
-  contraditorio: 'Esse pedido se contradiz (duas qualidades que se excluem). Tente uma delas.',
-  conversa: 'Oi! Eu busco e toco música do acervo. Peça por artista, título, época, gênero, andamento ou humor.',
+  letra: 'Não tenho letras, só o áudio dos álbuns.',
+  biografia: 'Não tenho dados sobre a vida dos artistas.',
+  plataforma: 'Isso é de outro serviço. Aqui só busco e toco o acervo.',
+  outra_midia: 'Só tenho áudio de álbuns, sem vídeo, filme nem livro.',
+  tecnica_musical: 'Não ensino técnica musical. Busco e toco o acervo.',
+  'clima/esporte/outros': 'Esse assunto está fora do acervo.',
+  impossivel: 'Nenhum álbum do acervo pode atender esse pedido.',
+  contraditorio: 'Esse pedido se contradiz. Tente uma das partes.',
+  produto: 'Isso é sobre o chat, não sobre a música.',
+  idioma: 'Entendo melhor português.',
+  conversa: 'Oi! Eu busco e toco música do acervo.',
 };
 
 // One answer for a request the archive cannot do, with the engine's reasons in "por quê?".
-function chatRefuse(bot, q) {
+function chatRefuse(bot, q, it, raw) {
   bot.appendChild(chatEl('p', null, CHAT_REFUSALS[q.categoria_fora] || 'Isso o acervo não faz.'));
-  bot.appendChild(chatSuggestions(['samba lento', 'anos 70', 'me surpreenda']));
+  bot.appendChild(chatTryChips({ cat: q.categoria_fora, q, it, raw }));
   if (q.notas.length) {
     const d = chatEl('details', 'chat-why');
     d.appendChild(chatEl('summary', null, 'por quê?'));
@@ -546,6 +583,12 @@ function chatFacetHits(q, eng, base, fromTracks) {
   return { hits: r.hits.map(withTrack), relaxados: r.relaxados };
 }
 
+let _chatNomes = null;
+function chatNameWord() {
+  if (!_chatNomes || _chatNomes.albums !== albums) _chatNomes = { albums, f: consultaPalavrasDeNome(albums).nome };
+  return _chatNomes.f;
+}
+
 let _chatFila = Promise.resolve();
 function chatAsk(raw) {
   _chatFila = _chatFila.then(() => chatAskAsync(raw)).catch(e => console.error(e));
@@ -577,10 +620,10 @@ async function chatAskAsync(raw) {
   let facet = null;
   const eng = typeof consultaCarregar === 'function' ? await consultaCarregar() : null;
   if (eng) {
-    const q = consultaInterpretar(raw, eng.lex, w => chatTermFreq(w) > 0, w => { const n = chatTermFreq(w); return n > 0 && n <= 30; });
+    const q = consultaInterpretar(raw, eng.lex, w => chatTermFreq(w) > 0, chatNameWord());
     if (q.categoria_fora && q.categoria_fora !== 'comando') {
       if (q.categoria_fora === 'vago') { it.terms = []; it.pending = []; it.notes.push(...q.notas.map(n => [n[0], n[1]])); }
-      else { chatRefuse(bot, q); chatAdd(bot); return; }
+      else { chatRefuse(bot, q, it, raw); chatAdd(bot); return; }
     } else if (!eng.semFeatures && (consultaTemFiltro(q) || q.referencia || q.relativo)) {
       const gone = new Set([...q.consumidos, ...(q.referencia ? q.referencia.texto.split(' ') : [])]);
       it.terms = it.terms.filter(w => !gone.has(w));
@@ -600,10 +643,8 @@ async function chatAskAsync(raw) {
     it.notes.push([`palavras: ${it.terms.join(', ')}`, 'ainda não sei julgar isso como qualidade da música; procurei como palavra de título, artista ou faixa']);
   }
   if (!facet && chatWhenEmpty(it.when) && !it.terms.length && !it.random) {
-    bot.appendChild(chatEl('p', null, it.pending.length
-      ? `Ainda não sei filtrar por "${it.pending.join(', ')}". Posso procurar por artista, álbum, faixa ou época.`
-      : 'Não achei o que procurar nessa frase. Tente um artista, um título ou uma época, como "anos 70".'));
-    chatAddLookalikes(bot, it);
+    chatAddLookalikes(bot, it, it.pending.length ? `Ainda não sei filtrar por "${it.pending.join(', ')}".` : 'Não achei o que procurar nessa frase.');
+    bot.appendChild(chatTryChips({ it, raw }));
     chatAdd(bot);
     return;
   }
@@ -635,11 +676,16 @@ async function chatAskAsync(raw) {
       }
     }
     hits = facetInfo.hits;
-    it.ordem = 'ordenados pela força da evidência (medida no áudio antes da inferida e da cultural)';
+    it.ordem = 'ordem: medido no áudio, depois inferido, depois só texto';
     for (const r of facetInfo.relaxados || []) it.notes.push([`ignorei: ${r}`, 'o detector não mede isso; usei só o que dá para medir']);
     if (facetInfo.motivo) it.notes.push(['sem resultado', facetInfo.motivo]);
     if (hits.length) {
-      for (const e of (hits[0].evid || []).slice(0, 6)) it.notes.push([`1º resultado, ${e[0]}`, `${e[1]} [${chatKind(e)}]`]);
+      // Each audio filter said against the albums returned. It replaces the engine's one-line facet notes (same facts, no repetition).
+      const ex = consultaExplicarFiltros(facet.q, facet.eng.agg, hits, facetInfo.ref, facetInfo.relaxados || []);
+      if (ex.length) {
+        it.notes = it.notes.filter(n => !/^(sem )?(gênero|humor|andamento|instrumento|voz|formação):/.test(n[0]));
+        for (const [what, why, kind] of ex) it.notes.push([what, `${why} [${kind}]`]);
+      }
     }
   }
   if (!facet && !hits.length && it.terms.length > 1) {
@@ -657,16 +703,14 @@ async function chatAskAsync(raw) {
   const lost = facet ? (chatApplyToGrid(chatNoWhen(), [], new Set(hits.map(h => h.a))), { wordsLost: false, periodLost: false }) : chatApplyToGrid(it.when, it.terms);
   const gridNotes = [];
   if (lost.wordsLost) gridNotes.push('na grade ao lado só apliquei década/ano; com mais de uma palavra, a busca da grade (um trecho contínuo) não consegue expressar o pedido');
-  else gridNotes.push(facet ? 'a grade ao lado mostra exatamente estes álbuns' : 'a grade ao lado também foi filtrada');
+  else if (!facet) gridNotes.push('a grade ao lado também foi filtrada');
   if (lost.periodLost) gridNotes.push('a grade só entende uma década ou um ano; este período (várias décadas, intervalo) vale só na lista do chat');
-  const gridNote = gridNotes.join('; ');
+  const gridNote = gridNotes.join('; ');   // empty = no line
 
   if (!hits.length) {
     bot.appendChild(chatEl('p', null, facetInfo?.motivo ? `Não consegui: ${facetInfo.motivo}.` : 'Não achei nenhum álbum com tudo isso.'));
-    if (it.inherited && !chatWhenEmpty(it.when) && it.when.text.length) {
-      bot.appendChild(chatSuggestions([it.when.text.join(' ')]));   // same period, without the previous words
-    }
     if (spelling.length) chatAddSpelling(bot, raw, spelling);
+    bot.appendChild(chatTryChips({ q: facet?.q, it, raw, zero: true }));
     bot.appendChild(chatWhy(it, 0, gridNote));
     chatAdd(bot);
     return;

@@ -75,3 +75,49 @@ test('A11Y4: grid DOM order matches visual order after scrolling down and back u
   expect(idx.length).toBeGreaterThan(0);
   expect(idx).toEqual([...idx].sort((a, b) => a - b));
 });
+
+// Chat: boas-vindas com exemplos, uma recusa com chips, e uma resposta com o "por quê?" aberto (features do fixture de cenários).
+test.describe('chat', () => {
+  test.use({ serviceWorkers: 'block' });
+  const albumsGz = fs.readFileSync(path.join(__dirname, 'fixtures', 'cenarios-albums.json.gz'));
+  const featuresGz = fs.readFileSync(path.join(__dirname, 'fixtures', 'cenarios-features.json.gz'));
+  const gz = body => r => r.fulfill({ status: 200, headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body });
+  async function openChat(page) {
+    await page.addInitScript(() => localStorage.setItem('tocador-browse-collapsed', 'true'));
+    await page.route('**/uqt-albums.json.gz', gz(albumsGz));
+    await page.route('**/*-features.json.gz', gz(featuresGz));
+    await page.route('**/*-genres.json.gz', r => r.fulfill({ status: 404 }));
+    await page.route('**/capa-min.jpg', r => r.fulfill({ status: 404 }));
+    await page.goto('/?acervo=uqt');
+    await page.waitForSelector('.album-item');
+    await page.click('#btn-chat');
+    await expect(page.locator('.chat-msg.bot').first()).toContainText('medidos no áudio');
+  }
+  const ask = async (page, t) => {
+    const n = await page.locator('.chat-msg.bot').count();
+    await page.fill('#chat-input', t);
+    await page.press('#chat-input', 'Enter');
+    await expect(page.locator('.chat-msg.bot')).toHaveCount(n + 1);
+  };
+  const semViolacoes = async page => expect((await scan(page)).violations.map(v => `${v.id}: ${v.nodes.length} nodes`)).toEqual([]);
+
+  test('A11Y9: chat welcome and a refusal with example chips have no axe violations', async ({ page }) => {
+    await openChat(page);
+    await semViolacoes(page);
+    await ask(page, 'letra da música Construção');
+    await semViolacoes(page);
+  });
+
+  test('A11Y10: chat answer with results and "por quê?" open has no axe violations; chips reach 40px touch height', async ({ page }) => {
+    await openChat(page);
+    await ask(page, 'samba lento dos anos 60');
+    await page.locator('.chat-msg.bot').last().locator('summary').first().click();
+    await semViolacoes(page);
+    await ask(page, 'samba rapido anos 20');
+    const h = await page.locator('.chat-msg.bot').last().locator('.chat-chip').first().evaluate(el => el.getBoundingClientRect().height);
+    expect(h).toBeGreaterThanOrEqual(40);
+    await page.locator('.chat-msg.bot').last().locator('.chat-chip').first().focus();
+    const outline = await page.locator('.chat-msg.bot').last().locator('.chat-chip').first().evaluate(el => getComputedStyle(el).outlineStyle);
+    expect(outline).not.toBe('none');
+  });
+});
