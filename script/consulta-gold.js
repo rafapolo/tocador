@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const load = new Function(fs.readFileSync(path.join(ROOT, 'js/util.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'js/consulta-pt.js'), 'utf8')
-  + '\nreturn { consultaLexico, consultaInterpretar };');
-const { consultaLexico, consultaInterpretar } = load();
+  + '\nreturn { consultaLexico, consultaInterpretar, consultaPalavrasDeNome };');
+const { consultaLexico, consultaInterpretar, consultaPalavrasDeNome } = load();
 const onto = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/ontologia-musical.json'), 'utf8'));
 const lex = consultaLexico(onto);
 const fold = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -55,16 +55,45 @@ if (process.argv.includes('--erros')) {
   }
 }
 
-// Held-out sanity check: train.jsonl was NOT used to tune the rules. Family → expected type (A,B search; C reference; D refusal).
+// Held-out check: train.jsonl was NOT used to tune the rules. Family → expected type (A,B search; C reference; D refusal).
+// The word tests the browser gets from the loaded catalogue (known word / name word) are emulated with the uqt catalogue
+// when ../uqt is next to this repo; without it the numbers are for the parser alone.
 if (process.argv.includes('--train')) {
+  let known, name;
+  try {
+    const zlib = await import('node:zlib');
+    const raw = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(ROOT, '../uqt/data/uqt-albums.json.gz'))).toString('utf8'));
+    const fold2 = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const { createRequire } = await import('node:module'); createRequire(import.meta.url)('../js/acervo-format.js');
+    const albums = globalThis.decodeAcervo(raw).albums;
+    if (albums) {
+      const blobs = albums.map(a => fold2([a.title, a.artist, a.path, ...a.tracks.flatMap(t => [t.title, t.artists])].join(' | ')));
+      const cache = new Map();
+      const freq = w => { let n = cache.get(w); if (n === undefined) { n = 0; for (const b of blobs) if (b.includes(w)) n++; cache.set(w, n); } return n; };
+      known = w => freq(w) > 0;
+      name = consultaPalavrasDeNome(albums.map(a => ({ nameLower: fold2(a.title), artistsLower: fold2(a.artist), tracks: a.tracks.map(t => ({ titleLower: fold2(t.title) })) }))).nome;
+      console.log('(palavras do catálogo uqt emuladas)');
+    }
+  } catch (e) { console.log('(sem catálogo: só o parser)'); }
   const rows = fs.readFileSync(path.join(ROOT, 'data/qgen/train.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l));
   const esperado = { A: 'busca', B: 'busca', C: 'referencial', D: 'fora_do_dominio' };
-  const por = {};
-  for (const r of rows) {
-    if (r.quality === 'duvidoso' || !esperado[r.family]) continue;
-    const o = consultaInterpretar(r.q, lex);
-    const b = (por[r.family] ||= { ok: 0, n: 0 });
+  // Linhas pares ajustam as regras (podem ser lidas); linhas ímpares são o conjunto retido: nunca olhar os erros delas.
+  const sp = { ajuste: { por: {}, cat: {}, falso: 0, n: 0 }, retido: { por: {}, cat: {}, falso: 0, n: 0 } };
+  rows.forEach((r, idx) => {
+    if (r.quality === 'duvidoso' || !esperado[r.family]) return;
+    const S = idx % 2 ? sp.retido : sp.ajuste;
+    const o = consultaInterpretar(r.q, lex, known, name);
+    const b = (S.por[r.family] ||= { ok: 0, n: 0 });
     b.n++; if (o.tipo === esperado[r.family]) b.ok++;
+    const recusou = o.tipo === 'fora_do_dominio' && o.categoria_fora !== 'comando';
+    if (r.family === 'D') { const c = (S.cat[r.categoria] ||= { ok: 0, n: 0 }); c.n++; if (recusou) c.ok++; }
+    else { S.n++; if (recusou) S.falso++; if (idx % 2 === 0 && process.argv.includes('--falsos') && o.tipo === 'fora_do_dominio') console.log(`  falso fora [${r.family}/${o.categoria_fora}]: ${r.q}`); }
+    if (idx % 2 === 0 && process.argv.includes('--perdidos') && r.family === 'D' && !recusou && r.categoria.includes(process.argv[process.argv.indexOf('--perdidos') + 1])) console.log(`  perdida: ${r.q}`);
+  });
+  for (const [nome, S] of Object.entries(sp)) {
+    const dOk = Object.values(S.cat).reduce((x, c) => x + c.ok, 0), dN = Object.values(S.cat).reduce((x, c) => x + c.n, 0);
+    const fam = Object.entries(S.por).filter(([f]) => f !== 'D').map(([f, b]) => `${f} ${pct(b.ok / b.n)}`).join(' · ');
+    console.log(`${nome}: recusa correta (D) ${pct(dOk / dN)} (${dOk}/${dN}) | ${fam} | falsos "fora" em A+B+C ${pct(S.falso / S.n)} (${S.falso}/${S.n})`);
+    if (process.argv.includes('--categorias') && nome === 'ajuste') for (const [c, b] of Object.entries(S.cat)) console.log(`  D ${pct(b.ok / b.n).padStart(6)} ${b.ok}/${b.n}  ${c}`);
   }
-  for (const [fam, b] of Object.entries(por)) console.log(`treino (fora do ajuste) família ${fam} → ${esperado[fam]}: ${pct(b.ok / b.n)} (${b.ok}/${b.n})`);
 }

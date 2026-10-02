@@ -6,7 +6,7 @@ import { encodeFeatures } from '../script/build-features-web.js';
 const ROOT = path.join(import.meta.dir, '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const C = new Function(read('js/util.js') + '\n' + read('js/acervo-features.js') + '\n' + read('js/consulta-pt.js')
-  + '\nreturn { consultaLexico, consultaInterpretar, consultaAgregar, consultaFiltrar, consultaRelativo, consultaEvidencias, decodeFeatures, consultaWithin };')();
+  + '\nreturn { consultaLexico, consultaInterpretar, consultaAgregar, consultaFiltrar, consultaRelativo, consultaEvidencias, decodeFeatures, consultaWithin, consultaPalavrasDeNome };')();
 const onto = JSON.parse(read('data/ontologia-musical.json'));
 const lex = C.consultaLexico(onto);
 const Q = s => C.consultaInterpretar(s, lex);
@@ -176,5 +176,35 @@ describe('contra o acervo real (se os dados estiverem na máquina)', () => {
     expect(performance.now() - t0).toBeLessThan(100);
     expect(r.hits.length).toBeGreaterThan(20);
     for (const h of r.hits.slice(0, 20)) expect(ag.porAlbum.get(h.a.path.normalize('NFC')).bpm).toBeLessThan(110);
+  });
+});
+
+describe('recusa das negativas (M5)', () => {
+  const cat = s => { const q = Q(s); return q.tipo === 'fora_do_dominio' ? q.categoria_fora : q.tipo; };
+  test.each([
+    ['como trocar a pele do pandeiro', 'tecnica_musical'], ['qual a diferença entre violão de aço e nylon', 'tecnica_musical'],
+    ['música cuja letra fala de cachaça', 'letra'], ['letras de amor não correspondido', 'letra'], ['quem canta "eu sou da roça"', 'letra'],
+    ['como ouvir sem anúncios', 'plataforma'], ['manda pro meu WhatsApp', 'plataforma'],
+    ['podcast sobre história do samba', 'outra_midia'], ['indica um romance de Jorge Amado', 'outra_midia'],
+    ['quantos gols o Pelé fez', 'clima/esporte/outros'], ['como tirar mancha de vinho do sofá', 'clima/esporte/outros'],
+    ['obrigado!', 'conversa'], ['você é um robô?', 'conversa'], ['hahaha', 'conversa'],
+    ['toca a música que vai ganhar o Grammy de 2040', 'impossivel'], ['o disco que o Cartola gravaria hoje', 'impossivel'],
+    ['algo grave e agudo ao mesmo tempo', 'contraditorio'], ['samba sem samba', 'contraditorio'],
+    ['sugestão de modelo em pt-br menor no navegador?', 'produto'], ['play something sad', 'idioma'],
+    ['qualquer coisa', 'vago'], ['sei lá, manda algo', 'vago'],
+  ])('%s → %s', (frase, esperado) => { expect(cat(frase)).toBe(esperado); });
+
+  test('buscas parecidas NÃO são recusadas', () => {
+    for (const f of ['samba lento dos anos 60', 'violão dedilhado, folk de 2012', 'samba de 1987 com letra sobre broa', 'cartola',
+      'Desafinado, só que mais calmo', 'Beth Carvalho sem letra, só instrumental', 'rap boom bap', 'mpb melancólica', 'pra ver o mar em silêncio'])
+      expect(Q(f).tipo).not.toBe('fora_do_dominio');
+  });
+
+  test('"quem é" um nome do catálogo não bloqueia a recusa; um nome sozinho continua busca', () => {
+    const nome = C.consultaPalavrasDeNome([{ nameLower: 'construcao', artistsLower: 'chico buarque', tracks: [] }]).nome;
+    expect(nome('chico')).toBe(true);
+    expect(nome('salario')).toBe(false);
+    expect(C.consultaInterpretar('chico', lex, () => true, nome).tipo).toBe('busca');
+    expect(C.consultaInterpretar('qual o salário mínimo', lex, () => true, nome).tipo).toBe('fora_do_dominio');
   });
 });

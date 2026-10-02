@@ -56,15 +56,47 @@ const CONSULTA_FORA_FORTE = [
   ['plataforma', /\b(spotify|youtube|deezer|apple music|tidal|soundcloud|napster|last ?fm|baixar|download|netflix|assinatura|assinar|premium|android|iphone|alexa|chromecast|radio fm|login|aplicativo|app|nota fiscal|ingressos?|comprar|tiktok|upload|legalmente|impressora|toque do celular|na radio|conta no)\b/],
   ['tecnica_musical', /\b(afinar|afino|afinacao|partituras?|tablaturas?|pestana|metronomo|semitom|tampo|encordoamento|trocar as cordas|escala pentatonica|compasso (2|3|4|6)\b|como (leio|transpor|afina|estudar|se faz|fazer batida|fazer o ritmo)|cifra de|quantas cordas|tirar o som certo)/],
   ['letra', /\b(qual (e )?a letra|letra d[aoe]s? (musica|cancao)|tem a frase|a frase ['"]|a que tem ['"]|qual (e )?a do refrao|refrao ['"]|(musica|cancao|aquela|a que|que|qual musica) (que )?(fala|diz|cita|conta|tem um verso)( de| do| da| sobre| que|[^a-z]| o nome))/],
-  ['outra_midia', /\b(novelas?|videogames?|quadrinhos?|gibis?|programa de tv|musical da broadway|audiolivros?|minisserie)\b|\b(tem|qual|quero)\b(?!.*\btrilha\b).{0,25}\b(documentarios?|podcasts?|series?|livros?|clipes?|filmes?|videos?)\b|\bpra (assistir|ver)\b(?!.*\btrilha\b)|\bem video\b/],
+  ['outra_midia', /^(?!.*\b(trilha|capa|do filme|da novela|da serie)\b).*\b(podcasts?|documentarios?|romances?|livros?|animes?|mangas?)\b/],
+  ['outra_midia', /\b(novelas?|videogames?|quadrinhos?|gibis?|programa de tv|musical da broadway|audiolivros?|minisserie)\b|\b(tem|qual|quero)\b(?!.*\btrilha\b).{0,25}\b(documentarios?|podcasts?|series?|livros?|clipes?|filmes?|videos?)\b|\bpra (assistir|ver) (um |uma |o |a )?(filme|serie|video|documentario|show|novela|jogo|anime)\b(?!.*\btrilha\b)|\bem video\b/],
   ['impossivel', /\b(depois de morrer|estivesse vivo|vou compor|ainda vai sair|que ainda nao foi gravada|nunca termine|arco iris)\b/],
+  // About the chat / the project itself, not about music ("sugestão de modelo em pt-br", "btn do chat ao lado do radio", "como funciona isso?").
+  ['produto', /\b(modelo (em|de|so|menor)|ontologia|vetor semantico|nosso proprio vetor|destilar|embeddings?|hugg?inface|github|servidor|btn (do|da|no|na)|botao do chat|machine learning|ml|tools?|tasks?|features? extraidas|relacionaveis|quantos? (albuns|discos|musicas|faixas|artistas) (tem|ha|existem)|como funciona (isso|o chat|aqui|esse site)|como (usar|uso) (isso|o chat)|caixa em pt|como assim)\b/],
+  // Plain English with no Portuguese concept ("play something sad", "are there music tools"): said so, instead of guessing.
+  ['idioma', /^(play|are|is|do|does|can|could|show|give|i want|i need|what|where|how|something|some|the|any|please|tell)\b.*\b(the|something|music|songs?|sad|there|you|me|like|some|tools?|song|tracks?)\b/],
+  // Added in M5 (tuned on half of data/qgen/train.jsonl, the other half is held out). Frames, not single words.
+  ['impossivel', /\b(do futuro|ainda nao (existe|foi|saiu|nasceu|aconteceu)|ainda (nem )?nasce\w*|ainda vai (ser|ganhar|cantar|tocar|nascer|sair)|vai (ganhar|cantar|tocar) (o |a |no |na |em )?(grammy|copa|ultimo)|inedit[oa] d[eoa]|gravaria|compos ontem|em (2[1-9]\d\d|20[3-9]\d)\b|de (2[1-9]\d\d|20[3-9]\d)\b|inteligencia artificial em|nao tem faixa|antes da invencao|ha mil anos|gravacao original de|1500|semana que vem|ano que vem|que o (brasil|mundo) inteiro vai|nao foi (feito|feita|tocad[oa]|gravad[oa]|lancad[oa])|ainda nao foi)\b/],
+  ['tecnica_musical', /^(como|qual (e )?(a |o )?(melhor|diferenca|jeito)|quais (as |os )?(melhores|cordas)|o que (e|sao) (um|uma|o|a|os|as) |posso aprender|quanto custa (uma )?aula)\b.*\b(toc\w+|fac\w+|faz\w*|trocar|montar|regular|posicion\w+|ensaiar|passar|achar|encontrar|respirar|decorar|limpar|colocar|marcar|segurar|aprender|estudar|usar|escolher|escrever|abrir|fechar|improvis\w+|transpor|ler|cantar|compor|arranjo|nota|bend|slap|ostinato|acordes?|escalas?|palheta|captador|surdina|calo|braco|violao|guitarra|cavaquinho|bateria|pandeiro|sax|trompete|piano|teclado|baixo)\b|\b(acordes?|partituras?|tablaturas?|cifras?|bemol|sustenido|transpor|pentatonica|solfejo|improvisar|palheta|captador|surdina|afinar|afinacao|aula de (violao|guitarra|piano|bateria|canto|cavaquinho)|seminimas?|tempos? (fortes?|fracos?)|ciclo das quintas|modo (dorico|frigio|lidio|mixolidio|eolio)|drop d|pedal de sustain|garageband|microfone|solfej\w+|hz|desafinad\w+|encord\w+|pele d[ao]|teoria musical|aprender (a )?(tocar|piano|violao|bateria|teoria|cantar)|estudar musica|corda de|dedos doendo|bater o samba|como (que )?toca\w*|tecnicamente|que dedo|cantar mais (agudo|grave)|escala (maior|menor)|posicoes|pegada d[oa] pandeiro|frequencia da voz)\b/],
+  ['biografia', /\b(ainda (faz show|toca|canta|esta junto|ta junto|vive|e vivo|existe)|quantos anos|tem quantos anos|nasceu|casou|casad[oa]|namorand\w+|namorad[oa]|torce|gay|polemicas?|esposa|alcoolatra|vegetarian\w+|vida (pessoal|amorosa|privada)|irmaos|filhos|morreu|faleceu|ganha por show|primeiro amor|professor de|quem foi|saiu por briga|ta junta|esta junta|religiao|patrimonio|altura d[oa]|netos|pai d[oe]|mae d[oe]|vocalista dessa|dessa banda|essa (cantora|banda|cantor)|foto d[oe]|filho d[oe])\b/],
 ];
 
+// Only when no music concept is in the sentence ("samba de 1987 com letra sobre broa" is a search, "música cuja letra fala de broa" is not).
+const CONSULTA_FORA_SEM_CONCEITO = [
+  ['impossivel', /\b(que nunca (foi|foram|saiu|sairam|existiu|ouviu|ouvi|ouviram|lancou|gravou|terminou|terminaram|vai)|nunca (ouvid[oa]|existiu)|que (ele|ela|eles) nunca|que ninguem (nunca |consegue |conhece |ouviu )|ninguem (nunca |consegue |conhece |ouviu )|compos (o|a|um|uma) |compost[oa] (por|pelos?|pela)|sonhei|sonhou|a cor d|som d[eoa] (um |uma )?(vazio|infinito|sentimento|gelo|buraco|pensamento|foto|big bang)|anjos|dimensoes|marte|dinossauros?|mortos|primeira festa da terra|do mundo, a que|a mais (triste|bonita|feia) (do mundo|que existe|do futuro)|sem som algum|sem ouvir|esqueci (o|a)|do jeito exato|ultimo dia|mais bonita que existe)\b/],
+  ['conversa', /^(opa|fala|salve|e ai|bah|tche|oie|boa tarde|beleza|valeu|brigad\w+|obrigad\w+|tenha uma|foi so|so (um )?teste|parabens|gostei|que (legal|fofo|bacana|massa)|ai que bom|nossa|nada nao|tchau|ate (mais|logo)|haha\w*|rsrs\w*|kk\w*|hmm?|ok)\b|\b(voce|vc|vcs|voces|seu|sua|vocês) (tem|sente|aprende|dorme|e (um|uma)|entende|gosta|se chama|nome|criador|familia|funciona por dentro)\b|\b(seu nome|se chama|quem criou|quem e seu|robo|inteligencia artificial|me conta uma piada|piada|mais devagar|primeira vez|tudo certo|tranquilo\?|firmeza|esta funcionando|ta funcionando|cade todo mundo|todo mundo dormindo|agradeco|ajudou|ajuda de ontem|trabalho de voces)\b/],
+  ['letra', /\b(cuja letra|na letra|a letra (diz|fala|e|tem|menciona|descreve)|letras? (sobre|com|em que|falando|de protesto|romantica|engracada|que)|trecho|pedaco (da|de) (letra|musica)|lembro (de|so) (uma letra|um pedaco|um trecho)|que comeca com ['"]|(musicas?|cancao|cancoes|faixas?) (que )?(fal(a|am|e|em)|cit(a|am|e|em)|mencion(a|am|e|em)|cont(a|am)|tem um verso|cant(a|am) (sobre|que|de))\b|em que (o|a|ele|ela) (cantor|cantora)? ?(canta|conversa|diz|fala|pede)|cite|mencion(a|e|am)\w*)\b/],
+  ['plataforma', /\b(posso|consigo|da pra|como) (ouvir|assistir|ver|tocar|colocar|baixar|compartilhar|pagar|gravar)\b.*\b(no|na|pelo|pela|em|com|sem|meu|minha)\b|\b(sem anuncios?|anuncios?|pen drive|whatsapp|telegram|discord|instagram|facebook|twitter|story|stories|kindle|e ?mail|shazam|picpay|pix|cupom|desconto|torrent|flac|alta resolucao|despertador|contratar|streaming|transmissao|compartilh\w+|radio (online|am|cultura|nova)|sintoniz\w+|toca discos|vendem?|compro|pago|pagar|site|link)\b|\b(tem|qual|vai ter) show\b|\bshow em\b/],
+  ['outra_midia', /\b(anime|manga|desenho animado|romance|poesia|poemas?|poeta|cordel|revista|stand ?up|sitcom|comedia|vlog|palestra|ted|canal|episodios?|cinema|games?|radionovela|reportagem|critica|jornal|assistir|youtube)\b(?!.*\b(trilha|samba|choro|rock|forro|musica)\b)/],
+];
+
+// Filler and social words: never a name from the catalogue, never a reason to read a sentence as a search.
+const CONSULTA_VAGAS = new Set('a aberto acaso achado agora ahh ahn ai aleatoria aleatorio algo algum alguma ali alo alto ao aquela aqui aquilo as assim ate bacana bagunca barulhinho bem boa boas bom bonitinho bonito bons bora bota brasa cada cade caixa casa classico coisa coisas coisinha com comigo comum da dar de decide deixa descobertas descobrir desconhecido destaque dica diferente diga diz do e eae eh ei eita em escolha escolhe escolher especial especifico essa essas esse esses estranho eu faixa famoso favor favorito faz fica ficar fim fora fundo ha hein hm hmm hoje impressiona impressione interessante isso joga joia la lado legal lembrei leve mais manda mandar mande manha massa me meio melhor menos mesmo mexe mexer mim mostra mostrar musica musicas nada nao ne negocio nem nova novo num nunca o oi olha os ou outra outras outro ouvi ouvido ouvidos ouvir para pena pensa pensar pf pfv pode pois por pouco pra pressao qq qqr qual qualquer que queria quero quiser random rapidinho rara rola sabe se sei sem ser serve servir seu sim sla so solta som sons sua sugestao surpreende surpresa ta tal tanto tarde tbm tem tinha tipo to toca tocadas tocado tocando tocar topa toque tudo ue um uma umas unico uns vai valha vamos ver verdade vez voce obrigado obrigada brigadao brigada valeu salve alo oie ola tchau parabens gostei adoro amei fofo projeto trabalho ajuda ajudou ontem depois volto saudades engracado funcionando dorme todo mundo alguem linha doido dia lindo'.split(' '));
+const REFCTX = /\b(sem letra|so (o |a )?(instrumental|parte instrumental)|mesma (regiao|epoca|pegada|estilo)|e estilo|so que|que lembre|na mesma|da mesma|versao|mais (pesad|calm|lent|anim|energia|acustic|rapid)\w*|com mais)\b/;
 const CONSULTA_COMANDOS = {
   pause: 'pausar', pausa: 'pausar', pausar: 'pausar', resume: 'continuar', continua: 'continuar', continuar: 'continuar', play: 'continuar',
   proxima: 'proxima', proximo: 'proxima', next: 'proxima', anterior: 'anterior', voltar: 'anterior', stop: 'pausar', parar: 'pausar',
   eta: 'status', status: 'status', rodando: 'status', progresso: 'status',
 };
+
+// "Is this word a name from the catalogue?" — the sentence is then a search, never a refusal ("elis", "pixinguinha").
+// A name is a WHOLE word of an artist or album title found in at most 30 albums: a substring test over every track
+// (what the term search uses) calls "salario" or "dentista" a name and blocks refusals.
+// `albums`: the player's album list (nameLower, artistsLower). Built once per list; returns { nome(w) }.
+function consultaPalavrasDeNome(albums) {
+  const tok = s => String(s || '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 3);
+  const titulo = new Map();
+  for (const a of albums) for (const w of new Set([...tok(a.nameLower), ...tok(a.artistsLower)])) titulo.set(w, (titulo.get(w) || 0) + 1);
+  return { nome: w => { const n = titulo.get(w) || 0; return n > 0 && n <= 30; } };
+}
 
 const _consultaNorm = s => fold(s).replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 
@@ -240,14 +272,25 @@ function consultaInterpretar(raw, lex, isKnownWord, isNameWord) {
   const comConceito = periodoAntes || consultaVarrer(all, lex, isKnownWord).some(h => !(h.facet === 'humor' && h.id === 'romântico' && all.length < 3));
   const entidadeCedo = _consultaEntidade(raw, lex, true);
   // A word that names something in the catalogue (an artist, a title: "elis", "pixinguinha") makes the sentence a search.
-  const nome = all.some(w => w.length >= 4 && isNameWord?.(w));
-  for (const [cat, re] of [...CONSULTA_FORA_FORTE, ...(comConceito ? CONSULTA_FORA.filter(x => x[0] === 'contraditorio') : CONSULTA_FORA)]) {
+  const nome = all.some(w => w.length >= 4 && !CONSULTA_VAGAS.has(w) && isNameWord?.(w));
+  for (const [cat, re] of [...CONSULTA_FORA_FORTE, ...(comConceito ? CONSULTA_FORA.filter(x => x[0] === 'contraditorio') : [...CONSULTA_FORA_SEM_CONCEITO, ...CONSULTA_FORA])]) {
     if (!re.test(t)) continue;
-    if (nome && (cat === 'conversa' || cat === 'vago')) continue;
+    if (REFCTX.test(t) && (cat === 'tecnica_musical' || cat === 'biografia' || cat === 'letra')) continue;   // "Desafinado, só que mais calmo": a title, not a question
+    if (nome && (cat === 'vago' || (cat === 'conversa' && all.length > 5))) continue;
+    if (cat === 'biografia' && entidadeCedo) { /* a named person plus a biographical word */ }
     if (cat === 'biografia' && !entidadeCedo && !/\b(biografia|quando (nasceu|morreu|se formou)|onde nasceu|nome (verdadeiro|real)|faleceu|enterro)\b/.test(t)) continue;
-    if (cat === 'conversa' && (all.length > 4 || /\b(samba|choro|rock|forro|jazz|mpb|anos?)\b/.test(t)) && !/^(oi|ola|eai|e ai)\b[^a-z]*$/.test(t)) continue;
+    if (cat === 'conversa' && all.length > 2 && (nome || /\b(quero|ouvir|gostaria|toca|bota|album|disco|faixa|artista)\b/.test(t)) && !/^(oi|ola|eai|e ai)\b[^a-z]*$/.test(t)) continue;
+    if (cat === 'conversa' && (all.length > 7 || /\b(samba|choro|rock|forro|jazz|mpb|anos?)\b/.test(t)) && !/^(oi|ola|eai|e ai)\b[^a-z]*$/.test(t)) continue;
     q.tipo = 'fora_do_dominio'; q.categoria_fora = cat; q.conf = 0.8;
-    q.notas.push(['fora do alcance', `parece ${cat.replace('_', ' ')} — o acervo só tem áudio de álbuns (artista, título, ano e características do som)`, 'cultural']);
+    q.notas.push(['fora do alcance', `parece ${cat.replace('_', ' ')}; o acervo só tem áudio de álbuns`, 'cultural']);
+    return q;
+  }
+
+  // Lyrics: "letras de amor", "versos sobre saudade", "a canção do 'amor, eu quero…'" — a mood word is no music concept here.
+  const semGenero = !periodoAntes && !consultaVarrer(all, lex, isKnownWord).some(h => ['genero', 'instrumento', 'formacao', 'andamento'].includes(h.facet));
+  if (semGenero && /\b(letras?|lyrics|versos?|texto cantado|estrofe|palavras (mais usadas|sobre)|(musicas?|cancao|cancoes|faixas?) (que )?(fal(a|am|e|em)|cit(a|am)|cant(a|am)) |que (se )?(diz|cante|canta) ['"]|cant(ava|avam) ['"]|quem canta ['"]|tem canção que fale|(lembro|so lembro) (que |do |da |de ))\b/.test(fold(raw).replace(/[“”«»]/g, '"')) && !REFCTX.test(t) && !q.referencia) {
+    q.tipo = 'fora_do_dominio'; q.categoria_fora = 'letra'; q.conf = 0.7;
+    q.notas.push(['fora do alcance', 'pedido sobre o texto cantado; o acervo não indexa letras', 'cultural']);
     return q;
   }
 
@@ -335,6 +378,25 @@ function consultaInterpretar(raw, lex, isKnownWord, isNameWord) {
   // "sem voz" negated cantada == instrumental
   if (q.excluir.voz) { q.voz = q.excluir.voz === 'cantada' ? 'instrumental' : 'cantada'; ids.voz.add(q.voz); q.excluir.voz = null; }
 
+  // 4a. contradictions between opposite words in one sentence (M5): "triste e muito alegre", "silêncio com bateria alta", "grave e agudo".
+  const _tem = re => re.test(t);
+  const PARES = [
+    [/\b(leve|suave|sussurr\w+|delicad\w+|baixinh\w+|silenci\w+|minimalista|pluma)\b/, /\b(pesad\w+|barulh\w+|ruidos\w+|berro|gritad\w+|mil camadas|adrenalina|mosh)\b/],
+    [/\b(grave|graves)\b/, /\b(agud[oa]s?|fininh\w+)\b/],
+    [/\b(rouc[oa]s?)\b/, /\b(limp[oa]s?|cristalin\w+)\b/],
+    [/\b(curt[oa]s?|segundos)\b/, /\b(long[oa]s?|minutos de solo|40 minutos|vinte minutos|duplo)\b/],
+    [/\b(agitad\w+|animad\w+|acelerad\w+)\b/, /\b(dormir|velorio|funeral)\b/],
+    [/\b(antig\w+|velh\w+)\b/, /\b(novissim\w+|nov[oa]s? de verdade)\b/],
+  ];
+  const hit = PARES.filter(([a, b]) => _tem(a) && _tem(b)).length;
+  if (hit && !q.referencia && !q.relativo) {
+    q.tipo = 'fora_do_dominio'; q.categoria_fora = 'contraditorio'; q.conf = 0.6;
+    q.notas.push(['pedido contraditório', 'duas qualidades que se excluem na mesma faixa (ex.: triste e alegre ao mesmo tempo, grave e agudo, com e sem voz)', 'medido']);
+    return q;
+  }
+  const _autoRef = /\b(\w+) sem \1\b/.test(t) || /\bsem (nenhum )?(\w+) (nem|e sem) (nenhum )?(\w+)\b.*\bsem\b/.test(t) || /\bsilencio\b.*\bbateria\b|\bbarulheira silenciosa\b|\bmesm[oa] \w+, mas diferente\b/.test(t);
+  if (_autoRef) { q.tipo = 'fora_do_dominio'; q.categoria_fora = 'contraditorio'; q.conf = 0.6; q.notas.push(['pedido contraditório', 'o pedido se nega a si mesmo', 'medido']); return q; }
+
   // 4. contradictions
   const h = q.humor;
   const conflita = (h.includes('calmo') && h.includes('agressivo'))
@@ -357,13 +419,22 @@ function consultaInterpretar(raw, lex, isKnownWord, isNameWord) {
   const periodo = /\b(19|20)\d{2}\b|\banos? \d|\bdecada|\bseculo\b/.test(t);
   const musical = /\b(musicas?|album|albuns|disco|discos|faixas?|cancao|cancoes|artistas?|bandas?|cantor[a]?|cantora|som|sons|ouvir|tocar|toca|playlist|show|grupo|compositor|sambista|ritmo|batida|melodia|instrumento|gravad[oa]|acervo)\b/.test(t);
   const pergunta = /^(como|qual|quais|quem|onde|por ?que|o que|quanto|quantos|quantas|vai|me (ajuda|indica|diz|fala|conta|explica)|tem (algum|alguma|como)|da pra|posso|consigo|aceitam|preciso|quero (ver|saber|comprar|assistir|ler|fazer|aprender)|pode)\b/.test(t) || /\?\s*$/.test(raw.trim()) || /\b(quem|qual|quanto|onde|por que)\b/.test(t) || /^(dicas|ajuda|me da|me de)\b/.test(t);
+  // A question frame no music request uses ("como tirar mancha", "quem inventou o avião", "quanto tempo leva…"): a name-like
+  // word in it ("vinho", "avião" are in some album titles) does not make it a search. Only a music word or a concept does.
+  const molde = /^(como (\w+(ar|er|ir|or)|faco|funciona|se|eu|posso|faz)|quem (inventou|ganhou|descobriu|e o presidente|venceu|escreveu)|quanto (tempo|custa|e|vale|sai)|quantos? (gols|anos de|dias|tem)|quantas? (calorias|horas)|que horas|pra que serve|posso (levar|tomar|usar|fazer|comer|pagar)|preciso (de|pra)|dicas? (pra|de|para)|qual (e )?(o|a) (melhor|capital|cep|cidade|time|preco|valor|distancia|diferenca)|onde (fica|compro|encontro|achar)|quando (e|sai|comeca|acaba|vence)|o que (eu )?(faco|fazer|comer|e bom)|tempo de (cozimento|viagem)|horario de|capital d|lista de compras|receita d|ingredientes|escreve|traduz|me ajuda (a|com|pra)|ta (frio|calor|chovendo)|tem (greve|transito|trafego|fila))\b/.test(t);
+  const tema = /\b(imposto|irpf|fgts|inss|sus|fies|enem|vestibular|concurso|curriculo|emprego|demissao|chefe|aluguel|locatario|salario|13o|ferias|seguro|banco digital|cartorio|cep|passaporte|metro|onibus|transito|greve|aviao|voo|gols?|brasileirao|libertadores|selecao|bbb|f1|escalacao|previsao|temperatura|umidade|lua cheia|horoscopo|dengue|gripe|vacina|dentista|remedio|soluco|dieta|emagrecer|cachorro|pet|churrasco|feijao|moqueca|bolo|pao|queijo|ovo|cozimento|receita|ingredientes|sobremesa|geladeira|windows|bitcoin|dolar|selic|presidente|ministro|governo|prefeito|eleicao|redacao|equacao|capital da|reforma|mancha|desentupir|lavar|estacionar)\b/.test(t);
+  if ((molde || tema) && !q.conf && !musical && q.tipo === 'busca') {
+    q.tipo = 'fora_do_dominio'; q.categoria_fora = 'clima/esporte/outros'; q.conf = 0.6;
+    q.notas.push(['fora do alcance', 'pergunta ou pedido sobre outro assunto: nada na frase fala de música, gênero, época, andamento ou humor', 'cultural']);
+    return q;
+  }
   if (!q.conf && !periodo && !musical && !nome && pergunta && all.length >= 3 && q.tipo === 'busca') {
     q.tipo = 'fora_do_dominio'; q.categoria_fora = 'clima/esporte/outros'; q.conf = 0.5;
     q.notas.push(['fora do alcance', 'pergunta sobre outro assunto: nada na frase fala de música, gênero, época, andamento ou humor', 'cultural']);
     return q;
   }
-  const vagas = new Set(['alguma', 'algum', 'qualquer', 'um', 'uma', 'ai', 'me', 'escolhe', 'escolha', 'nem', 'sei', 'coisa', 'algo', 'musica', 'quero', 'surpresa', 'tanto', 'faz', 'musicas', 'o', 'a']);
-  if (!q.conf && !nome && q.resto.length && q.resto.length <= 4 && q.resto.every(w => vagas.has(w))) {
+  const vagas = CONSULTA_VAGAS;
+  if (!q.conf && q.resto.length && q.resto.length <= 5 && q.resto.every(w => vagas.has(w))) {
     q.tipo = 'fora_do_dominio'; q.categoria_fora = 'vago'; q.conf = 0.3;
     q.notas.push(['pedido vago', 'sem época, gênero, humor, andamento nem nome para filtrar', 'cultural']);
   }
@@ -501,7 +572,7 @@ function _consultaGenero(agg, ag, a, id) {
   if (agg.generosMedidos.has(id) && ag?.n) {
     const share = ag.gen.get(id) || 0;
     const ok = share >= CONSULTA_GENERO_MIN || ag.top1 === id;
-    audio = { ok, score: Math.min(1, share / 0.5), evid: [`gênero ${id}`, `inferido das classes Discogs de ${ag.n} faixa(s): ${Math.round(share * 100)}% da massa de probabilidade${ag.top1 === id ? ' (é o gênero principal do álbum)' : ''} — não é rótulo de gravadora`, 'inferido', Math.min(1, share / 0.4)] };
+    audio = { ok, score: Math.min(1, share / 0.5), evid: [`gênero ${id}`, `inferido das classes Discogs de ${ag.n} faixa(s): ${Math.round(Math.min(1, share) * 100)}% da massa de probabilidade${ag.top1 === id ? ' (é o gênero principal do álbum)' : ''} — não é rótulo de gravadora`, 'inferido', Math.min(1, share / 0.4)] };
     if (ok) return audio;
   }
   // The audio classes read some archives badly (samba heard as baião); a folder, title, artist or track that
@@ -651,6 +722,88 @@ function consultaEvidencias(q, agg, a, pre) {
   const ag = _consultaAgg(agg, a);
   const extra = ag?.n && !evid.some(e => e[0].startsWith('andamento')) ? [['andamento do álbum', `BPM mediano ${ag.bpm} (confiança ${ag.bpm_conf.toFixed(1)})`, 'medido', Math.min(1, ag.bpm_conf / 3)]] : [];
   return [...evid, ...extra];
+}
+
+// ── "por quê?": each audio filter in a sentence, said against the audio of the albums actually returned ────────────
+// -> [[what, why, kind]] (kind: medido | inferido | cultural). Plain pt-BR, one short line per filter; the caller renders it with textContent.
+const _CONSULTA_NOME_PROB = { voice: 'voz', dance: 'dançável', acoustic: 'acústico', electronic: 'eletrônico', happy: 'alegre', sad: 'triste', relaxed: 'relaxado', aggressive: 'agressivo', party: 'festivo' };
+const _cf = (x, d = 2) => String(+Number(x).toFixed(d)).replace('.', ',');
+const _cp = x => `${Math.round(x * 100)}%`;
+const _cmed = a => (a.length ? _consultaMediana(a) : 0);
+const _cn = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+function consultaExplicarFiltros(q, agg, hits, ref, relaxados = []) {
+  const out = [];
+  if (!agg || agg.semFeatures || !hits.length) return out;
+  const N = hits.length;
+  const ags = hits.map(h => _consultaAgg(agg, h.a)).filter(x => x?.n);
+  const ativo = (tipo, id) => !relaxados.includes(`${tipo}: ${id}`);
+  const nos = N === 1 ? 'No álbum' : `Nos ${N} álbuns${ags.length < N ? ` (${ags.length} com áudio analisado)` : ''}`;
+  const faixasTotal = hits.reduce((s, h) => s + (h.a.tracks?.length || 0), 0);
+  const faixasSem = hits.reduce((s, h) => s + Math.max(0, (h.a.tracks?.length || 0) - (_consultaAgg(agg, h.a)?.n || 0)), 0);
+  const semAnalise = faixasSem ? ` Faixas sem análise de áudio, fora das medidas: ${faixasSem} de ${faixasTotal}.` : '';
+  const doTexto = (tipo, id) => hits.filter(h => (h.evid || []).some(e => e[0] === `${tipo} ${id}` && e[2] === 'cultural')).length;
+  const textoNote = (tipo, id) => { const c = doTexto(tipo, id); return c ? ` ${c} ${c === 1 ? 'entrou' : 'entraram'} só pela palavra no texto (cultural).` : ''; };
+
+  if (q.andamento && ativo('andamento', q.andamento)) {
+    const id = q.andamento, faixa = _consultaFaixaBpm(agg.onto, id);
+    const bpms = ags.map(x => x.bpm).filter(Boolean);
+    const baixa = ags.reduce((s, x) => s + x.confs.filter(c => c < CONSULTA_BPM_CONF_BAIXA).length, 0);
+    const crit = !faixa ? 'faixa de BPM da ontologia' : faixa[0] <= 0 ? `BPM até ${faixa[1]}` : faixa[1] >= 300 ? `BPM a partir de ${faixa[0]}` : `BPM de ${faixa[0]} a ${faixa[1]}`;
+    const relat = (id === 'lento' && agg.bpmCortes) ? ` Também entram os 15% mais lentos do acervo (até ${Math.round(agg.bpmCortes.lento)} BPM).`
+      : (id === 'acelerado' && agg.bpmCortes) ? ` Também entram os 15% mais rápidos do acervo (a partir de ${Math.round(agg.bpmCortes.acelerado)} BPM).` : '';
+    out.push([`andamento "${id}"`,
+      `${crit}.${relat} ${nos}: BPM mediano ${_cf(_cmed(bpms), 0)} (de ${_cf(Math.min(...bpms), 0)} a ${_cf(Math.max(...bpms), 0)}).`
+      + `${baixa ? ` ${baixa} ${baixa === 1 ? 'faixa tem' : 'faixas têm'} BPM pouco confiável (< ${_cf(CONSULTA_BPM_CONF_BAIXA, 1)}) e só ${baixa === 1 ? 'conta' : 'contam'} por meio ou dobro de tempo.` : ''}${semAnalise}`
+      + ' O detector pode errar por meio ou dobro de tempo.', 'medido']);
+  }
+  for (const id of q.humor) {
+    if (!ativo('humor', id)) continue;
+    const h = agg.onto.humores.find(x => x.id === id);
+    if (!h?.medido || !Object.keys(h.sinais || {}).length) { out.push([`humor "${id}"`, `O áudio não mede "${id}". Achei só a palavra no texto de ${doTexto('humor', id)} ${doTexto('humor', id) === 1 ? 'álbum' : 'álbuns'}. Pouca certeza.`, 'cultural']); continue; }
+    const partes = Object.entries(h.sinais).map(([k, nivel]) => {
+      const c = agg.cortes[k], v = ags.map(x => x.p[k]);
+      const passa = v.filter(x => (nivel === 'alto' ? x >= c.alto : nivel === 'baixo' ? x <= c.baixo : x >= c.baixo && x <= c.alto)).length;
+      const corte = nivel === 'alto' ? `≥ ${_cf(c.alto)}` : nivel === 'baixo' ? `≤ ${_cf(c.baixo)}` : `de ${_cf(c.baixo)} a ${_cf(c.alto)}`;
+      return `${_CONSULTA_NOME_PROB[k] || k} ${corte} (mediana ${_cf(_cmed(v))}; ${_cp(v.length ? passa / v.length : 0)} passam)`;
+    });
+    out.push([`humor "${id}"`, `${nos}, média das faixas: ${partes.join('; ')}. Corte = 30% mais altos/baixos do acervo.${semAnalise} São probabilidades de um modelo.`, 'medido']);
+  }
+  for (const id of q.generos) {
+    if (!ativo('genero', id)) continue;
+    if (!agg.generosMedidos.has(id)) { const c = doTexto('gênero', id); out.push([`gênero "${id}"`, `O áudio não tem classe para ${id}. Achei a palavra no texto de ${c} ${c === 1 ? 'álbum' : 'álbuns'}. Pouca certeza.`, 'cultural']); continue; }
+    const share = ags.map(x => Math.min(1, x.gen.get(id) || 0)), top = ags.filter(x => x.top1 === id).length;
+    out.push([`gênero "${id}"`, `Vale ≥ ${_cp(CONSULTA_GENERO_MIN)} da massa Discogs do álbum, ou ser o principal. ${nos}: ${top} de ${ags.length} com ${id} como principal; participação mediana ${_cp(_cmed(share))}.${textoNote('gênero', id)}${semAnalise} Inferido do som; não é rótulo de gravadora.`, 'inferido']);
+  }
+  for (const id of q.instrumentos) {
+    if (!ativo('instrumento', id)) continue;
+    const def = agg.onto.instrumentos.find(x => x.id === id);
+    if (!def?.medido) { const c = doTexto('instrumento', id); out.push([`instrumento "${id}"`, `O detector não reconhece ${id}. Achei a palavra no texto de ${c} ${c === 1 ? 'álbum' : 'álbuns'}. Pouca certeza.`, 'cultural']); continue; }
+    const fr = ags.map(x => x.inst.get(id) || 0);
+    out.push([`instrumento "${id}"`, `Vale ${id} entre os 3 mais fortes em ≥ ${_cp(CONSULTA_INST_MIN)} das faixas. ${nos}: mediana de ${_cp(_cmed(fr))}.${textoNote('instrumento', id)}${semAnalise} O detector confunde timbres parecidos.`, 'inferido']);
+  }
+  if (q.voz && ativo('voz', q.voz)) {
+    const v = ags.map(x => x.p.voice);
+    out.push([`voz "${q.voz}"`, `Vale voz média ${q.voz === 'cantada' ? '≥' : '<'} 0,5. ${nos}: mediana ${_cf(_cmed(v))} (de ${_cf(Math.min(...v))} a ${_cf(Math.max(...v))}).${semAnalise} Coro e fala podem passar por voz.`, 'medido']);
+  }
+  for (const id of q.formacoes) {
+    if (!ativo('formacao', id)) continue;
+    const c = doTexto('formação', id);
+    out.push([`formação "${id}"`, `Combino voz e instrumentos detectados (voz e violão = voz provável, violão frequente, pouca bateria). ${N} ${N === 1 ? 'álbum' : 'álbuns'}${c ? `; ${c} só pelo texto` : ''}. Inferência, com certeza média.`, 'inferido']);
+  }
+  const rel = q.referencia?.relacao || q.relativo;
+  if (rel && ref && /^mais_|^menos_/.test(rel)) {
+    const r = _consultaAgg(agg, ref);
+    const bpmRel = rel === 'mais_lento' || rel === 'mais_animado';
+    if (r?.n) {
+      const alvo = { mais_acustico: 'acoustic', menos_acustico: 'acoustic', mais_calmo: 'relaxed', mais_pesado: 'aggressive', mais_dancante: 'dance', menos_dancante: 'dance', mais_triste: 'sad', mais_alegre: 'happy' }[rel];
+      const vals = ags.map(x => (bpmRel ? x.bpm : x.p[alvo]));
+      const d = bpmRel ? 0 : 2;
+      out.push([`comparação "${rel.replace('_', ' ')}"`,
+        `${bpmRel ? `BPM ≥ 8 ${rel === 'mais_lento' ? 'abaixo' : 'acima'} do de "${ref.name}" (${_cf(r.bpm, 0)})` : `${_CONSULTA_NOME_PROB[alvo]} ≥ 0,1 ${rel.startsWith('menos') ? 'abaixo' : 'acima'} do de "${ref.name}" (${_cf(r.p[alvo])})`}. ${nos}: ${bpmRel ? 'BPM mediano' : 'mediana'} ${_cf(_cmed(vals), d)} (de ${_cf(Math.min(...vals), d)} a ${_cf(Math.max(...vals), d)}).${semAnalise} Compara médias por álbum.`, 'medido']);
+    }
+  }
+  return out;
 }
 
 const consultaRotuloConfianca = c => (c >= 0.7 ? 'alta' : c >= 0.4 ? 'média' : 'baixa');
