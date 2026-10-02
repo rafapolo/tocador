@@ -84,11 +84,6 @@
                             <path d="M14 9 L18 4" stroke-linecap="round"/>
                         </svg>
                     </a>
-                    <button id="btn-explorar" title="Explorar o acervo (E)" class="btn-explorar" aria-label="Explorar o acervo" aria-pressed="false" aria-controls="explorar-panel">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16" aria-hidden="true">
-                            <line x1="4" y1="20" x2="4" y2="12"/><line x1="10" y1="20" x2="10" y2="5"/><line x1="16" y1="20" x2="16" y2="9"/><line x1="22" y1="20" x2="22" y2="15"/>
-                        </svg>
-                    </button>
                     <button id="btn-shortcuts" title="Atalhos de teclado" class="btn-shortcuts" aria-label="Ver atalhos de teclado">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16" aria-hidden="true">
                             <circle cx="12" cy="12" r="10"/>
@@ -120,6 +115,10 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true"><path d="M12 3h6a2 2 0 0 1 2 2v6a2 2 0 0 1-.6 1.4l-8 8a2 2 0 0 1-2.8 0l-6-6a2 2 0 0 1 0-2.8l8-8A2 2 0 0 1 12 3Z"/><circle cx="16.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/></svg>
                         <span>Gêneros</span>
                     </button>
+                    <button id="btn-explorar" class="ex-tab" role="tab" aria-selected="false" aria-controls="explorar-panel" title="Explorar por características de áudio (E)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg>
+                        <span>Explorar</span>
+                    </button>
                 </div>
                 <div class="browse-search-wrap">
                     <div class="browse-search-inner">
@@ -139,6 +138,20 @@
                         <span class="browse-acervo-label">Explorar</span>
                         <button id="btn-explorar-close" class="browse-close" aria-label="Fechar painel">✕</button>
                     </div>
+                </div>
+                <div class="browse-tabs" role="tablist" aria-label="Navegar por">
+                    <button class="ex-tab" role="tab" data-ex-tab="artists" aria-selected="false">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke-linecap="round"/></svg>
+                        <span>Artistas</span>
+                    </button>
+                    <button class="ex-tab" role="tab" data-ex-tab="genres" aria-selected="false" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true"><path d="M12 3h6a2 2 0 0 1 2 2v6a2 2 0 0 1-.6 1.4l-8 8a2 2 0 0 1-2.8 0l-6-6a2 2 0 0 1 0-2.8l8-8A2 2 0 0 1 12 3Z"/><circle cx="16.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+                        <span>Gêneros</span>
+                    </button>
+                    <button class="ex-tab active" role="tab" aria-selected="true" aria-controls="explorar-panel">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg>
+                        <span>Explorar</span>
+                    </button>
                 </div>
                 <div class="browse-search-wrap">
                     <div class="browse-search-inner">

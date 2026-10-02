@@ -48,7 +48,8 @@ class VirtualGrid {
     container.addEventListener('scroll', this._onScroll, { passive: true });
   }
 
-  setItems(items) {
+  // `quiet`: a live refinement (the Explorar sliders) — no entrance animation, or the grid flashes on every tick.
+  setItems(items, quiet = false) {
     this.items = items;
     // Only ~30 items are in the DOM; the label tells assistive tech the real total.
     this.container.setAttribute('aria-label', `Álbuns (${items.length})`);
@@ -56,7 +57,7 @@ class VirtualGrid {
     this._pool = [];
     this.inner.replaceChildren();
     this.container.scrollTop = 0;
-    this._animateNext = true;
+    this._animateNext = !quiet;
     this._layout();
   }
 

@@ -23,7 +23,11 @@ async function boot(page, { semFeatures = false } = {}) {
   await page.waitForSelector('.album-item', { timeout: 8000 });
 }
 
-const abrir = async page => { await page.click('#btn-explorar'); await page.waitForSelector('.ex-feat'); };
+const abrir = async page => {
+  if (page.viewportSize().width <= 768) await page.click('#btn-browse');   // no mobile a aba fica na gaveta
+  await page.click('#btn-explorar');
+  await page.waitForSelector('.ex-feat');
+};
 
 // Move uma alça por teclado: o range nativo aceita setas e Home/End.
 const ajustar = (page, nome, qual, valor) => page.locator('.ex-feat', { hasText: nome }).locator(`input.ex-${qual}`)
@@ -34,10 +38,21 @@ test('abre e fecha, trocando com o painel de navegação', async ({ page }) => {
   await expect(page.locator('#explorar-panel')).toBeHidden();
   await abrir(page);
   await expect(page.locator('#browse-panel')).toBeHidden();
-  await expect(page.locator('#btn-explorar')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#explorar-panel .ex-tab.active')).toContainText('Explorar');
   await page.click('#btn-explorar-close');
   await expect(page.locator('#explorar-panel')).toBeHidden();
   await expect(page.locator('#browse-panel')).toBeVisible();
+});
+
+test('a aba Explorar fica em browse-tabs e as abas do painel voltam à lista', async ({ page }) => {
+  await boot(page);
+  await expect(page.locator('.browse-tabs #btn-explorar')).toBeVisible();
+  await expect(page.locator('.header-stats #btn-explorar')).toHaveCount(0);
+  await abrir(page);
+  await page.locator('#explorar-panel [data-ex-tab="artists"]').click();
+  await expect(page.locator('#explorar-panel')).toBeHidden();
+  await expect(page.locator('#browse-panel')).toBeVisible();
+  await expect(page.locator('.browse-tab[data-tab="artists"]')).toHaveClass(/active/);
 });
 
 test('atalho E abre e Esc fecha', async ({ page }) => {
@@ -51,7 +66,7 @@ test('atalho E abre e Esc fecha', async ({ page }) => {
 test('mostra os grupos e a cobertura da análise', async ({ page }) => {
   await boot(page);
   await abrir(page);
-  for (const g of ['Ritmo', 'Clima', 'Timbre', 'Som']) await expect(page.locator('.explorar-sec summary', { hasText: g })).toBeVisible();
+  for (const g of ['Ritmo', 'Clima', 'Timbre']) await expect(page.locator('.explorar-sec summary', { hasText: g })).toBeVisible();
   await expect(page.locator('.ex-resumo')).toContainText('álbuns com análise de áudio');
   await expect(page.locator('#explorar-apply')).toHaveText('ver todos os álbuns');
 });
@@ -84,6 +99,19 @@ test('arrastar a alça com o mouse funciona e a alça fica visível', async ({ p
   // A alça herdava a cor preta do input e sumia no fundo escuro.
   const cor = await hi.evaluate(el => getComputedStyle(el, '::-webkit-slider-thumb').backgroundColor);
   expect(cor).not.toBe('rgb(0, 0, 0)');
+});
+
+test('arrastar não dispara a animação de troca da grade (piscava a cada passo)', async ({ page }) => {
+  await boot(page);
+  await abrir(page);
+  await page.evaluate(() => {
+    window.__swaps = 0;
+    new MutationObserver(ms => ms.forEach(m => { if (m.target.classList.contains('swapping')) window.__swaps++; }))
+      .observe(document.querySelector('.albums-grid-inner'), { attributes: true, attributeFilter: ['class'] });
+  });
+  for (const v of [60, 80, 100, 110, 120]) await ajustar(page, 'Andamento', 'lo', v);
+  await expect(page.locator('#search-count')).toHaveClass(/visible/);
+  expect(await page.evaluate(() => window.__swaps)).toBe(0);
 });
 
 test('filtros combinam por E e a faixa impossível esvazia a grade', async ({ page }) => {
@@ -119,7 +147,7 @@ test('escolher uma década depois limpa os filtros de características', async (
 test('a busca do painel esconde grupos sem resultado', async ({ page }) => {
   await boot(page);
   await abrir(page);
-  await page.fill('#explorar-search', 'volume');
+  await page.fill('#explorar-search', 'festa');
   await expect(page.locator('.explorar-sec:visible')).toHaveCount(1);
   await expect(page.locator('.ex-feat:visible')).toHaveCount(1);
 });
@@ -135,8 +163,7 @@ test.describe('mobile', () => {
   test.use({ viewport: { width: 390, height: 780 } });
   test('vira gaveta, aplica pelo botão do rodapé', async ({ page }) => {
     await boot(page);
-    await page.click('#btn-explorar');
-    await page.waitForSelector('.ex-feat');
+    await abrir(page);
     await expect(page.locator('#explorar-panel')).toHaveClass(/open/);
     await expect(page.locator('#browse-scrim')).toHaveClass(/open/);
     await ajustar(page, 'Andamento', 'lo', 100);

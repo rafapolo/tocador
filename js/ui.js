@@ -366,7 +366,7 @@ function getDecades() {
   return _cachedDecades;
 }
 
-function filterAlbums() {
+function filterAlbums(quiet = false) {
   const q = fold(searchQuery);
   const ak = activeArtist ? fold(activeArtist) : null;
   filteredAlbums = albums.filter(album => {
@@ -390,11 +390,11 @@ function filterAlbums() {
   });
 
   const inner = virtualGrid?.inner;
-  if (inner) {
+  if (inner && !quiet) {
     inner.classList.add('swapping');
     requestAnimationFrame(() => requestAnimationFrame(() => inner.classList.remove('swapping')));
   }
-  virtualGrid.setItems(filteredAlbums);
+  virtualGrid.setItems(filteredAlbums, quiet);
 
   _countEl ??= document.getElementById('search-count');
   _clearBtn ??= document.getElementById('search-clear');

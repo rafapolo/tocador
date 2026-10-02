@@ -1,4 +1,4 @@
-// Painel "Explorar": filtra os álbuns por características de áudio (andamento, dança, clima, timbre, volume…).
+// Painel "Explorar": filtra os álbuns por características de áudio (andamento, dança, clima, timbre).
 // Classic script: shares ui.js's global scope. Loaded after browse.js and acervo-features.js; everything runs at call time.
 //
 // Os valores por álbum vêm das features por faixa (<acervo>-features.json.gz): média das faixas analisadas
@@ -13,7 +13,7 @@ let _exFiltros = {};              // chave -> [lo, hi] (só os que estão fora d
 let _exVoz = 'any';               // 'any' | 'com' | 'sem'
 let _exQuery = '';
 let _exCtl = {};                  // chave -> { lo, hi, out, hist, sec, def }
-let _exRaf = 0;
+let _exTimer = 0;
 
 const EX_BINS = 24;
 const EX_GRUPOS = [
@@ -29,13 +29,9 @@ const EX_GRUPOS = [
     { k: 'aggressive', nome: 'Agressivo', min: 0, max: 100, step: 1, un: '%' },
   ]],
   ['Timbre', true, [
+    { k: 'voice', nome: 'Voz', voz: true },
     { k: 'acoustic', nome: 'Acústico', min: 0, max: 100, step: 1, un: '%' },
     { k: 'electronic', nome: 'Eletrônico', min: 0, max: 100, step: 1, un: '%' },
-    { k: 'voice', nome: 'Voz', voz: true },
-  ]],
-  ['Som', false, [
-    { k: 'loud', nome: 'Volume', min: -40, max: -5, step: 1, un: ' dB' },
-    { k: 'dur', nome: 'Duração da faixa', min: 1, max: 8, step: 0.5, un: ' min' },
   ]],
 ];
 const EX_PROBS = ['voice', 'dance', 'acoustic', 'electronic', 'happy', 'sad', 'relaxed', 'aggressive', 'party'];
@@ -77,7 +73,7 @@ function _exCarregar() {
     if (!f) return null;
     const n = db.albums.length;
     const vals = {};
-    for (const k of ['bpm', 'loud', 'dur', ...EX_PROBS]) vals[k] = new Float32Array(n).fill(NaN);
+    for (const k of ['bpm', ...EX_PROBS]) vals[k] = new Float32Array(n).fill(NaN);
     const idx = new Map();
     let row = 0, analisados = 0;
     db.albums.forEach((a, i) => {
@@ -87,10 +83,7 @@ function _exCarregar() {
       if (!rows.length) return;
       analisados++;
       vals.bpm[i] = _exMediana(rows.map(r => f.bpm[r]));
-      vals.loud[i] = -rows.reduce((s, r) => s + f.loud[r], 0) / rows.length;
       for (const k of EX_PROBS) vals[k][i] = (rows.reduce((s, r) => s + f[k][r], 0) / rows.length / 255) * 100;
-      const ds = a.tracks.map(t => t.duration).filter(d => d > 0);
-      if (ds.length) vals.dur[i] = ds.reduce((s, d) => s + d, 0) / ds.length / 60;
     });
     const rr = await _exBuscar('data/resumo-acervo.json');
     let resumo = null;
@@ -125,7 +118,7 @@ function _exPassa(i) {
 }
 
 function _exFaixaTexto(d, lo, hi) {
-  const f = x => (d.k === 'dur' ? String(x).replace('.', ',') : String(x)) + d.un;
+  const f = x => String(x) + d.un;
   if (lo <= d.min && hi >= d.max) return 'qualquer';
   if (lo <= d.min) return `até ${f(hi)}`;
   if (hi >= d.max) return `${f(lo)}+`;
@@ -138,33 +131,43 @@ function _exRotuloAtivo(d) {
   return `${d.nome} ${_exFaixaTexto(d, lo, hi)}`;
 }
 
-function _exAplicar() {
-  _exRaf = 0;
+// A contagem do rodapé acompanha o arrasto na hora; a grade só troca quando o arrasto dá uma pausa
+// (e sem a animação de entrada), senão os álbuns piscam a cada passo do slider.
+function _exCalcular() {
+  const set = new Set();
+  for (const a of albums) {
+    const i = _exDados.idx.get(a.path.normalize('NFC'));
+    if (i !== undefined && _exPassa(i)) set.add(a);
+  }
+  return set;
+}
+
+function _exAplicar(quiet) {
+  clearTimeout(_exTimer);
   if (!_exDados) return;
   const ativos = _exAtivos();
   if (!ativos.length) {
-    if (activeAlbumSet) { activeAlbumSet = null; activeAlbumSetLabel = ''; filterAlbums(); }
+    if (activeAlbumSet) { activeAlbumSet = null; activeAlbumSetLabel = ''; filterAlbums(quiet); }
   } else {
     resetFacets('features');
-    const set = new Set();
-    for (const a of albums) {
-      const i = _exDados.idx.get(a.path.normalize('NFC'));
-      if (i !== undefined && _exPassa(i)) set.add(a);
-    }
-    activeAlbumSet = set;
+    activeAlbumSet = _exCalcular();
     activeAlbumSetLabel = ativos.length === 1 ? _exRotuloAtivo(ativos[0]) : `${ativos.length} características`;
-    filterAlbums();
+    filterAlbums(quiet);
   }
   _exAtualizarRodape();
 }
 
-function _exAgendar() {
+function _exAgendar(imediato) {
   _exAtualizarUI();
-  if (!_exRaf) _exRaf = requestAnimationFrame(_exAplicar);
+  clearTimeout(_exTimer);
+  if (imediato) { _exAplicar(false); return; }
+  _exAtualizarRodape(true);
+  _exTimer = setTimeout(() => _exAplicar(true), 160);
 }
 
 // Chamado por resetFacets() quando outra faceta passa a mandar na grade.
 function explorarReset() {
+  clearTimeout(_exTimer);
   _exFiltros = {};
   _exVoz = 'any';
   if (_exDados) { _exSincronizar(); _exAtualizarUI(); _exAtualizarRodape(); }
@@ -226,7 +229,7 @@ function _exSlider(d) {
   wrap.append(_exEl('div', 'ex-track'), lo, hi);
   sec.append(head, hist, wrap);
   if (med !== null) {
-    const m = _exEl('div', 'ex-feat-med', `mediana ${(d.k === 'dur' ? med.toFixed(1).replace('.', ',') : Math.round(med))}${d.un}`);
+    const m = _exEl('div', 'ex-feat-med', `mediana ${Math.round(med)}${d.un}`);
     sec.append(m);
   }
   _exCtl[d.k] = { lo, hi, out, hist, d };
@@ -244,7 +247,7 @@ function _exVozCtl() {
   for (const [v, t] of [['any', 'tanto faz'], ['com', 'com voz'], ['sem', 'instrumental']]) {
     const lab = _exEl('label', 'ex-radio');
     const r = _exEl('input'); r.type = 'radio'; r.name = 'ex-voz'; r.value = v; r.checked = v === _exVoz;
-    r.addEventListener('change', () => { _exVoz = v; _exAgendar(); });
+    r.addEventListener('change', () => { _exVoz = v; _exAgendar(true); });
     lab.append(r, _exEl('span', null, t));
     grp.append(lab);
   }
@@ -311,7 +314,7 @@ function _exAtualizarUI() {
     b.addEventListener('click', () => {
       if (d.voz) _exVoz = 'any'; else delete _exFiltros[d.k];
       _exSincronizar();
-      _exAgendar();
+      _exAgendar(true);
     });
     chips.append(b);
   }
@@ -323,12 +326,12 @@ function _exAtualizarUI() {
   }
 }
 
-function _exAtualizarRodape() {
+function _exAtualizarRodape(vivo) {
   if (!_exApply) return;
   const ativos = _exAtivos().length;
   if (!_exDados) { _exApply.hidden = true; return; }
   _exApply.hidden = false;
-  const n = activeAlbumSet ? activeAlbumSet.size : null;
+  const n = !ativos ? null : vivo ? _exCalcular().size : activeAlbumSet ? activeAlbumSet.size : null;
   _exApply.textContent = ativos && n !== null ? `ver ${n.toLocaleString('pt-BR')} álbum${n === 1 ? '' : 's'}` : 'ver todos os álbuns';
 }
 
@@ -361,12 +364,19 @@ async function renderExplorar() {
   _exAtualizarRodape();
 }
 
+// A faixa de abas daqui espelha a do painel de navegação (a aba Gêneros só existe com índice de gêneros).
+function _exSincronizarAbas() {
+  const g = document.querySelector('.browse-tab[data-tab="genres"]');
+  const mine = _exPanel?.querySelector('[data-ex-tab="genres"]');
+  if (g && mine) { mine.hidden = g.hidden; mine.disabled = g.disabled; }
+}
+
 function openExplorar() {
   if (!_exPanel) return;
   closeBrowseDrawer();
   _exLayout.classList.add('explorar-mode');
   _exPanel.hidden = false;
-  _exBtn?.setAttribute('aria-pressed', 'true');
+  _exSincronizarAbas();
   if (isMobile()) {
     _exPanel.classList.add('open');
     document.getElementById('browse-scrim')?.classList.add('open');
@@ -381,7 +391,6 @@ function closeExplorar() {
   _exPanel.hidden = true;
   _exPanel.classList.remove('open');
   document.getElementById('browse-scrim')?.classList.remove('open');
-  _exBtn?.setAttribute('aria-pressed', 'false');
   _exBtn?.focus();
 }
 
@@ -394,7 +403,13 @@ document.addEventListener('DOMContentLoaded', () => {
   _exBtn = document.getElementById('btn-explorar');
   _exSearch = document.getElementById('explorar-search');
   _exApply = document.getElementById('explorar-apply');
-  _exBtn?.addEventListener('click', toggleExplorar);
+  _exBtn?.addEventListener('click', openExplorar);
+  _exPanel?.querySelectorAll('[data-ex-tab]').forEach(b => b.addEventListener('click', () => {
+    if (b.disabled) return;
+    closeExplorar();
+    if (isMobile()) openBrowseDrawer();
+    switchBrowseTab(b.dataset.exTab);
+  }));
   document.getElementById('btn-explorar-close')?.addEventListener('click', closeExplorar);
   document.getElementById('browse-scrim')?.addEventListener('click', closeExplorar);
   document.getElementById('btn-browse')?.addEventListener('click', closeExplorar);

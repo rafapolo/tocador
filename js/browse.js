@@ -190,10 +190,10 @@ function renderActiveFilterChip() {
 // cleared along with its URL param and its chrome. This only ever clears, so
 // callers assign their own facet afterwards. Omit `keep` to clear all five.
 function resetFacets(keep) {
-  if (keep !== 'features' && activeAlbumSet) {
+  if (keep !== 'features') {
     activeAlbumSet = null;
     activeAlbumSetLabel = '';
-    if (typeof explorarReset === 'function') explorarReset();
+    if (typeof explorarReset === 'function') explorarReset();   // também cancela um filtro ainda no debounce
   }
   if (keep !== 'search' && searchQuery) {
     searchQuery = '';
