@@ -2286,7 +2286,7 @@ audio {
 .explorar-sec > summary:hover { color: var(--color-accent); }
 .explorar-sec > summary:focus-visible { outline-offset: -2px; }
 .explorar-sec > summary::-webkit-details-marker { display: none; }
-.explorar-sec > summary::before { content: '▸'; width: 0.8em; }
+.explorar-sec > summary::before { content: '▸'; width: 1.1em; font-size: 1.15rem; line-height: 1; }
 .explorar-sec[open] > summary::before { content: '▾'; }
 .ex-sec-n:not(:empty) { background: var(--color-accent); color: var(--color-bg); border-radius: 999px; min-width: 1.4em; padding: 0 5px; font-size: 0.68rem; letter-spacing: 0; text-align: center; }
 .ex-feat { padding: 4px 14px 12px; }
