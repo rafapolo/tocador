@@ -509,6 +509,26 @@ document.addEventListener('DOMContentLoaded', async function () {
 // hazard (see CLAUDE.md, "v2 payload"). Drop the service-worker caches and reload
 // once to fetch the current player; if that doesn't help, say so instead of
 // leaving an empty grid.
+// ?acervo= takes an alias or a catalog URL. A bare word that isn't an alias used to be
+// fetched as a relative URL ("homis" → /homis → 404, empty grid, #640): match it
+// case-insensitively and by prefix ("homis", "Hominis" → homi), otherwise drop it so
+// the default acervo loads. The address bar is rewritten to the canonical alias.
+function normalizeAcervoParam(raw) {
+  const param = raw?.trim();
+  if (!param) return null;
+  if (KNOWN_ACERVOS[param]) return param;
+  if (/[/.:]/.test(param)) return param; // a URL or path: pass through untouched
+  const word = param.toLowerCase();
+  const key = Object.keys(KNOWN_ACERVOS).find(k => k === word || word.startsWith(k) || (word.length >= 3 && k.startsWith(word)))
+    ?? Object.entries(KNOWN_ACERVOS).find(([, e]) => fold(e.label).replace(/\s+/g, '').startsWith(fold(word)))?.[0]
+    ?? null;
+  const qs = new URLSearchParams(location.search);
+  if (key) qs.set('acervo', key); else qs.delete('acervo');
+  const q = qs.toString();
+  history.replaceState(history.state, '', `${location.pathname}${q ? `?${q}` : ''}${location.hash}`);
+  return key;
+}
+
 async function handleCatalogDecodeError(err, container) {
   const RELOAD_KEY = 'tocador-stale-reload';
   if (err?.code === 'UNSUPPORTED_ACERVO_VERSION' && !sessionStorage.getItem(RELOAD_KEY)) {
@@ -543,7 +563,7 @@ async function handleCatalogDecodeError(err, container) {
   virtualGrid = new VirtualGrid(albumsList);
 
   // Async data: ?acervo=<url|alias> selects the archive; defaults to UQT if omitted
-  const acervoParam = albumPageFromPath()?.alias ?? new URLSearchParams(location.search).get('acervo');
+  const acervoParam = albumPageFromPath()?.alias ?? normalizeAcervoParam(new URLSearchParams(location.search).get('acervo'));
   if (acervoParam) {
     const entry = KNOWN_ACERVOS[acervoParam];
     sessionStorage.setItem('acervo', entry ? entry.data : decodeURIComponent(acervoParam));
@@ -568,12 +588,33 @@ async function handleCatalogDecodeError(err, container) {
 
   if (genresUrl) genreLoading = true;
 
+  let catalogFailed = false;
   const [json, genresRaw] = await Promise.all([
-    decompressGzUrl(dataUrl),
+    decompressGzUrl(dataUrl).catch(err => {
+      // A dead catalog URL (third-party ?acervo= gone, typo'd link) must not leave a
+      // skeleton forever, nor stick in sessionStorage so every reload fails again.
+      console.warn('[tocador] catalog fetch failed:', dataUrl, err);
+      catalogFailed = true;
+      return null;
+    }),
     genresUrl
       ? decompressGzUrl(genresUrl).then(t => JSON.parse(t)).catch(() => null)
       : Promise.resolve(null),
   ]);
+  if (catalogFailed) {
+    sessionStorage.removeItem('acervo');
+    sessionStorage.removeItem('acervo-base');
+    skeletonEl.remove();
+    const p = document.createElement('p');
+    p.className = 'album-not-found';
+    p.textContent = 'Não foi possível carregar o acervo. ';
+    const a = document.createElement('a');
+    a.href = `${APP_ROOT}?acervo=${DEFAULT_ACERVO}`;
+    a.textContent = `Abrir ${KNOWN_ACERVOS[DEFAULT_ACERVO].label}`;
+    p.append(a);
+    albumsList.replaceChildren(p);
+    return;
+  }
   // Accepts both the v1 (row) and v2 (columnar) payloads; always yields v1 shape.
   await ensureDecodeAcervo();
   try {
