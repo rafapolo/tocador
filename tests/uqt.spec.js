@@ -409,6 +409,18 @@ test('I36: mobile drawer close button hides the drawer', async ({ page }) => {
   await expect(page.locator('#mobile-track-drawer')).not.toHaveClass(/open/);
 });
 
+test('I37: tapping the artist in the mobile drawer header searches for that artist', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await gotoWithFixture(page);
+  await page.locator('.album-item').nth(1).click();
+  await expect(page.locator('#mobile-track-drawer')).toHaveClass(/open/);
+  const link = page.locator('#drawer-album-meta .artist-link').first();
+  const artist = await link.getAttribute('data-artist');
+  await link.click();
+  await expect(page.locator('#search-input')).toHaveValue(artist);
+  await expect(page.locator('#mobile-track-drawer')).not.toHaveClass(/open/);
+});
+
 // ── J. Bonus Edge Cases ───────────────────────────────────────────────────
 
 test('J37: album with no cover shows placeholder on album header', async ({ page }) => {

@@ -75,7 +75,10 @@ function renderMobileDrawer(album) {
   }
 
   if (titleEl) titleEl.textContent = album.name;
-  if (metaEl)  metaEl.textContent  = `${album.artists} · ${album.year} · ${album.tracks.length} faixas`;
+  if (metaEl) {
+    metaEl.innerHTML = `${artistLinksHTML(album.artists)} · ${escapeHtml(album.year)} · ${album.tracks.length} faixas`;
+    attachArtistHandlers(metaEl);
+  }
   if (coverEl) loadCoverImage(coverEl, album.cover);
   if (!listEl) return;
 
