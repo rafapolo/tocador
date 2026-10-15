@@ -134,8 +134,29 @@ Gera o `.json.gz` a partir de uma pasta de MP3s. Ver seção acima.
 Faz upload dos arquivos `.mp3` para o bucket S3.
 
 ```bash
-ARCHIVE_DIR=/caminho/musicas bun sync-to-bucket.js
+ARCHIVE_DIR=/caminho/musicas S3_PREFIX=acervo/ bun sync-to-bucket.js --dry-run   # lista o que subiria
+ARCHIVE_DIR=/caminho/musicas S3_PREFIX=acervo/ bun sync-to-bucket.js
 ```
+
+Lista o prefixo inteiro no bucket e sobe só o que falta ou mudou de tamanho; uma chave
+que já existe em NFC ou em NFD conta como enviada. Nunca apaga nada no bucket. Sem
+`S3_PREFIX` (nem `ACERVO_JSON`), o prefixo cai para `uqt/`.
+
+### `merge-acervo.js` — Acrescentar álbuns a um catálogo publicado
+
+Para quando o acervo inteiro não está em disco: rode o `generate-albums` só sobre uma
+pasta de staging com os álbuns novos e junte o resultado ao catálogo publicado.
+
+```bash
+bun merge-acervo.js publicado.json.gz novos.json.gz --dry-run   # o que entra, o que é rejeitado
+bun merge-acervo.js publicado.json.gz novos.json.gz [saida.json.gz]
+```
+
+O gerador só detecta duplicatas entre as pastas que vê, então o merge rejeita álbum novo
+cujo `path`, (artista, título, ano) ou artista + tracklist (títulos e durações) já existe
+no catálogo. Recalcula `meta.hours`, mantém o formato publicado (v2 via
+`convert-acervo-v2.js`) e recusa gravar se algum álbum antigo mudar ou perder o slug da
+sua página (`albumSlugs()` numera colisões pela posição).
 
 Requer `.env` com `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_BUCKET`.
 

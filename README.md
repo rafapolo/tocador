@@ -59,7 +59,7 @@ Cole em qualquer página para incorporar a rádio:
 - **Ordenação de artistas**: ordem alfabética por locale pt-BR — letras antes de números e símbolos
 - **Animação de entrada**: cards de álbum expandem ao entrar no viewport
 - **Ocultar artista no card**: ao filtrar por artista, o nome some dos cards para reduzir ruído visual
-- **Sitemap.xml**: gerado automaticamente pelo `generate-albums` para indexação por buscadores
+- **Páginas por álbum e sitemaps**: gerados no deploy (`script/build-album-pages.js`) a partir dos catálogos publicados, para indexação por buscadores e prévias de link com capa
 - **Scripts de enriquecimento**: `enrich-singles-audd` (reconhecimento de áudio via AudD) e `fix-singles-itunes` (metadados de singles via iTunes)
 - **Cache .gz com ETag**: invalidação instantânea do catálogo ao fazer deploy sem quebrar cache do browser
 
@@ -178,6 +178,27 @@ ARCHIVE_DIR=/path/to/musicas bun script/sync-to-bucket.js
 # 3. Redimensionar e fazer upload das capas (200px)
 ARCHIVE_DIR=/path/to/musicas bun script/resize-cover-images.js
 ```
+
+### Acrescentar álbuns sem o volume de música
+
+O áudio publicado vive só no S3: não é preciso ter o acervo inteiro em disco para
+publicar álbuns novos. Os novos ficam numa pasta de staging, sobem para o bucket e
+entram no catálogo publicado por merge, sem regenerá-lo:
+
+```bash
+# catálogo parcial, só com as pastas novas (meta copiada do catálogo publicado)
+./script/generate-albums/target/release/generate-albums ~/staging/unzips novos.json.gz \
+  --title "…" --subtitle "…" --base-url https://cdn.exemplo.com/acervo --s3-prefix acervo/
+
+# o que já está no catálogo (path, artista/título/ano ou artista+tracklist) fica de fora
+bun script/merge-acervo.js publicado.json.gz novos.json.gz --dry-run
+S3_PREFIX=acervo/ ARCHIVE_DIR=~/staging/unzips node script/sync-to-bucket.js --dry-run
+S3_PREFIX=acervo/ ARCHIVE_DIR=~/staging/unzips node script/sync-to-bucket.js
+bun script/merge-acervo.js publicado.json.gz novos.json.gz
+```
+
+O merge mantém o formato (v1 ou v2) e só grava se todos os álbuns antigos voltarem
+idênticos e com o mesmo slug de página.
 
 ### Arquitetura
 - **Player** (`index.html`): HTML5 + CSS3 + JavaScript vanilla — servido pelo GitHub Pages ou qualquer CDN estática

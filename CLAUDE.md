@@ -44,6 +44,7 @@ caches. Neither happens in the uqt/hominiscanidae mirrors, which serve the sourc
 - **filter-albums-by-s3.js** — Removes albums from the JSON that have no matching S3 folder
 - **find-untagged.js** — Lists MP3s missing ID3 tags
 - **dedup-albums.js** — Detects duplicate albums by track fingerprint
+- **merge-acervo.js** — Appends a partial catalog (generate-albums run on a staging dir holding only new albums) to a published `.json.gz`, rejecting albums whose path, (artist, title, year) or artist + tracklist already exist; keeps the published format and refuses to write unless every old album decodes unchanged and keeps its album-page slug. How albums get added now that homi's audio lives only in S3 (see *Adding albums without the music volume*)
 - **convert-acervo-v2.js** — Rewrites a published `.json.gz` from the v1 to the v2 columnar payload, verifying the round-trip before writing
 - **build-album-pages.js** — Builds static per-album pages, per-acervo indexes and sitemaps at deploy (see *Generating an acervo*)
 - **build-3d-atlas.js** — Packs every album cover into 4096² WebP atlases + `atlas-map.json.gz` for `3d.html` and uploads them (`--acervo uqt|homi`, `--check` to compare the live atlas with the catalog, `--no-upload`). Re-run after every ETL: an album added later has no tile until then (the 3D view falls back to loading its cover individually). Aborts without uploading if any album with a cover ends up without a tile
@@ -193,6 +194,48 @@ Add `--v2` to emit the columnar payload instead of v1. Publish the player first 
 the deploy-order note under *v2 (columnar) payload*.
 
 Build first: `cd script/generate-albums && cargo build --release`
+
+### Adding albums without the music volume
+
+`/Volumes/EXTRA/hominiscanidae` is gone: homi's audio exists only in the `indie` bucket. New
+posts are staged on the internal disk, pushed to S3 and merged into the published catalog, which
+is now the source of truth — a full `generate-albums` run over the whole archive is no longer
+possible, so generator naming fixes only reach albums added after them, and `acervo.json`'s
+`exclude` list went with the drive (reject duplicates at merge time instead). Run on 2026-10-15
+for 28 albums (6679 → 6707).
+
+```bash
+export HOMI_DEST=~/homi-staging            # download_all.py, unzip.py, flac_to_mp3.py read it
+cd ~/Projetos/hominiscanidae
+python3 scripts/scrape/scrape_posts.py --sitemap
+python3 -u scripts/download/download_all.py   # only posts not yet "downloaded" in posts.json
+python3 scripts/utils/unzip.py --dry-run && python3 scripts/utils/unzip.py
+
+cd ~/Projetos/tocador
+./script/generate-albums/target/release/generate-albums ~/homi-staging/unzips /tmp/homi-novos.json.gz \
+  --title "Hominis Canidae" --subtitle "HOMINISCANIDAEVERSO DESDE 2009" \
+  --base-url https://cdn.tocador.cc/indie --s3-prefix indie/
+bun script/merge-acervo.js ../hominiscanidae/data/homi-albums.json.gz /tmp/homi-novos.json.gz --dry-run
+# move any rejected folder out of ~/homi-staging/unzips before syncing, or its S3 keys get overwritten
+S3_PREFIX=indie/ ARCHIVE_DIR=~/homi-staging/unzips node script/sync-to-bucket.js --dry-run  # only the new files
+S3_PREFIX=indie/ ARCHIVE_DIR=~/homi-staging/unzips node script/sync-to-bucket.js
+bun script/merge-acervo.js ../hominiscanidae/data/homi-albums.json.gz /tmp/homi-novos.json.gz
+ARCHIVE_DIR=~/homi-staging/unzips bun script/resize-cover-images.js --acervo homi --dry-run   # ≈ one per new album
+ARCHIVE_DIR=~/homi-staging/unzips bun script/resize-cover-images.js --acervo homi
+```
+
+Then the audio analysis with `--dir ~/homi-staging/unzips --out ~/Projetos/tocador/data/features/homi.jsonl`
+(`analyze-tracks.py` and the feature-integrity scripts live on `feat/chat-musical`), `build-genre-index.js`,
+and `bun script/build-features-web.js --acervo homi --out data` — the merged catalog changes the
+features fingerprint, so without this the Pegada panel rejects `homi-features.json.gz`.
+Publish hominiscanidae first and wait until GitHub Pages serves the new catalog (`deploy.yml` builds
+the album pages from it), then push tocador, then run `build-3d-atlas.js --acervo homi`.
+
+Gotchas from the first run: aria2 can leave a `.rar.aria2` next to a truncated archive that still
+reports "OK" — `unrar t` every archive before extracting, and re-download a failing one directly.
+Homebrew disabled the `rar` cask on 2026-09-01; `unrar` comes from the RARLAB tarball in
+`~/.local/bin`. Checking every new track through cdn.tocador.cc trips the proxy's rate limit (429);
+verify keys with authenticated S3 `HeadObject` calls instead.
 
 ### Migrating an existing acervo to v2
 
