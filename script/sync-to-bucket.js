@@ -11,6 +11,7 @@ const { Upload } = require('@aws-sdk/lib-storage');
 const LOCAL_DIR   = process.env.ARCHIVE_DIR || path.join(__dirname, '..', 'unzips');
 const ENDPOINT    = process.env.S3_ENDPOINT || 'https://hel1.your-objectstorage.com';
 const CONCURRENCY = 20;
+const DRY_RUN     = process.argv.includes('--dry-run');
 
 // ── Load .env ─────────────────────────────────────────────────────────────────
 
@@ -150,7 +151,9 @@ async function main() {
   // Diff
   const toUpload = localFiles.filter(({ relativePath, size }) => {
     const key   = (PREFIX + relativePath.replace(/\\/g, '/')).normalize('NFC');
-    const s3obj = s3Map.get(key);
+    // The bucket holds both NFC and NFD keys (macOS writes NFD); a key present in
+    // either form is already there.
+    const s3obj = s3Map.get(key) || s3Map.get(key.normalize('NFD'));
     return !s3obj || s3obj.size !== size;
   });
 
@@ -160,6 +163,11 @@ async function main() {
   }
 
   const totalBytes = toUpload.reduce((acc, f) => acc + f.size, 0);
+  if (DRY_RUN) {
+    for (const f of toUpload) console.log(`  ${PREFIX}${f.relativePath}`);
+    console.log(`\n  --dry-run: ${toUpload.length.toLocaleString()} files (${(totalBytes / 1e9).toFixed(2)} GB) would upload to ${BUCKET}/${PREFIX}\n`);
+    return;
+  }
   console.log(`  Uploading ${toUpload.length.toLocaleString()} files  (${(totalBytes / 1e9).toFixed(2)} GB)\n`);
 
   let done = 0;
