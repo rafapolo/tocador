@@ -181,6 +181,24 @@ body {
   flex-shrink: 0;
 }
 
+/* The stats + four link buttons don't shrink, so on tight widths the title used to wrap
+   and push the header from 94px to ~146px (or out of the 44px mobile bar). Keep the title
+   block on one line: it may shrink, and truncates as a last resort. */
+.header-title { min-width: 0; }
+.app-title, .app-subtitle {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Between the mobile layout and ~900px there isn't room for the hours count too. */
+@media (min-width: 769px) and (max-width: 900px) {
+  .music-count { display: none; }
+}
+@media (max-width: 359px) {
+  #mobile-stat-artists { display: none; }
+}
+
 .music-count,
 .header-stats span {
   font-size: 0.8rem;

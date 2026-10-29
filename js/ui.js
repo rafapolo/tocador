@@ -644,6 +644,10 @@ async function handleCatalogDecodeError(err, container) {
   if (btn3d) btn3d.href = `${APP_ROOT}3d.html${acervoQuery}`;
   const btnRadio = document.getElementById('btn-radio');
   if (btnRadio) btnRadio.href = `${APP_ROOT}radio.html${acervoQuery}`;
+  // The atlas shows both acervos at once, so no ?acervo= — but it still needs APP_ROOT:
+  // on /<alias>/<slug>/ a relative ./atlas.html resolves inside the album's path.
+  const btnAtlas = document.getElementById('btn-atlas');
+  if (btnAtlas) btnAtlas.href = `${APP_ROOT}atlas.html`;
   skeletonEl.remove();
   applyArchiveMeta();
   renderAcervoSelect(activeAcervoKey);
