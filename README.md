@@ -52,6 +52,23 @@ Cole em qualquer página para incorporar a rádio:
 - Barra de progresso clicável
 - Clique no artista ou álbum para abrir no player principal
 
+## 🗺️ Atlas
+
+[`tocador.cc/atlas`](https://tocador.cc/atlas) põe as ~79 mil faixas dos dois acervos num mapa: cada ponto é uma faixa, e o que soa parecido fica perto (UMAP do embedding de áudio). Aproxime para ver o nome de cada faixa, gire em 3D com o botão direito do mouse, filtre por gênero ou acervo, busque um artista e clique numa faixa para ouvir no player. Como foi feito, como ler o mapa e por que aparecem fios de pontos: [ATLAS.md](ATLAS.md).
+
+<p align="center">
+  <a href="https://tocador.cc/atlas"><img src="docs/atlas-demo.jpg" alt="Atlas — o mapa de frente, colorido por gênero" width="49%"></a>
+  <a href="https://tocador.cc/atlas"><img src="docs/atlas-3d-demo.jpg" alt="Atlas — o mesmo mapa girado em 3D" width="49%"></a>
+</p>
+
+## 🌌 Universo 3D
+
+[`tocador.cc/3d`](https://tocador.cc/3d) mostra os álbuns de um acervo como uma galáxia de capas: arraste para girar, role para avançar e clique numa capa para abrir o álbum.
+
+<p align="center">
+  <a href="https://tocador.cc/3d"><img src="docs/3d-demo.jpg" alt="Universo 3D — capas de álbuns flutuando no espaço" width="680"></a>
+</p>
+
 ## 🆕 Novidades recentes
 
 - **Painel de navegação (Browse)**: filtre por gênero (árvore com expand/collapse) ou por artista — contagem em tempo real e botão de limpar
