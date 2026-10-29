@@ -178,6 +178,30 @@ ARCHIVE_DIR=/caminho/musicas python3 extract-genres.py --model discogs519 --work
 
 Requer: `essentia`, `tensorflow`, modelos em `script/models/`.
 
+### `build-atlas-coords.py` — Coordenadas do mapa /atlas (UMAP)
+
+Projeta as faixas de `data/features/{uqt,homi}.json.gz` + `.emb.f16` (saída de `analyze-tracks.py --compact`) em 2D com UMAP: o embedding de áudio gera o mapa "som", os rótulos de gênero o mapa "rotulos". Saída: `data/features/atlas-coords.json.gz` (ignorado pelo git). Leva ~5 min e não é incremental, o mapa inteiro é redesenhado. Os dois mapas são UMAP 3D que partem do 2D (init), então vistos de frente ficam parecidos com o 2D; a terceira coordenada vira `somz`/`rotulosz` no payload. No desktop, botão direito ou Shift + arrastar gira a vista; o clique na vista girada usa busca linear projetada (a grade só vale para a vista plana). O player tem o link `#btn-atlas` ao lado de `#btn-shortcuts`.
+
+```bash
+uv run -q --with umap-learn --with scikit-learn --with scipy --with numpy python script/build-atlas-coords.py
+```
+
+### `build-atlas-web.js` — Payload do /atlas
+
+Junta as coordenadas aos catálogos publicados e grava `data/atlas-faixas.json.gz` (~1,4 MB, versionado). Os pontos são casados com o catálogo pelo hash da chave da faixa, não pela ordem: álbuns novos ou reordenados não quebram os pontos antigos, mas faixas novas só ganham ponto na próxima geração. Faixas cuja análise falhou não têm ponto.
+
+```bash
+bun script/build-atlas-web.js
+```
+
+### `build-atlas-og.py` — Imagem de compartilhamento do /atlas
+
+Gera `assets/atlas-og.jpg`, usada como `og:image` da página.
+
+```bash
+uv run -q --with matplotlib --with numpy --with pillow python script/build-atlas-og.py
+```
+
 ### `dedup-albums.js` — Detectar álbuns duplicados
 
 Lista álbuns com títulos semelhantes para revisão manual.

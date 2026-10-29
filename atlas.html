@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Atlas — todas as faixas do Tocador num mapa</title>
+  <meta name="description" content="Cerca de 79 mil faixas dos acervos UQT e Hominis Canidae num mapa: músicas que soam parecido ficam perto. Navegue, dê zoom e clique numa faixa para ouvir.">
+  <meta name="author" content="extrapolo.com">
+  <link rel="canonical" href="https://tocador.cc/atlas">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Tocador">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Atlas — 79 mil faixas espalhadas pelo som">
+  <meta property="og:description" content="Samba, punk, MPB, rap, eletrônica: cada ponto é uma faixa, e o que soa parecido fica perto. Navegue pelo mapa e clique para ouvir.">
+  <meta property="og:url" content="https://tocador.cc/atlas">
+  <meta property="og:image" content="https://tocador.cc/assets/atlas-og.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Nuvem de dezenas de milhares de pontos coloridos por gênero musical sobre fundo escuro, com o título Atlas">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Atlas — 79 mil faixas espalhadas pelo som">
+  <meta name="twitter:description" content="Cada ponto é uma faixa, e o que soa parecido fica perto. Navegue pelo mapa e clique para ouvir.">
+  <meta name="twitter:image" content="https://tocador.cc/assets/atlas-og.jpg">
+  <meta name="twitter:image:alt" content="Nuvem de pontos coloridos por gênero musical sobre fundo escuro, com o título Atlas">
+  <meta name="theme-color" content="#0f0e0c">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect fill='%231a1814' width='200' height='200'/%3E%3Ccircle cx='100' cy='100' r='40' fill='none' stroke='%23d4a574' stroke-width='8'/%3E%3Ccircle cx='100' cy='100' r='15' fill='none' stroke='%23d4a574' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://cdn.tocador.cc">
+  <link rel="stylesheet" href="assets/atlas.css">
+  <script src="js/acervo-format.js" defer></script>
+  <script src="js/util.js" defer></script>
+  <script src="js/atlas-data.js" defer></script>
+  <script src="js/atlas.js" defer></script>
+</head>
+<body>
+<main id="atlas">
+  <canvas id="atlas-canvas" role="img" aria-label="Mapa de todas as faixas: cada ponto é uma faixa, e faixas que soam parecido ficam perto"></canvas>
+  <div id="marcos" aria-hidden="true"></div>
+  <div id="faixas" aria-hidden="true"></div>
+  <div id="anel-hover" class="anel" hidden></div>
+  <div id="anel-sel" class="anel anel-sel" hidden></div>
+  <div id="dica" role="tooltip" hidden></div>
+
+  <header id="topo">
+    <a id="voltar" href="./" aria-label="Voltar ao Tocador">←<span> Tocador</span></a>
+    <h1>Atlas</h1>
+    <div id="busca-wrap">
+      <input id="busca" type="search" placeholder="Buscar artista, álbum ou faixa" autocomplete="off" spellcheck="false" aria-label="Buscar artista, álbum ou faixa" aria-describedby="contagem" disabled>
+      <button id="busca-limpar" type="button" aria-label="Limpar busca" hidden>✕</button>
+    </div>
+    <p id="contagem" role="status" aria-live="polite"></p>
+  </header>
+
+  <nav id="controles" aria-label="Opções do mapa">
+    <div class="seg" role="group" aria-label="Posição dos pontos">
+      <button type="button" data-mapa="som" aria-pressed="true" title="Posição pelo som (embedding de áudio)">Som</button>
+      <button type="button" data-mapa="rotulos" aria-pressed="false" title="Posição pelos rótulos de gênero">Gêneros</button>
+    </div>
+    <div class="seg" role="group" aria-label="Acervo">
+      <button type="button" data-acervo="todos" aria-pressed="true">Todos</button>
+      <button type="button" data-acervo="uqt" aria-pressed="false">UQT</button>
+      <button type="button" data-acervo="homi" aria-pressed="false">Homi</button>
+    </div>
+  </nav>
+
+  <details id="legenda">
+    <summary>Gêneros</summary>
+    <ul id="legenda-lista"></ul>
+  </details>
+
+  <div id="zoom" role="group" aria-label="Zoom">
+    <button id="zoom-mais" type="button" aria-label="Aproximar">+</button>
+    <button id="zoom-menos" type="button" aria-label="Afastar">−</button>
+    <button id="zoom-reset" type="button" aria-label="Ver o mapa inteiro">⌂</button>
+  </div>
+
+  <section id="cartao" aria-label="Faixa selecionada" hidden>
+    <button id="cartao-fechar" type="button" aria-label="Fechar">✕</button>
+    <img id="cartao-capa" alt="" width="72" height="72" hidden>
+    <div id="cartao-texto">
+      <p id="cartao-genero"><span class="ponto"></span><span id="cartao-genero-nome"></span></p>
+      <h2 id="cartao-titulo"></h2>
+      <p id="cartao-artista"></p>
+      <p id="cartao-album"></p>
+    </div>
+    <div id="cartao-acoes">
+      <a id="cartao-ouvir" class="botao" href="./">▶ Ouvir no player</a>
+      <button id="cartao-previa" class="botao botao-sec" type="button" aria-pressed="false">Prévia</button>
+    </div>
+    <audio id="previa" preload="none"></audio>
+  </section>
+
+  <p id="ajuda">arraste para navegar · role para zoom · botão direito gira em 3D · clique numa faixa</p>
+
+  <div id="carregando" role="status">
+    <p>Atlas</p>
+    <p id="carregando-status">Carregando o mapa…</p>
+  </div>
+</main>
+</body>
+</html>

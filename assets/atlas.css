@@ -1,0 +1,206 @@
+/* /atlas — mapa de todas as faixas. Tokens do player (assets/player.css), sem as fontes web. */
+:root {
+  --bg: #0f0e0c;
+  --surface: #1a1814;
+  --surface-light: #2a2620;
+  --accent: #d4a574;
+  --text: #f5f1ed;
+  --text-2: #b8b0a8;
+  --text-3: #958d83;
+  --border: #3a3530;
+  --glass: rgba(26, 24, 20, 0.86);
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+  --serif: 'Playfair Display', Baskerville, Georgia, serif;
+  --gap: 12px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 var(--font); }
+body { overflow: hidden; overscroll-behavior: none; }
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+#atlas { position: fixed; inset: 0; height: 100dvh; }
+#atlas-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
+#atlas-canvas.arrastando { cursor: grabbing; }
+#atlas-canvas.sobre { cursor: pointer; }
+
+/* ── rótulos de subgênero ── */
+#marcos { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.marco {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.01em; color: var(--text);
+  text-shadow: 0 0 3px var(--bg), 0 0 6px var(--bg), 0 0 10px var(--bg);
+  opacity: 0.92;
+}
+.marco.menor { font-size: 11px; font-weight: 500; color: var(--text-2); }
+
+/* ── nomes das faixas, de perto ── */
+#faixas { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.nome-faixa {
+  position: absolute; left: 0; top: 0; white-space: nowrap; line-height: 14px;
+  font-size: 11px; color: var(--text-2);
+  text-shadow: 0 0 2px var(--bg), 0 0 4px var(--bg), 0 0 8px var(--bg);
+}
+
+/* ── anéis de hover/seleção ── */
+.anel {
+  position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  border: 2px solid var(--text); pointer-events: none; box-shadow: 0 0 0 2px rgba(15, 14, 12, 0.7);
+}
+.anel-sel { width: 24px; height: 24px; margin: -12px 0 0 -12px; border-color: var(--accent); }
+
+#dica {
+  position: absolute; z-index: 5; max-width: 280px; padding: 6px 10px; border-radius: 8px;
+  background: var(--glass); border: 1px solid var(--border); pointer-events: none;
+  font-size: 12.5px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+#dica b { display: block; font-weight: 600; color: var(--text); }
+#dica span { color: var(--text-2); }
+
+/* ── barra de topo ── */
+#topo {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; align-items: center; gap: var(--gap);
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: linear-gradient(to bottom, rgba(15, 14, 12, 0.95), rgba(15, 14, 12, 0.6) 70%, transparent);
+  pointer-events: none;
+}
+#topo > * { pointer-events: auto; }
+#voltar { color: var(--text-2); text-decoration: none; font-size: 13px; white-space: nowrap; padding: 6px 2px; }
+#voltar:hover, #voltar:focus-visible { color: var(--accent); }
+#topo h1 { margin: 0; font: 600 22px/1 var(--serif); color: var(--accent); letter-spacing: 0.01em; }
+#busca-wrap { position: relative; flex: 0 1 340px; min-width: 0; }
+#busca {
+  width: 100%; height: 36px; padding: 0 32px 0 12px; border-radius: 18px;
+  border: 1px solid var(--border); background: rgba(26, 24, 20, 0.9); color: var(--text);
+  font: inherit; font-size: 16px; /* 16px: iOS não dá zoom no foco */ outline: none;
+}
+#busca::placeholder { color: var(--text-3); }
+#busca:focus-visible { border-color: var(--accent); }
+#busca::-webkit-search-cancel-button { display: none; }
+#busca-limpar {
+  position: absolute; right: 4px; top: 4px; width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-2); cursor: pointer;
+}
+#contagem { margin: 0; color: var(--text-2); font-size: 12.5px; white-space: nowrap; }
+
+/* ── controles ── */
+#controles {
+  position: absolute; z-index: 10; top: calc(58px + env(safe-area-inset-top, 0px)); left: 16px;
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--glass); }
+.seg button {
+  border: 0; background: transparent; color: var(--text-2); padding: 7px 13px; min-height: 34px;
+  cursor: pointer; font-size: 13px;
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--surface-light); color: var(--text); }
+.seg button:focus-visible, #zoom button:focus-visible, .botao:focus-visible, #legenda summary:focus-visible,
+#legenda-lista button:focus-visible, #cartao-fechar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── legenda ── */
+#legenda {
+  position: absolute; z-index: 10; left: 16px; bottom: calc(16px + var(--safe-b));
+  background: var(--glass); border: 1px solid var(--border); border-radius: 12px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); max-width: 240px;
+}
+#legenda summary { cursor: pointer; padding: 8px 12px; color: var(--text-2); font-size: 12.5px; list-style: none; user-select: none; }
+#legenda summary::-webkit-details-marker { display: none; }
+#legenda summary::after { content: ' ▴'; }
+#legenda:not([open]) summary::after { content: ' ▾'; }
+#legenda-lista { list-style: none; margin: 0; padding: 0 6px 8px; }
+#legenda-lista button {
+  display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: transparent;
+  padding: 5px 6px; border-radius: 6px; cursor: pointer; text-align: left; font-size: 13px; color: var(--text);
+}
+#legenda-lista button:hover { background: var(--surface-light); }
+#legenda-lista button[aria-pressed="false"] { color: var(--text-3); }
+#legenda-lista button[aria-pressed="false"] .ponto { background: transparent !important; }
+#legenda-lista .n { margin-left: auto; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ponto { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; border: 2px solid transparent; }
+
+/* ── zoom ── */
+#zoom {
+  position: absolute; z-index: 10; right: 16px; bottom: calc(16px + var(--safe-b));
+  display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  background: var(--glass);
+}
+#zoom button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 18px; cursor: pointer; color: var(--text); }
+#zoom button + button { border-top: 1px solid var(--border); }
+#zoom button:hover { background: var(--surface-light); }
+
+/* ── cartão da faixa ── */
+#cartao {
+  position: absolute; z-index: 20; right: 72px; bottom: calc(16px + var(--safe-b)); width: 340px;
+  display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; padding: 14px;
+  background: var(--glass); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+#cartao-capa { width: 72px; height: 72px; border-radius: 6px; object-fit: cover; background: var(--surface-light); }
+#cartao-texto { min-width: 0; padding-right: 22px; }
+#cartao-texto p, #cartao-texto h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; }
+#cartao-genero { display: flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 12px; white-space: nowrap; }
+#cartao-titulo { font-size: 16px; font-weight: 600; line-height: 1.25; margin: 2px 0 !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+#cartao-artista { color: var(--text); font-size: 13.5px; white-space: nowrap; }
+#cartao-album { color: var(--text-2); font-size: 12.5px; white-space: nowrap; }
+#cartao-acoes { grid-column: 1 / -1; display: flex; gap: 8px; }
+#cartao-fechar {
+  position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-2); cursor: pointer; font-size: 14px;
+}
+#cartao-fechar:hover { background: var(--surface-light); }
+.botao {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 14px;
+  border-radius: 20px; border: 1px solid var(--accent); background: var(--accent); color: #1a1814;
+  font-weight: 600; font-size: 14px; text-decoration: none; cursor: pointer;
+}
+.botao:hover { filter: brightness(1.08); }
+.botao-sec { flex: 0 0 auto; background: transparent; color: var(--accent); }
+.botao-sec[aria-pressed="true"] { background: var(--surface-light); }
+
+#ajuda {
+  position: absolute; z-index: 5; left: 50%; bottom: calc(18px + var(--safe-b)); transform: translateX(-50%);
+  margin: 0; color: var(--text-3); font-size: 12px; white-space: nowrap; pointer-events: none;
+  transition: opacity 0.6s;
+}
+#ajuda.some { opacity: 0; }
+
+#carregando {
+  position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--bg); transition: opacity 0.5s;
+}
+#carregando p { margin: 4px; color: var(--text-2); }
+#carregando p:first-child { font: 600 34px/1 var(--serif); color: var(--accent); }
+#carregando.pronto { opacity: 0; pointer-events: none; }
+
+/* ── mobile ── */
+@media (max-width: 720px) {
+  #topo { flex-wrap: wrap; gap: 8px 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) 16px 8px; }
+  #voltar span { display: none; }
+  #voltar { font-size: 18px; padding: 4px 6px 4px 0; }
+  #topo h1 { font-size: 20px; }
+  #contagem { margin-left: auto; font-size: 12px; }
+  #busca-wrap { order: 3; flex: 1 1 100%; }
+  #controles { top: calc(96px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; }
+  .seg button { padding: 6px 11px; }
+  #ajuda { display: none; }
+  #legenda { max-width: calc(100% - 96px); }
+  #legenda[open] { max-height: 52dvh; overflow: auto; }
+  #cartao {
+    left: 0; right: 0; bottom: 0; width: auto; border-radius: 16px 16px 0 0; border-bottom: 0;
+    padding: 16px 16px calc(16px + var(--safe-b));
+  }
+  #cartao-capa { width: 64px; height: 64px; }
+  .marco { font-size: 11px; }
+  .marco.menor { font-size: 10px; }
+  #dica { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #carregando, #ajuda { transition: none; }
+}
