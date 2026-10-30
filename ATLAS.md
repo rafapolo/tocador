@@ -34,6 +34,13 @@ Ao aproximar, alguns trechos não são nuvens: são **fios**, filas de pontos qu
 noise/power electronics e o fio de gravações de rádio antigas). Isso foi medido nos dois fios dos
 prints que motivaram esta seção:
 
+<p>
+  <img src="docs/atlas-fio-radio.jpg" alt="Fio de gravações de rádio antigas: pontos de várias cores em fila diagonal, com títulos como Feitiço da Vila, Carlos Gardel e Revista Old Parr" height="420">
+  <img src="docs/atlas-fio-noise.jpg" alt="Fio de noise e power electronics: pontos verdes em fila diagonal, com títulos como Noisu #1, Binaural Quimbanda e Vultos Satânicos" height="420">
+</p>
+
+*À esquerda, o fio da rádio antiga e dos 78 rpm; à direita, o fio de noise/power electronics, os dois de perto (≥10× de zoom), com os títulos das faixas.*
+
 | Fio | Pontos / álbuns | Variância no 1º eixo | O que muda ao longo do fio |
 |---|---|---|---|
 | Noise / Power Electronics / Industrial (homi, 2013–2023) | 265 faixas, 118 álbuns | 57% | **loudness** (r = −0,63) |
