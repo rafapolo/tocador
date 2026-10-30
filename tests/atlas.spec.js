@@ -392,3 +392,37 @@ test('aria-live: #contagem acompanha o filtro da legenda', async ({ page }) => {
   await page.locator('#legenda-lista [data-genero="1"]').click();
   await expect(page.locator('#contagem')).toHaveText(`${PONTOS} faixas`);
 });
+
+test('3D no toque: com ⟳ ligado, arrastar um dedo gira e um toque parado ainda abre a faixa', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+  const page = await ctx.newPage();
+  try {
+    await boot(page);
+    const btn = page.locator('#zoom-girar');
+    await expect(btn).toBeVisible();
+    await btn.tap();
+    await expect(btn).toHaveAttribute('aria-pressed', 'true');
+    const { x, y } = await centro(page);
+    const cdp = await page.context().newCDPSession(page).catch(() => null);
+    if (cdp) {
+      const toque = (type, px, py) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: px, y: py }] });
+      await toque('touchStart', x, y);
+      for (let s = 1; s <= 8; s++) await toque('touchMove', x + s * 15, y + s * 8);
+      await toque('touchEnd');
+      const e = await estado(page);
+      expect(e.yaw).not.toBe(0);
+      expect(e.pitch).not.toBe(0);
+      expect(e.sel).toBe(-1);
+    }
+    // toque sem arrastar continua escolhendo a faixa, girado ou não
+    const i = await ponto(page, primeiro, primeiro.tracks[0]);
+    const p = await posicao(page, i);
+    await page.touchscreen.tap(p.x, p.y);
+    await expect(page.locator('#cartao-titulo')).toHaveText('Alfa');
+  } finally { await ctx.close(); }
+});
+
+test('3D: payload sem z esconde o ⟳', async ({ page }) => {
+  await boot(page, { faixas: faixas2dGz });
+  await expect(page.locator('#zoom-girar')).toBeHidden();
+});

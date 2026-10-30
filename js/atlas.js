@@ -618,6 +618,11 @@
   let gesto = null, ultimoToque = null;
   const posRel = e => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 
+  function iniciarGiro(x, y, moveu) {
+    pivoNoCentro();
+    gesto = { tipo: 'girar', x0: x, y0: y, yaw0: yaw, pitch0: pitch, moveu };
+    if (moveu) { canvas.classList.add('arrastando'); dica.hidden = true; hover = -1; }
+  }
   function iniciarPinca() {
     const [a, b] = [...ptrs.values()];
     const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
@@ -632,10 +637,10 @@
     sumirAjuda();
     if (ptrs.size === 1) {
       const [x, y] = posRel(e);
-      if (e.pointerType === 'mouse' && (e.button === 2 || e.shiftKey) && A.posZ[mapa] && t === tAlvo) {
-        pivoNoCentro();
-        gesto = { tipo: 'girar', x0: x, y0: y, yaw0: yaw, pitch0: pitch, moveu: true };
-        canvas.classList.add('arrastando'); dica.hidden = true; hover = -1;
+      const botaoGira = e.pointerType === 'mouse' && (e.button === 2 || e.shiftKey);
+      if ((botaoGira || modoGirar) && A.posZ[mapa] && t === tAlvo) {
+        // with ⟳ on, a press that never moves is still a tap (picks a track); the right button never taps
+        iniciarGiro(x, y, botaoGira);
         return;
       }
       gesto = { tipo: 'pan', x0: x, y0: y, cx0: cx, cy0: cy, t0: performance.now(), moveu: false };
@@ -647,6 +652,10 @@
     ptrs.set(e.pointerId, posRel(e));
     if (gesto?.tipo === 'girar') {
       const [x, y] = posRel(e);
+      if (!gesto.moveu) {
+        if (Math.hypot(x - gesto.x0, y - gesto.y0) <= 6) return;
+        gesto.moveu = true; canvas.classList.add('arrastando'); dica.hidden = true; hover = -1;
+      }
       yaw = gesto.yaw0 + (x - gesto.x0) * 0.008;
       pitch = Math.max(-1.45, Math.min(1.45, gesto.pitch0 + (y - gesto.y0) * 0.008));
       rotacao(); pedir();
@@ -667,13 +676,14 @@
     ptrs.delete(e.pointerId);
     canvas.classList.remove('arrastando');
     if (gesto?.tipo === 'pinca') {
-      if (ptrs.size === 1) {   // one finger left: keep panning from here, never a tap
+      if (ptrs.size === 1) {   // one finger left: keep panning (or orbiting, with ⟳ on) from here, never a tap
         const [x, y] = [...ptrs.values()][0];
-        gesto = { tipo: 'pan', x0: x, y0: y, cx0: cx, cy0: cy, t0: 0, moveu: true };
+        if (modoGirar && A.posZ[mapa] && t === tAlvo) iniciarGiro(x, y, true);
+        else gesto = { tipo: 'pan', x0: x, y0: y, cx0: cx, cy0: cy, t0: 0, moveu: true };
       } else if (ptrs.size === 0) gesto = null;
       return;
     }
-    if (gesto?.tipo === 'pan' && !gesto.moveu && e.type === 'pointerup') tocar(e);
+    if ((gesto?.tipo === 'pan' || gesto?.tipo === 'girar') && !gesto.moveu && e.type === 'pointerup') tocar(e);
     if (ptrs.size === 0) gesto = null;
   }
   canvas.addEventListener('pointerup', soltar);
@@ -732,6 +742,18 @@
   $('zoom-mais').addEventListener('click', () => voar(cx, cy, k * 1.8));
   $('zoom-menos').addEventListener('click', () => voar(cx, cy, k / 1.8));
   $('zoom-reset').addEventListener('click', () => enquadrarTudo());
+  // ⟳: one-finger (or left-button) drag orbits instead of panning — the way to rotate on touch screens
+  let modoGirar = false;
+  const btnGirar = $('zoom-girar');
+  function ligarGiro(on) {
+    modoGirar = on;
+    btnGirar.setAttribute('aria-pressed', String(on));
+  }
+  function atualizarBtnGirar() {
+    btnGirar.hidden = !A.posZ[mapa];
+    if (btnGirar.hidden) ligarGiro(false);
+  }
+  btnGirar.addEventListener('click', () => ligarGiro(!modoGirar));
 
   function trocarMapa(m, animar = true) {
     if (m === mapa && t === tAlvo) return;
@@ -740,6 +762,7 @@
     hover = -1; dica.hidden = true;
     document.querySelectorAll('[data-mapa]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mapa === m)));
     if (girado()) pivoNoCentro();
+    atualizarBtnGirar();
     if (filtro.busca && nAtivo) {
       const b = caixa(mapa, ativo, 0.02, 0.98);
       if (b) enquadrar(b, animar, 0.015, [0, 0]);
@@ -861,6 +884,7 @@
 
     montarLegenda();
     if (params.get('mapa') === 'rotulos') { mapa = 'rotulos'; t = tAlvo = 1; document.querySelectorAll('[data-mapa]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mapa === 'rotulos'))); }
+    atualizarBtnGirar();
     const pa = params.get('acervo');
     if (pa && ACERVOS[pa]) trocarAcervo(pa);
     filtro.q = params.get('q') || '';
@@ -886,7 +910,7 @@
     },
     tela(i) { return { x: telaX(mundoX(i)), y: telaY(mundoY(i)) }; },
     focar(i, zoom = 40) { voar(mundoX(i), mundoY(i), k0 * zoom, false); },
-    estado() { return { k, k0, cx, cy, mapa, t, nAtivo, n: N, sel, yaw, pitch, tem3d: !!A.posZ[mapa] }; },
+    estado() { return { k, k0, cx, cy, mapa, t, nAtivo, n: N, sel, yaw, pitch, tem3d: !!A.posZ[mapa], girar: modoGirar }; },
   };
 
   iniciar();

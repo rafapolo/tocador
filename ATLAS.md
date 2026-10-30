@@ -2,7 +2,7 @@
 
 [tocador.cc/atlas](https://tocador.cc/atlas) mostra **todas as faixas** dos acervos UQT e Hominis
 Canidae (~79 mil) como pontos num mapa. Faixas que soam parecido ficam perto. Dá para aproximar,
-arrastar, girar em 3D (botão direito do mouse no desktop) e clicar numa faixa para ouvir no player.
+arrastar, girar em 3D (botão direito do mouse no desktop; no celular, ligue o ⟳ e arraste com um dedo) e clicar numa faixa para ouvir no player.
 
 ![prévia](assets/atlas-og.jpg)
 
