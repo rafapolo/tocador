@@ -13,7 +13,7 @@ arrastar, girar em 3D (botão direito do mouse no desktop; no celular, ligue o �
 - **Os rótulos** (Samba, Punk, Cloud Rap…) ficam na mediana dos pontos de cada subgênero. Só aparecem
   os subgêneros que formam um "lugar", isto é, que não estão espalhados pelo mapa inteiro.
 - **De perto**, a partir de ~10× de zoom, cada ponto ganha o título da faixa.
-- **Os eixos não significam nada.** Não existe "mais para a direita = mais rápido". O UMAP só preserva
+- **Os eixos não significam nada.** Não existe "mais para a direita = mais rápido". O [UMAP](https://umap-learn.readthedocs.io/) só preserva
   vizinhança: o que está perto é parecido, mas a distância entre regiões longe uma da outra não é uma
   medida confiável (Samba longe de Punk quer dizer "diferentes", não "x vezes mais diferentes").
 - **Dois mapas** (botão Som / Gêneros):
