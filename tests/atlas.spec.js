@@ -195,6 +195,113 @@ test('grafo: redimensionar recoloca o centro sem animar', async ({ page }) => {
   await expect.poll(() => foraDoCentro(page)).toBeLessThan(1);
 });
 
+// Reprodução simulada: o mp3 dos testes é vazio, então `paused` e `pause()` são trocados no elemento.
+const simularPrevia = page => page.evaluate(() => {
+  const a = document.getElementById('previa');
+  window.__pausou = 0;
+  Object.defineProperty(a, 'paused', { value: false, configurable: true });
+  Object.defineProperty(a, 'duration', { value: 100, configurable: true });
+  Object.defineProperty(a, 'currentTime', { value: 30, configurable: true });
+  a.pause = () => { window.__pausou++; Object.defineProperty(a, 'paused', { value: true, configurable: true }); };
+  a.dispatchEvent(new Event('timeupdate'));
+});
+const pausou = page => page.evaluate(() => window.__pausou);
+// Painel e cartão não se cobrem, e nenhum nó fica atrás deles.
+async function expectSemCobrir(page) {
+  await expect(page.locator('.grafo-no').first()).toBeVisible();
+  await assentou(page);
+  const r = await page.evaluate(() => {
+    const ret = id => document.getElementById(id).getBoundingClientRect();
+    const toca = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    const c = ret('cartao'), p = ret('grafo-painel');
+    const nos = [...document.querySelectorAll('.grafo-no circle')].map(n => n.getBoundingClientRect());
+    return { sobre: toca(c, p), escondidos: nos.filter(n => toca(n, c) || toca(n, p)).length };
+  });
+  expect(r).toEqual({ sobre: false, escondidos: 0 });
+}
+const emTresCaminhos = [
+  ['botão Grafo', page => page.locator('#btn-grafo').click()],
+  ['tecla G', page => page.keyboard.press('g')],
+  ['chip de parecidos', page => page.locator('#cartao-parecidos-lista button', { hasText: 'Delta' }).click()],
+];
+for (const [nome, abrir] of emTresCaminhos) {
+  test(`prévia: segue tocando ao entrar no grafo pelo ${nome}`, async ({ page }) => {
+    await boot(page);
+    await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+    await expect(page.locator('#cartao-parecidos-lista button').first()).toBeVisible();
+    await simularPrevia(page);
+    await abrir(page);
+    await expect(page.locator('#grafo')).toBeVisible();
+    await expect(page.locator('#cartao')).toBeVisible();
+    await expect(page.locator('#cartao-progresso')).toBeVisible();
+    await expect(page.locator('#cartao-previa')).toBeVisible();
+    expect(await pausou(page)).toBe(0);
+    await expectSemCobrir(page);
+  });
+}
+
+test('prévia: no celular o painel fica acima do cartão e nenhum nó some', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 780 });
+  await boot(page);
+  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  await simularPrevia(page);
+  await page.keyboard.press('g');
+  await expect(page.locator('#grafo')).toBeVisible();
+  await expect(page.locator('#cartao')).toBeVisible();
+  await expectSemCobrir(page);
+  await page.locator('#cartao-fechar').click();
+  await expect(page.locator('#cartao')).toBeHidden();
+  expect(await pausou(page)).toBe(1);
+});
+
+test('prévia: clicar em nós e buscar no grafo não interrompe o áudio', async ({ page }) => {
+  await boot(page);
+  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  await simularPrevia(page);
+  await page.locator('#btn-grafo').click();
+  await page.locator('.grafo-no', { hasText: 'Beta' }).click();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Beta');
+  await page.locator('#busca').fill('delt');
+  await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  expect(await pausou(page)).toBe(0);
+  await expect(page.locator('#cartao')).toBeVisible();
+});
+
+test('prévia: sair do grafo voa até o artista sem trocar a faixa selecionada', async ({ page }) => {
+  await boot(page);
+  const i = await clicarNoPonto(page, primeiro, primeiro.tracks[1]);
+  await simularPrevia(page);
+  await page.locator('#btn-grafo').click();
+  await expect(page.locator('#grafo-titulo')).toHaveText(primeiro.artist);
+  const antes = (await estado(page)).k;
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#grafo')).toBeHidden();
+  await page.waitForFunction(k => Math.abs(window.__atlas.estado().k - k) > 1, antes);
+  expect((await estado(page)).sel).toBe(i);
+  await expect(page.locator('#cartao')).toBeVisible();
+  await expect(page.locator('#cartao-progresso')).toBeVisible();
+  expect(await pausou(page)).toBe(0);
+});
+
+test('prévia: "Ver no mapa" mantém o áudio mesmo com a busca filtrando a faixa', async ({ page }) => {
+  await boot(page);
+  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  await simularPrevia(page);
+  await page.locator('#cartao-parecidos-lista button', { hasText: 'Delta' }).click();
+  await page.locator('#grafo-ver-mapa').click();
+  await expect(page.locator('#grafo')).toBeHidden();
+  await expect(page.locator('#cartao')).toBeVisible();
+  expect(await pausou(page)).toBe(0);
+});
+
+test('grafo: sem prévia tocando o cartão fecha ao entrar', async ({ page }) => {
+  await boot(page);
+  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  await page.locator('#btn-grafo').click();
+  await expect(page.locator('#grafo')).toBeVisible();
+  await expect(page.locator('#cartao')).toBeHidden();
+});
+
 test('grafo: artista fora do grafo abre a visão geral e avisa', async ({ page }) => {
   await boot(page, { url: '/atlas?grafo=1&artista=Ningu%C3%A9m' });
   await expect(page.locator('#contagem')).toHaveText('Artista fora do grafo');

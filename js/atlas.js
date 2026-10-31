@@ -500,7 +500,7 @@
     }
     nAtivo = n;
     enviarAtivo();
-    if (sel >= 0 && !ativo[sel]) fecharCartao();
+    if (sel >= 0 && !ativo[sel] && audio.paused) fecharCartao();   // a playing preview outlives the filter
     atualizarContagem();
     salvarUrl();
     pedir();
@@ -914,7 +914,7 @@
       if (d < menor) { menor = d; melhor = i; }
     }
     voar(mundoX(melhor), mundoY(melhor), k0 * ZOOM_PONTO);
-    selecionar(melhor);
+    if (audio.paused) selecionar(melhor);     // selecting stops the preview: its track stays the selection
     return true;
   }
   // The player's .album-atlas link: ?de=<acervo>&album=<path>.
@@ -935,8 +935,9 @@
     }
     irParaFaixas(dele);
   }
+  // A playing preview goes on over the graph, with its card still there to stop it.
   function abrirGrafo(nome) {
-    fecharCartao();
+    if (audio.paused) fecharCartao();
     grafo.abrir(nome);
   }
   function alternarGrafo() {

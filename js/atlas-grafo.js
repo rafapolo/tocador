@@ -35,7 +35,7 @@
     const cena = new Map();              // artist index -> what is drawn now: { x, y, r, o, v } (v = fading in/out)
     const linhas = new Map();            // link key -> { el, a, b, o }
     let transicao = null, quadro = 0;    // the walk in progress and its animation frame
-    let larguraFeita = 0, alturaFeita = 0;
+    let larguraFeita = 0, alturaFeita = 0, reservaFeita = 0;
     let vista = { x: 0, y: 0, k: 1 };
 
     function carregar() {
@@ -96,6 +96,12 @@
       return out;
     }
 
+    // Height at the bottom taken by the panel and, while a preview plays over the graph, by the card.
+    function reservaBaixo() {
+      const cartao = $('cartao');
+      const topo = Math.min($('grafo-painel').getBoundingClientRect().top, cartao.hidden ? Infinity : cartao.getBoundingClientRect().top);
+      return camada.clientHeight - topo + 12;
+    }
     const chaveLinha = (a, b) => (a < b ? a * D.n + b : b * D.n + a);
     function nivelDe(lista) {
       const diretos = new Set(centro >= 0 ? viz(centro) : []);
@@ -112,8 +118,7 @@
       const x = new Float64Array(n), y = new Float64Array(n);
       const W = camada.clientWidth, H = camada.clientHeight;
       const topo = $('controles').getBoundingClientRect().bottom + 16;
-      const painel = $('grafo-painel').offsetHeight + 28;
-      const area = { l: 16, r: W - 16, t: topo, b: H - painel };
+      const area = { l: 16, r: W - 16, t: topo, b: H - reservaBaixo() };
       const aw = Math.max(120, area.r - area.l), ah = Math.max(120, area.b - area.t);
       const L = Math.sqrt(aw * ah / Math.max(n, 1)) * 1.1;
       const meioX = area.l + aw / 2, meioY = area.t + ah / 2;
@@ -222,7 +227,7 @@
       const ligs = ligar(lista, centro);
       nos = lista; arestas = ligs;
       desenharPainel();                      // first: the layout measures the panel
-      larguraFeita = camada.clientWidth; alturaFeita = camada.clientHeight;
+      larguraFeita = camada.clientWidth; alturaFeita = camada.clientHeight; reservaFeita = reservaBaixo();
       const semente = new Map();
       for (const i of lista) { const c = cena.get(i); if (c?.v > 0) semente.set(i, [c.x, c.y]); }
       const pos = calcular(lista, ligs, semente);
@@ -409,9 +414,13 @@
 
     $('grafo-ver-mapa').addEventListener('click', () => { const nome = D.nomes[centro]; fechar(false); aoVerNoMapa(nome); });
     $('grafo-geral').addEventListener('click', () => centrar(-1));
-    new ResizeObserver(() => {
-      if (aberto && D && (camada.clientWidth !== larguraFeita || camada.clientHeight !== alturaFeita)) desenhar(false);
-    }).observe(camada);
+    const ajustar = new ResizeObserver(() => {
+      camada.style.setProperty('--cartao-alto', `${$('cartao').offsetHeight}px`);   // phones stack the panel on the card
+      if (aberto && D && (camada.clientWidth !== larguraFeita || camada.clientHeight !== alturaFeita
+        || Math.abs(reservaBaixo() - reservaFeita) > 1)) desenhar(false);
+    });
+    ajustar.observe(camada);
+    ajustar.observe($('cartao'));
 
     // ── public ──
     async function abrir(nome = null) {
@@ -425,7 +434,7 @@
       const i = indice(nome);
       centro = i;
       aviso = nome && i < 0 ? 'Artista fora do grafo' : '';
-      desenhar();
+      desenhar(true, i);
       aoMudar();
     }
     // `posicionar`: leave the map on the artist the graph was centered on.

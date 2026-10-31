@@ -245,6 +245,10 @@ button { font: inherit; color: inherit; }
 #grafo-svg.foco #grafo-arestas line.perto { stroke: var(--accent); opacity: 1; }
 #grafo-svg.foco .grafo-no.perto:not(.saindo) circle, #grafo-svg.foco .grafo-no.perto:not(.saindo) text { opacity: 1; }
 #grafo-svg.foco .grafo-no.perto text { fill: var(--text); }
+/* Prévia tocando sobre o grafo: o cartão fica no canto direito, o painel vai para o esquerdo. */
+@media (min-width: 721px) {
+  .em-grafo:has(#cartao:not([hidden])) #grafo-painel { left: 16px; right: auto; width: min(300px, calc(100vw - 444px)); }
+}
 @media (prefers-reduced-motion: reduce) {
   #grafo-arestas line, .grafo-no circle, .grafo-no text { transition: none; }
 }
@@ -260,4 +264,7 @@ button { font: inherit; color: inherit; }
 @media (max-width: 720px) {
   #cartao-progresso { border-radius: 0; }
   #grafo-painel { left: 12px; right: 12px; width: auto; bottom: calc(12px + var(--safe-b)); }
+  .em-grafo:has(#cartao:not([hidden])) #grafo-painel { bottom: calc(var(--cartao-alto, 0px) + 8px); padding: 8px 12px; }
+  .em-grafo:has(#cartao:not([hidden])) #grafo-detalhe, .em-grafo #cartao-parecidos { display: none; }
+  .em-grafo:has(#cartao:not([hidden])) #grafo-acoes { margin-top: 6px; }
 }
