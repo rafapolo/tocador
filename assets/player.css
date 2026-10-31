@@ -727,7 +727,8 @@ body {
 }
 
 .album-share,
-.album-like {
+.album-like,
+.album-atlas {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -744,8 +745,10 @@ body {
 
 .album-share:hover,
 .album-like:hover,
+.album-atlas:hover,
 .album-share:focus-visible,
-.album-like:focus-visible {
+.album-like:focus-visible,
+.album-atlas:focus-visible {
   color: var(--color-accent);
   border-color: var(--color-accent);
 }

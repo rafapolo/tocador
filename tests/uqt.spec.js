@@ -841,6 +841,22 @@ test('L69: the atlas link opens in a new tab', async ({ page }) => {
   await expect(link).toHaveAttribute('rel', 'noopener');
 });
 
+// À direita do coração: leva ao nó do artista no grafo, em outra aba para o áudio seguir.
+test('L70: the album atlas button sits right of the heart and targets the artist node', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=uqt');
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  const botoes = page.locator('#album-header .album-actions > *');
+  await expect(botoes).toHaveCount(3);
+  await expect(botoes.nth(1)).toHaveClass(/album-like/);
+  const link = botoes.nth(2);
+  await expect(link).toHaveClass(/album-atlas/);
+  await expect(link).toHaveAttribute('target', '_blank');
+  const url = new URL(await link.getAttribute('href'), page.url());
+  expect(url.pathname).toMatch(/atlas\.html$/);
+  expect(url.searchParams.get('grafo')).toBe('1');
+  expect(url.searchParams.get('artista')).toBeTruthy();
+});
+
 // Coração: salva o álbum no localStorage (por acervo) e a aba de salvos o lista;
 // clicar num salvo reabre o álbum mesmo com o grid filtrado em outra coisa.
 test.describe(() => {

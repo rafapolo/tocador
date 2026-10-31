@@ -41,7 +41,32 @@
     };
   }
 
+  // Same rule as chave() in script/build-artistas-parecidos.py: "alcione" = "Alcione", "BK" = "BK'",
+  // and a "(part: …)" credit doesn't make a new artist.
+  function chaveArtista(nome) {
+    return String(nome).replace(/(?:\s*\((?:part|feat|ft|com)\b|\s+(?:part|feat|ft)\.?\s).*$/i, '').normalize('NFD')
+      .replace(/\p{Mn}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  }
+
+  // data/atlas-artistas.json.gz: nomes sorted by track count; viz[mapa] holds k neighbour indices per artist.
+  function decodeArtistas(p) {
+    if (!p || p.v !== 1) {
+      var err = new Error('formato do grafo não suportado: ' + (p && p.v));
+      err.code = 'UNSUPPORTED_ARTISTAS_VERSION';
+      throw err;
+    }
+    var chaves = p.nomes.map(chaveArtista), indice = new Map(), viz = {};
+    chaves.forEach(function (c, i) { indice.set(c, i); });
+    Object.keys(p.viz).forEach(function (m) { viz[m] = view(Uint16Array, p.viz[m]); });
+    return {
+      n: p.nomes.length, k: p.k, nomes: p.nomes, chaves: chaves, indice: indice, generos: p.generos,
+      acervos: p.acervos, faixas: p.faixas, genero: p.genero, acervo: p.acervo, viz: viz,
+    };
+  }
+
   global.ATLAS_FORMAT = ATLAS_FORMAT;
+  global.chaveArtista = chaveArtista;
+  global.decodeArtistas = decodeArtistas;
   global.atlasKeyHash = atlasKeyHash;
   global.decodeAtlas = decodeAtlas;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

@@ -22,16 +22,25 @@ const PONTOS = 12;   // faixas do fixture com ponto: o álbum "Recente" fica de 
 test.use({ serviceWorkers: 'block' });
 
 const gz = body => ({ status: 200, headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body });
-async function rotear(page, { faixas = faixasGz } = {}) {
+// Grafo pequeno: quatro artistas em anel no som e em estrela nos rótulos.
+const u16b64 = a => Buffer.from(Uint16Array.from(a).buffer).toString('base64');
+const artistasGz = zlib.gzipSync(JSON.stringify({
+  v: 1, k: 2, nomes: [primeiro.artist, 'Beta', '<img src=x onerror=alert(1)>', 'Delta'],
+  generos: ['Latin---Samba', 'Rock---Punk'], acervos: ['uqt', 'homi'],
+  faixas: [40, 20, 10, 5], genero: [0, 0, 1, 1], acervo: [0, 0, 1, 1],
+  viz: { som: u16b64([1, 3, 2, 0, 3, 1, 0, 2]), rotulos: u16b64([3, 2, 0, 3, 0, 3, 0, 2]) },
+}));
+async function rotear(page, { faixas = faixasGz, artistas = artistasGz } = {}) {
   await page.route('**/data/atlas-faixas.json.gz', r => r.fulfill(gz(faixas)));
+  await page.route('**/data/atlas-artistas.json.gz', r => artistas ? r.fulfill(gz(artistas)) : r.fulfill({ status: 404 }));
   await page.route('**/uqt/data/uqt-albums.json.gz', r => r.fulfill(gz(uqtGz)));
   await page.route('**/hominiscanidae/data/homi-albums.json.gz', r => r.fulfill(gz(homiGz)));
   await page.route('**/capa-min.jpg', r => r.fulfill({ status: 404 }));
   await page.route('**/*.mp3', r => r.fulfill({ status: 200, body: Buffer.alloc(0) }));
 }
 
-async function boot(page, { url = '/atlas.html', faixas } = {}) {
-  await rotear(page, { faixas });
+async function boot(page, { url = '/atlas.html', faixas, artistas } = {}) {
+  await rotear(page, { faixas, artistas });
   await page.goto(url);
   // Sem WebGL a página só avisa e não monta o gancho dos catálogos: o teste não tem o que verificar.
   const semGL = await page.evaluate(() => { const c = document.createElement('canvas'); return !(c.getContext('webgl')); });
@@ -56,6 +65,95 @@ async function clicarNoPonto(page, album, faixa, acervo = 'uqt') {
   await page.mouse.click(x, y);
   return i;
 }
+
+const grafo = page => page.evaluate(() => window.__atlas.grafo());
+
+test('grafo: o botão abre a visão geral e fecha de volta ao mapa, com a contagem certa', async ({ page }) => {
+  await boot(page);
+  const antes = await page.locator('#contagem').textContent();
+  const btn = page.locator('#btn-grafo');
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#grafo-nos .grafo-no')).toHaveCount(4);
+  await expect(page.locator('#contagem')).toContainText('4 artistas');
+  await expect(page.locator('#zoom')).toBeHidden();
+  await page.waitForFunction(() => location.search.includes('grafo=1'));
+  await btn.click();
+  await expect(page.locator('#grafo')).toBeHidden();
+  await expect(page.locator('#contagem')).toHaveText(antes);
+  await page.waitForFunction(() => !location.search.includes('grafo'));
+});
+
+test('grafo: ?grafo=1&artista= centra no artista, ignorando caixa e acento, e clicar recentra', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=DELTA' });
+  await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  await expect(page.locator('.grafo-no.centro')).toHaveCount(1);
+  await page.locator('.grafo-no', { hasText: 'Beta' }).click();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Beta');
+  await page.waitForFunction(() => new URLSearchParams(location.search).get('artista') === 'Beta');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#grafo')).toBeHidden();
+});
+
+test('grafo: artista fora do grafo abre a visão geral e avisa', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Ningu%C3%A9m' });
+  await expect(page.locator('#contagem')).toHaveText('Artista fora do grafo');
+  expect((await grafo(page)).centro).toBeNull();
+  await expect(page.locator('#grafo-ver-mapa')).toBeHidden();
+});
+
+test('grafo: Som e Gêneros trocam as ligações sem fechar o grafo', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await expect(page.locator('#grafo-detalhe')).toContainText('pelo som');
+  await page.locator('[data-mapa="rotulos"]').click();
+  await expect(page.locator('#grafo-detalhe')).toContainText('rótulos de gênero');
+  expect((await grafo(page)).aberto).toBe(true);
+});
+
+test('grafo: a busca centra no artista e nome hostil fica como texto', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1' });
+  await page.locator('#busca').fill('delt');
+  await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  await expect(page.locator('#grafo img')).toHaveCount(0);
+  await expect(page.locator('.grafo-no', { hasText: '<img src=x' })).toHaveCount(1);
+});
+
+test('grafo: sem o payload avisa e o mapa segue funcionando', async ({ page }) => {
+  await page.route('https://tocador.cc/data/atlas-artistas.json.gz', r => r.fulfill({ status: 404 }));
+  await boot(page, { artistas: null });
+  await page.locator('#btn-grafo').click();
+  await expect(page.locator('#contagem')).toHaveText('grafo indisponível');
+  await page.locator('#btn-grafo').click();
+  await expect(page.locator('#contagem')).toContainText('faixas');
+});
+
+test('cartão: lista os parecidos e clicar num deles abre o grafo nele', async ({ page }) => {
+  await boot(page);
+  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  const chip = page.locator('#cartao-parecidos-lista button', { hasText: 'Delta' });
+  await expect(chip).toBeVisible();
+  await chip.click();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  await expect(page.locator('#cartao')).toBeHidden();
+});
+
+test('cartão: a linha dourada acompanha a prévia e some ao parar', async ({ page }) => {
+  await boot(page);
+  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  const barra = page.locator('#cartao-progresso');
+  await expect(barra).toBeHidden();
+  await page.evaluate(() => {
+    const a = document.getElementById('previa');
+    Object.defineProperty(a, 'duration', { value: 100, configurable: true });
+    Object.defineProperty(a, 'currentTime', { value: 25, configurable: true });
+    a.dispatchEvent(new Event('timeupdate'));
+  });
+  await expect(barra).toBeVisible();
+  await expect(barra.locator('span')).toHaveAttribute('style', /scaleX\(0\.25\)/);
+  await expect(barra).toHaveCSS('bottom', '0px');
+  await page.locator('#cartao-fechar').click();
+  await expect(barra).toBeHidden();
+});
 
 test('carrega: a contagem mostra o total de pontos e a busca fica habilitada', async ({ page }) => {
   const erros = [];

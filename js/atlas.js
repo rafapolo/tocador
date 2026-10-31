@@ -1,7 +1,8 @@
 // atlas.js — /atlas: every uqt + homi track as a point on a 2D map (WebGL), with zoom/pan, pinch,
 // search, genre/acervo filters and a card that links to the player.
 // Classic script, loaded after acervo-format.js (decodeAcervo, albumSlugs), util.js (fold) and
-// atlas-data.js (decodeAtlas, atlasKeyHash). Catalog text only ever reaches the page via textContent.
+// atlas-data.js (decodeAtlas, atlasKeyHash), atlas-grafo.js (criarGrafoAtlas). Catalog text only ever
+// reaches the page via textContent.
 (function () {
   'use strict';
 
@@ -503,6 +504,7 @@
   }
 
   function atualizarContagem() {
+    if (grafo.aberto) return;      // the graph writes its own count here
     const el = $('contagem');
     if (filtro.busca) el.textContent = nAtivo ? `${fmt(nAtivo)} ${nAtivo === 1 ? 'faixa' : 'faixas'}` : 'nada encontrado';
     else el.textContent = `${fmt(nAtivo)} faixas`;
@@ -524,6 +526,7 @@
     const q = fold(valor.trim());
     filtro.q = valor.trim();
     $('busca-limpar').hidden = !filtro.q;
+    grafo.buscar(filtro.q);
     if (q.length < 2) { filtro.busca = null; recalcular(); return; }
     if (!textos) montarTextos();
     const termos = q.split(/\s+/);
@@ -554,6 +557,7 @@
       $('cartao-ouvir').href = urlPlayer(i);
       $('cartao-ouvir').removeAttribute('aria-disabled');
       $('cartao-previa').hidden = false;
+      mostrarParecidos(i, parseArtists(info.artista));
       const base = info.db.meta?.base_url;
       if (info.album.has_cover && base) {
         capa.hidden = false;
@@ -565,10 +569,24 @@
       $('cartao-ouvir').removeAttribute('href');
       $('cartao-ouvir').setAttribute('aria-disabled', 'true');
       $('cartao-previa').hidden = true;
+      $('cartao-parecidos').hidden = true;
       capa.hidden = true;
     }
     cartao.hidden = false;
     pedir();
+  }
+  async function mostrarParecidos(i, artistas) {
+    $('cartao-parecidos').hidden = true;
+    const nomes = await grafo.parecidos(artistas, 4);
+    if (sel !== i || !nomes.length) return;
+    $('cartao-parecidos-lista').replaceChildren(...nomes.map(n => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = n;
+      b.addEventListener('click', () => abrirGrafo(n));
+      return b;
+    }));
+    $('cartao-parecidos').hidden = false;
   }
   function fecharCartao() {
     sel = -1;
@@ -579,10 +597,17 @@
   $('cartao-capa').addEventListener('error', e => { e.target.hidden = true; });
   $('cartao-fechar').addEventListener('click', fecharCartao);
 
-  const audio = $('previa');
+  const audio = $('previa'), progresso = $('cartao-progresso');
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    progresso.hidden = false;
+    progresso.firstElementChild.style.transform = `scaleX(${audio.currentTime / audio.duration})`;
+  });
   function pararPrevia() {
     audio.pause();
     audio.removeAttribute('src');
+    progresso.hidden = true;
+    progresso.firstElementChild.style.transform = 'scaleX(0)';
     $('cartao-previa').setAttribute('aria-pressed', 'false');
     $('cartao-previa').textContent = 'Prévia';
   }
@@ -767,6 +792,7 @@
       const b = caixa(mapa, ativo, 0.02, 0.98);
       if (b) enquadrar(b, animar, 0.015, [0, 0]);
     } else enquadrarTudo(animar);
+    grafo.redesenhar();
     salvarUrl();
   }
   document.querySelectorAll('[data-mapa]').forEach(b => b.addEventListener('click', () => trocarMapa(b.dataset.mapa)));
@@ -775,6 +801,7 @@
     filtro.acervo = a;
     document.querySelectorAll('[data-acervo]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.acervo === a)));
     recalcular();
+    grafo.redesenhar();
   }
   document.querySelectorAll('[data-acervo]').forEach(b => b.addEventListener('click', () => trocarAcervo(b.dataset.acervo)));
 
@@ -826,7 +853,8 @@
     const passo = 90 / k;
     switch (e.key) {
       case '/': e.preventDefault(); $('busca').focus(); break;
-      case 'Escape': if (sel >= 0) fecharCartao(); break;
+      case 'Escape': if (grafo.aberto) grafo.fechar(); else if (sel >= 0) fecharCartao(); break;
+      case 'g': case 'G': alternarGrafo(); break;
       case '+': case '=': voar(cx, cy, k * 1.5); break;
       case '-': case '_': voar(cx, cy, k / 1.5); break;
       case '0': enquadrarTudo(); break;
@@ -849,10 +877,36 @@
       if (mapa !== 'som') p.set('mapa', mapa);
       if (filtro.acervo !== 'todos') p.set('acervo', filtro.acervo);
       if (filtro.q) p.set('q', filtro.q);
+      if (grafo.aberto) {
+        p.set('grafo', '1');
+        if (grafo.centro) p.set('artista', grafo.centro);
+      }
       const qs = p.toString();
       history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
     }, 300);
   }
+
+  // ── graph ──
+  const grafo = criarGrafoAtlas({
+    raiz: APP_ROOT, fetchJsonGz,
+    mapa: () => mapa,
+    acervo: () => filtro.acervo,
+    corDe: g => MACROS.find(m => m[0] === macroDe(g))?.[2] || COR_OUTROS,
+    rotuloGenero: g => `${subDe(g)} · ${nomeMacro(macroDe(g))}`,
+    avisar: texto => { $('contagem').textContent = texto; },
+    aoMudar: () => { atualizarContagem(); salvarUrl(); },
+    aoVerNoMapa: nome => { $('busca').value = nome; buscar(nome); },
+  });
+  function abrirGrafo(nome) {
+    fecharCartao();
+    grafo.abrir(nome);
+  }
+  function alternarGrafo() {
+    if (grafo.aberto) { grafo.fechar(); return; }
+    const info = sel >= 0 ? infoDe(sel) : null;
+    abrirGrafo(info ? parseArtists(info.artista)[0] : null);
+  }
+  $('btn-grafo').addEventListener('click', alternarGrafo);
 
   // ── size ──
   function medir() {
@@ -892,6 +946,7 @@
     medir();
     new ResizeObserver(medir).observe(canvas);
     atualizarContagem();
+    if (params.get('grafo')) grafo.abrir(params.get('artista'));
     $('carregando').classList.add('pronto');
     setTimeout(() => $('carregando').hidden = true, 600);
     setTimeout(sumirAjuda, 8000);
@@ -911,6 +966,7 @@
     tela(i) { return { x: telaX(mundoX(i)), y: telaY(mundoY(i)) }; },
     focar(i, zoom = 40) { voar(mundoX(i), mundoY(i), k0 * zoom, false); },
     estado() { return { k, k0, cx, cy, mapa, t, nAtivo, n: N, sel, yaw, pitch, tem3d: !!A.posZ[mapa], girar: modoGirar }; },
+    grafo: () => grafo.estado(),
   };
 
   iniciar();

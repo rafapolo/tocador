@@ -207,3 +207,50 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   #carregando, #ajuda { transition: none; }
 }
+
+/* ── cartão: artistas parecidos e progresso da prévia ── */
+#cartao-parecidos { grid-column: 1 / -1; min-width: 0; }
+#cartao-parecidos p { margin: 0 0 6px; color: var(--text-2); font-size: 12px; }
+#cartao-parecidos-lista { display: flex; flex-wrap: wrap; gap: 6px; }
+#cartao-parecidos-lista button {
+  max-width: 100%; padding: 4px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+  font-size: 12.5px; background: transparent; border: 1px solid var(--border); border-radius: 14px;
+}
+#cartao-parecidos-lista button:hover { background: var(--surface-light); }
+#cartao-parecidos-lista button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#cartao-progresso { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; border-radius: 0 0 13px 13px; }
+#cartao-progresso span {
+  display: block; height: 100%; background: #e0b84c; transform: scaleX(0); transform-origin: left;
+  transition: transform 0.25s linear;
+}
+
+/* ── grafo de artistas ── */
+#grafo { position: absolute; inset: 0; z-index: 6; background: var(--bg); }
+#grafo-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#grafo-arestas line { stroke: var(--border); stroke-width: 1; }
+#grafo-arestas line.forte { stroke: var(--accent); stroke-opacity: 0.55; }
+.grafo-no { cursor: pointer; outline: none; transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
+.sem-transicao .grafo-no { transition: none; }
+.grafo-no text {
+  fill: var(--text-2); font-size: 11.5px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round;
+}
+.grafo-no.centro text { fill: var(--text); font-size: 15px; font-weight: 600; }
+.grafo-no.centro circle { stroke: var(--text); stroke-width: 2; }
+.grafo-no:focus-visible circle { stroke: var(--accent); stroke-width: 3; }
+#grafo-svg.foco .grafo-no:not(.perto) { opacity: 0.3; }
+#grafo-svg.foco #grafo-arestas line:not(.perto) { opacity: 0.25; }
+#grafo-svg.foco #grafo-arestas line.perto { stroke: var(--accent); stroke-opacity: 1; }
+#grafo-svg.foco .grafo-no.perto text { fill: var(--text); }
+#grafo-painel {
+  position: absolute; right: 16px; bottom: calc(16px + var(--safe-b)); width: 300px; padding: 12px 14px;
+  background: var(--glass); border: 1px solid var(--border); border-radius: 12px;
+}
+#grafo-titulo { margin: 0 0 4px; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
+#grafo-detalhe { margin: 0; color: var(--text-2); font-size: 12.5px; }
+#grafo-acoes { display: flex; gap: 8px; margin-top: 10px; }
+#grafo-acoes:has(> [hidden] + [hidden]) { display: none; }
+.em-grafo #legenda, .em-grafo #zoom, .em-grafo #ajuda { display: none; }
+@media (max-width: 720px) {
+  #cartao-progresso { border-radius: 0; }
+  #grafo-painel { left: 12px; right: 12px; width: auto; bottom: calc(12px + var(--safe-b)); }
+}

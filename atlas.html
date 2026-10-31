@@ -30,6 +30,7 @@
   <script src="js/acervo-format.js" defer></script>
   <script src="js/util.js" defer></script>
   <script src="js/atlas-data.js" defer></script>
+  <script src="js/atlas-grafo.js" defer></script>
   <script src="js/atlas.js" defer></script>
 </head>
 <body>
@@ -40,6 +41,17 @@
   <div id="anel-hover" class="anel" hidden></div>
   <div id="anel-sel" class="anel anel-sel" hidden></div>
   <div id="dica" role="tooltip" hidden></div>
+<section id="grafo" aria-label="Grafo de artistas parecidos" hidden>
+  <svg id="grafo-svg" role="group" aria-label="Artistas ligados aos mais parecidos"><g id="grafo-mundo"><g id="grafo-arestas"></g><g id="grafo-nos"></g></g></svg>
+  <div id="grafo-painel">
+    <h2 id="grafo-titulo"></h2>
+    <p id="grafo-detalhe"></p>
+    <div id="grafo-acoes">
+      <button id="grafo-ver-mapa" class="botao botao-sec" type="button">Ver no mapa</button>
+      <button id="grafo-geral" class="botao botao-sec" type="button">Visão geral</button>
+    </div>
+  </div>
+</section>
 
   <header id="topo">
     <a id="voltar" href="./" aria-label="Voltar ao Tocador">←<span> Tocador</span></a>
@@ -60,6 +72,9 @@
       <button type="button" data-acervo="todos" aria-pressed="true">Todos</button>
       <button type="button" data-acervo="uqt" aria-pressed="false">UQT</button>
       <button type="button" data-acervo="homi" aria-pressed="false">Homi</button>
+    </div>
+    <div class="seg" role="group" aria-label="Visualização">
+      <button id="btn-grafo" type="button" aria-pressed="false" title="Ver artistas parecidos como grafo (G)">Grafo</button>
     </div>
   </nav>
 
@@ -88,7 +103,12 @@
       <a id="cartao-ouvir" class="botao" href="./">▶ Ouvir no player</a>
       <button id="cartao-previa" class="botao botao-sec" type="button" aria-pressed="false">Prévia</button>
     </div>
+    <div id="cartao-parecidos" hidden>
+      <p>Soa parecido com</p>
+      <div id="cartao-parecidos-lista"></div>
+    </div>
     <audio id="previa" preload="none"></audio>
+    <div id="cartao-progresso" hidden><span></span></div>
   </section>
 
   <p id="ajuda">arraste para navegar · role para zoom · botão direito (ou ⟳) gira em 3D · clique numa faixa</p>
