@@ -1,7 +1,10 @@
 // Tocador service worker — instant repeat loads + offline app shell.
 //
-// Strategy: stale-while-revalidate for same-origin static assets and for the
-// acervo catalogs (*.json.gz, cross-origin on GitHub raw). Audio and covers
+// Strategy: network-first for pages, stale-while-revalidate for same-origin
+// static assets and for the acervo catalogs (*.json.gz, cross-origin on GitHub
+// raw). A page must never be older than the scripts it gets: pages from before
+// a deploy lack the tags of files added since, and the new scripts crash on the
+// missing globals. Audio and covers
 // (cdn.tocador.cc) are never intercepted so Range requests pass straight
 // through to the proxy untouched.
 //
@@ -34,7 +37,7 @@ self.addEventListener('activate', e => {
 
 // Serve from cache immediately when available; refresh the cache from the
 // network in the background. Falls back to cache when offline.
-async function staleWhileRevalidate(cacheKey, request) {
+async function staleWhileRevalidate(cacheKey, request, offlineKey = cacheKey) {
   const cache = await caches.open(CACHE);
   const cached = await cache.match(cacheKey);
   const network = fetch(request)
@@ -42,8 +45,25 @@ async function staleWhileRevalidate(cacheKey, request) {
       if (resp.ok) cache.put(cacheKey, resp.clone());
       return resp;
     })
-    .catch(() => cached);
+    .catch(async err => {
+      const copia = cached || await cache.match(offlineKey);
+      if (copia) return copia;
+      throw err;
+    });
   return cached || network;
+}
+
+async function networkFirst(cacheKey, request) {
+  const cache = await caches.open(CACHE);
+  try {
+    const resp = await fetch(request);
+    if (resp.ok) cache.put(cacheKey, resp.clone());
+    return resp;
+  } catch (err) {
+    const copia = await cache.match(cacheKey);
+    if (copia) return copia;
+    throw err;
+  }
 }
 
 self.addEventListener('fetch', e => {
@@ -57,6 +77,12 @@ self.addEventListener('fetch', e => {
 
   // ?album=/?q=/?acervo= variants are all the same SPA shell — key by pathname
   // so one cached copy serves every deep link.
-  const cacheKey = sameOrigin ? url.pathname : request;
-  e.respondWith(staleWhileRevalidate(cacheKey, request));
+  if (request.mode === 'navigate') { e.respondWith(networkFirst(url.pathname, request)); return; }
+
+  // deploy.yml stamps ?v=<sha> on scripts and styles: that is part of the file's
+  // identity, or a page would get whatever build of the file was cached last. The
+  // bare path is what install precached, the copy to use offline.
+  const versao = sameOrigin && url.searchParams.has('v');
+  const cacheKey = !sameOrigin ? request : versao ? url.pathname + url.search : url.pathname;
+  e.respondWith(staleWhileRevalidate(cacheKey, request, sameOrigin ? url.pathname : request));
 });
