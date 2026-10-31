@@ -95,6 +95,106 @@ test('grafo: ?grafo=1&artista= centra no artista, ignorando caixa e acento, e cl
   await expect(page.locator('#grafo')).toBeHidden();
 });
 
+// Meio da área do grafo e, em px, a distância do nó central até ele.
+const foraDoCentro = page => page.evaluate(() => {
+  const r = document.querySelector('.grafo-no.centro circle').getBoundingClientRect();
+  const topo = document.getElementById('controles').getBoundingClientRect().bottom + 16;
+  const baixo = innerHeight - document.getElementById('grafo-painel').offsetHeight - 28;
+  return Math.hypot(r.x + r.width / 2 - innerWidth / 2, r.y + r.height / 2 - (topo + baixo) / 2);
+});
+const assentou = page => page.waitForFunction(() =>
+  !document.querySelector('.grafo-no.saindo') && !document.querySelector('.grafo-no[style*="--o: 0;"]'));
+
+test('grafo: o nó clicado termina no centro e as arestas chegam junto com os nós', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await page.locator('.grafo-no', { hasText: 'Beta' }).click();
+  await expect(page.locator('.grafo-no.centro')).toContainText('Beta');
+  await expect.poll(() => foraDoCentro(page)).toBeLessThan(1);
+  await assentou(page);
+  const soltas = await page.evaluate(() => {
+    const pos = new Map([...document.querySelectorAll('.grafo-no')].map(n => [n.dataset.i, n.getAttribute('transform').match(/-?[\d.]+/g).map(Number)]));
+    return [...document.querySelectorAll('#grafo-arestas line')].filter(l => {
+      const a = pos.get(l.dataset.a), b = pos.get(l.dataset.b);
+      return !a || !b || Math.hypot(a[0] - +l.getAttribute('x1'), a[1] - +l.getAttribute('y1')) > 0.01
+        || Math.hypot(b[0] - +l.getAttribute('x2'), b[1] - +l.getAttribute('y2')) > 0.01;
+    }).length;
+  });
+  expect(soltas).toBe(0);
+  await expect(page.locator('#grafo-arestas line').first()).toBeAttached();
+});
+
+test('grafo: a transição é contínua: no meio dela o nó está a caminho e as arestas o acompanham', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await assentou(page);
+  const inicio = await foraDoCentro(page);
+  const meio = await page.evaluate(() => new Promise(res => {
+    const no = [...document.querySelectorAll('.grafo-no')].find(n => n.textContent === 'Beta');
+    no.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const antes = no.getAttribute('transform');
+    setTimeout(() => {
+      const [x, y] = no.getAttribute('transform').match(/-?[\d.]+/g).map(Number);
+      const i = no.dataset.i, linha = document.querySelector(`#grafo-arestas line[data-a="${i}"], #grafo-arestas line[data-b="${i}"]`);
+      const ponta = linha.dataset.a === i ? [+linha.getAttribute('x1'), +linha.getAttribute('y1')] : [+linha.getAttribute('x2'), +linha.getAttribute('y2')];
+      res({ moveu: no.getAttribute('transform') !== antes, solta: Math.hypot(ponta[0] - x, ponta[1] - y) });
+    }, 300);
+  }));
+  expect(inicio).toBeLessThan(1);
+  expect(meio.moveu).toBe(true);
+  expect(meio.solta).toBeLessThan(0.01);
+});
+
+test('grafo: um segundo clique no meio da transição parte de onde os nós estão', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await assentou(page);
+  await page.evaluate(() => {
+    const no = nome => [...document.querySelectorAll('.grafo-no')].find(n => n.textContent === nome);
+    no('Beta').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    return new Promise(res => setTimeout(() => {
+      no('Delta').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      res();
+    }, 120));
+  });
+  await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  await assentou(page);
+  await expect.poll(() => foraDoCentro(page)).toBeLessThan(1);
+  await expect(page.locator('.grafo-no')).toHaveCount((await grafo(page)).nos.length);
+});
+
+test('grafo: a opacidade cai com a distância ao centro e o texto segue legível', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await assentou(page);
+  const op = (nome, sel) => page.locator('.grafo-no', { hasText: nome }).locator(sel).evaluate(e => +getComputedStyle(e).opacity);
+  await expect.poll(() => op('Delta', 'circle')).toBeCloseTo(1);
+  await expect(page.locator('.grafo-no', { hasText: 'Beta' })).toHaveAttribute('data-nivel', '2');
+  await expect(page.locator('.grafo-no[data-nivel="1"]')).toHaveCount(2);
+  const direto = page.locator('.grafo-no[data-nivel="1"] circle').first();
+  await expect.poll(() => direto.evaluate(e => +getComputedStyle(e).opacity)).toBeCloseTo(0.72);
+  await expect.poll(() => op('Beta', 'circle')).toBeCloseTo(0.42);
+  await expect.poll(() => op('Beta', 'text')).toBeCloseTo(0.652);
+  await page.locator('.grafo-no', { hasText: 'Beta' }).hover();
+  await expect.poll(() => op('Beta', 'circle')).toBeCloseTo(1);
+});
+
+test('grafo: com movimento reduzido a troca é direta', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  const direta = await page.evaluate(() => {
+    const no = [...document.querySelectorAll('.grafo-no')].find(n => n.textContent === 'Beta');
+    no.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const c = document.querySelector('.grafo-no.centro');
+    return c.textContent === 'Beta' && !document.querySelector('.grafo-no.saindo');
+  });
+  expect(direta).toBe(true);
+  expect(await foraDoCentro(page)).toBeLessThan(1);
+});
+
+test('grafo: redimensionar recoloca o centro sem animar', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await assentou(page);
+  await page.setViewportSize({ width: 900, height: 620 });
+  await expect.poll(() => foraDoCentro(page)).toBeLessThan(1);
+});
+
 test('grafo: artista fora do grafo abre a visão geral e avisa', async ({ page }) => {
   await boot(page, { url: '/atlas?grafo=1&artista=Ningu%C3%A9m' });
   await expect(page.locator('#contagem')).toHaveText('Artista fora do grafo');

@@ -12,6 +12,13 @@
   const SEMENTES = 3;         // overview: top artists per macro-genre it starts from
   const VIZ_FORA = 3;         // neighbours followed from each direct neighbour of the center
   const RANK_FORA = 4;        // links drawn between nodes that aren't the center
+  const DURACAO = 650;        // ms of a walk from one artist to the next
+  // By distance from the center: itself, direct neighbours, the rest. Labels fade less than dots (TEXTO_MIN).
+  const OPACIDADE_NO = [1, 0.72, 0.42];
+  const OPACIDADE_ARESTA = [0.45, 0.4, 0.24];
+  const OPACIDADE_FORTE = 0.8;
+  const TEXTO_MIN = 0.4;
+  const suave = p => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
   const fmt = n => n.toLocaleString('pt-BR');
 
   function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, aoMudar, aoVerNoMapa, aoSair, avisar }) {
@@ -25,6 +32,10 @@
     let nos = [], arestas = [];
     let aviso = '';                      // shown instead of the count until the view changes
     const elNo = new Map();              // artist index -> <g>
+    const cena = new Map();              // artist index -> what is drawn now: { x, y, r, o, v } (v = fading in/out)
+    const linhas = new Map();            // link key -> { el, a, b, o }
+    let transicao = null, quadro = 0;    // the walk in progress and its animation frame
+    let larguraFeita = 0, alturaFeita = 0;
     let vista = { x: 0, y: 0, k: 1 };
 
     function carregar() {
@@ -85,11 +96,18 @@
       return out;
     }
 
-    // ── layout: run once, so a given artist always draws the same picture ──
+    const chaveLinha = (a, b) => (a < b ? a * D.n + b : b * D.n + a);
+    function nivelDe(lista) {
+      const diretos = new Set(centro >= 0 ? viz(centro) : []);
+      return new Map(lista.map(i => [i, centro < 0 || i === centro ? 0 : diretos.has(i) ? 1 : 2]));
+    }
+
+    // ── layout: run once. Nodes already on screen start where they are, so a step keeps the scene's shape;
+    // with nothing drawn yet, the same artist always gives the same picture. ──
     const raio = i => (i === centro ? 13 : Math.min(15, 3.5 + Math.sqrt(D.faixas[i]) * 0.5));
     const larguraRotulo = i => D.nomes[i].length * 6.3 + 8;
 
-    function calcular(lista, ligs) {
+    function calcular(lista, ligs, semente = new Map()) {
       const n = lista.length, pos = new Map(lista.map((v, j) => [v, j]));
       const x = new Float64Array(n), y = new Float64Array(n);
       const W = camada.clientWidth, H = camada.clientHeight;
@@ -98,7 +116,13 @@
       const area = { l: 16, r: W - 16, t: topo, b: H - painel };
       const aw = Math.max(120, area.r - area.l), ah = Math.max(120, area.b - area.t);
       const L = Math.sqrt(aw * ah / Math.max(n, 1)) * 1.1;
-      lista.forEach((_, j) => { const r = 14 * Math.sqrt(j + 1), g = j * 2.39996; x[j] = r * Math.cos(g); y[j] = r * Math.sin(g); });
+      const meioX = area.l + aw / 2, meioY = area.t + ah / 2;
+      const [refX, refY] = semente.get(centro) || [meioX, meioY];
+      lista.forEach((v, j) => {
+        const r = 14 * Math.sqrt(j + 1), g = j * 2.39996, s = semente.get(v);
+        x[j] = s ? s[0] - refX : r * Math.cos(g);
+        y[j] = s ? s[1] - refY : r * Math.sin(g);
+      });
       const fixo = lista.indexOf(centro);
       const pares = ligs.map(e => [pos.get(e.a), pos.get(e.b)]);
       const passos = 320, gravidade = 0.02;
@@ -123,13 +147,25 @@
         if (fixo >= 0) { x[fixo] = 0; y[fixo] = 0; }
       }
       // Fit the viewport, leaving room for the label to the right of the rightmost node.
-      const folga = 110;
+      const folga = Math.min(110, aw * 0.22);
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
       for (let i = 0; i < n; i++) { x0 = Math.min(x0, x[i]); x1 = Math.max(x1, x[i]); y0 = Math.min(y0, y[i]); y1 = Math.max(y1, y[i]); }
-      const sx = (aw - folga - 24) / Math.max(x1 - x0, 1), sy = (ah - 24) / Math.max(y1 - y0, 1);
-      for (let i = 0; i < n; i++) {
-        x[i] = area.l + 12 + (x[i] - x0) * sx;
-        y[i] = area.t + 12 + (y[i] - y0) * sy;
+      if (fixo >= 0) {
+        // Each side of the center fits on its own, so the center stays exactly in the middle of the area.
+        const esq = (aw / 2 - 12) / Math.max(-x0, 1), dir = Math.max(aw / 2 - folga - 12, 20) / Math.max(x1, 1);
+        const cima = (ah / 2 - 12) / Math.max(-y0, 1), baixo = (ah / 2 - 12) / Math.max(y1, 1);
+        const se = Math.min(esq, 2.5 * dir), sd = Math.min(dir, 2.5 * esq);    // a lopsided graph isn't stretched
+        const sc = Math.min(cima, 2.5 * baixo), sb = Math.min(baixo, 2.5 * cima);
+        for (let i = 0; i < n; i++) {
+          x[i] = meioX + x[i] * (x[i] < 0 ? se : sd);
+          y[i] = meioY + y[i] * (y[i] < 0 ? sc : sb);
+        }
+      } else {
+        const sx = (aw - folga - 24) / Math.max(x1 - x0, 1), sy = (ah - 24) / Math.max(y1 - y0, 1);
+        for (let i = 0; i < n; i++) {
+          x[i] = area.l + 12 + (x[i] - x0) * sx;
+          y[i] = area.t + 12 + (y[i] - y0) * sy;
+        }
       }
       // Push overlapping labels apart, mostly vertically: a label is much wider than it is tall.
       for (let p = 0; p < 40; p++) {
@@ -148,10 +184,18 @@
         if (!mexeu) break;
       }
       // That can spill past the edges: squeeze back rather than clamp, which would pile nodes on the border.
-      let t0 = Infinity, t1 = -Infinity;
-      for (let i = 0; i < n; i++) { t0 = Math.min(t0, y[i]); t1 = Math.max(t1, y[i]); }
-      const sq = Math.min(1, (ah - 24) / Math.max(t1 - t0, 1));
-      for (let i = 0; i < n; i++) y[i] = area.t + 12 + (y[i] - t0) * sq;
+      if (fixo >= 0) {
+        const d = meioY - y[fixo];
+        let acima = 0, abaixo = 0;
+        for (let i = 0; i < n; i++) { y[i] += d; acima = Math.max(acima, meioY - y[i]); abaixo = Math.max(abaixo, y[i] - meioY); }
+        const sa = Math.min(1, (ah / 2 - 12) / Math.max(acima, 1)), sb = Math.min(1, (ah / 2 - 12) / Math.max(abaixo, 1));
+        for (let i = 0; i < n; i++) y[i] = meioY + (y[i] - meioY) * (y[i] < meioY ? sa : sb);
+      } else {
+        let t0 = Infinity, t1 = -Infinity;
+        for (let i = 0; i < n; i++) { t0 = Math.min(t0, y[i]); t1 = Math.max(t1, y[i]); }
+        const sq = Math.min(1, (ah - 24) / Math.max(t1 - t0, 1));
+        for (let i = 0; i < n; i++) y[i] = area.t + 12 + (y[i] - t0) * sq;
+      }
       return new Map(lista.map((v, j) => [v, [x[j], y[j]]]));
     }
 
@@ -170,33 +214,109 @@
       return g;
     }
 
-    function desenhar(animar = true) {
+    // A step of the walk: what is drawn now (cena, linhas) eases towards the new layout in one loop, so nodes
+    // and links move together and the clicked dot reaches the center as the scene becomes its perspective.
+    function desenhar(animar = true, origem = -1) {
+      parar();
       const lista = centro >= 0 ? escolherEgo(centro) : escolherGeral();
       const ligs = ligar(lista, centro);
       nos = lista; arestas = ligs;
       desenharPainel();                      // first: the layout measures the panel
-      const pos = calcular(lista, ligs);
-      vista = { x: 0, y: 0, k: 1 };
-      aplicarVista();
-      gNos.classList.toggle('sem-transicao', !animar || reduzMovimento);
-      for (const [i, el] of elNo) if (!pos.has(i)) { el.remove(); elNo.delete(i); }
+      larguraFeita = camada.clientWidth; alturaFeita = camada.clientHeight;
+      const semente = new Map();
+      for (const i of lista) { const c = cena.get(i); if (c?.v > 0) semente.set(i, [c.x, c.y]); }
+      const pos = calcular(lista, ligs, semente);
+      const niveis = nivelDe(lista);
+
+      // Whatever leaves goes along with the camera, instead of staying behind as the scene moves.
+      const antes = cena.get(centro), [nx, ny] = antes ? pos.get(centro) : [0, 0];
+      const dx = antes ? nx - antes.x : 0, dy = antes ? ny - antes.y : 0;
+      const nasce = cena.get(origem);
+      const alvos = new Map();
       for (const i of lista) {
-        const novo = !elNo.has(i);
-        if (novo) { elNo.set(i, novoNo(i)); gNos.append(elNo.get(i)); }
-        const el = elNo.get(i), [x, y] = pos.get(i), r = raio(i);
-        el.style.transform = `translate(${x}px, ${y}px)`;
-        el.classList.toggle('centro', i === centro);
-        el.firstChild.setAttribute('r', r);
-        el.lastChild.setAttribute('x', r + 4);
-        el.lastChild.setAttribute('y', 4);
+        const [x, y] = pos.get(i), o = OPACIDADE_NO[niveis.get(i)], r = raio(i);
+        alvos.set(i, { x, y, r, o, v: 1 });
+        if (!cena.has(i)) {
+          elNo.set(i, novoNo(i));
+          gNos.append(elNo.get(i));
+          cena.set(i, { x: nasce ? nasce.x : x, y: nasce ? nasce.y : y, r, o, v: 0 });
+        }
       }
-      gArestas.replaceChildren(...ligs.map(e => {
-        const l = document.createElementNS(SVG, 'line'), [x1, y1] = pos.get(e.a), [x2, y2] = pos.get(e.b);
-        l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
-        l.setAttribute('class', e.forte ? 'forte' : '');
-        l.dataset.a = e.a; l.dataset.b = e.b;
-        return l;
-      }));
+      for (const [i, c] of cena) if (!alvos.has(i)) alvos.set(i, { x: c.x + dx, y: c.y + dy, r: c.r, o: c.o, v: 0 });
+      for (const [i, el] of elNo) {
+        const fica = pos.has(i);
+        el.classList.toggle('centro', i === centro);
+        el.classList.toggle('saindo', !fica);
+        el.setAttribute('tabindex', fica ? '0' : '-1');
+        if (fica) el.dataset.nivel = niveis.get(i);
+      }
+
+      const alvosLinha = new Map();
+      for (const e of ligs) {
+        const k = chaveLinha(e.a, e.b);
+        if (!linhas.has(k)) {
+          const el = document.createElementNS(SVG, 'line');
+          el.dataset.a = e.a; el.dataset.b = e.b;
+          gArestas.append(el);
+          linhas.set(k, { el, a: e.a, b: e.b, o: 0 });
+        }
+        linhas.get(k).el.setAttribute('class', e.forte ? 'forte' : '');
+        alvosLinha.set(k, e.forte ? OPACIDADE_FORTE : OPACIDADE_ARESTA[Math.max(niveis.get(e.a), niveis.get(e.b))]);
+      }
+      for (const k of linhas.keys()) if (!alvosLinha.has(k)) alvosLinha.set(k, 0);
+
+      transicao = {
+        alvos, alvosLinha,
+        de: new Map([...cena].map(([i, c]) => [i, { ...c }])),
+        deLinha: new Map([...linhas].map(([k, l]) => [k, l.o])),
+        vista: { ...vista },
+      };
+      if (!animar || reduzMovimento) { encerrar(); return; }
+      const t0 = performance.now();
+      const passo = agora => {
+        const p = Math.min(1, (agora - t0) / DURACAO);
+        if (p >= 1) { encerrar(); return; }
+        aplicar(suave(p));
+        quadro = requestAnimationFrame(passo);
+      };
+      quadro = requestAnimationFrame(passo);
+    }
+
+    const entre = (a, b, p) => a + (b - a) * p;
+    function aplicar(p) {
+      const { alvos, alvosLinha, de, deLinha, vista: v0 } = transicao;
+      for (const [i, c] of cena) {
+        const a = de.get(i), b = alvos.get(i), el = elNo.get(i);
+        c.x = entre(a.x, b.x, p); c.y = entre(a.y, b.y, p); c.r = entre(a.r, b.r, p);
+        c.o = entre(a.o, b.o, p); c.v = entre(a.v, b.v, p);
+        el.setAttribute('transform', `translate(${c.x} ${c.y})`);
+        el.firstChild.setAttribute('r', c.r);
+        el.lastChild.setAttribute('x', c.r + 4);
+        el.lastChild.setAttribute('y', 4);
+        el.style.setProperty('--o', c.o * c.v);
+        el.style.setProperty('--t', (TEXTO_MIN + (1 - TEXTO_MIN) * c.o) * c.v);   // labels stay readable far from the center
+      }
+      for (const [k, l] of linhas) {
+        const a = cena.get(l.a), b = cena.get(l.b);
+        l.o = entre(deLinha.get(k), alvosLinha.get(k), p);
+        l.el.setAttribute('x1', a.x); l.el.setAttribute('y1', a.y);
+        l.el.setAttribute('x2', b.x); l.el.setAttribute('y2', b.y);
+        l.el.style.setProperty('--o', l.o);
+      }
+      vista = { x: entre(v0.x, 0, p), y: entre(v0.y, 0, p), k: entre(v0.k, 1, p) };
+      aplicarVista();
+    }
+    // Stops a walk where it is; the next one starts from there.
+    function parar() {
+      cancelAnimationFrame(quadro);
+      transicao = null;
+    }
+    function encerrar() {
+      if (!transicao) return;
+      aplicar(1);
+      for (const [k, o] of transicao.alvosLinha) if (!o) { linhas.get(k).el.remove(); linhas.delete(k); }
+      for (const [i, a] of transicao.alvos) if (!a.v) { elNo.get(i).remove(); elNo.delete(i); cena.delete(i); }
+      parar();
     }
 
     function desenharPainel() {
@@ -215,7 +335,7 @@
       centro = i;
       aviso = '';
       limparFoco();
-      desenhar();
+      desenhar(true, i);
       aoMudar();
     }
 
@@ -289,7 +409,9 @@
 
     $('grafo-ver-mapa').addEventListener('click', () => { const nome = D.nomes[centro]; fechar(false); aoVerNoMapa(nome); });
     $('grafo-geral').addEventListener('click', () => centrar(-1));
-    new ResizeObserver(() => { if (aberto && D) desenhar(false); }).observe(camada);
+    new ResizeObserver(() => {
+      if (aberto && D && (camada.clientWidth !== larguraFeita || camada.clientHeight !== alturaFeita)) desenhar(false);
+    }).observe(camada);
 
     // ── public ──
     async function abrir(nome = null) {
@@ -309,6 +431,7 @@
     // `posicionar`: leave the map on the artist the graph was centered on.
     function fechar(posicionar = true) {
       const nome = D && centro >= 0 ? D.nomes[centro] : null;
+      encerrar();
       aberto = false;
       camada.hidden = true;
       document.body.classList.remove('em-grafo');
