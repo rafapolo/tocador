@@ -283,17 +283,6 @@ test('prévia: sair do grafo voa até o artista sem trocar a faixa selecionada',
   expect(await pausou(page)).toBe(0);
 });
 
-test('prévia: "Ver no mapa" mantém o áudio mesmo com a busca filtrando a faixa', async ({ page }) => {
-  await boot(page);
-  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
-  await simularPrevia(page);
-  await page.locator('#cartao-parecidos-lista button', { hasText: 'Delta' }).click();
-  await page.locator('#grafo-ver-mapa').click();
-  await expect(page.locator('#grafo')).toBeHidden();
-  await expect(page.locator('#cartao')).toBeVisible();
-  expect(await pausou(page)).toBe(0);
-});
-
 test('grafo: sem prévia tocando o cartão fecha ao entrar', async ({ page }) => {
   await boot(page);
   await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
@@ -306,7 +295,7 @@ test('grafo: artista fora do grafo abre a visão geral e avisa', async ({ page }
   await boot(page, { url: '/atlas?grafo=1&artista=Ningu%C3%A9m' });
   await expect(page.locator('#contagem')).toHaveText('Artista fora do grafo');
   expect((await grafo(page)).centro).toBeNull();
-  await expect(page.locator('#grafo-ver-mapa')).toBeHidden();
+  await expect(page.locator('#grafo-genero')).toBeHidden();
 });
 
 test('grafo: Som e Gêneros trocam as ligações sem fechar o grafo', async ({ page }) => {
@@ -518,6 +507,44 @@ test('histórico: digitar na busca não cria uma entrada por letra; Enter cria u
   expect(await page.evaluate(() => history.length)).toBe(antes + 1);
   await page.goBack();
   await expect(page.locator('#busca')).not.toHaveValue('samba');
+});
+
+test('grafo: desligar o botão volta ao mapa 3D inteiro, sem cartão; Esc ainda vai ao ponto', async ({ page }) => {
+  await boot(page, { url: `/atlas?grafo=1&artista=${encodeURIComponent(primeiro.artist)}` });
+  await expect(page.locator('#grafo-titulo')).toHaveText(primeiro.artist);
+  await page.locator('#btn-grafo').click();
+  await expect(page.locator('#grafo')).toBeHidden();
+  await expect(page.locator('#cartao')).toBeHidden();
+  await page.waitForTimeout(800);
+  const e = await estado(page);
+  expect(e.sel).toBe(-1);
+  expect(Math.abs(e.k / e.k0 - 1)).toBeLessThan(0.05);
+});
+
+test('grafo: o painel mostra todas as capas do artista, com link em nova aba, sem botões', async ({ page }) => {
+  await rotear(page);
+  await page.route('**/capa-min.jpg', r => r.fulfill({
+    status: 200, contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+  }));
+  // A fixture não tem capas: aqui todo álbum do catálogo passa a ter.
+  const comCapa = { ...uqt, albums: uqt.albums.map(a => ({ ...a, has_cover: true })) };
+  await page.route('**/uqt/data/uqt-albums.json.gz', r => r.fulfill(gz(zlib.gzipSync(JSON.stringify(comCapa)))));
+  await page.goto(`/atlas?grafo=1&artista=${encodeURIComponent(primeiro.artist)}`);
+  await page.evaluate(() => window.__atlas.pronto);
+  const esperadas = comCapa.albums.filter(a => a.artist === primeiro.artist).length;
+  expect(esperadas).toBeGreaterThan(0);
+  const capas = page.locator('#grafo-capas a');
+  await expect(capas).toHaveCount(esperadas);
+  await expect(capas.first()).toHaveAttribute('target', '_blank');
+  await expect(capas.first().locator('img')).toHaveAttribute('src', /capa-min\.jpg$/);
+  await expect(page.locator('#grafo-acoes')).toHaveCount(0);
+  await expect(page.locator('#grafo-genero')).toBeVisible();
+});
+
+test('UQT e Homi usam o mesmo ícone de acervo', async ({ page }) => {
+  await boot(page);
+  await expect(page.locator('[data-acervo="uqt"] use')).toHaveAttribute('href', '#i-acervo');
+  await expect(page.locator('[data-acervo="homi"] use')).toHaveAttribute('href', '#i-acervo');
 });
 
 test('grafo: sem o payload avisa e o mapa segue funcionando', async ({ page }) => {

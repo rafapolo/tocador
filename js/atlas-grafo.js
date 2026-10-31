@@ -23,7 +23,7 @@
   const suave = p => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
   const fmt = n => n.toLocaleString('pt-BR');
 
-  function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, aoMudar, aoVerNoMapa, aoSair, avisar }) {
+  function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, capasDe, aoMudar, aoSair, avisar }) {
     const $ = id => document.getElementById(id);
     const camada = $('grafo'), svg = $('grafo-svg'), mundo = $('grafo-mundo');
     const gArestas = $('grafo-arestas'), gNos = $('grafo-nos'), btn = $('btn-grafo');
@@ -39,6 +39,7 @@
     let transicao = null, quadro = 0;    // the walk in progress and its animation frame
     let larguraFeita = 0, alturaFeita = 0, reservaFeita = 0;
     let vista = { x: 0, y: 0, k: 1 };
+    let capasFeitas = '';                // whose covers are in the panel
     let yaw = 0, pitch = 0;              // rotation of the scene around `piv`; 0, 0 is the flat front view
     let piv = null, pivAlvo = { x: 0, y: 0 };
 
@@ -363,12 +364,37 @@
 
     function desenharPainel() {
       const base = mapa() === 'rotulos' ? 'pelos rótulos de gênero' : 'pelo som das faixas';
-      $('grafo-titulo').textContent = centro >= 0 ? D.nomes[centro] : 'Artistas parecidos';
+      const nome = centro >= 0 ? D.nomes[centro] : null;
+      $('grafo-titulo').textContent = nome ?? 'Artistas parecidos';
+      $('grafo-genero').hidden = !nome;
+      if (nome) {
+        const g = D.generos[D.genero[centro]];
+        $('grafo-genero').querySelector('.ponto').style.background = corDe(g);
+        $('grafo-genero-nome').textContent = rotuloGenero(g);
+      }
       $('grafo-detalhe').textContent = centro >= 0
-        ? `${rotuloGenero(D.generos[D.genero[centro]])} · ${fmt(D.faixas[centro])} faixas · ligações ${base}. Arraste para girar.`
+        ? `${fmt(D.faixas[centro])} faixas · ligações ${base}. Arraste para girar.`
         : `Artistas ligados ${base}. Escolha um para ver quem está perto dele; arraste para girar.`;
-      $('grafo-ver-mapa').hidden = $('grafo-geral').hidden = centro < 0;
+      desenharCapas(nome);
       avisar(aviso || `${fmt(nos.length)} artistas · ${fmt(arestas.length)} ligações`);
+    }
+
+    function desenharCapas(nome) {
+      const capas = nome ? capasDe(nome) : [], caixa = $('grafo-capas'), chave = `${nome}|${capas.length}`;
+      if (chave === capasFeitas) return;     // redrawing would refetch and flash images already on screen
+      capasFeitas = chave;
+      caixa.scrollTop = caixa.scrollLeft = 0;
+      caixa.replaceChildren(...capas.map(c => {
+        const a = document.createElement('a'), img = document.createElement('img');
+        a.href = c.href; a.target = '_blank'; a.rel = 'noopener';
+        a.title = c.titulo;
+        a.setAttribute('aria-label', `Abrir ${c.titulo} no tocador`);
+        img.src = c.src; img.alt = ''; img.width = img.height = 56; img.loading = 'lazy';
+        img.addEventListener('error', () => { a.remove(); caixa.hidden = !caixa.children.length; });
+        a.append(img);
+        return a;
+      }));
+      caixa.hidden = !capas.length;
     }
 
     function aplicarVista() { mundo.setAttribute('transform', `translate(${vista.x} ${vista.y}) scale(${vista.k})`); }
@@ -449,8 +475,6 @@
     svg.addEventListener('pointerup', soltar);
     svg.addEventListener('pointercancel', soltar);
 
-    $('grafo-ver-mapa').addEventListener('click', () => { const nome = D.nomes[centro]; fechar(false); aoVerNoMapa(nome); });
-    $('grafo-geral').addEventListener('click', () => centrar(-1));
     const ajustar = new ResizeObserver(() => {
       camada.style.setProperty('--cartao-alto', `${$('cartao').offsetHeight}px`);   // phones stack the panel on the card
       if (aberto && D && (camada.clientWidth !== larguraFeita || camada.clientHeight !== alturaFeita
@@ -458,6 +482,7 @@
     });
     ajustar.observe(camada);
     ajustar.observe($('cartao'));
+    ajustar.observe($('grafo-painel'));
 
     // ── public ──
     async function abrir(nome = null) {
@@ -507,6 +532,7 @@
       get aberto() { return aberto; },
       get centro() { return D && centro >= 0 ? D.nomes[centro] : null; },
       redesenhar() { if (aberto && D) desenhar(); },
+      atualizarPainel() { if (aberto && D) desenharPainel(); },   // the catalogs arrive after the graph on a direct link
       estado() { return { aberto, centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), arestas: arestas.length, yaw, pitch }; },
     };
   }

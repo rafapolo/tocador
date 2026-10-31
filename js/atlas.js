@@ -110,6 +110,44 @@
     return `${APP_ROOT}?${new URLSearchParams({ acervo: ak, album: album.path, t: num, play: 1 })}`;
   }
 
+  function urlAlbum(ak, ai) {
+    const c = cat[ak];
+    if (location.hostname === 'tocador.cc') {
+      c.slugs ??= albumSlugs(c.db.albums);
+      return `${APP_ROOT}${ak}/${c.slugs[ai]}/`;
+    }
+    return `${APP_ROOT}?${new URLSearchParams({ acervo: ak, album: c.db.albums[ai].path })}`;
+  }
+
+  // Artist key -> albums with a cover where they appear, on the album or on any of its tracks.
+  let porArtista = null;
+  function indexarArtistas() {
+    const m = new Map(), chaves = new Map();
+    const chavesDe = t => {
+      if (!chaves.has(t)) chaves.set(t, parseArtists(t.replace(/\x00/g, '; ')).map(chaveArtista));
+      return chaves.get(t);
+    };
+    for (const ak of Object.keys(cat)) {
+      cat[ak].db.albums.forEach((album, ai) => {
+        if (!album.has_cover) return;
+        const dele = new Set(chavesDe(album.artist || ''));
+        for (const tr of album.tracks) if (tr.artists) for (const c of chavesDe(tr.artists)) dele.add(c);
+        for (const c of dele) { if (!m.has(c)) m.set(c, []); m.get(c).push({ ak, ai, album }); }
+      });
+    }
+    return m;
+  }
+  function capasDe(nome) {
+    if (!ligado) return [];
+    porArtista ??= indexarArtistas();
+    return (porArtista.get(chaveArtista(nome)) || []).slice().sort((a, b) => (b.album.year || 0) - (a.album.year || 0))
+      .map(({ ak, ai, album }) => ({
+        href: urlAlbum(ak, ai),
+        src: `${cat[ak].db.meta.base_url}/${encodeURIComponent(album.path)}/capa-min.jpg`,
+        titulo: album.year ? `${album.title} (${album.year})` : album.title,
+      }));
+  }
+
   function infoDe(i) {
     if (!ligado || ptAlb[i] < 0) return null;
     const ak = A.acervos[A.acervo[i]], db = cat[ak].db, album = db.albums[ptAlb[i]], track = album.tracks[ptTr[i]];
@@ -138,6 +176,7 @@
     $('busca').disabled = false;
     if (filtro.q) { $('busca').value = filtro.q; buscar(filtro.q, false); }
     atualizarContagem();
+    grafo.atualizarPainel();
     semHistorico(() => selecaoDaUrl(new URLSearchParams(location.search)));
   }
 
@@ -950,9 +989,9 @@
     acervo: () => filtro.acervo,
     corDe: g => MACROS.find(m => m[0] === macroDe(g))?.[2] || COR_OUTROS,
     rotuloGenero: g => `${subDe(g)} · ${nomeMacro(macroDe(g))}`,
+    capasDe,
     avisar: texto => { $('contagem').textContent = texto; },
     aoMudar: () => { atualizarContagem(); salvarUrl(true); },
-    aoVerNoMapa: nome => { $('busca').value = nome; buscar(nome); },
     aoSair: irParaArtista,
   });
   // An artist or album has no point of its own: its tracks sit in the same region of the map, so the most
@@ -995,7 +1034,12 @@
     grafo.abrir(nome);
   }
   function alternarGrafo() {
-    if (grafo.aberto) { grafo.fechar(); return; }
+    if (grafo.aberto) {             // the toggle goes back to the whole map; Esc goes to the artist's dot
+      grafo.fechar(false);
+      if (audio.paused) fecharCartao();
+      enquadrarTudo();
+      return;
+    }
     const info = sel >= 0 ? infoDe(sel) : null;
     abrirGrafo(info ? parseArtists(info.artista)[0] : null);
   }

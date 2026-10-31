@@ -253,20 +253,27 @@ button { font: inherit; color: inherit; }
   #grafo-arestas line, .grafo-no circle, .grafo-no text { transition: none; }
 }
 #grafo-painel {
-  position: absolute; right: 16px; bottom: calc(16px + var(--safe-b)); width: 300px; padding: 12px 14px;
-  background: var(--glass); border: 1px solid var(--border); border-radius: 12px;
+  position: absolute; right: 16px; bottom: calc(16px + var(--safe-b)); width: 340px; padding: 14px;
+  background: var(--glass); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
+#grafo-genero { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text-2); font-size: 12px; }
+#grafo-capas { display: grid; grid-template-columns: repeat(auto-fill, 56px); gap: 6px; margin-top: 10px; max-height: 182px; overflow-y: auto; }
+#grafo-capas[hidden] { display: none; }
+#grafo-capas a { display: block; width: 56px; height: 56px; border-radius: 6px; overflow: hidden; background: var(--surface-light); }
+#grafo-capas a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#grafo-capas img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.em-grafo #cartao-parecidos { display: none; }
 #grafo-titulo { margin: 0 0 4px; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
 #grafo-detalhe { margin: 0; color: var(--text-2); font-size: 12.5px; }
-#grafo-acoes { display: flex; gap: 8px; margin-top: 10px; }
-#grafo-acoes:has(> [hidden] + [hidden]) { display: none; }
 .em-grafo #legenda, .em-grafo #zoom, .em-grafo #ajuda { display: none; }
 @media (max-width: 720px) {
   #cartao-progresso { border-radius: 0; }
+  #grafo-capas { display: flex; overflow-x: auto; overflow-y: hidden; max-height: none; }
+  #grafo-capas a { flex: none; }
   #grafo-painel { left: 12px; right: 12px; width: auto; bottom: calc(12px + var(--safe-b)); }
   .em-grafo:has(#cartao:not([hidden])) #grafo-painel { bottom: calc(var(--cartao-alto, 0px) + 8px); padding: 8px 12px; }
-  .em-grafo:has(#cartao:not([hidden])) #grafo-detalhe, .em-grafo #cartao-parecidos { display: none; }
-  .em-grafo:has(#cartao:not([hidden])) #grafo-acoes { margin-top: 6px; }
+  .em-grafo:has(#cartao:not([hidden])) #grafo-detalhe, .em-grafo:has(#cartao:not([hidden])) #grafo-capas { display: none; }
 }
 
 /* ── ícones dos botões (sprite em atlas.html) ── */
