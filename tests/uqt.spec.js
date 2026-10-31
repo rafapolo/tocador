@@ -868,6 +868,27 @@ test('L70: the album atlas button sits right of the heart and targets the album 
   expect(url.searchParams.get('album')).toContain('Construção');
 });
 
+// O acervo ativo depende da aba: salvos do outro não podem parecer perdidos.
+test('L71: the saved tab also lists albums saved in the other acervo and opens them in a new tab', async ({ page, context }) => {
+  await gotoWithFixture(page, '/?acervo=uqt');
+  await page.evaluate(() => localStorage.setItem('tocador-salvos', JSON.stringify({
+    homi: [{ path: '2019 - Banda - Disco', name: 'Disco', artists: 'Banda', year: 2019, em: 1 }],
+  })));
+  await page.reload();
+  await expect(page.locator('.album-item').first()).toBeVisible();
+  await page.locator('.browse-tab[data-tab="saved"]').click();
+  const item = page.locator('#browse-list .browse-item');
+  await expect(item).toHaveCount(1);
+  await expect(item).toContainText('Disco — Banda');
+  await expect(item).toContainText('homi');
+  const [aba] = await Promise.all([context.waitForEvent('page'), item.click()]);
+  const url = new URL(aba.url());
+  expect(url.searchParams.get('acervo')).toBe('homi');
+  expect(url.searchParams.get('album')).toBe('2019 - Banda - Disco');
+  await aba.close();
+  await expect(page.locator('.browse-tab[data-tab="saved"]')).toHaveAttribute('title', 'Álbuns salvos (1)');
+});
+
 // Coração: salva o álbum no localStorage (por acervo) e a aba de salvos o lista;
 // clicar num salvo reabre o álbum mesmo com o grid filtrado em outra coisa.
 test.describe(() => {

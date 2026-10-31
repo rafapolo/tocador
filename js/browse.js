@@ -90,6 +90,7 @@ function getGenreDisplayItems() {
 // { "<acervo>": [{ path, name, artists, year, em }] }, o mais recente primeiro.
 // O path (NFC) é a chave; nome/artista/ano só servem para quem ler o JSON à mão.
 const SALVOS_KEY = 'tocador-salvos';
+const SALVO_FORA = 'salvo-fora:';     // valor de um item da lista que é de outro acervo
 
 function _salvosLer() {
   try {
@@ -120,6 +121,7 @@ function alternarSalvo(album) {
   else delete todos[activeAcervoId];
   try {
     localStorage.setItem(SALVOS_KEY, JSON.stringify(todos));
+    navigator.storage?.persist?.();      // pede para o navegador não despejar os salvos sob pressão de espaço
   } catch {
     showToast('Este navegador não deixou salvar');
     return i >= 0;
@@ -129,7 +131,7 @@ function alternarSalvo(album) {
 }
 
 function salvosMudaram() {
-  const n = salvosDoAcervo().length;
+  const n = Object.values(_salvosLer()).reduce((t, l) => t + (Array.isArray(l) ? l.length : 0), 0);
   document.querySelectorAll('.browse-tab[data-tab="saved"], .ex-tab[data-ex-tab="saved"]').forEach(b => {
     b.title = n ? `Álbuns salvos (${n})` : 'Álbuns salvos';
     b.setAttribute('aria-label', b.title);
@@ -142,10 +144,20 @@ function salvosMudaram() {
 function buildSavedList() {
   const porPath = new Map(albums.map(a => [a.path.normalize('NFC'), a]));
   // Um álbum que saiu do catálogo some da lista, mas continua guardado (pode voltar).
-  return salvosDoAcervo()
+  const daqui = salvosDoAcervo()
     .map(s => porPath.get(s.path))
     .filter(Boolean)
     .map(a => ({ name: a.artists ? `${a.name} — ${a.artists}` : a.name, fullName: a.path, count: a.year > 0 ? a.year : '' }));
+  // A lista é uma só: o acervo ativo depende da aba, e sem isso os salvos do outro pareciam perdidos.
+  // O catálogo dele não está carregado, então esses itens vivem do que foi guardado ao salvar.
+  const fora = Object.entries(_salvosLer())
+    .filter(([id, lista]) => id !== activeAcervoId && Array.isArray(lista))
+    .flatMap(([id, lista]) => lista.filter(s => s && typeof s.path === 'string').map(s => ({
+      name: s.artists ? `${s.name} — ${s.artists}` : s.name,
+      fullName: SALVO_FORA + JSON.stringify([id, s.path]),
+      count: KNOWN_ACERVOS[id] ? id : 'outro acervo',
+    })));
+  return [...daqui, ...fora];
 }
 
 function browseSelectedValue() {
@@ -340,6 +352,12 @@ function clearAllFilters() {
 }
 
 function selectBrowseItem(value, itemType) {
+  if (browseTab === 'saved' && value.startsWith(SALVO_FORA)) {
+    // Em outra aba: trocar de acervo aqui recarregaria a página e cortaria o áudio.
+    const [acervo, album] = JSON.parse(value.slice(SALVO_FORA.length));
+    window.open(`${APP_ROOT}?${new URLSearchParams({ acervo, album })}`, '_blank', 'noopener');
+    return;
+  }
   if (browseTab === 'saved') {
     // Abrir um salvo não mexe nos filtros: o álbum abre mesmo que o grid não o mostre.
     const album = albums.find(a => a.path === value);
