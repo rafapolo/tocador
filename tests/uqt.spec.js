@@ -833,6 +833,14 @@ test('L59: recycled node pool stays within its cap after repeated scroll cycles'
   expect(result.nodeCount).toBe(result.domCount);
 });
 
+// O atlas abre em outra aba para não interromper o áudio do player.
+test('L69: the atlas link opens in a new tab', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=uqt');
+  const link = page.locator('#btn-atlas');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener');
+});
+
 // Coração: salva o álbum no localStorage (por acervo) e a aba de salvos o lista;
 // clicar num salvo reabre o álbum mesmo com o grid filtrado em outra coisa.
 test.describe(() => {
