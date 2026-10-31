@@ -2405,3 +2405,6 @@ audio {
 
 .browse-genre-note { padding-bottom: 8px; border-bottom: 1px solid var(--color-border); }
 .browse-genre-note[hidden] { display: none; }
+
+.ic-x { vertical-align: -1px; }
+.ex-chip .ic-x, .ex-sugestao .ic-x, .track-filter-note .ic-x { margin: 0 3px; }

@@ -216,7 +216,7 @@ function renderTrackFilterNote(listEl, tracks) {
   const dentro = tracks.length - fora;
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.textContent = 'limpar filtro';
+  btn.innerHTML = `${ICONE_X} limpar filtro`;
   btn.addEventListener('click', () => trackFilterInfo?.limpar?.());
   note.replaceChildren(`${dentro} de ${tracks.length} faixas ${trackFilterInfo?.frase || 'passam no filtro'}; as apagadas são puladas. `, btn);
 }

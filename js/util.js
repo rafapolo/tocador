@@ -24,6 +24,9 @@ function parseArtists(str) {
   return merged;
 }
 
+// Constant markup for the dismiss icon of the small "remove" buttons.
+const ICONE_X = '<svg class="ic-x" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
 // Catalog text (also from third-party ?acervo= URLs) is untrusted: escape it
 // before it goes anywhere near innerHTML.
 function escapeHtml(s) {

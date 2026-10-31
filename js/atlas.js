@@ -585,7 +585,8 @@
     $('cartao-parecidos-lista').replaceChildren(...nomes.map(n => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.textContent = n;
+      b.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-artista"/></svg>';
+      b.append(n);
       b.addEventListener('click', () => abrirGrafo(n));
       return b;
     }));
@@ -606,13 +607,18 @@
     progresso.hidden = false;
     progresso.firstElementChild.style.transform = `scaleX(${audio.currentTime / audio.duration})`;
   });
+  function estadoPrevia(tocando) {
+    const b = $('cartao-previa');
+    b.setAttribute('aria-pressed', String(tocando));
+    b.querySelector('use').setAttribute('href', tocando ? '#i-pausar' : '#i-tocar');
+    b.querySelector('span').textContent = tocando ? 'Pausar' : 'Prévia';
+  }
   function pararPrevia() {
     audio.pause();
     audio.removeAttribute('src');
     progresso.hidden = true;
     progresso.firstElementChild.style.transform = 'scaleX(0)';
-    $('cartao-previa').setAttribute('aria-pressed', 'false');
-    $('cartao-previa').textContent = 'Prévia';
+    estadoPrevia(false);
   }
   $('cartao-previa').addEventListener('click', () => {
     const info = sel >= 0 && infoDe(sel);
@@ -621,8 +627,7 @@
     const base = info.db.meta?.base_url;
     audio.src = `${base}/${encodeURIComponent(info.album.path)}/${encodeURIComponent(info.track.file)}`;
     audio.play().catch(() => pararPrevia());
-    $('cartao-previa').setAttribute('aria-pressed', 'true');
-    $('cartao-previa').textContent = '❚❚ Pausar';
+    estadoPrevia(true);
   });
   audio.addEventListener('ended', pararPrevia);
 

@@ -218,6 +218,7 @@ function _exSugerir(c) {
   for (const [d, n] of opcoes.sort((a, b) => b[1] - a[1]).slice(0, 3)) {
     const b = _exEl('button', 'ex-sugestao', `${_exRotuloAtivo(d)} → ${_exPl(n, 'álbum', 'álbuns')}`);
     b.type = 'button';
+    b.insertAdjacentHTML('afterbegin', ICONE_X);
     b.setAttribute('aria-label', `Remover ${_exRotuloAtivo(d)}: ${_exPl(n, 'álbum', 'álbuns')}`);
     b.addEventListener('click', () => _exRemover(d));
     box.append(b);
@@ -273,7 +274,8 @@ function _exSlider(d) {
   const head = _exEl('div', 'ex-feat-head');
   head.append(_exEl('span', 'ex-feat-nome', d.nome));
   const out = _exEl('span', 'ex-feat-out', 'qualquer');
-  const reset = _exEl('button', 'ex-feat-reset', '✕');
+  const reset = _exEl('button', 'ex-feat-reset');
+  reset.innerHTML = ICONE_X;
   reset.type = 'button';
   reset.hidden = true;
   reset.title = 'Voltar a qualquer valor';
@@ -438,7 +440,8 @@ function _exAtualizarUI() {
   if (!chips) return;
   chips.replaceChildren();
   for (const d of ativos) {
-    const b = _exEl('button', 'ex-chip', _exRotuloAtivo(d) + ' ✕');
+    const b = _exEl('button', 'ex-chip', _exRotuloAtivo(d));
+    b.insertAdjacentHTML('beforeend', ICONE_X);
     b.type = 'button';
     b.setAttribute('aria-label', `Remover filtro ${_exRotuloAtivo(d)}`);
     b.addEventListener('click', () => _exRemover(d));
@@ -446,6 +449,7 @@ function _exAtualizarUI() {
   }
   if (chips.children.length) {
     const l = _exEl('button', 'ex-chip ex-chip-limpar', 'limpar tudo');
+    l.insertAdjacentHTML('afterbegin', ICONE_X);
     l.type = 'button';
     l.addEventListener('click', () => { explorarLimparTudo(); });
     chips.append(l);
@@ -467,7 +471,7 @@ function _exAtualizarContagem() {
   if (c?.set.size) document.getElementById('explorar-sugestoes')?.setAttribute('hidden', '');
   if (_exApply) {
     _exApply.hidden = false;
-    _exApply.textContent = !c ? 'ver todos os álbuns'
+    _exApply.lastElementChild.textContent = !c ? 'ver todos os álbuns'
       : c.set.size ? `ver ${_exPl(c.set.size, 'álbum', 'álbuns')} · ${_exPl(c.faixas, 'faixa', 'faixas')}`
       : 'nenhum álbum passa nos filtros';
   }

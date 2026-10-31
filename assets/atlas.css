@@ -268,3 +268,11 @@ button { font: inherit; color: inherit; }
   .em-grafo:has(#cartao:not([hidden])) #grafo-detalhe, .em-grafo #cartao-parecidos { display: none; }
   .em-grafo:has(#cartao:not([hidden])) #grafo-acoes { margin-top: 6px; }
 }
+
+/* ── ícones dos botões (sprite em atlas.html) ── */
+.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.seg button, .botao, #cartao-parecidos-lista button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.seg .ic, #cartao-parecidos-lista .ic { width: 14px; height: 14px; }
+#busca-limpar, #cartao-fechar, #zoom button { display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+#zoom .ic { width: 18px; height: 18px; }
+#zoom button[hidden] { display: none; }
