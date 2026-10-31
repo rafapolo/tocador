@@ -114,6 +114,8 @@ let genreLoading = false;
 let activeGenre = null;
 let activeArtist = null;
 let browseTab = 'artists';
+// Chave dos álbuns salvos: o alias (uqt/homi) ou, num ?acervo=<url>, a própria URL.
+let activeAcervoId = null;
 let browsePanelQuery = '';
 let expandedGenres = new Set();
 let _cachedGenreTree = null;
@@ -418,6 +420,34 @@ function filterAlbums(quiet = false) {
 
 // ── Init ──────────────────────────────────────────────────────────────────
 
+// Abre um álbum (grid ou lista de salvos): cabeçalho, faixas, gaveta no celular,
+// primeira faixa preparada sem tocar e o endereço do álbum na barra.
+function openAlbum(album) {
+  if (!album || (selectedAlbum === album && currentTrack != null)) return;
+  selectedAlbum = album;
+  renderedAlbum = null;
+  virtualGrid?.refresh();
+  renderAlbumHeader();
+  renderTrackList();
+  renderMobileDrawer(album);
+  if (isMobile()) openMobileDrawer();
+
+  if (album.tracks.length > 0) {
+    const audio = document.getElementById('audio');
+    if (audio.paused) {
+      currentTrack = album.tracks.find(trackAllowed) ?? album.tracks[0];
+      updateNowPlaying();
+      const newSrc = `${BASE_URL}/${currentTrack.file}`;
+      if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
+    }
+  }
+
+  updateMetaTags(album);
+  if (browseTab === 'saved') updateBrowseSelection();
+  const primedNum = currentTrack?.num || 1;
+  window.history.pushState({ album: album.path, t: primedNum }, '', generateAlbumUrl(album, primedNum));
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
   const albumsList = document.querySelector('#albums-list');
 
@@ -431,27 +461,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     albumsList.querySelector('.album-item.active')?.classList.remove('active');
     item.classList.add('active');
-
-    selectedAlbum = album;
-    renderedAlbum = null;
-    renderAlbumHeader();
-    renderTrackList();
-    renderMobileDrawer(album);
-    if (isMobile()) openMobileDrawer();
-
-    if (album.tracks.length > 0) {
-      const audio = document.getElementById('audio');
-      if (audio.paused) {
-        currentTrack = album.tracks.find(trackAllowed) ?? album.tracks[0];
-        updateNowPlaying();
-        const newSrc = `${BASE_URL}/${currentTrack.file}`;
-        if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
-      }
-    }
-
-    updateMetaTags(album);
-    const primedNum = currentTrack?.num || 1;
-    window.history.pushState({ album: album.path, t: primedNum }, '', generateAlbumUrl(album, primedNum));
+    openAlbum(album);
   });
 
   // Browser back/forward: restore album selection and search query from history state
@@ -630,6 +640,7 @@ async function handleCatalogDecodeError(err, container) {
   // Now that db.meta is available, resolve for real — sub-pages and the switcher
   // must follow the acervo actually loaded, not the deployment's default.
   activeAcervoKey = resolveAcervoKey(dataUrl, acervoParam);
+  activeAcervoId = activeAcervoKey || dataUrl;
   const indexLink = document.getElementById('acervo-index-link');
   if (indexLink) {
     // Plain link to the static album index of the loaded acervo — the crawl path
@@ -689,6 +700,9 @@ async function handleCatalogDecodeError(err, container) {
     }
     renderBrowsePanel();
   }
+  salvosMudaram();
+  // Salvou/removeu em outra aba do navegador: o coração e a lista acompanham.
+  window.addEventListener('storage', e => { if (e.key === SALVOS_KEY || e.key === null) salvosMudaram(); });
 
   // Restore search query and year filter from URL
   const initialQuery = getQueryFromUrl();

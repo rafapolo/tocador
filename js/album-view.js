@@ -108,15 +108,40 @@ function renderAlbumHeader() {
   attachArtistHandlers(info);
 
   const album = selectedAlbum;
+  const actions = document.createElement('div');
+  actions.className = 'album-actions';
+
   const share = document.createElement('button');
   share.type = 'button';
   share.className = 'album-share';
-  share.textContent = 'Compartilhar';
+  share.title = 'Compartilhar';
   share.setAttribute('aria-label', `Compartilhar link de ${album.name}`);
+  share.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><line x1="8.2" y1="10.8" x2="15.8" y2="6.2"/><line x1="8.2" y1="13.2" x2="15.8" y2="17.8"/></svg>';
   share.addEventListener('click', () => shareAlbum(album));
-  info.appendChild(share);
+
+  const like = document.createElement('button');
+  like.type = 'button';
+  like.className = 'album-like';
+  like.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.4C1.5 7.8 3.6 4.5 7 4.5c2 0 3.9 1.1 5 2.9 1.1-1.8 3-2.9 5-2.9 3.4 0 5.5 3.3 4.3 6.6-1.8 4.8-9.3 9.4-9.3 9.4Z"/></svg>';
+  syncLikeButton(like, album);
+  like.addEventListener('click', () => {
+    const salvo = alternarSalvo(album);
+    syncLikeButton(like, album);
+    showToast(salvo ? 'Álbum salvo' : 'Álbum removido dos salvos');
+  });
+
+  actions.append(share, like);
+  info.appendChild(actions);
 
   container.replaceChildren(cover, info);
+}
+
+function syncLikeButton(btn, album) {
+  const salvo = albumSalvo(album);
+  btn.classList.toggle('active', salvo);
+  btn.setAttribute('aria-pressed', String(salvo));
+  btn.title = salvo ? 'Remover dos salvos' : 'Salvar álbum';
+  btn.setAttribute('aria-label', `${salvo ? 'Remover dos salvos' : 'Salvar'}: ${album.name}`);
 }
 
 function updateDurationInDOM(track, idx) {

@@ -712,22 +712,41 @@ body {
   margin-bottom: 2px;
 }
 
-.album-share {
+.album-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
   margin-top: 10px;
-  padding: 4px 14px;
-  font: inherit;
-  font-size: 0.8rem;
+}
+
+.album-share,
+.album-like {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: 50%;
   cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, transform 0.15s;
 }
 
-.album-share:hover {
+.album-share:hover,
+.album-like:hover,
+.album-share:focus-visible,
+.album-like:focus-visible {
   color: var(--color-accent);
   border-color: var(--color-accent);
 }
+
+.album-like svg { fill: none; transition: fill 0.2s; }
+.album-like.active { color: var(--color-accent); border-color: var(--color-accent); }
+.album-like.active svg { fill: currentColor; }
+.album-like:active { transform: scale(0.9); }
 
 .year-link,
 .artist-link {
@@ -1744,7 +1763,7 @@ audio {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   padding: 9px 6px;
   background: none;
   border: none;
@@ -1759,6 +1778,14 @@ audio {
 }
 
 .browse-tab svg, .ex-tab svg { flex-shrink: 0; }
+
+/* display:flex acima venceria o atributo hidden (a aba Gêneros sem índice aparecia desabilitada). */
+.browse-tab[hidden], .ex-tab[hidden] { display: none; }
+.browse-tab[data-tab="saved"].active svg { fill: currentColor; }
+
+/* Só ícones; a aba ativa mostra o nome ao lado (as outras têm title/aria-label). */
+.browse-tabs .browse-tab:not(.active) span,
+.browse-tabs .ex-tab:not(.active) span { display: none; }
 
 .browse-tab:hover, .ex-tab:hover { color: var(--color-text); }
 

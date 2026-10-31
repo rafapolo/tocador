@@ -832,3 +832,41 @@ test('L59: recycled node pool stays within its cap after repeated scroll cycles'
   expect(result.poolLength).toBeLessThanOrEqual(result.poolCap);
   expect(result.nodeCount).toBe(result.domCount);
 });
+
+// Coração: salva o álbum no localStorage (por acervo) e a aba de salvos o lista;
+// clicar num salvo reabre o álbum mesmo com o grid filtrado em outra coisa.
+test.describe(() => {
+  // A segunda navegação passaria pelo service worker, que ignora page.route.
+  test.use({ serviceWorkers: 'block' });
+  test('L68: heart saves the album and the saved tab lists and reopens it', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    await page.evaluate(() => localStorage.removeItem('tocador-salvos'));
+    await page.locator('.album-item', { hasText: 'Construção' }).click();
+    const like = page.locator('#album-header .album-like');
+    await expect(like).toHaveAttribute('aria-pressed', 'false');
+    await like.click();
+    await expect(like).toHaveAttribute('aria-pressed', 'true');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('tocador-salvos')));
+    expect(saved.uqt.map(s => s.path)).toEqual([expect.stringContaining('Construção')]);
+
+    await page.locator('.browse-tab[data-tab="saved"]').click();
+    const item = page.locator('#browse-list .browse-item');
+    await expect(item).toHaveCount(1);
+    await expect(item).toContainText('Construção');
+
+    await page.locator('.album-item').filter({ hasNotText: 'Construção' }).first().click();
+    await expect(page.locator('#album-header h2')).not.toContainText('Construção');
+    await item.click();
+    await expect(page.locator('#album-header h2')).toContainText('Construção');
+
+    // Persiste ao recarregar; desmarcar esvazia a lista.
+    await page.goto('/?acervo=uqt');
+    await expect(page.locator('.album-item').first()).toBeVisible();
+    await page.locator('.browse-tab[data-tab="saved"]').click();
+    await expect(page.locator('#browse-list .browse-item')).toHaveCount(1);
+    await page.locator('#browse-list .browse-item').click();
+    await page.locator('#album-header .album-like').click();
+    await expect(page.locator('#browse-list .browse-item')).toHaveCount(0);
+    await expect(page.locator('#browse-empty')).toBeVisible();
+  });
+});

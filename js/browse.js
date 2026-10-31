@@ -85,7 +85,77 @@ function getGenreDisplayItems() {
   return items;
 }
 
+// ── Álbuns salvos (coração) ───────────────────────────────────────────────
+// Ficam no localStorage deste navegador, separados por acervo:
+// { "<acervo>": [{ path, name, artists, year, em }] }, o mais recente primeiro.
+// O path (NFC) é a chave; nome/artista/ano só servem para quem ler o JSON à mão.
+const SALVOS_KEY = 'tocador-salvos';
+
+function _salvosLer() {
+  try {
+    const v = JSON.parse(localStorage.getItem(SALVOS_KEY) || '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch { return {}; }
+}
+
+function salvosDoAcervo() {
+  const lista = _salvosLer()[activeAcervoId];
+  return Array.isArray(lista) ? lista.filter(s => s && typeof s.path === 'string') : [];
+}
+
+function albumSalvo(album) {
+  const p = album.path.normalize('NFC');
+  return salvosDoAcervo().some(s => s.path === p);
+}
+
+// Liga/desliga e devolve o novo estado (true = salvo).
+function alternarSalvo(album) {
+  const todos = _salvosLer();
+  const p = album.path.normalize('NFC');
+  const lista = salvosDoAcervo();
+  const i = lista.findIndex(s => s.path === p);
+  if (i < 0) lista.unshift({ path: p, name: album.name, artists: album.artists, year: album.year, em: Date.now() });
+  else lista.splice(i, 1);
+  if (lista.length) todos[activeAcervoId] = lista;
+  else delete todos[activeAcervoId];
+  try {
+    localStorage.setItem(SALVOS_KEY, JSON.stringify(todos));
+  } catch {
+    showToast('Este navegador não deixou salvar');
+    return i >= 0;
+  }
+  salvosMudaram();
+  return i < 0;
+}
+
+function salvosMudaram() {
+  const n = salvosDoAcervo().length;
+  document.querySelectorAll('.browse-tab[data-tab="saved"], .ex-tab[data-ex-tab="saved"]').forEach(b => {
+    b.title = n ? `Álbuns salvos (${n})` : 'Álbuns salvos';
+    b.setAttribute('aria-label', b.title);
+  });
+  const like = document.querySelector('#album-header .album-like');
+  if (like && selectedAlbum) syncLikeButton(like, selectedAlbum);
+  if (browseTab === 'saved') refreshBrowseCounts();
+}
+
+function buildSavedList() {
+  const porPath = new Map(albums.map(a => [a.path.normalize('NFC'), a]));
+  // Um álbum que saiu do catálogo some da lista, mas continua guardado (pode voltar).
+  return salvosDoAcervo()
+    .map(s => porPath.get(s.path))
+    .filter(Boolean)
+    .map(a => ({ name: a.artists ? `${a.name} — ${a.artists}` : a.name, fullName: a.path, count: a.year > 0 ? a.year : '' }));
+}
+
+function browseSelectedValue() {
+  if (browseTab === 'genres') return activeGenre;
+  if (browseTab === 'saved') return selectedAlbum?.path ?? null;
+  return activeArtist;
+}
+
 function getCurrentBrowseItems() {
+  if (browseTab === 'saved') return buildSavedList();
   return browseTab === 'genres' ? buildGenreList() : buildArtistList();
 }
 
@@ -104,12 +174,16 @@ function _applyBrowseItems(items, preserveScroll) {
     const q = fold(browsePanelQuery);
     visible = items.filter(i => fold(i.name).includes(q));
   }
-  if (_browseEmptyEl) _browseEmptyEl.hidden = visible.length > 0;
+  if (_browseEmptyEl) {
+    _browseEmptyEl.hidden = visible.length > 0;
+    _browseEmptyEl.textContent = browseTab === 'saved' && !browsePanelQuery
+      ? 'Nenhum álbum salvo. Toque no coração de um álbum para guardá-lo aqui.'
+      : 'Nenhum resultado';
+  }
   _updateBrowseCountUI(visible.length);
-  const activeVal = browseTab === 'genres' ? activeGenre : activeArtist;
   if (preserveScroll) virtualBrowseList.updateItems(visible, true);
   else virtualBrowseList.setItems(visible);
-  virtualBrowseList.refresh(activeVal);
+  virtualBrowseList.refresh(browseSelectedValue());
 }
 
 // Os gêneros vêm do áudio (modelo treinado com o Discogs), não de etiqueta: a aba avisa disso.
@@ -266,6 +340,15 @@ function clearAllFilters() {
 }
 
 function selectBrowseItem(value, itemType) {
+  if (browseTab === 'saved') {
+    // Abrir um salvo não mexe nos filtros: o álbum abre mesmo que o grid não o mostre.
+    const album = albums.find(a => a.path === value);
+    if (!album) return;
+    if (isMobile()) closeBrowseDrawer();
+    openAlbum(album);
+    virtualBrowseList?.refresh(album.path);
+    return;
+  }
   resetFacets(browseTab === 'genres' ? 'genre' : 'artist');
   if (browseTab === 'genres') {
     if (itemType === 'parent') {
@@ -291,7 +374,7 @@ function selectBrowseItem(value, itemType) {
 }
 
 function updateBrowseSelection() {
-  virtualBrowseList?.refresh(browseTab === 'genres' ? activeGenre : activeArtist);
+  virtualBrowseList?.refresh(browseSelectedValue());
 }
 
 function switchBrowseTab(tab) {
@@ -305,7 +388,7 @@ function switchBrowseTab(tab) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', String(isActive));
   });
-  _browseListEl?.setAttribute('aria-label', tab === 'genres' ? 'Gêneros' : 'Artistas');
+  _browseListEl?.setAttribute('aria-label', tab === 'genres' ? 'Gêneros' : tab === 'saved' ? 'Álbuns salvos' : 'Artistas');
   renderBrowsePanel();
 }
 
