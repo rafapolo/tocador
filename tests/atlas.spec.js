@@ -362,6 +362,76 @@ test('?de=&album= de álbum sem ponto avisa e deixa o mapa inteiro', async ({ pa
   await expect(page.locator('#cartao')).toBeHidden();
 });
 
+// Onde o nó está desenhado agora.
+const noNaTela = (page, nome) => page.evaluate(n => {
+  const g = [...document.querySelectorAll('.grafo-no')].find(x => x.textContent === n);
+  return g.getAttribute('transform');
+}, nome);
+const fimDaTransicao = page => page.evaluate(() => new Promise(r => setTimeout(r, 800)));
+async function arrastarNoVazio(page, dx, dy, opcoes = {}) {
+  await page.mouse.move(40, 300);
+  if (opcoes.shift) await page.keyboard.down('Shift');
+  await page.mouse.down();
+  await page.mouse.move(40 + dx, 300 + dy, { steps: 6 });
+  await page.mouse.up();
+  if (opcoes.shift) await page.keyboard.up('Shift');
+}
+
+test('grafo 3D: arrastar gira a cena, o centro fica e as arestas seguem os nós', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await fimDaTransicao(page);
+  const centro = await noNaTela(page, 'Delta'), beta = await noNaTela(page, 'Beta');
+  await arrastarNoVazio(page, 120, 40);
+  const e = await grafo(page);
+  expect(e.yaw).toBeGreaterThan(0.5);
+  expect(e.pitch).toBeGreaterThan(0.1);
+  expect(e.centro).toBe('Delta');
+  expect(await noNaTela(page, 'Delta')).toBe(centro);
+  expect(await noNaTela(page, 'Beta')).not.toBe(beta);
+  const soltas = await page.evaluate(() => {
+    const pontos = new Map([...document.querySelectorAll('.grafo-no')].map(g => [g.dataset.i, g.getAttribute('transform').match(/[-\d.]+/g).map(Number)]));
+    return [...document.querySelectorAll('#grafo-arestas line')].filter(l => {
+      const a = pontos.get(l.dataset.a);
+      return Math.abs(a[0] - +l.getAttribute('x1')) > 0.01 || Math.abs(a[1] - +l.getAttribute('y1')) > 0.01;
+    }).length;
+  });
+  expect(soltas).toBe(0);
+});
+
+test('grafo 3D: Shift + arrastar desloca sem girar; as setas giram', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await fimDaTransicao(page);
+  await arrastarNoVazio(page, 80, 0, { shift: true });
+  expect((await grafo(page)).yaw).toBe(0);
+  await expect(page.locator('#grafo-mundo')).toHaveAttribute('transform', /translate\(80 /);
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowUp');
+  const e = await grafo(page);
+  expect(e.yaw).toBeGreaterThan(0);
+  expect(e.pitch).toBeLessThan(0);
+});
+
+test('grafo 3D: clicar num nó com a cena girada ainda o leva ao centro, sem desfazer o giro', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await fimDaTransicao(page);
+  const meio = await noNaTela(page, 'Delta');
+  await arrastarNoVazio(page, 60, 20);
+  const { yaw } = await grafo(page);
+  await page.locator('.grafo-no', { hasText: 'Beta' }).click();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Beta');
+  await fimDaTransicao(page);
+  expect((await grafo(page)).yaw).toBe(yaw);
+  expect(await noNaTela(page, 'Beta')).toBe(meio);
+});
+
+test('grafo: com o mouse parado no nó clicado, os vizinhos não apagam durante a transição', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await fimDaTransicao(page);
+  await page.locator('.grafo-no', { hasText: 'Beta' }).click();
+  await page.waitForTimeout(150);
+  await expect(page.locator('#grafo-svg')).not.toHaveClass(/foco/);
+});
+
 test('grafo: sem o payload avisa e o mapa segue funcionando', async ({ page }) => {
   await page.route('https://tocador.cc/data/atlas-artistas.json.gz', r => r.fulfill({ status: 404 }));
   await boot(page, { artistas: null });

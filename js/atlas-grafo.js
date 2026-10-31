@@ -18,6 +18,8 @@
   const OPACIDADE_ARESTA = [0.45, 0.4, 0.24];
   const OPACIDADE_FORTE = 0.8;
   const TEXTO_MIN = 0.4;
+  const DISTANCIA = 700;       // px from the viewer: how strong the perspective is
+  const GIRO_PX = 0.008;       // radians per px dragged
   const suave = p => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
   const fmt = n => n.toLocaleString('pt-BR');
 
@@ -32,11 +34,13 @@
     let nos = [], arestas = [];
     let aviso = '';                      // shown instead of the count until the view changes
     const elNo = new Map();              // artist index -> <g>
-    const cena = new Map();              // artist index -> what is drawn now: { x, y, r, o, v } (v = fading in/out)
+    const cena = new Map();              // artist index -> what is drawn now: { x, y, z, r, o, v } (v = fading in/out)
     const linhas = new Map();            // link key -> { el, a, b, o }
     let transicao = null, quadro = 0;    // the walk in progress and its animation frame
     let larguraFeita = 0, alturaFeita = 0, reservaFeita = 0;
     let vista = { x: 0, y: 0, k: 1 };
+    let yaw = 0, pitch = 0;              // rotation of the scene around `piv`; 0, 0 is the flat front view
+    let piv = null, pivAlvo = { x: 0, y: 0 };
 
     function carregar() {
       carregando ??= (async () => {
@@ -115,42 +119,50 @@
 
     function calcular(lista, ligs, semente = new Map()) {
       const n = lista.length, pos = new Map(lista.map((v, j) => [v, j]));
-      const x = new Float64Array(n), y = new Float64Array(n);
+      const x = new Float64Array(n), y = new Float64Array(n), z = new Float64Array(n);
       const W = camada.clientWidth, H = camada.clientHeight;
       const topo = $('controles').getBoundingClientRect().bottom + 16;
       const area = { l: 16, r: W - 16, t: topo, b: H - reservaBaixo() };
       const aw = Math.max(120, area.r - area.l), ah = Math.max(120, area.b - area.t);
       const L = Math.sqrt(aw * ah / Math.max(n, 1)) * 1.1;
       const meioX = area.l + aw / 2, meioY = area.t + ah / 2;
+      pivAlvo = { x: meioX, y: meioY };
       const [refX, refY] = semente.get(centro) || [meioX, meioY];
       lista.forEach((v, j) => {
         const r = 14 * Math.sqrt(j + 1), g = j * 2.39996, s = semente.get(v);
         x[j] = s ? s[0] - refX : r * Math.cos(g);
         y[j] = s ? s[1] - refY : r * Math.sin(g);
+        z[j] = s ? s[2] : r * Math.sin(g * 1.7) * 0.6;
       });
       const fixo = lista.indexOf(centro);
       const pares = ligs.map(e => [pos.get(e.a), pos.get(e.b)]);
       const passos = 320, gravidade = 0.02;
       for (let p = 0; p < passos; p++) {
         const teto = 40 * (1 - p / passos) + 1;
-        const fx = new Float64Array(n), fy = new Float64Array(n);
+        const fx = new Float64Array(n), fy = new Float64Array(n), fz = new Float64Array(n);
         for (let i = 0; i < n; i++) {
           for (let j = i + 1; j < n; j++) {
-            const dx = x[i] - x[j], dy = y[i] - y[j], d2 = Math.max(dx * dx + dy * dy, 1);
+            const dx = x[i] - x[j], dy = y[i] - y[j], dz = z[i] - z[j], d2 = Math.max(dx * dx + dy * dy + dz * dz, 1);
             const f = L * L * 0.5 / d2;
-            fx[i] += dx * f; fy[i] += dy * f; fx[j] -= dx * f; fy[j] -= dy * f;
+            fx[i] += dx * f; fy[i] += dy * f; fz[i] += dz * f; fx[j] -= dx * f; fy[j] -= dy * f; fz[j] -= dz * f;
           }
         }
         for (const [i, j] of pares) {
-          const dx = x[j] - x[i], dy = y[j] - y[i], d = Math.hypot(dx, dy) || 1, f = (d - L) * 0.12 / d;
-          fx[i] += dx * f; fy[i] += dy * f; fx[j] -= dx * f; fy[j] -= dy * f;
+          const dx = x[j] - x[i], dy = y[j] - y[i], dz = z[j] - z[i], d = Math.hypot(dx, dy, dz) || 1, f = (d - L) * 0.12 / d;
+          fx[i] += dx * f; fy[i] += dy * f; fz[i] += dz * f; fx[j] -= dx * f; fy[j] -= dy * f; fz[j] -= dz * f;
         }
         for (let i = 0; i < n; i++) {
           x[i] += Math.max(-teto, Math.min(teto, fx[i] - x[i] * gravidade));
           y[i] += Math.max(-teto, Math.min(teto, fy[i] - y[i] * gravidade * (aw / ah)));
+          z[i] += Math.max(-teto, Math.min(teto, fz[i] - z[i] * gravidade));
         }
-        if (fixo >= 0) { x[fixo] = 0; y[fixo] = 0; }
+        if (fixo >= 0) { x[fixo] = 0; y[fixo] = 0; z[fixo] = 0; }
       }
+      // Depth on the screen's scale: about as deep as the smaller side, around the center.
+      const zMeio = fixo >= 0 ? 0 : z.reduce((a, b) => a + b, 0) / Math.max(n, 1);
+      let zMax = 1;
+      for (let i = 0; i < n; i++) { z[i] -= zMeio; zMax = Math.max(zMax, Math.abs(z[i])); }
+      for (let i = 0; i < n; i++) z[i] *= Math.min(aw, ah) * 0.3 / zMax;
       // Fit the viewport, leaving room for the label to the right of the rightmost node.
       const folga = Math.min(110, aw * 0.22);
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
@@ -201,7 +213,7 @@
         const sq = Math.min(1, (ah - 24) / Math.max(t1 - t0, 1));
         for (let i = 0; i < n; i++) y[i] = area.t + 12 + (y[i] - t0) * sq;
       }
-      return new Map(lista.map((v, j) => [v, [x[j], y[j]]]));
+      return new Map(lista.map((v, j) => [v, [x[j], y[j], z[j]]]));
     }
 
     // ── drawing ──
@@ -229,25 +241,26 @@
       desenharPainel();                      // first: the layout measures the panel
       larguraFeita = camada.clientWidth; alturaFeita = camada.clientHeight; reservaFeita = reservaBaixo();
       const semente = new Map();
-      for (const i of lista) { const c = cena.get(i); if (c?.v > 0) semente.set(i, [c.x, c.y]); }
+      for (const i of lista) { const c = cena.get(i); if (c?.v > 0) semente.set(i, [c.x, c.y, c.z]); }
       const pos = calcular(lista, ligs, semente);
       const niveis = nivelDe(lista);
 
       // Whatever leaves goes along with the camera, instead of staying behind as the scene moves.
+      piv ??= pivAlvo;
       const antes = cena.get(centro), [nx, ny] = antes ? pos.get(centro) : [0, 0];
       const dx = antes ? nx - antes.x : 0, dy = antes ? ny - antes.y : 0;
       const nasce = cena.get(origem);
       const alvos = new Map();
       for (const i of lista) {
-        const [x, y] = pos.get(i), o = OPACIDADE_NO[niveis.get(i)], r = raio(i);
-        alvos.set(i, { x, y, r, o, v: 1 });
+        const [x, y, z] = pos.get(i), o = OPACIDADE_NO[niveis.get(i)], r = raio(i);
+        alvos.set(i, { x, y, z, r, o, v: 1 });
         if (!cena.has(i)) {
           elNo.set(i, novoNo(i));
           gNos.append(elNo.get(i));
-          cena.set(i, { x: nasce ? nasce.x : x, y: nasce ? nasce.y : y, r, o, v: 0 });
+          cena.set(i, { x: nasce ? nasce.x : x, y: nasce ? nasce.y : y, z: nasce ? nasce.z : z, r, o, v: 0 });
         }
       }
-      for (const [i, c] of cena) if (!alvos.has(i)) alvos.set(i, { x: c.x + dx, y: c.y + dy, r: c.r, o: c.o, v: 0 });
+      for (const [i, c] of cena) if (!alvos.has(i)) alvos.set(i, { x: c.x + dx, y: c.y + dy, z: c.z, r: c.r, o: c.o, v: 0 });
       for (const [i, el] of elNo) {
         const fica = pos.has(i);
         el.classList.toggle('centro', i === centro);
@@ -274,7 +287,7 @@
         alvos, alvosLinha,
         de: new Map([...cena].map(([i, c]) => [i, { ...c }])),
         deLinha: new Map([...linhas].map(([k, l]) => [k, l.o])),
-        vista: { ...vista },
+        vista: { ...vista }, piv: { ...piv },
       };
       if (!animar || reduzMovimento) { encerrar(); return; }
       const t0 = performance.now();
@@ -289,27 +302,51 @@
 
     const entre = (a, b, p) => a + (b - a) * p;
     function aplicar(p) {
-      const { alvos, alvosLinha, de, deLinha, vista: v0 } = transicao;
+      const { alvos, alvosLinha, de, deLinha, vista: v0, piv: p0 } = transicao;
       for (const [i, c] of cena) {
-        const a = de.get(i), b = alvos.get(i), el = elNo.get(i);
-        c.x = entre(a.x, b.x, p); c.y = entre(a.y, b.y, p); c.r = entre(a.r, b.r, p);
+        const a = de.get(i), b = alvos.get(i);
+        c.x = entre(a.x, b.x, p); c.y = entre(a.y, b.y, p); c.z = entre(a.z, b.z, p); c.r = entre(a.r, b.r, p);
         c.o = entre(a.o, b.o, p); c.v = entre(a.v, b.v, p);
-        el.setAttribute('transform', `translate(${c.x} ${c.y})`);
-        el.firstChild.setAttribute('r', c.r);
-        el.lastChild.setAttribute('x', c.r + 4);
-        el.lastChild.setAttribute('y', 4);
-        el.style.setProperty('--o', c.o * c.v);
-        el.style.setProperty('--t', (TEXTO_MIN + (1 - TEXTO_MIN) * c.o) * c.v);   // labels stay readable far from the center
       }
       for (const [k, l] of linhas) {
-        const a = cena.get(l.a), b = cena.get(l.b);
         l.o = entre(deLinha.get(k), alvosLinha.get(k), p);
-        l.el.setAttribute('x1', a.x); l.el.setAttribute('y1', a.y);
-        l.el.setAttribute('x2', b.x); l.el.setAttribute('y2', b.y);
         l.el.style.setProperty('--o', l.o);
       }
+      piv = { x: entre(p0.x, pivAlvo.x, p), y: entre(p0.y, pivAlvo.y, p) };
       vista = { x: entre(v0.x, 0, p), y: entre(v0.y, 0, p), k: entre(v0.k, 1, p) };
       aplicarVista();
+      projetar();
+    }
+    // World to screen. The front view is the plain layout: the perspective fades in with the first degrees of
+    // rotation, so the labels placed for that view stay put until the scene is actually turned.
+    function projetar() {
+      const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+      const peso = Math.min(1, (Math.abs(yaw) + Math.abs(pitch)) / 0.25);
+      for (const [i, c] of cena) {
+        const X = c.x - piv.x, Y = c.y - piv.y;
+        const x1 = X * cy + c.z * sy, z1 = c.z * cy - X * sy;
+        const y2 = Y * cp - z1 * sp, z2 = z1 * cp + Y * sp;
+        const f = Math.max(0.55, Math.min(1.6, 1 + peso * z2 / DISTANCIA));
+        const longe = Math.max(0.35, Math.min(1, 1 + peso * z2 / (DISTANCIA * 0.5)));   // the far side dims
+        c.sx = piv.x + x1 * f; c.sy = piv.y + y2 * f;
+        const el = elNo.get(i), r = c.r * f;
+        el.setAttribute('transform', `translate(${c.sx} ${c.sy})`);
+        el.firstChild.setAttribute('r', r);
+        el.lastChild.setAttribute('x', r + 4);
+        el.lastChild.setAttribute('y', 4);
+        el.style.setProperty('--o', c.o * c.v * longe);
+        el.style.setProperty('--t', (TEXTO_MIN + (1 - TEXTO_MIN) * c.o) * c.v * longe);   // labels stay readable far from the center
+      }
+      for (const l of linhas.values()) {
+        const a = cena.get(l.a), b = cena.get(l.b);
+        l.el.setAttribute('x1', a.sx); l.el.setAttribute('y1', a.sy);
+        l.el.setAttribute('x2', b.sx); l.el.setAttribute('y2', b.sy);
+      }
+    }
+    function girar(dx, dy) {
+      yaw += dx * GIRO_PX;
+      pitch = Math.max(-1.4, Math.min(1.4, pitch + dy * GIRO_PX));
+      if (!transicao) projetar();          // a walk in progress projects on its next frame
     }
     // Stops a walk where it is; the next one starts from there.
     function parar() {
@@ -328,8 +365,8 @@
       const base = mapa() === 'rotulos' ? 'pelos rótulos de gênero' : 'pelo som das faixas';
       $('grafo-titulo').textContent = centro >= 0 ? D.nomes[centro] : 'Artistas parecidos';
       $('grafo-detalhe').textContent = centro >= 0
-        ? `${rotuloGenero(D.generos[D.genero[centro]])} · ${fmt(D.faixas[centro])} faixas · ligações ${base}`
-        : `Artistas ligados ${base}. Escolha um para ver quem está perto dele.`;
+        ? `${rotuloGenero(D.generos[D.genero[centro]])} · ${fmt(D.faixas[centro])} faixas · ligações ${base}. Arraste para girar.`
+        : `Artistas ligados ${base}. Escolha um para ver quem está perto dele; arraste para girar.`;
       $('grafo-ver-mapa').hidden = $('grafo-geral').hidden = centro < 0;
       avisar(aviso || `${fmt(nos.length)} artistas · ${fmt(arestas.length)} ligações`);
     }
@@ -360,7 +397,7 @@
       for (const l of gArestas.children) l.classList.remove('perto');
     }
     const noDe = t => t.closest?.('.grafo-no');
-    gNos.addEventListener('pointerover', e => { const g = noDe(e.target); if (g && e.pointerType === 'mouse') focar(+g.dataset.i); });
+    gNos.addEventListener('pointerover', e => { const g = noDe(e.target); if (g && e.pointerType === 'mouse' && !transicao && !toques.size) focar(+g.dataset.i); });
     gNos.addEventListener('pointerout', e => { if (noDe(e.target)) limparFoco(); });
     gNos.addEventListener('focusin', e => { const g = noDe(e.target); if (g) focar(+g.dataset.i); });
     gNos.addEventListener('focusout', limparFoco);
@@ -369,7 +406,7 @@
       if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); centrar(+g.dataset.i); }
     });
 
-    // Drag pans, wheel and pinch zoom; a press that barely moved is a click on whatever is under it.
+    // Drag rotates, Shift + drag pans, wheel and pinch zoom; a press that barely moved is a click on whatever is under it.
     const toques = new Map();
     let arrastou = false, pinca = 0;
     function zoomEm(px, py, f) {
@@ -399,8 +436,8 @@
       if (!arrastou) svg.setPointerCapture(e.pointerId);
       arrastou = true;
       toques.set(e.pointerId, [e.clientX, e.clientY]);
-      vista.x += dx; vista.y += dy;
-      aplicarVista();
+      if (e.shiftKey) { vista.x += dx; vista.y += dy; aplicarVista(); }
+      else girar(dx, dy);
     });
     const soltar = e => {
       if (toques.delete(e.pointerId) && !arrastou && !toques.size) {
@@ -466,11 +503,11 @@
     }
 
     return {
-      abrir, fechar, buscar, parecidos,
+      abrir, fechar, buscar, parecidos, girar,
       get aberto() { return aberto; },
       get centro() { return D && centro >= 0 ? D.nomes[centro] : null; },
       redesenhar() { if (aberto && D) desenhar(); },
-      estado() { return { aberto, centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), arestas: arestas.length }; },
+      estado() { return { aberto, centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), arestas: arestas.length, yaw, pitch }; },
     };
   }
 

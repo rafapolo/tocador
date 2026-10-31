@@ -858,6 +858,11 @@
 
   document.addEventListener('keydown', e => {
     if (!A || e.target.closest('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (grafo.aberto && e.key.startsWith('Arrow')) {
+      e.preventDefault();
+      grafo.girar(e.key === 'ArrowLeft' ? -30 : e.key === 'ArrowRight' ? 30 : 0, e.key === 'ArrowUp' ? -30 : e.key === 'ArrowDown' ? 30 : 0);
+      return;
+    }
     const passo = 90 / k;
     switch (e.key) {
       case '/': e.preventDefault(); $('busca').focus(); break;
