@@ -124,7 +124,7 @@ test('grafo: sair centrado num artista leva o mapa ao ponto dele; a visão geral
   await page.keyboard.press('Escape');
   await expect(page.locator('#cartao-artista')).toContainText(primeiro.artist);
   await expect(page.locator('#anel-sel')).toBeVisible();
-  await page.waitForFunction(() => { const e = window.__atlas.estado(); return e.k > e.k0 * 6; });
+  await page.waitForFunction(() => { const e = window.__atlas.estado(); return e.k > e.k0 * 2.9; });
   const { sel } = await estado(page);
   await page.waitForFunction(i => {
     const p = window.__atlas.tela(i);
@@ -136,6 +136,22 @@ test('grafo: sair centrado num artista leva o mapa ao ponto dele; a visão geral
   await expect(page.locator('#grafo-nos .grafo-no')).toHaveCount(4);
   await page.locator('#btn-grafo').click();
   await expect(page.locator('#grafo')).toBeHidden();
+  await expect(page.locator('#cartao')).toBeHidden();
+});
+
+test('?de=&album= abre o mapa centrado no ponto do álbum, sem zoom fechado', async ({ page }) => {
+  await boot(page, { url: `/atlas?de=uqt&album=${encodeURIComponent(primeiro.path)}` });
+  await expect(page.locator('#cartao-album')).toContainText(primeiro.title);
+  await expect(page.locator('#grafo')).toBeHidden();
+  await page.waitForFunction(() => {
+    const e = window.__atlas.estado(), p = window.__atlas.tela(e.sel);
+    return e.k > e.k0 * 2.9 && e.k < e.k0 * 3.1 && Math.abs(p.x - innerWidth / 2) < 2 && Math.abs(p.y - innerHeight / 2) < 2;
+  });
+});
+
+test('?de=&album= de álbum sem ponto avisa e deixa o mapa inteiro', async ({ page }) => {
+  await boot(page, { url: `/atlas?de=uqt&album=${encodeURIComponent(recente.path)}` });
+  await expect(page.locator('#contagem')).toHaveText('Álbum fora do mapa');
   await expect(page.locator('#cartao')).toBeHidden();
 });
 

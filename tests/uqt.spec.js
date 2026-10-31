@@ -841,8 +841,8 @@ test('L69: the atlas link opens in a new tab', async ({ page }) => {
   await expect(link).toHaveAttribute('rel', 'noopener');
 });
 
-// À direita do coração: leva ao nó do artista no grafo, em outra aba para o áudio seguir.
-test('L70: the album atlas button sits right of the heart and targets the artist node', async ({ page }) => {
+// À direita do coração: leva ao ponto do álbum no atlas, em outra aba para o áudio seguir.
+test('L70: the album atlas button sits right of the heart and targets the album dot', async ({ page }) => {
   await gotoWithFixture(page, '/?acervo=uqt');
   await page.locator('.album-item', { hasText: 'Construção' }).click();
   const botoes = page.locator('#album-header .album-actions > *');
@@ -853,8 +853,8 @@ test('L70: the album atlas button sits right of the heart and targets the artist
   await expect(link).toHaveAttribute('target', '_blank');
   const url = new URL(await link.getAttribute('href'), page.url());
   expect(url.pathname).toMatch(/atlas\.html$/);
-  expect(url.searchParams.get('grafo')).toBe('1');
-  expect(url.searchParams.get('artista')).toBeTruthy();
+  expect(url.searchParams.get('de')).toBe('uqt');
+  expect(url.searchParams.get('album')).toContain('Construção');
 });
 
 // Coração: salva o álbum no localStorage (por acervo) e a aba de salvos o lista;

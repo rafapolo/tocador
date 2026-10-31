@@ -131,7 +131,7 @@ function renderAlbumHeader() {
   });
 
   actions.append(share, like);
-  // Only uqt and homi are in the atlas; a third-party ?acervo= catalog has no node to point to.
+  // Only uqt and homi are in the atlas; a third-party ?acervo= catalog has no dot to point to.
   if (KNOWN_ACERVOS[activeAcervoKey]) actions.append(atlasLink(album));
   info.appendChild(actions);
 
@@ -139,14 +139,13 @@ function renderAlbumHeader() {
 }
 
 function atlasLink(album) {
-  const artista = parseArtists(album.artists)[0];
   const link = document.createElement('a');
   link.className = 'album-atlas';
-  link.href = `${APP_ROOT}atlas.html?grafo=1${artista ? `&artista=${encodeURIComponent(artista)}` : ''}`;
+  link.href = `${APP_ROOT}atlas.html?${new URLSearchParams({ de: activeAcervoKey, album: album.path })}`;
   link.target = '_blank';   // a new tab keeps the audio playing here
   link.rel = 'noopener';
-  link.title = 'Ver no grafo de artistas';
-  link.setAttribute('aria-label', `Ver ${album.artists || album.name} no grafo de artistas`);
+  link.title = 'Ver no atlas';
+  link.setAttribute('aria-label', `Ver ${album.name} no atlas`);
   link.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="12" x2="5" y2="6"/><line x1="12" y1="12" x2="19" y2="7"/><line x1="12" y1="12" x2="17" y2="19"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/><circle cx="5" cy="6" r="1.9" fill="currentColor" stroke="none"/><circle cx="19" cy="7" r="1.9" fill="currentColor" stroke="none"/><circle cx="17" cy="19" r="1.9" fill="currentColor" stroke="none"/></svg>';
   return link;
 }

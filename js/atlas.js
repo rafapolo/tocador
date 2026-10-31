@@ -12,7 +12,7 @@
   };
   const APP_ROOT = new URL('../', document.currentScript.src).href;
   const PAYLOAD = 'data/atlas-faixas.json.gz';
-  const ZOOM_ARTISTA = 12;        // × the fit, when the graph hands the map an artist
+  const ZOOM_PONTO = 3;           // × the fit, when the map is sent to an artist or album: centered, with its surroundings in view
 
   // Macro-genres in a fixed order: the dark categorical palette the PNG maps were validated with.
   // Color follows the genre, never its rank; everything else is "Outros".
@@ -138,6 +138,8 @@
     $('busca').disabled = false;
     if (filtro.q) { $('busca').value = filtro.q; buscar(filtro.q, false); }
     atualizarContagem();
+    const q = new URLSearchParams(location.search);
+    if (q.get('album')) irParaAlbum(q.get('de'), q.get('album'));
   }
 
   // ── WebGL ──
@@ -899,8 +901,29 @@
     aoVerNoMapa: nome => { $('busca').value = nome; buscar(nome); },
     aoSair: irParaArtista,
   });
-  // Back from the graph: fly to the artist's most central dot and select it. Its tracks sit in the same
-  // region of the map but aren't one point, so the medoid stands in for the node.
+  // An artist or album has no point of its own: its tracks sit in the same region of the map, so the most
+  // central one (the medoid) stands in for it. Center on it, a little zoomed in, and select it.
+  function irParaFaixas(lista) {
+    if (!lista.length) return false;
+    let mx = 0, my = 0;
+    for (const i of lista) { mx += mundoX(i); my += mundoY(i); }
+    mx /= lista.length; my /= lista.length;
+    let melhor = lista[0], menor = Infinity;
+    for (const i of lista) {
+      const d = (mundoX(i) - mx) ** 2 + (mundoY(i) - my) ** 2;
+      if (d < menor) { menor = d; melhor = i; }
+    }
+    voar(mundoX(melhor), mundoY(melhor), k0 * ZOOM_PONTO);
+    selecionar(melhor);
+    return true;
+  }
+  // The player's .album-atlas link: ?de=<acervo>&album=<path>.
+  function irParaAlbum(ak, path) {
+    const ai = A.acervos.indexOf(ak), bi = cat[ak]?.db.albums.findIndex(a => a.path === path) ?? -1;
+    const dele = [];
+    if (bi >= 0) for (let i = 0; i < N; i++) if (A.acervo[i] === ai && ptAlb[i] === bi) dele.push(i);
+    if (!irParaFaixas(dele)) $('contagem').textContent = 'Álbum fora do mapa';
+  }
   function irParaArtista(nome) {
     if (!ligado) return;
     const c = chaveArtista(nome), porTexto = new Map(), dele = [];
@@ -910,17 +933,7 @@
       if (!porTexto.has(artista)) porTexto.set(artista, parseArtists(artista).some(a => chaveArtista(a) === c));
       if (porTexto.get(artista)) dele.push(i);
     }
-    if (!dele.length) return;
-    let mx = 0, my = 0;
-    for (const i of dele) { mx += mundoX(i); my += mundoY(i); }
-    mx /= dele.length; my /= dele.length;
-    let melhor = dele[0], menor = Infinity;
-    for (const i of dele) {
-      const d = (mundoX(i) - mx) ** 2 + (mundoY(i) - my) ** 2;
-      if (d < menor) { menor = d; melhor = i; }
-    }
-    voar(mundoX(melhor), mundoY(melhor), k0 * ZOOM_ARTISTA);
-    selecionar(melhor);
+    irParaFaixas(dele);
   }
   function abrirGrafo(nome) {
     fecharCartao();
