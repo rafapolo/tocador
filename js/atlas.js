@@ -12,6 +12,7 @@
   };
   const APP_ROOT = new URL('../', document.currentScript.src).href;
   const PAYLOAD = 'data/atlas-faixas.json.gz';
+  const ZOOM_ARTISTA = 12;        // × the fit, when the graph hands the map an artist
 
   // Macro-genres in a fixed order: the dark categorical palette the PNG maps were validated with.
   // Color follows the genre, never its rank; everything else is "Outros".
@@ -896,7 +897,31 @@
     avisar: texto => { $('contagem').textContent = texto; },
     aoMudar: () => { atualizarContagem(); salvarUrl(); },
     aoVerNoMapa: nome => { $('busca').value = nome; buscar(nome); },
+    aoSair: irParaArtista,
   });
+  // Back from the graph: fly to the artist's most central dot and select it. Its tracks sit in the same
+  // region of the map but aren't one point, so the medoid stands in for the node.
+  function irParaArtista(nome) {
+    if (!ligado) return;
+    const c = chaveArtista(nome), porTexto = new Map(), dele = [];
+    for (let i = 0; i < N; i++) {
+      if (ptAlb[i] < 0 || !ativo[i]) continue;
+      const artista = infoDe(i).artista;
+      if (!porTexto.has(artista)) porTexto.set(artista, parseArtists(artista).some(a => chaveArtista(a) === c));
+      if (porTexto.get(artista)) dele.push(i);
+    }
+    if (!dele.length) return;
+    let mx = 0, my = 0;
+    for (const i of dele) { mx += mundoX(i); my += mundoY(i); }
+    mx /= dele.length; my /= dele.length;
+    let melhor = dele[0], menor = Infinity;
+    for (const i of dele) {
+      const d = (mundoX(i) - mx) ** 2 + (mundoY(i) - my) ** 2;
+      if (d < menor) { menor = d; melhor = i; }
+    }
+    voar(mundoX(melhor), mundoY(melhor), k0 * ZOOM_ARTISTA);
+    selecionar(melhor);
+  }
   function abrirGrafo(nome) {
     fecharCartao();
     grafo.abrir(nome);

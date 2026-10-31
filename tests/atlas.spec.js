@@ -118,6 +118,27 @@ test('grafo: a busca centra no artista e nome hostil fica como texto', async ({ 
   await expect(page.locator('.grafo-no', { hasText: '<img src=x' })).toHaveCount(1);
 });
 
+test('grafo: sair centrado num artista leva o mapa ao ponto dele; a visão geral não mexe no mapa', async ({ page }) => {
+  await boot(page, { url: `/atlas?grafo=1&artista=${encodeURIComponent(primeiro.artist)}` });
+  await expect(page.locator('#grafo-titulo')).toHaveText(primeiro.artist);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#cartao-artista')).toContainText(primeiro.artist);
+  await expect(page.locator('#anel-sel')).toBeVisible();
+  await page.waitForFunction(() => { const e = window.__atlas.estado(); return e.k > e.k0 * 6; });
+  const { sel } = await estado(page);
+  await page.waitForFunction(i => {
+    const p = window.__atlas.tela(i);
+    return Math.abs(p.x - innerWidth / 2) < 2 && Math.abs(p.y - innerHeight / 2) < 2;
+  }, sel);
+
+  await page.locator('#cartao-fechar').click();
+  await page.locator('#btn-grafo').click();
+  await expect(page.locator('#grafo-nos .grafo-no')).toHaveCount(4);
+  await page.locator('#btn-grafo').click();
+  await expect(page.locator('#grafo')).toBeHidden();
+  await expect(page.locator('#cartao')).toBeHidden();
+});
+
 test('grafo: sem o payload avisa e o mapa segue funcionando', async ({ page }) => {
   await page.route('https://tocador.cc/data/atlas-artistas.json.gz', r => r.fulfill({ status: 404 }));
   await boot(page, { artistas: null });

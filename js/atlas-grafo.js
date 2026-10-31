@@ -14,7 +14,7 @@
   const RANK_FORA = 4;        // links drawn between nodes that aren't the center
   const fmt = n => n.toLocaleString('pt-BR');
 
-  function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, aoMudar, aoVerNoMapa, avisar }) {
+  function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, aoMudar, aoVerNoMapa, aoSair, avisar }) {
     const $ = id => document.getElementById(id);
     const camada = $('grafo'), svg = $('grafo-svg'), mundo = $('grafo-mundo');
     const gArestas = $('grafo-arestas'), gNos = $('grafo-nos'), btn = $('btn-grafo');
@@ -287,7 +287,7 @@
     svg.addEventListener('pointerup', soltar);
     svg.addEventListener('pointercancel', soltar);
 
-    $('grafo-ver-mapa').addEventListener('click', () => { const nome = D.nomes[centro]; fechar(); aoVerNoMapa(nome); });
+    $('grafo-ver-mapa').addEventListener('click', () => { const nome = D.nomes[centro]; fechar(false); aoVerNoMapa(nome); });
     $('grafo-geral').addEventListener('click', () => centrar(-1));
     new ResizeObserver(() => { if (aberto && D) desenhar(false); }).observe(camada);
 
@@ -306,12 +306,15 @@
       desenhar();
       aoMudar();
     }
-    function fechar() {
+    // `posicionar`: leave the map on the artist the graph was centered on.
+    function fechar(posicionar = true) {
+      const nome = D && centro >= 0 ? D.nomes[centro] : null;
       aberto = false;
       camada.hidden = true;
       document.body.classList.remove('em-grafo');
       btn.setAttribute('aria-pressed', 'false');
       aoMudar();
+      if (nome && posicionar) aoSair(nome);
     }
     function buscar(q) {
       if (!aberto || !D) return;
