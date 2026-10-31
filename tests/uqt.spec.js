@@ -846,6 +846,12 @@ test.describe(() => {
     await expect(like).toHaveAttribute('aria-pressed', 'false');
     await like.click();
     await expect(like).toHaveAttribute('aria-pressed', 'true');
+    // Confirmação em amarelo; um toast de erro depois dela volta ao vermelho.
+    const toast = page.locator('#toast');
+    await expect(toast).toHaveText('Álbum salvo');
+    await expect(toast).toHaveCSS('color', 'rgb(255, 216, 77)');
+    await page.evaluate(() => showToast('erro'));
+    await expect(toast).toHaveCSS('color', 'rgb(255, 112, 112)');
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('tocador-salvos')));
     expect(saved.uqt.map(s => s.path)).toEqual([expect.stringContaining('Construção')]);
 

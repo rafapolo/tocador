@@ -127,7 +127,7 @@ function renderAlbumHeader() {
   like.addEventListener('click', () => {
     const salvo = alternarSalvo(album);
     syncLikeButton(like, album);
-    showToast(salvo ? 'Álbum salvo' : 'Álbum removido dos salvos');
+    showToast(salvo ? 'Álbum salvo' : 'Álbum removido dos salvos', undefined, { ok: true });
   });
 
   actions.append(share, like);

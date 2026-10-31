@@ -239,11 +239,12 @@ function restorePlaybackPosition(track, audio) {
 }
 
 let _toastTimer = null;
-function showToast(msg, duration = 3500) {
+function showToast(msg, duration = 3500, { ok = false } = {}) {
   _toastEl ??= document.getElementById('toast');
   if (!_toastEl) return;
   clearTimeout(_toastTimer);
   _toastEl.textContent = msg;
+  _toastEl.classList.toggle('ok', ok);
   _toastEl.classList.add('show');
   _toastTimer = setTimeout(() => _toastEl.classList.remove('show'), duration);
 }

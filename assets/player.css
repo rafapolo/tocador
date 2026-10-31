@@ -558,6 +558,13 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+/* O vermelho é para erro; confirmações usam amarelo. */
+#toast.ok {
+  background: rgba(40, 30, 4, 0.96);
+  border-color: #d4a017;
+  color: #ffd84d;
+}
+
 .album-item {
   display: flex;
   flex-direction: column;
