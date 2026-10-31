@@ -432,6 +432,94 @@ test('grafo: com o mouse parado no nó clicado, os vizinhos não apagam durante 
   await expect(page.locator('#grafo-svg')).not.toHaveClass(/foco/);
 });
 
+test('histórico: voltar e avançar percorrem o grafo nó a nó até o mapa', async ({ page }) => {
+  await boot(page);
+  await page.locator('#btn-grafo').click();
+  await page.waitForFunction(() => location.search.includes('grafo=1'));
+  await page.locator('.grafo-no', { hasText: 'Delta' }).click();
+  await page.waitForFunction(() => location.search.includes('artista=Delta'));
+  await fimDaTransicao(page);
+  await page.locator('.grafo-no', { hasText: 'Beta' }).click();
+  await page.waitForFunction(() => location.search.includes('artista=Beta'));
+
+  await page.goBack();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  await page.goBack();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Artistas parecidos');
+  await page.goBack();
+  await expect(page.locator('#grafo')).toBeHidden();
+  await expect(page.locator('#btn-grafo')).toHaveAttribute('aria-pressed', 'false');
+  await page.goForward();
+  await expect(page.locator('#grafo')).toBeVisible();
+  await page.goForward();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  await page.goForward();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Beta');
+});
+
+test('histórico: abrir e fechar uma faixa voltam e avançam, e o link recarregado abre a mesma faixa', async ({ page }) => {
+  await boot(page);
+  const i = await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  await expect(page.locator('#cartao')).toBeVisible();
+  await page.waitForFunction(() => location.search.includes('faixa='));
+  await page.locator('#cartao-fechar').click();
+  await expect(page.locator('#cartao')).toBeHidden();
+  await page.waitForFunction(() => !location.search.includes('faixa='));
+  await page.goBack();
+  await expect(page.locator('#cartao')).toBeVisible();
+  expect((await estado(page)).sel).toBe(i);
+  await page.goBack();
+  await expect(page.locator('#cartao')).toBeHidden();
+  await page.goForward();
+  await expect(page.locator('#cartao')).toBeVisible();
+
+  const url = page.url();
+  await page.goto(url);
+  await page.evaluate(() => window.__atlas.pronto);
+  await expect(page.locator('#cartao')).toBeVisible();
+  expect((await estado(page)).sel).toBe(i);
+});
+
+test('histórico: Som/Gêneros, acervo e legenda voltam um clique por vez', async ({ page }) => {
+  await boot(page);
+  await page.locator('[data-mapa="rotulos"]').click();
+  await page.waitForFunction(() => location.search.includes('mapa=rotulos'));
+  await page.locator('[data-acervo="homi"]').click();
+  await page.waitForFunction(() => location.search.includes('acervo=homi'));
+  await page.locator('#legenda-lista [data-genero="0"]').click();
+  await page.waitForFunction(() => location.search.includes('off=0'));
+
+  await page.goBack();
+  await expect(page.locator('#legenda-lista [data-genero="0"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.goBack();
+  await expect(page.locator('[data-acervo="todos"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-mapa="rotulos"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.goBack();
+  await expect(page.locator('[data-mapa="som"]')).toHaveAttribute('aria-pressed', 'true');
+  expect((await estado(page)).mapa).toBe('som');
+  await page.goForward();
+  await page.goForward();
+  await page.goForward();
+  await expect(page.locator('#legenda-lista [data-genero="0"]')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('[data-acervo="homi"]')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('histórico: digitar na busca não cria uma entrada por letra; Enter cria uma', async ({ page }) => {
+  await boot(page);
+  const antes = await page.evaluate(() => history.length);
+  await page.locator('#busca').pressSequentially('sam', { delay: 30 });
+  await page.waitForFunction(() => location.search.includes('q=sam'));
+  expect(await page.evaluate(() => history.length)).toBe(antes);
+  await page.locator('#busca').fill('');
+  await page.locator('#busca').pressSequentially('samba');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => location.search.includes('q=samba'));
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => history.length)).toBe(antes + 1);
+  await page.goBack();
+  await expect(page.locator('#busca')).not.toHaveValue('samba');
+});
+
 test('grafo: sem o payload avisa e o mapa segue funcionando', async ({ page }) => {
   await page.route('https://tocador.cc/data/atlas-artistas.json.gz', r => r.fulfill({ status: 404 }));
   await boot(page, { artistas: null });

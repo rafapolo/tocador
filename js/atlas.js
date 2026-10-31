@@ -138,8 +138,7 @@
     $('busca').disabled = false;
     if (filtro.q) { $('busca').value = filtro.q; buscar(filtro.q, false); }
     atualizarContagem();
-    const q = new URLSearchParams(location.search);
-    if (q.get('album')) irParaAlbum(q.get('de'), q.get('album'));
+    semHistorico(() => selecaoDaUrl(new URLSearchParams(location.search)));
   }
 
   // ── WebGL ──
@@ -599,7 +598,7 @@
     pedir();
   }
   $('cartao-capa').addEventListener('error', e => { e.target.hidden = true; });
-  $('cartao-fechar').addEventListener('click', fecharCartao);
+  $('cartao-fechar').addEventListener('click', () => { fecharCartao(); salvarUrl(true); });
 
   const audio = $('previa'), progresso = $('cartao-progresso');
   audio.addEventListener('timeupdate', () => {
@@ -727,7 +726,7 @@
     const [x, y] = posRel(e);
     const toque = e.pointerType !== 'mouse';
     const i = pegar(x, y, toque ? 22 : 10);
-    if (i >= 0) { selecionar(i); ultimoToque = null; return; }
+    if (i >= 0) { selecionar(i); salvarUrl(true); ultimoToque = null; return; }
     // double tap on empty space zooms in (dblclick doesn't fire reliably with touch-action: none)
     const agora = performance.now();
     if (toque && ultimoToque && agora - ultimoToque.t < 320 && Math.hypot(x - ultimoToque.x, y - ultimoToque.y) < 30) {
@@ -737,7 +736,7 @@
       return;
     }
     ultimoToque = { t: agora, x, y };
-    if (sel >= 0) fecharCartao();
+    if (sel >= 0) { fecharCartao(); salvarUrl(true); }
   }
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('dblclick', e => {
@@ -801,7 +800,7 @@
       if (b) enquadrar(b, animar, 0.015, [0, 0]);
     } else enquadrarTudo(animar);
     grafo.redesenhar();
-    salvarUrl();
+    salvarUrl(true);
   }
   document.querySelectorAll('[data-mapa]').forEach(b => b.addEventListener('click', () => trocarMapa(b.dataset.mapa)));
 
@@ -810,6 +809,7 @@
     document.querySelectorAll('[data-acervo]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.acervo === a)));
     recalcular();
     grafo.redesenhar();
+    salvarUrl(true);
   }
   document.querySelectorAll('[data-acervo]').forEach(b => b.addEventListener('click', () => trocarAcervo(b.dataset.acervo)));
 
@@ -829,11 +829,11 @@
       b.addEventListener('click', () => {
         filtro.off.has(j) ? filtro.off.delete(j) : filtro.off.add(j);
         if (filtro.off.size === itens.length) filtro.off.clear();
-        sincronizarLegenda(); recalcular();
+        sincronizarLegenda(); recalcular(); salvarUrl(true);
       });
       b.addEventListener('dblclick', () => {
         filtro.off = new Set(itens.map(x => x[0]).filter(x => x !== j));
-        sincronizarLegenda(); recalcular();
+        sincronizarLegenda(); recalcular(); salvarUrl(true);
       });
       li.append(b);
       return li;
@@ -851,10 +851,10 @@
     tBusca = setTimeout(() => buscar(e.target.value), 220);
   });
   $('busca').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { clearTimeout(tBusca); buscar(e.target.value); if (mobile()) e.target.blur(); }
-    if (e.key === 'Escape') { e.target.value = ''; buscar(''); e.target.blur(); }
+    if (e.key === 'Enter') { clearTimeout(tBusca); buscar(e.target.value); salvarUrl(true); if (mobile()) e.target.blur(); }
+    if (e.key === 'Escape') { e.target.value = ''; buscar(''); salvarUrl(true); e.target.blur(); }
   });
-  $('busca-limpar').addEventListener('click', () => { $('busca').value = ''; buscar(''); $('busca').focus(); });
+  $('busca-limpar').addEventListener('click', () => { $('busca').value = ''; buscar(''); salvarUrl(true); $('busca').focus(); });
 
   document.addEventListener('keydown', e => {
     if (!A || e.target.closest('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -866,7 +866,7 @@
     const passo = 90 / k;
     switch (e.key) {
       case '/': e.preventDefault(); $('busca').focus(); break;
-      case 'Escape': if (grafo.aberto) grafo.fechar(); else if (sel >= 0) fecharCartao(); break;
+      case 'Escape': if (grafo.aberto) grafo.fechar(); else if (sel >= 0) { fecharCartao(); salvarUrl(true); } break;
       case 'g': case 'G': alternarGrafo(); break;
       case '+': case '=': voar(cx, cy, k * 1.5); break;
       case '-': case '_': voar(cx, cy, k / 1.5); break;
@@ -881,22 +881,66 @@
   let ajudaSumiu = false;
   function sumirAjuda() { if (!ajudaSumiu) { ajudaSumiu = true; $('ajuda').classList.add('some'); } }
 
-  // ── URL state: ?mapa=rotulos&acervo=homi&q=… ──
-  let tUrl = 0;
-  function salvarUrl() {
+  // ── URL state and history: ?mapa=rotulos&acervo=homi&q=…&off=0,3&grafo=1&artista=…&faixa=<acervo>.<hash> ──
+  // Each click is a history entry (salvarUrl(true)); typing and passive changes only rewrite the current one.
+  // The short delay folds one gesture's several changes into one entry, like leaving the graph, which closes
+  // it and then selects the artist's dot.
+  let tUrl = 0, novaEntrada = false, restaurando = 0;
+  function salvarUrl(nova = false) {
+    if (restaurando) return;
+    novaEntrada ||= nova;
     clearTimeout(tUrl);
     tUrl = setTimeout(() => {
       const p = new URLSearchParams();
       if (mapa !== 'som') p.set('mapa', mapa);
       if (filtro.acervo !== 'todos') p.set('acervo', filtro.acervo);
       if (filtro.q) p.set('q', filtro.q);
+      if (filtro.off.size) p.set('off', [...filtro.off].sort((a, b) => a - b).join(','));
       if (grafo.aberto) {
         p.set('grafo', '1');
         if (grafo.centro) p.set('artista', grafo.centro);
       }
-      const qs = p.toString();
-      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
-    }, 300);
+      if (sel >= 0) p.set('faixa', `${A.acervos[A.acervo[sel]]}.${A.hash[sel]}`);
+      const qs = p.toString(), alvo = location.pathname + (qs ? '?' + qs : '');
+      if (alvo !== location.pathname + location.search) history[novaEntrada ? 'pushState' : 'replaceState'](null, '', alvo);
+      novaEntrada = false;
+    }, novaEntrada ? 60 : 300);
+  }
+  async function semHistorico(fn) {
+    restaurando++;
+    try { await fn(); } finally { restaurando--; }
+  }
+  const offDaUrl = q => new Set((q.get('off') || '').split(',').filter(Boolean).map(Number));
+  function faixaDaUrl(valor) {
+    const [ak, h] = valor.split('.'), ai = A.acervos.indexOf(ak);
+    for (let i = 0; i < N; i++) if (A.acervo[i] === ai && A.hash[i] === Number(h)) return i;
+    return -1;
+  }
+  function selecaoDaUrl(q) {
+    if (!audio.paused) return;       // a playing preview keeps its card
+    const f = q.get('faixa'), i = f ? faixaDaUrl(f) : -1;
+    if (i >= 0) { if (i !== sel) irParaFaixas([i], Math.max(k, k0 * ZOOM_PONTO)); }
+    else if (q.get('album')) irParaAlbum(q.get('de'), q.get('album'));
+    else if (sel >= 0) fecharCartao();
+  }
+  // Back and forward: make the page match the URL again, without writing new entries.
+  function aplicarUrl() {
+    clearTimeout(tUrl);
+    novaEntrada = false;
+    const q = new URLSearchParams(location.search);
+    return semHistorico(async () => {
+      const m = q.get('mapa') === 'rotulos' ? 'rotulos' : 'som';
+      if (m !== mapa) trocarMapa(m);
+      const a = q.get('acervo') || 'todos';
+      if (a !== filtro.acervo) trocarAcervo(ACERVOS[a] ? a : 'todos');
+      const off = offDaUrl(q);
+      if ([...off].sort().join() !== [...filtro.off].sort().join()) { filtro.off = off; sincronizarLegenda(); recalcular(); }
+      const busca = q.get('q') || '';
+      if (busca !== filtro.q) { $('busca').value = busca; buscar(busca); }
+      if (q.get('grafo')) await grafo.abrir(q.get('artista'));
+      else if (grafo.aberto) grafo.fechar(false);
+      if (ligado) selecaoDaUrl(q);
+    });
   }
 
   // ── graph ──
@@ -907,13 +951,13 @@
     corDe: g => MACROS.find(m => m[0] === macroDe(g))?.[2] || COR_OUTROS,
     rotuloGenero: g => `${subDe(g)} · ${nomeMacro(macroDe(g))}`,
     avisar: texto => { $('contagem').textContent = texto; },
-    aoMudar: () => { atualizarContagem(); salvarUrl(); },
+    aoMudar: () => { atualizarContagem(); salvarUrl(true); },
     aoVerNoMapa: nome => { $('busca').value = nome; buscar(nome); },
     aoSair: irParaArtista,
   });
   // An artist or album has no point of its own: its tracks sit in the same region of the map, so the most
   // central one (the medoid) stands in for it. Center on it, a little zoomed in, and select it.
-  function irParaFaixas(lista) {
+  function irParaFaixas(lista, zoom = k0 * ZOOM_PONTO) {
     if (!lista.length) return false;
     let mx = 0, my = 0;
     for (const i of lista) { mx += mundoX(i); my += mundoY(i); }
@@ -923,7 +967,7 @@
       const d = (mundoX(i) - mx) ** 2 + (mundoY(i) - my) ** 2;
       if (d < menor) { menor = d; melhor = i; }
     }
-    voar(mundoX(melhor), mundoY(melhor), k0 * ZOOM_PONTO);
+    voar(mundoX(melhor), mundoY(melhor), zoom);
     if (audio.paused) selecionar(melhor);     // selecting stops the preview: its track stays the selection
     return true;
   }
@@ -991,11 +1035,14 @@
     const pa = params.get('acervo');
     if (pa && ACERVOS[pa]) trocarAcervo(pa);
     filtro.q = params.get('q') || '';
+    filtro.off = offDaUrl(params);
+    sincronizarLegenda();
     W = H = 1;
     medir();
     new ResizeObserver(medir).observe(canvas);
     atualizarContagem();
-    if (params.get('grafo')) grafo.abrir(params.get('artista'));
+    if (params.get('grafo')) semHistorico(() => grafo.abrir(params.get('artista')));
+    window.addEventListener('popstate', aplicarUrl);
     $('carregando').classList.add('pronto');
     setTimeout(() => $('carregando').hidden = true, 600);
     setTimeout(sumirAjuda, 8000);
