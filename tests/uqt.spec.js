@@ -352,6 +352,17 @@ test('G30: clicking artist name in album header filters by that artist', async (
   expect(count).toBeLessThan(10);
 });
 
+test('G30b: cmd/ctrl + click on an artist opens the search in a new tab and leaves this one alone', async ({ page, context }) => {
+  await gotoWithFixture(page, '/?acervo=uqt');
+  await page.locator('.album-item', { hasText: 'Elis & Tom' }).click();
+  const link = page.locator('#album-header .artist-link').filter({ hasText: 'Elis Regina' }).first();
+  await expect(link).toHaveAttribute('href', /[?&]q=Elis\+Regina/);
+  const [aba] = await Promise.all([context.waitForEvent('page'), link.click({ modifiers: ['ControlOrMeta'] })]);
+  expect(new URL(aba.url()).searchParams.get('q')).toBe('Elis Regina');
+  await aba.close();
+  await expect(page.locator('#search-input')).toHaveValue('');
+});
+
 test('G31: clicking track-level artist in track list filters by that artist', async ({ page }) => {
   await gotoWithFixture(page);
   await page.locator('.album-item', { hasText: 'Getz' }).click();

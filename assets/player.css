@@ -761,6 +761,8 @@ body {
 .year-link,
 .artist-link {
   cursor: pointer;
+  color: inherit;
+  text-decoration: none;
 }
 
 .year-link:hover,

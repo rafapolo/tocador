@@ -148,10 +148,16 @@ const PLACEHOLDER_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/20
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 
+// A real link, so ⌘/Ctrl + click and the middle button open the artist in a new tab.
+function artistUrl(name) {
+  const acervo = activeAcervoKey ?? new URLSearchParams(location.search).get('acervo');
+  return `${APP_ROOT}?${new URLSearchParams({ ...(acervo && { acervo }), q: name })}`;
+}
+
 function artistLinksHTML(str) {
   return parseArtists(str).map(p => {
     const e = escapeHtml(p);
-    return `<span class="artist-link" data-artist="${e}" role="button" tabindex="0" aria-label="Buscar por ${e}">${e}</span>`;
+    return `<a class="artist-link" href="${escapeHtml(artistUrl(p))}" data-artist="${e}" aria-label="Buscar por ${e}">${e}</a>`;
   }).join(', ');
 }
 
@@ -159,6 +165,8 @@ function attachArtistHandlers(container) {
   container.querySelectorAll('.artist-link[data-artist]').forEach(el => {
     const handleArtistClick = e => {
       e.stopPropagation();
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;   // the browser opens the href
+      e.preventDefault();
       const name = el.dataset.artist;
       resetFacets('search');
       if (_searchInput) { _searchInput.value = name; }
