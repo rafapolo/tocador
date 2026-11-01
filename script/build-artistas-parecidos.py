@@ -10,10 +10,13 @@ Cada artista vira a média das suas faixas (L2 por faixa, depois L2 no artista).
 que dá contraste: sem isso quase todo cosseno passa de 0,9. Ficam os artistas com MIN_FAIXAS ou mais e, para
 cada um, os K mais próximos.
 
-Lê data/features/{uqt,homi}.json.gz + .emb.f16 e os catálogos publicados (script/export-faixas-artistas.js)
-e escreve data/atlas-artistas.json.gz (formato em js/atlas-data.js, decodeArtistas). ~1 min.
+O UMAP só entra para desenhar: `pos` guarda onde cada artista fica na visão geral, com todos os artistas (x, y, z
+em ±32767, por mapa). Os vizinhos continuam vindo do cosseno.
 
-Uso: uv run -q --with numpy python script/build-artistas-parecidos.py [--amostra "Nome" "Outro"]
+Lê data/features/{uqt,homi}.json.gz + .emb.f16 e os catálogos publicados (script/export-faixas-artistas.js)
+e escreve data/atlas-artistas.json.gz (formato em js/atlas-data.js, decodeArtistas). ~2 min.
+
+Uso: uv run -q --with umap-learn --with numpy python script/build-artistas-parecidos.py [--amostra "Nome" "Outro"]
 """
 import argparse, base64, gzip, json, os, re, subprocess, sys, unicodedata
 from collections import Counter, defaultdict
@@ -43,10 +46,22 @@ def chave(nome):
     return ''.join(c for c in s if c.isalnum())
 
 
-def vizinhos(M):
-    """Linhas de M já normalizadas → (índices K-vizinhos, n × K)."""
+def contraste(M):
+    """Linhas de M já normalizadas, menos a média global e normalizadas de novo."""
     M = M - M.mean(0)
-    M /= np.linalg.norm(M, axis=1, keepdims=True) + 1e-8
+    return M / (np.linalg.norm(M, axis=1, keepdims=True) + 1e-8)
+
+
+def layout(M):
+    """Posição 3D de cada artista, cada eixo em ±32767 cortando as pontas: uma ilha distante espremeria o resto."""
+    import umap
+    P = umap.UMAP(n_components=3, n_neighbors=K * 2, min_dist=0.25, metric='cosine', random_state=42).fit_transform(M)
+    lo, hi = np.percentile(P, [0.3, 99.7], axis=0)
+    return np.round(np.clip((P - lo) / (hi - lo) * 2 - 1, -1, 1) * 32767).astype('<i2')
+
+
+def vizinhos(M):
+    """Linhas de M já contrastadas → (índices K-vizinhos, n × K)."""
     n = len(M)
     out = np.zeros((n, K), dtype=np.uint16)
     for i in range(0, n, 512):
@@ -118,6 +133,7 @@ for i, x in enumerate(nomes):
     for j, p in soma_rot[x].items():
         R[i, j] = p
 R /= np.linalg.norm(R, axis=1, keepdims=True) + 1e-8
+S, R = contraste(S), contraste(R)
 viz = {'som': vizinhos(S), 'rotulos': vizinhos(R)}
 
 if args.amostra is not None and len(args.amostra):
@@ -135,14 +151,16 @@ if args.amostra is not None and len(args.amostra):
 
 generos = sorted({genero[x].most_common(1)[0][0] for x in nomes})
 gi = {g: i for i, g in enumerate(generos)}
-b64 = lambda a: base64.b64encode(a.astype('<u2').tobytes()).decode()
+b64 = lambda a: base64.b64encode(a.tobytes()).decode()
+print('layout: UMAP dos dois mapas…', file=sys.stderr)
 payload = {
     'v': 1, 'k': K, 'nomes': [exibir[x] for x in nomes], 'generos': generos,
     'faixas': [n_faixas[x] for x in nomes],
     'genero': [gi[genero[x].most_common(1)[0][0]] for x in nomes],
     'acervo': [ACERVOS.index(acervo_de[x].most_common(1)[0][0]) for x in nomes],
     'acervos': list(ACERVOS),
-    'viz': {m: b64(v) for m, v in viz.items()},
+    'viz': {m: b64(v.astype('<u2')) for m, v in viz.items()},
+    'pos': {'som': b64(layout(S)), 'rotulos': b64(layout(R))},
 }
 dest = os.path.join(ROOT, 'data', 'atlas-artistas.json.gz')
 with gzip.GzipFile(dest, 'wb', mtime=0, compresslevel=9) as f:

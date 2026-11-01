@@ -55,12 +55,14 @@
       err.code = 'UNSUPPORTED_ARTISTAS_VERSION';
       throw err;
     }
-    var chaves = p.nomes.map(chaveArtista), indice = new Map(), viz = {};
+    var chaves = p.nomes.map(chaveArtista), indice = new Map(), viz = {}, pos = {};
     chaves.forEach(function (c, i) { indice.set(c, i); });
     Object.keys(p.viz).forEach(function (m) { viz[m] = view(Uint16Array, p.viz[m]); });
+    // Optional: an older payload has no layout and the graph falls back to its own, for a part of the artists.
+    Object.keys(p.pos || {}).forEach(function (m) { pos[m] = view(Int16Array, p.pos[m]); });
     return {
       n: p.nomes.length, k: p.k, nomes: p.nomes, chaves: chaves, indice: indice, generos: p.generos,
-      acervos: p.acervos, faixas: p.faixas, genero: p.genero, acervo: p.acervo, viz: viz,
+      acervos: p.acervos, faixas: p.faixas, genero: p.genero, acervo: p.acervo, viz: viz, pos: pos,
     };
   }
 

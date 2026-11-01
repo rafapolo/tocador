@@ -119,7 +119,7 @@
     return `${APP_ROOT}?${new URLSearchParams({ acervo: ak, album: c.db.albums[ai].path })}`;
   }
 
-  // Artist key -> albums with a cover where they appear, on the album or on any of its tracks.
+  // Artist key -> albums where they appear, on the album or on any of its tracks.
   let porArtista = null;
   function indexarArtistas() {
     const m = new Map(), chaves = new Map();
@@ -129,7 +129,6 @@
     };
     for (const ak of Object.keys(cat)) {
       cat[ak].db.albums.forEach((album, ai) => {
-        if (!album.has_cover) return;
         const dele = new Set(chavesDe(album.artist || ''));
         for (const tr of album.tracks) if (tr.artists) for (const c of chavesDe(tr.artists)) dele.add(c);
         for (const c of dele) { if (!m.has(c)) m.set(c, []); m.get(c).push({ ak, ai, album }); }
@@ -137,10 +136,24 @@
     }
     return m;
   }
+  // The graph's names lose credits and punctuation (chaveArtista), but ?artista= compares with fold(), so the link
+  // carries the spelling the catalog has. `preferido`: the acervo with most of the artist's tracks. Null before the
+  // catalogs arrive.
+  function urlArtista(nome, preferido) {
+    if (!ligado) return null;
+    porArtista ??= indexarArtistas();
+    const c = chaveArtista(nome), lista = porArtista.get(c);
+    if (!lista) return null;
+    const { ak, album } = lista.find(x => x.ak === preferido) || lista[0];
+    const textos = [album.artist, ...album.tracks.map(t => t.artists)].filter(Boolean);
+    const exato = textos.flatMap(t => parseArtists(t.replace(/\x00/g, '; '))).find(p => chaveArtista(p) === c);
+    const artista = !exato || fold(exato) === fold(nome) ? nome : exato;
+    return `${APP_ROOT}?${new URLSearchParams({ acervo: ak, artista })}`;
+  }
   function capasDe(nome) {
     if (!ligado) return [];
     porArtista ??= indexarArtistas();
-    return (porArtista.get(chaveArtista(nome)) || []).slice().sort((a, b) => (b.album.year || 0) - (a.album.year || 0))
+    return (porArtista.get(chaveArtista(nome)) || []).filter(x => x.album.has_cover).sort((a, b) => (b.album.year || 0) - (a.album.year || 0))
       .map(({ ak, ai, album }) => ({
         href: urlAlbum(ak, ai),
         src: `${cat[ak].db.meta.base_url}/${encodeURIComponent(album.path)}/capa-min.jpg`,
@@ -990,6 +1003,7 @@
     corDe: g => MACROS.find(m => m[0] === macroDe(g))?.[2] || COR_OUTROS,
     rotuloGenero: g => `${subDe(g)} · ${nomeMacro(macroDe(g))}`,
     capasDe,
+    urlArtista,
     avisar: texto => { $('contagem').textContent = texto; },
     aoMudar: () => { atualizarContagem(); salvarUrl(true); },
     aoSair: irParaArtista,
@@ -1107,6 +1121,7 @@
     focar(i, zoom = 40) { voar(mundoX(i), mundoY(i), k0 * zoom, false); },
     estado() { return { k, k0, cx, cy, mapa, t, nAtivo, n: N, sel, yaw, pitch, tem3d: !!A.posZ[mapa], girar: modoGirar }; },
     grafo: () => grafo.estado(),
+    grafoTudo: nome => grafo.noTudo(nome),
   };
 
   iniciar();

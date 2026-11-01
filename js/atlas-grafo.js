@@ -7,7 +7,7 @@
 
   const PAYLOAD = 'data/atlas-artistas.json.gz';
   const SVG = 'http://www.w3.org/2000/svg';
-  const LIMITE_GERAL = 120;   // nodes in the overview, on a screen big enough for them
+  const LIMITE_GERAL = 120;   // nodes in the overview without a precomputed layout, on a screen big enough for them
   const AREA_POR_NO = 11000;  // px² each overview node needs for its label to stay readable
   const SEMENTES = 3;         // overview: top artists per macro-genre it starts from
   const VIZ_FORA = 3;         // neighbours followed from each direct neighbour of the center
@@ -18,15 +18,21 @@
   const OPACIDADE_ARESTA = [0.45, 0.4, 0.24];
   const OPACIDADE_FORTE = 0.8;
   const TEXTO_MIN = 0.4;
+  // Overview with every artist, drawn on a canvas.
+  const LIGACOES_TUDO = 3;     // nearest neighbours each artist is linked to
+  const ROTULOS_TUDO = 220;    // names on screen at most, biggest artists first
+  const ZOOM_TUDO = 16;        // the whole catalog needs more zoom than a neighbourhood (6)
+  const CELULA = [16, 15];     // px of the grid that keeps those names from overlapping
   const DISTANCIA = 700;       // px from the viewer: how strong the perspective is
   const GIRO_PX = 0.008;       // radians per px dragged
   const suave = p => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
   const fmt = n => n.toLocaleString('pt-BR');
 
-  function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, capasDe, aoMudar, aoSair, avisar }) {
+  function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, capasDe, urlArtista, aoMudar, aoSair, avisar }) {
     const $ = id => document.getElementById(id);
     const camada = $('grafo'), svg = $('grafo-svg'), mundo = $('grafo-mundo');
     const gArestas = $('grafo-arestas'), gNos = $('grafo-nos'), btn = $('btn-grafo');
+    const tela = $('grafo-tudo'), pincel = tela.getContext('2d');
     const reduzMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let D = null, carregando = null;
@@ -42,6 +48,8 @@
     let capasFeitas = '';                // whose covers are in the panel
     let yaw = 0, pitch = 0;              // rotation of the scene around `piv`; 0, 0 is the flat front view
     let piv = null, pivAlvo = { x: 0, y: 0 };
+    let T = null;                        // the overview: see filtrarTudo() and montarTudo()
+    let quente = -1, pintura = 0;        // artist under the mouse, pending paint
 
     function carregar() {
       carregando ??= (async () => {
@@ -53,6 +61,9 @@
 
     const viz = (i, m = mapa()) => D.viz[m].subarray(i * D.k, (i + 1) * D.k);
     const indice = nome => (nome && D.indice.get(chaveArtista(nome))) ?? -1;
+    // With a precomputed layout the overview shows everybody; without one (an older payload) it falls back to a
+    // selection of artists in the SVG, since the force layout below is quadratic.
+    const emTudo = () => centro < 0 && !!D?.pos[mapa()];
 
     // ── which nodes and links ──
     function escolherEgo(c) {
@@ -118,16 +129,22 @@
     const raio = i => (i === centro ? 13 : Math.min(15, 3.5 + Math.sqrt(D.faixas[i]) * 0.5));
     const larguraRotulo = i => D.nomes[i].length * 6.3 + 8;
 
-    function calcular(lista, ligs, semente = new Map()) {
-      const n = lista.length, pos = new Map(lista.map((v, j) => [v, j]));
-      const x = new Float64Array(n), y = new Float64Array(n), z = new Float64Array(n);
+    // The part of the screen free for the graph.
+    function areaLivre() {
       const W = camada.clientWidth, H = camada.clientHeight;
       const topo = $('controles').getBoundingClientRect().bottom + 16;
       const area = { l: 16, r: W - 16, t: topo, b: H - reservaBaixo() };
       const aw = Math.max(120, area.r - area.l), ah = Math.max(120, area.b - area.t);
-      const L = Math.sqrt(aw * ah / Math.max(n, 1)) * 1.1;
       const meioX = area.l + aw / 2, meioY = area.t + ah / 2;
       pivAlvo = { x: meioX, y: meioY };
+      return { area, aw, ah, meioX, meioY };
+    }
+
+    function calcular(lista, ligs, semente = new Map()) {
+      const n = lista.length, pos = new Map(lista.map((v, j) => [v, j]));
+      const x = new Float64Array(n), y = new Float64Array(n), z = new Float64Array(n);
+      const { area, aw, ah, meioX, meioY } = areaLivre();
+      const L = Math.sqrt(aw * ah / Math.max(n, 1)) * 1.1;
       const [refX, refY] = semente.get(centro) || [meioX, meioY];
       lista.forEach((v, j) => {
         const r = 14 * Math.sqrt(j + 1), g = j * 2.39996, s = semente.get(v);
@@ -217,6 +234,136 @@
       return new Map(lista.map((v, j) => [v, [x[j], y[j], z[j]]]));
     }
 
+    // ── overview: every artist. The SVG holds a neighbourhood, not thousands of nodes and links rewritten per frame:
+    // a canvas draws them all, at the positions build-artistas-parecidos.py computed. ──
+    const raioTudo = i => 1.5 + Math.sqrt(D.faixas[i]) * 0.2;
+
+    // Who is on screen under the acervo filter. `lista` keeps nomes' order (most tracks first): that's the name priority.
+    function filtrarTudo() {
+      const a = acervo(), ai = D.acervos.indexOf(a), dentro = new Uint8Array(D.n), lista = [], porCor = new Map(), pares = [];
+      for (let i = 0; i < D.n; i++) {
+        if (a !== 'todos' && D.acervo[i] !== ai) continue;
+        dentro[i] = 1;
+        lista.push(i);
+        const cor = corDe(D.generos[D.genero[i]]);
+        (porCor.get(cor) || porCor.set(cor, []).get(cor)).push(i);
+      }
+      const vistas = new Set();
+      for (const i of lista) {
+        for (const v of viz(i).subarray(0, LIGACOES_TUDO)) {
+          const c = chaveLinha(i, v);
+          if (dentro[v] && !vistas.has(c)) { vistas.add(c); pares.push([i, v]); }
+        }
+      }
+      T = { dentro, lista, porCor: [...porCor], x: T?.x, y: T?.y, z: T?.z, sx: T?.sx, sy: T?.sy, sr: T?.sr };
+      nos = lista; arestas = pares;
+    }
+
+    function montarTudo() {
+      const { area, aw, ah } = areaLivre(), P = D.pos[mapa()], n = D.n;
+      for (const c of ['x', 'y', 'z', 'sx', 'sy', 'sr']) T[c] ??= new Float32Array(n);
+      const folga = Math.min(70, aw * 0.12), profundo = Math.min(aw, ah) * 0.45;
+      for (let i = 0; i < n; i++) {
+        T.x[i] = area.l + 12 + (P[3 * i] / 32767 + 1) / 2 * (aw - folga - 24);
+        T.y[i] = area.t + 12 + (P[3 * i + 1] / 32767 + 1) / 2 * (ah - 24);
+        T.z[i] = P[3 * i + 2] / 32767 * profundo;
+      }
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      tela.width = camada.clientWidth * dpr;
+      tela.height = camada.clientHeight * dpr;
+      T.dpr = dpr;
+      T.css = getComputedStyle(tela);
+    }
+
+    function pedirPintura() { pintura ||= requestAnimationFrame(pintarTudo); }
+
+    function pintarTudo() {
+      pintura = 0;
+      if (!T?.x) return;
+      const { lista, porCor, x, y, z, sx, sy, sr, dentro, dpr, css } = T;
+      const W = tela.width / dpr, H = tela.height / dpr, ponto = {}, cam = camera(), k = vista.k, rk = Math.sqrt(k);
+      for (const i of lista) {
+        cam(x[i], y[i], z[i], ponto);
+        sx[i] = ponto.x * k + vista.x;
+        sy[i] = ponto.y * k + vista.y;
+        sr[i] = raioTudo(i) * ponto.f * rk;
+      }
+      const cor = n => css.getPropertyValue(n);
+      pincel.setTransform(dpr, 0, 0, dpr, 0, 0);
+      pincel.clearRect(0, 0, W, H);
+
+      pincel.beginPath();
+      for (const [a, b] of arestas) { pincel.moveTo(sx[a], sy[a]); pincel.lineTo(sx[b], sy[b]); }
+      pincel.strokeStyle = cor('--text-3');
+      pincel.globalAlpha = quente >= 0 ? 0.08 : 0.16;
+      pincel.lineWidth = 0.6;
+      pincel.stroke();
+
+      pincel.globalAlpha = 0.9;
+      for (const [c, membros] of porCor) {
+        pincel.beginPath();
+        for (const i of membros) {
+          if (sx[i] < -9 || sy[i] < -9 || sx[i] > W + 9 || sy[i] > H + 9) continue;
+          pincel.moveTo(sx[i] + sr[i], sy[i]);
+          pincel.arc(sx[i], sy[i], sr[i], 0, 6.2832);
+        }
+        pincel.fillStyle = c;
+        pincel.fill();
+      }
+      pincel.globalAlpha = 1;
+
+      // Names: the biggest artists that fit, so more of them come out as the zoom opens room.
+      const colunas = Math.ceil(W / CELULA[0]) + 1, livres = new Uint8Array(colunas * (Math.ceil(H / CELULA[1]) + 2));
+      const reservar = (px, py, largura) => {
+        const c0 = Math.max(0, Math.floor(px / CELULA[0])), c1 = Math.min(colunas - 1, Math.floor((px + largura) / CELULA[0]));
+        const l0 = Math.max(0, Math.floor((py - 7) / CELULA[1])), l1 = Math.floor((py + 7) / CELULA[1]);
+        for (let l = l0; l <= l1; l++) for (let c = c0; c <= c1; c++) if (livres[l * colunas + c]) return false;
+        for (let l = l0; l <= l1; l++) for (let c = c0; c <= c1; c++) livres[l * colunas + c] = 1;
+        return true;
+      };
+      const escrever = (i, destaque) => {
+        const px = sx[i] + sr[i] + 4;
+        pincel.font = `${destaque ? 600 : 400} ${destaque ? 13 : 11.5}px ${css.fontFamily}`;
+        pincel.fillStyle = destaque ? cor('--text') : cor('--text-2');
+        pincel.strokeText(D.nomes[i], px, sy[i]);
+        pincel.fillText(D.nomes[i], px, sy[i]);
+      };
+      pincel.lineJoin = 'round';
+      pincel.lineWidth = 3;
+      pincel.strokeStyle = cor('--bg');
+      pincel.textBaseline = 'middle';
+      if (quente >= 0) {
+        const perto = [...viz(quente)].filter(v => dentro[v]);
+        pincel.beginPath();
+        for (const v of perto) { pincel.moveTo(sx[quente], sy[quente]); pincel.lineTo(sx[v], sy[v]); }
+        pincel.strokeStyle = cor('--accent');
+        pincel.lineWidth = 1.2;
+        pincel.stroke();
+        pincel.lineWidth = 3;
+        pincel.strokeStyle = cor('--bg');
+        reservar(sx[quente] + sr[quente] + 4, sy[quente], larguraRotulo(quente) * 1.15);
+        escrever(quente, true);
+        for (const i of perto) if (reservar(sx[i] + sr[i] + 4, sy[i], larguraRotulo(i))) escrever(i, false);
+      }
+      let escritos = 0;
+      for (const i of lista) {
+        if (escritos >= ROTULOS_TUDO) break;
+        if (quente >= 0 || sx[i] < 0 || sy[i] < 8 || sx[i] > W || sy[i] > H - 8) continue;
+        if (!reservar(sx[i] + sr[i] + 4, sy[i], larguraRotulo(i))) continue;
+        escrever(i, false);
+        escritos++;
+      }
+    }
+
+    function pertoDe(px, py, folga) {
+      let melhor = -1, d2 = Infinity;
+      for (const i of T.lista) {
+        const dx = T.sx[i] - px, dy = T.sy[i] - py, d = dx * dx + dy * dy, r = T.sr[i] + folga;
+        if (d <= r * r && d < d2) { d2 = d; melhor = i; }
+      }
+      return melhor;
+    }
+
     // ── drawing ──
     function novoNo(i) {
       const g = document.createElementNS(SVG, 'g');
@@ -236,14 +383,20 @@
     // and links move together and the clicked dot reaches the center as the scene becomes its perspective.
     function desenhar(animar = true, origem = -1) {
       parar();
-      const lista = centro >= 0 ? escolherEgo(centro) : escolherGeral();
-      const ligs = ligar(lista, centro);
-      nos = lista; arestas = ligs;
+      const tudo = emTudo(), deTudo = !tudo && tela.classList.contains('ligada');
+      const lista = tudo ? [] : centro >= 0 ? escolherEgo(centro) : escolherGeral();
+      const ligs = tudo ? [] : ligar(lista, centro);
+      quente = -1;
+      svg.style.cursor = '';
+      if (tudo) filtrarTudo();
+      else { nos = lista; arestas = ligs; }
       desenharPainel();                      // first: the layout measures the panel
+      if (tudo) montarTudo();
+      tela.classList.toggle('ligada', tudo);
       larguraFeita = camada.clientWidth; alturaFeita = camada.clientHeight; reservaFeita = reservaBaixo();
       const semente = new Map();
       for (const i of lista) { const c = cena.get(i); if (c?.v > 0) semente.set(i, [c.x, c.y, c.z]); }
-      const pos = calcular(lista, ligs, semente);
+      const pos = tudo ? new Map() : calcular(lista, ligs, semente);
       const niveis = nivelDe(lista);
 
       // Whatever leaves goes along with the camera, instead of staying behind as the scene moves.
@@ -258,10 +411,15 @@
         if (!cena.has(i)) {
           elNo.set(i, novoNo(i));
           gNos.append(elNo.get(i));
-          cena.set(i, { x: nasce ? nasce.x : x, y: nasce ? nasce.y : y, z: nasce ? nasce.z : z, r, o, v: 0 });
+          // Out of the overview, each node rises from its own dot.
+          cena.set(i, deTudo ? { x: T.x[i], y: T.y[i], z: T.z[i], r, o, v: 0 }
+            : { x: nasce ? nasce.x : x, y: nasce ? nasce.y : y, z: nasce ? nasce.z : z, r, o, v: 0 });
         }
       }
-      for (const [i, c] of cena) if (!alvos.has(i)) alvos.set(i, { x: c.x + dx, y: c.y + dy, z: c.z, r: c.r, o: c.o, v: 0 });
+      for (const [i, c] of cena) {
+        if (alvos.has(i)) continue;
+        alvos.set(i, tudo ? { x: T.x[i], y: T.y[i], z: T.z[i], r: c.r, o: c.o, v: 0 } : { x: c.x + dx, y: c.y + dy, z: c.z, r: c.r, o: c.o, v: 0 });
+      }
       for (const [i, el] of elNo) {
         const fica = pos.has(i);
         el.classList.toggle('centro', i === centro);
@@ -320,16 +478,24 @@
     }
     // World to screen. The front view is the plain layout: the perspective fades in with the first degrees of
     // rotation, so the labels placed for that view stay put until the scene is actually turned.
-    function projetar() {
+    function camera() {
       const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-      const peso = Math.min(1, (Math.abs(yaw) + Math.abs(pitch)) / 0.25);
-      for (const [i, c] of cena) {
-        const X = c.x - piv.x, Y = c.y - piv.y;
-        const x1 = X * cy + c.z * sy, z1 = c.z * cy - X * sy;
+      const peso = Math.min(1, (Math.abs(yaw) + Math.abs(pitch)) / 0.25), { x: px, y: py } = piv;
+      return (x, y, z, s) => {
+        const X = x - px, Y = y - py;
+        const x1 = X * cy + z * sy, z1 = z * cy - X * sy;
         const y2 = Y * cp - z1 * sp, z2 = z1 * cp + Y * sp;
-        const f = Math.max(0.55, Math.min(1.6, 1 + peso * z2 / DISTANCIA));
-        const longe = Math.max(0.35, Math.min(1, 1 + peso * z2 / (DISTANCIA * 0.5)));   // the far side dims
-        c.sx = piv.x + x1 * f; c.sy = piv.y + y2 * f;
+        s.f = Math.max(0.55, Math.min(1.6, 1 + peso * z2 / DISTANCIA));
+        s.longe = Math.max(0.35, Math.min(1, 1 + peso * z2 / (DISTANCIA * 0.5)));   // the far side dims
+        s.x = px + x1 * s.f; s.y = py + y2 * s.f;
+      };
+    }
+    function projetar() {
+      const cam = camera(), p = {};
+      for (const [i, c] of cena) {
+        cam(c.x, c.y, c.z, p);
+        const { f, longe } = p;
+        c.sx = p.x; c.sy = p.y;
         const el = elNo.get(i), r = c.r * f;
         el.setAttribute('transform', `translate(${c.sx} ${c.sy})`);
         el.firstChild.setAttribute('r', r);
@@ -343,6 +509,7 @@
         l.el.setAttribute('x1', a.sx); l.el.setAttribute('y1', a.sy);
         l.el.setAttribute('x2', b.sx); l.el.setAttribute('y2', b.sy);
       }
+      if (emTudo() || transicao) pedirPintura();
     }
     function girar(dx, dy) {
       yaw += dx * GIRO_PX;
@@ -374,8 +541,16 @@
       }
       $('grafo-detalhe').textContent = centro >= 0
         ? `${fmt(D.faixas[centro])} faixas · ligações ${base}. Arraste para girar.`
-        : `Artistas ligados ${base}. Escolha um para ver quem está perto dele; arraste para girar.`;
+        : emTudo()
+          ? `Todos os artistas com 3 ou mais faixas, ligados ${base}. Escolha um ponto para ver quem está perto; arraste para girar e role para aproximar.`
+          : `Artistas ligados ${base}. Escolha um para ver quem está perto dele; arraste para girar.`;
       desenharCapas(nome);
+      const noPlayer = nome && urlArtista(nome, D.acervos[D.acervo[centro]]);
+      $('grafo-ouvir').hidden = !noPlayer;
+      if (noPlayer) {
+        $('grafo-ouvir').href = noPlayer;
+        $('grafo-ouvir').setAttribute('aria-label', `Ver ${nome} no tocador`);
+      }
       avisar(aviso || `${fmt(nos.length)} artistas · ${fmt(arestas.length)} ligações`);
     }
 
@@ -397,7 +572,10 @@
       caixa.hidden = !capas.length;
     }
 
-    function aplicarVista() { mundo.setAttribute('transform', `translate(${vista.x} ${vista.y}) scale(${vista.k})`); }
+    function aplicarVista() {
+      mundo.setAttribute('transform', `translate(${vista.x} ${vista.y}) scale(${vista.k})`);
+      if (emTudo()) pedirPintura();
+    }
 
     function centrar(i) {
       centro = i;
@@ -436,7 +614,7 @@
     const toques = new Map();
     let arrastou = false, pinca = 0;
     function zoomEm(px, py, f) {
-      const k = Math.max(0.5, Math.min(6, vista.k * f)), r = k / vista.k;
+      const k = Math.max(0.5, Math.min(emTudo() ? ZOOM_TUDO : 6, vista.k * f)), r = k / vista.k;
       vista = { k, x: px - (px - vista.x) * r, y: py - (py - vista.y) * r };
       aplicarVista();
     }
@@ -448,7 +626,13 @@
     svg.addEventListener('pointerdown', e => { toques.set(e.pointerId, [e.clientX, e.clientY]); arrastou = false; pinca = 0; });
     svg.addEventListener('pointermove', e => {
       const ant = toques.get(e.pointerId);
-      if (!ant) return;
+      if (!ant) {
+        if (e.pointerType === 'mouse' && emTudo() && T?.x && !transicao) {
+          const b = svg.getBoundingClientRect(), i = pertoDe(e.clientX - b.left, e.clientY - b.top, 5);
+          if (i !== quente) { quente = i; svg.style.cursor = i >= 0 ? 'pointer' : ''; pedirPintura(); }
+        }
+        return;
+      }
       const dx = e.clientX - ant[0], dy = e.clientY - ant[1];
       if (toques.size === 2) {
         toques.set(e.pointerId, [e.clientX, e.clientY]);
@@ -467,11 +651,17 @@
     });
     const soltar = e => {
       if (toques.delete(e.pointerId) && !arrastou && !toques.size) {
-        const g = noDe(document.elementFromPoint(e.clientX, e.clientY) || svg);
-        if (g && e.type === 'pointerup') centrar(+g.dataset.i);
+        if (e.type === 'pointerup' && emTudo() && T?.x) {
+          const b = svg.getBoundingClientRect(), i = pertoDe(e.clientX - b.left, e.clientY - b.top, e.pointerType === 'mouse' ? 5 : 16);
+          if (i >= 0) centrar(i);
+        } else {
+          const g = noDe(document.elementFromPoint(e.clientX, e.clientY) || svg);
+          if (g && e.type === 'pointerup') centrar(+g.dataset.i);
+        }
       }
       if (!toques.size) svg.classList.remove('arrastando');
     };
+    svg.addEventListener('pointerleave', () => { if (quente >= 0) { quente = -1; svg.style.cursor = ''; pedirPintura(); } });
     svg.addEventListener('pointerup', soltar);
     svg.addEventListener('pointercancel', soltar);
 
@@ -533,7 +723,8 @@
       get centro() { return D && centro >= 0 ? D.nomes[centro] : null; },
       redesenhar() { if (aberto && D) desenhar(); },
       atualizarPainel() { if (aberto && D) desenharPainel(); },   // the catalogs arrive after the graph on a direct link
-      estado() { return { aberto, centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), arestas: arestas.length, yaw, pitch }; },
+      estado() { return { aberto, tudo: emTudo(), centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), arestas: arestas.length, yaw, pitch }; },
+      noTudo(nome) { const i = indice(nome); return emTudo() && T?.x && i >= 0 ? { x: T.sx[i], y: T.sy[i], r: T.sr[i] } : null; },
     };
   }
 

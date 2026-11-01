@@ -30,6 +30,12 @@ const artistasGz = zlib.gzipSync(JSON.stringify({
   faixas: [40, 20, 10, 5], genero: [0, 0, 1, 1], acervo: [0, 0, 1, 1],
   viz: { som: u16b64([1, 3, 2, 0, 3, 1, 0, 2]), rotulos: u16b64([3, 2, 0, 3, 0, 3, 0, 2]) },
 }));
+// O mesmo grafo com layout pré-calculado: a visão geral passa para o canvas, com todos os artistas.
+const i16b64 = a => Buffer.from(Int16Array.from(a).buffer).toString('base64');
+const POS = [-20000, -20000, 0, 20000, -20000, 5000, 20000, 20000, -5000, -20000, 20000, 0];
+const artistasLayoutGz = zlib.gzipSync(JSON.stringify({
+  ...JSON.parse(zlib.gunzipSync(artistasGz)), pos: { som: i16b64(POS), rotulos: i16b64(POS) },
+}));
 async function rotear(page, { faixas = faixasGz, artistas = artistasGz } = {}) {
   await page.route('**/data/atlas-faixas.json.gz', r => r.fulfill(gz(faixas)));
   await page.route('**/data/atlas-artistas.json.gz', r => artistas ? r.fulfill(gz(artistas)) : r.fulfill({ status: 404 }));
@@ -82,6 +88,38 @@ test('grafo: o botão abre a visão geral e fecha de volta ao mapa, com a contag
   await expect(page.locator('#grafo')).toBeHidden();
   await expect(page.locator('#contagem')).toHaveText(antes);
   await page.waitForFunction(() => !location.search.includes('grafo'));
+});
+
+test('grafo: com layout, a visão geral mostra todos no canvas e clicar num ponto abre o artista', async ({ page }) => {
+  await boot(page, { artistas: artistasLayoutGz });
+  await page.locator('#btn-grafo').click();
+  await expect(page.locator('#contagem')).toContainText('4 artistas');
+  expect((await grafo(page)).tudo).toBe(true);
+  await expect(page.locator('#grafo-tudo')).toHaveClass(/ligada/);
+  await expect(page.locator('#grafo-nos .grafo-no')).toHaveCount(0);
+  await expect(page.locator('#grafo-ouvir')).toBeHidden();
+  await page.waitForFunction(() => window.__atlas.grafoTudo('Beta'));
+  await page.waitForTimeout(100);
+  const beta = await page.evaluate(() => window.__atlas.grafoTudo('Beta'));
+  const caixa = await page.locator('#grafo-svg').boundingBox();
+  await page.mouse.click(caixa.x + beta.x, caixa.y + beta.y);
+  await expect(page.locator('#grafo-titulo')).toHaveText('Beta');
+  expect((await grafo(page)).tudo).toBe(false);
+  await expect(page.locator('#grafo-tudo')).not.toHaveClass(/ligada/);
+  await expect(page.locator('.grafo-no.centro')).toHaveCount(1);
+  await page.waitForFunction(() => location.search.includes('artista=Beta'));
+  await page.goBack();
+  await expect(page.locator('#grafo-tudo')).toHaveClass(/ligada/);
+  await expect(page.locator('#grafo-nos .grafo-no')).toHaveCount(0);
+});
+
+test('grafo: o painel do artista leva ao filtro dele no tocador', async ({ page }) => {
+  await boot(page, { url: `/atlas?grafo=1&artista=${encodeURIComponent(primeiro.artist.toUpperCase())}` });
+  await expect(page.locator('#grafo-titulo')).toHaveText(primeiro.artist);
+  await expect(page.locator('#grafo-ouvir')).toBeVisible();
+  const url = new URL(await page.locator('#grafo-ouvir').getAttribute('href'));
+  expect(url.searchParams.get('artista')).toBe(primeiro.artist);
+  expect(['uqt', 'homi']).toContain(url.searchParams.get('acervo'));
 });
 
 test('grafo: ?grafo=1&artista= centra no artista, ignorando caixa e acento, e clicar recentra', async ({ page }) => {
