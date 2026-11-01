@@ -100,6 +100,25 @@ function _salvosLer() {
   } catch { return {}; }
 }
 
+// A base de cada acervo já aberto neste navegador ({ "<acervo>": "https://cdn…" }): os salvos de outro acervo vêm
+// sem catálogo carregado, e é dela que sai a URL da capa deles.
+const BASES_KEY = 'tocador-acervo-bases';
+function _basesLer() {
+  try { const v = JSON.parse(localStorage.getItem(BASES_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; }
+  catch { return {}; }
+}
+function lembrarBaseDoAcervo(id, base) {
+  if (!id || !/^https?:\/\//.test(base || '')) return;
+  const todas = _basesLer();
+  if (todas[id] === base) return;
+  todas[id] = base;
+  try { localStorage.setItem(BASES_KEY, JSON.stringify(todas)); } catch {}
+}
+function capaSalvoFora(id, s) {
+  const base = _basesLer()[id];
+  return base && s.capa !== 0 ? `${base}/${encodeURIComponent(s.path)}/capa-min.jpg` : null;
+}
+
 function salvosDoAcervo() {
   const lista = _salvosLer()[activeAcervoId];
   return Array.isArray(lista) ? lista.filter(s => s && typeof s.path === 'string') : [];
@@ -116,7 +135,7 @@ function alternarSalvo(album) {
   const p = album.path.normalize('NFC');
   const lista = salvosDoAcervo();
   const i = lista.findIndex(s => s.path === p);
-  if (i < 0) lista.unshift({ path: p, name: album.name, artists: album.artists, year: album.year, em: Date.now() });
+  if (i < 0) lista.unshift({ path: p, name: album.name, artists: album.artists, year: album.year, capa: album.cover ? 1 : 0, em: Date.now() });
   else lista.splice(i, 1);
   if (lista.length) todos[activeAcervoId] = lista;
   else delete todos[activeAcervoId];
@@ -175,7 +194,7 @@ function buildSavedList() {
     .filter(([id, lista]) => id !== activeAcervoId && Array.isArray(lista))
     .flatMap(([id, lista]) => lista.filter(s => s && typeof s.path === 'string').map(s => ({
       name: s.artists ? `${s.name} — ${s.artists}` : s.name,
-      label: s.name, sub: s.artists, cover: null,   // outro acervo não carregado: sem URL de capa
+      label: s.name, sub: s.artists, cover: capaSalvoFora(id, s),   // outro acervo: a base lembrada de quando foi aberto
       fullName: SALVO_FORA + JSON.stringify([id, s.path]),
       count: KNOWN_ACERVOS[id] ? id : 'outro acervo',
     })));

@@ -360,9 +360,9 @@ class VirtualList {
     if (subEl) { subEl.textContent = item.sub || ''; subEl.hidden = !item.sub; }
     if (thumbEl) {
       thumbEl.width = thumbEl.height = isMobile() ? 40 : 32;
-      // The 96 px capa-micro.jpg exists only for our acervos (script/build-micro-covers.js). An album added since the
+      // The 96 px capa-micro.jpg exists only on our CDN (script/build-micro-covers.js), whichever acervo is active. An album added since the
       // last run falls back on capa-min.jpg; null or failed -> inline placeholder, no request.
-      const micro = activeAcervoKey ? item.cover?.replace(/capa-min\.jpg$/, 'capa-micro.jpg') : item.cover;
+      const micro = /^https:\/\/cdn\.tocador\.cc\//.test(item.cover || '') ? item.cover.replace(/capa-min\.jpg$/, 'capa-micro.jpg') : item.cover;
       loadCoverImage(thumbEl, micro, item.cover);
     }
     return node;

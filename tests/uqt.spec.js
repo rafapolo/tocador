@@ -1118,6 +1118,26 @@ test.describe('mini-capa na lista de navegação', () => {
     await expect(item.locator('.browse-sub')).toHaveText('Banda');
     await expect(item.locator('.browse-thumb')).toHaveAttribute('src', /^data:image\/svg\+xml/);
   });
+
+  test('salvos de outro acervo já aberto aqui mostram a mini capa, pela base lembrada daquele acervo', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tocador-acervo-bases')).uqt)).toMatch(/^https:\/\//);
+    await page.evaluate(() => {
+      localStorage.setItem('tocador-acervo-bases', JSON.stringify({ homi: 'https://cdn.tocador.cc/indie' }));
+      localStorage.setItem('tocador-salvos', JSON.stringify({
+        homi: [{ path: '2019 - Banda - Disco Ç', name: 'Disco Ç', artists: 'Banda', year: 2019, em: 1 },
+               { path: '2020 - Banda - Sem Capa', name: 'Sem Capa', artists: 'Banda', year: 2020, capa: 0, em: 2 }],
+      }));
+    });
+    await page.route(/capa-m(in|icro)\.jpg$/, r => r.fulfill({ status: 200, contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64') }));
+    await page.reload();
+    await page.locator('.browse-tab[data-tab="saved"]').click();
+    const item = page.locator('#browse-list .browse-item');
+    await expect(item).toHaveCount(2);
+    await expect(item.filter({ hasText: 'Disco Ç' }).locator('.browse-thumb'))
+      .toHaveAttribute('src', `https://cdn.tocador.cc/indie/${encodeURIComponent('2019 - Banda - Disco Ç')}/capa-micro.jpg`);
+    await expect(item.filter({ hasText: 'Sem Capa' }).locator('.browse-thumb')).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  });
 });
 
 // Playlist compartilhada: o link mostra os álbuns de quem enviou sem mexer nos salvos de quem abre.

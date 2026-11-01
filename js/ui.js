@@ -670,6 +670,7 @@ async function handleCatalogDecodeError(err, container) {
   // must follow the acervo actually loaded, not the deployment's default.
   activeAcervoKey = resolveAcervoKey(dataUrl, acervoParam);
   activeAcervoId = activeAcervoKey || dataUrl;
+  lembrarBaseDoAcervo(activeAcervoId, BASE_URL);
   const indexLink = document.getElementById('acervo-index-link');
   if (indexLink) {
     // Plain link to the static album index of the loaded acervo — the crawl path

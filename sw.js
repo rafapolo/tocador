@@ -50,7 +50,10 @@ async function staleWhileRevalidate(cacheKey, request, offlineKey = cacheKey) {
       if (copia) return copia;
       throw err;
     });
-  return cached || network;
+  // Com a cópia do cache servida, a falha da atualização em segundo plano (offline, deploy no meio) não é erro de
+  // ninguém: sem este catch ela vira "Uncaught (in promise) TypeError: Failed to fetch" no console.
+  if (cached) { network.catch(() => {}); return cached; }
+  return network;
 }
 
 async function networkFirst(cacheKey, request) {
