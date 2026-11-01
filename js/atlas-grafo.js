@@ -37,7 +37,7 @@
 
     let D = null, carregando = null;
     let aberto = false, centro = -1;     // centro: artist index, -1 = overview
-    let nos = [], arestas = [];
+    let nos = [], arestas = [], parecidosFeitos = '', detalheBase = null;
     let aviso = '';                      // shown instead of the count until the view changes
     const elNo = new Map();              // artist index -> <g>
     const cena = new Map();              // artist index -> what is drawn now: { x, y, z, r, o, v } (v = fading in/out)
@@ -293,7 +293,10 @@
       pincel.clearRect(0, 0, W, H);
 
       pincel.beginPath();
-      for (const [a, b] of arestas) { pincel.moveTo(sx[a], sy[a]); pincel.lineTo(sx[b], sy[b]); }
+      for (const e of arestas) {
+        if (!Array.isArray(e)) continue;      // walking to an artist: its links are the SVG's
+        pincel.moveTo(sx[e[0]], sy[e[0]]); pincel.lineTo(sx[e[1]], sy[e[1]]);
+      }
       pincel.strokeStyle = cor('--text-3');
       pincel.globalAlpha = quente >= 0 ? 0.08 : 0.16;
       pincel.lineWidth = 0.6;
@@ -530,6 +533,7 @@
     }
 
     function desenharPainel() {
+      detalheBase = null;
       const base = mapa() === 'rotulos' ? 'pelos rótulos de gênero' : 'pelo som das faixas';
       const nome = centro >= 0 ? D.nomes[centro] : null;
       $('grafo-titulo').textContent = nome ?? 'Artistas parecidos';
@@ -541,11 +545,12 @@
       }
       const albuns = nome ? albunsDe(nome) : 0;
       $('grafo-detalhe').textContent = centro >= 0
-        ? `${albuns ? `${fmt(albuns)} ${albuns === 1 ? 'álbum' : 'álbuns'} · ` : ''}${fmt(D.faixas[centro])} faixas · ligações ${base}.`
+        ? `${albuns ? `${fmt(albuns)} ${albuns === 1 ? 'álbum' : 'álbuns'} · ` : ''}${fmt(D.faixas[centro])} faixas`
         : emTudo()
           ? `Todos os artistas com 3 ou mais faixas, ligados ${base}. Escolha um ponto para ver quem está perto.`
           : `Artistas ligados ${base}. Escolha um para ver quem está perto dele.`;
       desenharCapas(nome);
+      desenharParecidos();
       const noPlayer = nome && urlArtista(nome, D.acervos[D.acervo[centro]]);
       $('grafo-ouvir').hidden = !noPlayer;
       if (noPlayer) {
@@ -553,6 +558,48 @@
         $('grafo-ouvir').setAttribute('aria-label', `Ver ${nome} no tocador`);
       }
       avisar(aviso || `${fmt(nos.length)} artistas · ${fmt(arestas.length)} ligações`);
+    }
+
+    // The neighbours as buttons: on a phone a dot is a small target, and labels can run over each other. Nearest first,
+    // only those on screen, and hovering one lights its dot and links.
+    const MAX_PARECIDOS = 6;
+    function desenharParecidos() {
+      const caixa = $('grafo-parecidos'), lista = $('grafo-parecidos-lista');
+      const vis = new Set(nos), ids = centro >= 0 ? [...viz(centro)].filter(j => vis.has(j)).slice(0, MAX_PARECIDOS) : [];
+      const chave = `${centro}|${mapa()}|${ids}`;
+      if (chave === parecidosFeitos) return;
+      parecidosFeitos = chave;
+      const tinhaFoco = lista.contains(document.activeElement);
+      lista.scrollLeft = 0;
+      lista.replaceChildren(...ids.map(j => {
+        const b = document.createElement('button'), p = document.createElement('span');
+        b.type = 'button'; b.dataset.i = j;
+        p.className = 'ponto'; p.style.background = corDe(D.generos[D.genero[j]]);
+        b.append(p, D.nomes[j]);
+        return b;
+      }));
+      caixa.hidden = !ids.length;
+      if (tinhaFoco) lista.firstElementChild?.focus();     // the button that had the focus is gone
+    }
+    {
+      const lista = $('grafo-parecidos-lista'), alvo = e => e.target.closest('button');
+      lista.addEventListener('click', e => { const b = alvo(e); if (b) centrar(+b.dataset.i); });
+      lista.addEventListener('pointerover', e => { const b = alvo(e); if (b && e.pointerType === 'mouse' && !transicao) focar(+b.dataset.i); });
+      lista.addEventListener('pointerout', e => { if (alvo(e)) limparFoco(); });
+      lista.addEventListener('focusin', e => { const b = alvo(e); if (b && !transicao) focar(+b.dataset.i); });
+      lista.addEventListener('focusout', limparFoco);
+      // A cover has no text of its own: hovering one names the album in the line that holds the totals, so nothing shifts.
+      const capas = $('grafo-capas'), detalhe = $('grafo-detalhe'), mostra = e => {
+        const a = e.target.closest('a');
+        if (!a || capas.children.length < 2) return;
+        detalheBase ??= detalhe.textContent;
+        detalhe.textContent = a.title;
+      }, volta = () => { if (detalheBase !== null) { detalhe.textContent = detalheBase; detalheBase = null; } };
+      capas.addEventListener('pointerover', mostra);
+      capas.addEventListener('pointerout', volta);
+      capas.addEventListener('focusin', mostra);
+      capas.addEventListener('focusout', volta);
+      $('grafo-fechar').addEventListener('click', () => fechar());
     }
 
     function desenharCapas(nome) {
@@ -565,8 +612,15 @@
         a.href = c.href; a.target = '_blank'; a.rel = 'noopener';
         a.title = c.titulo;
         a.setAttribute('aria-label', `Abrir ${c.titulo} no tocador`);
-        img.src = c.src; img.alt = ''; img.width = img.height = 56; img.loading = 'lazy';
-        img.addEventListener('error', () => { a.remove(); caixa.hidden = !caixa.children.length; umAlbum(); });
+        img.alt = ''; img.width = img.height = 56; img.loading = 'lazy'; img.decoding = 'async';
+        // The slot is held by the link's own background, so covers arrive without moving anything: 96 px capa-micro
+        // first (3 KB against 25), the regular cover if an album doesn't have it yet, and only then the slot goes.
+        img.addEventListener('load', () => a.classList.add('pronta'));
+        img.addEventListener('error', () => {
+          if (img.src !== new URL(c.src, location.href).href) { img.src = c.src; return; }
+          a.remove(); caixa.hidden = !caixa.children.length; umAlbum();
+        });
+        img.src = c.src.replace(/capa-min\.jpg$/, 'capa-micro.jpg');
         a.append(img);
         return a;
       }));
@@ -733,7 +787,21 @@
       get aberto() { return aberto; },
       get centro() { return D && centro >= 0 ? D.nomes[centro] : null; },
       // [genre label, weight] of the centered artist and its nearest neighbours; null on the overview
-      generosCentro() { return D && centro >= 0 ? [[D.generos[D.genero[centro]], 1], ...[...viz(centro).subarray(0, 4)].map(j => [D.generos[D.genero[j]], 0.3])] : null; },
+      // The music reads the graph as it reads the map: every artist on screen, where it is, as much as it shows.
+      pontosVisiveis(fn) {
+        if (!D) return;
+        const W = camada.clientWidth, H = camada.clientHeight;
+        if (emTudo() && T?.x) {
+          for (const i of T.lista) if (T.sx[i] >= 0 && T.sy[i] >= 0 && T.sx[i] <= W && T.sy[i] <= H) fn(T.sx[i], T.sy[i], D.generos[D.genero[i]], Math.imul(i, 2654435761) >>> 0, Math.sqrt(D.faixas[i]) / 4);
+          return;
+        }
+        for (const [i, c] of cena) {
+          if (!(c.v > 0) || c.sx === undefined) continue;
+          const peso = i === centro ? 3 : c.o * c.v;
+          fn(c.sx * vista.k + vista.x, c.sy * vista.k + vista.y, D.generos[D.genero[i]], Math.imul(i, 2654435761) >>> 0, peso);
+        }
+      },
+      get zoom() { return vista.k; },
       redesenhar() { if (aberto && D) desenhar(); },
       atualizarPainel() { if (aberto && D) desenharPainel(); },   // the catalogs arrive after the graph on a direct link
       estado() { return { aberto, tudo: emTudo(), centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), arestas: arestas.length, yaw, pitch }; },

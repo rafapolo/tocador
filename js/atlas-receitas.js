@@ -30,7 +30,52 @@
 
   // Every family inherits these.
   // `nivel` evens out how loud families come out: measured by rendering each one, a drone is 20 dB under a punk band.
-  const BASE = { passos: 16, swing: 0, compassos: 1, escala: 'maior', tonica: 0, cama: 'pad', perc: {}, faixa: 72, nivel: 1 };
+  // `curta`: how much of the reverb is the short room, not the long one. `camaPerto`: what is left of the bed once a band plays.
+  const BASE = { passos: 16, swing: 0, compassos: 1, escala: 'maior', tonica: 0, cama: 'pad', perc: {}, faixa: 72, nivel: 1, curta: 0.7, camaPerto: 0.3, mix: { cama: 1, perc: 1, baixo: 1, acorde: 1, mel: 1 } };
+
+  // Groove is where a recording lives and a grid doesn't. `cel`: how far each step of the beat sits from the grid, as a
+  // fraction of a step, repeating; samba's anticipated third and fourth sixteenths are its ginga. `atraso`: each
+  // instrument's habitual lean, in ms: bass and backbeat behind in soul, hats ahead in boom bap. `solto`: human error, in s.
+  const GROOVES = {
+    samba: { cel: [0, 0.04, -0.09, -0.13], atraso: { surdo: 6, baixo: 5, acorde: -2 }, solto: 0.005 },
+    bossa: { cel: [0, 0.02, -0.05, -0.07], atraso: { baixo: 6, mel: 8 }, solto: 0.005 },
+    forro: { cel: [0, 0.02, -0.03, -0.11], atraso: { zabumba: 4, baixo: 4 }, solto: 0.005 },
+    funk: { cel: [0, 0.1, 0, 0.1], atraso: { caixa: 5, baixo: -3 }, solto: 0.003 },
+    soul: { cel: [0, 0.08, 0, 0.08], atraso: { caixa: 10, baixo: 8, acorde: 6, mel: 12 }, solto: 0.004 },
+    boombap: { cel: [0], atraso: { caixa: 14, chimbal: -4, baixo: 10, acorde: 8 }, solto: 0.004 },
+    reggae: { cel: [0, 0.16, 0, 0.16], atraso: { aro: 12, acorde: 8, baixo: 10 }, solto: 0.005 },
+    rock: { cel: [0], atraso: { caixa: 6, chimbal: -2, baixo: 4 }, solto: 0.005 },
+    punk: { cel: [0], atraso: { caixa: -3, baixo: -2 }, solto: 0.005 },
+    jazz: { cel: [0], atraso: { prato: -4, baixo: -3, acorde: 8, mel: 10 }, solto: 0.007 },
+    latino: { cel: [0], atraso: { conga: 4, baixo: 2 }, solto: 0.004 },
+    humano: { cel: [0], atraso: {}, solto: 0.007 },
+  };
+  const GROOVE_DE = {
+    samba: 'samba', batucada: 'samba', mpb: 'bossa', bossa: 'bossa', forro: 'forro', funk: 'funk', afrobeat: 'funk', soul: 'soul',
+    boombap: 'boombap', downtempo: 'boombap', reggae: 'reggae', dub: 'reggae', ska: 'reggae', rock: 'rock', alternativo: 'rock',
+    psicodelico: 'rock', dream: 'rock', postrock: 'rock', doom: 'rock', punk: 'punk', hardcore: 'punk', metal: 'punk', black: 'punk',
+    jazz: 'jazz', jazzcontemporaneo: 'jazz', manouche: 'jazz', blues: 'jazz', salsa: 'latino', reggaeton: 'latino', bolero: 'latino', africa: 'latino',
+  };
+  const MAQUINAS = new Set(['house', 'techno', 'electro', 'synthpop', 'dnb', 'trap', 'nuvem', 'ambient', 'experimental', 'ruido']);
+  const LONGAS = ['ambient', 'classica', 'cinema', 'contemporanea', 'dream', 'postrock', 'nuvem', 'balada', 'experimental', 'dub', 'black', 'neofolk', 'doom'];
+  // `eco`: tape echo in beats, its feedback, its level and what goes into it. `bomba`: how far the kick ducks the rest.
+  const EFEITOS = {
+    dub: { eco: { t: 0.75, fb: 0.56, n: 0.7, em: ['acorde', 'aro', 'caixa'] } },
+    reggae: { eco: { t: 0.75, fb: 0.28, n: 0.25, em: ['acorde', 'aro'] } },
+    dream: { eco: { t: 0.75, fb: 0.42, n: 0.35, em: ['acorde', 'mel'] } },
+    downtempo: { eco: { t: 0.75, fb: 0.32, n: 0.2, em: ['acorde', 'mel'] } },
+    psicodelico: { eco: { t: 0.5, fb: 0.4, n: 0.3, em: ['mel'] } },
+    house: { bomba: 0.55 }, techno: { bomba: 0.5 }, synthpop: { bomba: 0.3 }, electro: { bomba: 0.3 },
+  };
+  // Measured, not written: script/ajustar-som-atlas.py rewrites this block from each family's real tracks.
+  // eq: dB at 80 200 500 1200 3000 8000 Hz. cel: their microtiming. bpm: their tempo. mix, camaPerto, curta, melT: the best found.
+  // AJUSTES:INICIO
+  const AJUSTES = {};
+  // AJUSTES:FIM
+
+  // Who plays a fill, from the first the family has; and where a timbre's line sits if the family doesn't say.
+  const VIRADA = ['repique', 'caixa', 'conga', 'bongo', 'tamborim', 'palma', 'aro', 'pandeiro'];
+  const REGISTRO = { voz: -12, guitarra: -12, sopro: -5 };
 
   const FAMILIAS = {
     // ── Brazil: the acervos' heart, so the most careful ones ──
@@ -555,11 +600,31 @@
     });
   }
 
+  function ajustar(f, a) {
+    if (!a) return f;
+    const { melT, cel, mix, ...resto } = a;
+    Object.assign(f, resto);
+    if (mix) f.mix = { ...f.mix, ...mix };
+    if (melT && f.mel) f.mel = { ...f.mel, t: melT, oit: REGISTRO[melT] ?? 0 };
+    if (cel && f.groove) f.groove = { ...f.groove, cel };
+    return f;
+  }
+
   // A family ready to play: defaults filled in, chords parsed, scale resolved.
   const prontas = new Map();
   function receita(nome) {
     if (prontas.has(nome)) return prontas.get(nome);
-    const f = { ...BASE, ...FAMILIAS[nome], nome };
+    const f = { ...BASE, ...FAMILIAS[nome], ...EFEITOS[nome], nome };
+    f.groove = MAQUINAS.has(nome) ? null : GROOVES[GROOVE_DE[nome] || 'humano'];
+    if (LONGAS.includes(nome)) f.curta = 0;
+    // Every family has a line: the dots on screen are its score, and a genre without one would leave them silent.
+    f.mel ??= { t: f.acorde?.t === 'dist' ? 'dist' : f.baixo?.t === 'acid' || f.baixo?.t === 'sub' ? 'lead' : 'guitarra', d: 0.1 };
+    if (f.mel) f.mel = { oit: REGISTRO[f.mel.t], ...f.mel };
+    ajustar(f, AJUSTES[nome]);
+    const insts = Object.keys(f.perc);
+    f.virada = VIRADA.filter(i => insts.includes(i)).slice(0, 2);
+    f.bateria = 'caixa' in f.perc || 'palma' in f.perc;
+    f.banda = !!f.acorde || insts.length >= 2;
     f.harmonia = {};
     for (const modo of Object.keys(f.harm)) f.harmonia[modo] = lerAcordes(f.harm[modo]);
     f.escalaNotas = ESCALAS[f.escala];
@@ -567,5 +632,5 @@
     return f;
   }
 
-  global.RECEITAS_ATLAS = { familias: Object.keys(FAMILIAS), familiaDe, receita, ESCALAS };
+  global.RECEITAS_ATLAS = { familias: Object.keys(FAMILIAS), familiaDe, receita, ajustar, ESCALAS, GROOVES };
 })(window);

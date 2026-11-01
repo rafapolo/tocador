@@ -338,11 +338,43 @@ test('grafo: artista fora do grafo abre a visão geral e avisa', async ({ page }
 
 test('grafo: Som e Gêneros trocam as ligações sem fechar o grafo', async ({ page }) => {
   await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
-  await expect(page.locator('#grafo-detalhe')).toContainText('pelo som');
+  await expect(page.locator('#grafo-detalhe')).not.toContainText('ligações');
   await expect(page.locator('#grafo-detalhe')).not.toContainText('rraste');
   await page.locator('[data-mapa="rotulos"]').click();
-  await expect(page.locator('#grafo-detalhe')).toContainText('rótulos de gênero');
+  await expect(page.locator('#grafo-detalhe')).not.toContainText('ligações');
   expect((await grafo(page)).aberto).toBe(true);
+});
+
+test('painel do grafo: parecidos levam ao vizinho, ✕ fecha e voltar refaz o caminho', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  const chips = page.locator('#grafo-parecidos-lista button');
+  await expect(chips.first()).toBeVisible();
+  expect(await chips.count()).toBeLessThanOrEqual(6);
+  const nome = (await chips.first().textContent()).trim();
+  await chips.first().focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#grafo-titulo')).toHaveText(nome);
+  await expect.poll(() => page.evaluate(() => document.activeElement?.closest('#grafo-parecidos-lista') !== null)).toBe(true);   // o foco fica na lista
+  await page.waitForFunction(() => !location.search.includes('artista=Delta'));
+  await page.goBack();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  await page.locator('#grafo-fechar').click();
+  await expect(page.locator('#grafo')).toBeHidden();
+});
+
+test('música no grafo: os artistas à vista são a mistura e a partitura, também na visão geral', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
+  await page.keyboard.press('Shift');          // o gesto que libera o som
+  const som = () => page.evaluate(() => window.__atlas.som());
+  await expect.poll(async () => (await som())?.vozes?.filter(v => v.peso > 0).length ?? 0, { timeout: 8000 }).toBeGreaterThan(0);
+  await expect.poll(async () => (await som()).frase?.length ?? 0, { timeout: 12000 }).toBeGreaterThan(0);
+  const f0 = JSON.stringify((await som()).frase);
+  await page.locator('#grafo-parecidos-lista button').first().click();
+  await expect.poll(async () => JSON.stringify((await som()).frase), { timeout: 15000 }).not.toBe(f0);
+  await page.goto('/atlas?grafo=1');
+  await page.evaluate(() => window.__atlas.pronto);
+  await page.keyboard.press('Shift');
+  await expect.poll(async () => (await som())?.vozes?.filter(v => v.peso > 0).length ?? 0, { timeout: 8000 }).toBeGreaterThan(0);
 });
 
 test('grafo: a busca centra no artista e nome hostil fica como texto', async ({ page }) => {
@@ -575,7 +607,7 @@ test('grafo: o painel mostra todas as capas do artista, com link em nova aba, se
   const capas = page.locator('#grafo-capas a');
   await expect(capas).toHaveCount(esperadas);
   await expect(capas.first()).toHaveAttribute('target', '_blank');
-  await expect(capas.first().locator('img')).toHaveAttribute('src', /capa-min\.jpg$/);
+  await expect(capas.first().locator('img')).toHaveAttribute('src', /capa-micro\.jpg$/);
   await expect(page.locator('#grafo-acoes')).toHaveCount(0);
   await expect(page.locator('#grafo-genero')).toBeVisible();
 });
@@ -605,7 +637,9 @@ for (const [nome, vp] of [['desktop', { width: 1280, height: 800 }], ['mobile', 
     expect(ouvir.y).toBeGreaterThanOrEqual(capa.y + capa.height);        // ação embaixo
     await expect(page.locator('#grafo-capas a')).toHaveAttribute('target', '_blank');
     // Capa que falha: o painel volta ao desenho sem capas, sem sobrar a linha do álbum.
-    await page.evaluate(() => document.querySelector('#grafo-capas img').dispatchEvent(new Event('error')));
+    await page.evaluate(() => { const i = document.querySelector('#grafo-capas img'); i.dispatchEvent(new Event('error')); });  // da micro para a normal
+    await expect.poll(() => page.evaluate(() => document.querySelector('#grafo-capas img')?.src ?? '')).toContain('capa-min.jpg');
+    await page.evaluate(() => document.querySelector('#grafo-capas img')?.dispatchEvent(new Event('error')));
     await expect(painel).not.toHaveClass(/um-album/);
     await expect(page.locator('#grafo-album')).toBeHidden();
   });

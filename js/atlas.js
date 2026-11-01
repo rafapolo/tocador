@@ -600,6 +600,7 @@
   }
 
   const SOM_BPM = new Float32Array(260), SOM_TOM = new Float32Array(24);
+  const SOM_M = new Float32Array(64), SOM_Y = new Float32Array(64), SOM_H = new Float32Array(64), SOM_G = new Float32Array(64);
   // Key detection leans to a few keys, C major first, so the commonest key on screen is C nearly everywhere.
   // A region's key is the one it has more of than the whole archive does; a broad view has none, and keeps
   // the family's own.
@@ -618,6 +619,8 @@
   let somG = null, somX = null, somIdx = null, somCam = null;
   // What the camera looks at: weight per genre (the nearer the center the more it counts), where each sits on
   // screen, and, with the features in, the median tempo, the commonest key and the mood of those same tracks.
+  // The graph has no dots to read: each artist is a place of its own.
+  const lugarDe = nome => { let h = 7; for (const c of nome || '') h = (h * 31 + c.charCodeAt(0)) % 9973; return { x: h / 317, y: h / 139, vel: 0 }; };
   function regiaoSom() {
     if (!A || t !== tAlvo) return null;
     somG ??= new Float32Array(A.generos.length);
@@ -625,21 +628,34 @@
     somG.fill(0); somX.fill(0);
     const agora = performance.now();
     let z = k / k0, tempero = null;
+    // Everything on screen goes through here, dots of the map or artists of the graph: its weight in the mix, near the
+    // center, and its place in the score, a piano roll of 4 rows by 16 columns, a point shared between the two columns
+    // it falls between so that dragging moves notes gradually.
+    const r2 = (Math.min(W, H) * (grafo.aberto ? 0.5 : 0.25)) ** 2;     // tight on the map: the edges would outvote the sights
+    const raio = Math.sqrt(r2) * 2, xi = W / 2 - raio, yi = H / 2 - raio, lado = raio * 2;
+    SOM_M.fill(0); SOM_Y.fill(0); SOM_H.fill(0);
+    const juntar = (x, y, g, hash, peso) => {
+      const w = peso * Math.exp(-((x - W / 2) ** 2 + (y - H / 2) ** 2) / r2);
+      somG[g] += w; somX[g] += w * x;
+      const c = (x - xi) / lado * 15, l = Math.floor((y - yi) / lado * 4);
+      if (c < 0 || c > 15 || l < 0 || l > 3) return;
+      const c0 = Math.floor(c), u = c - c0, ny = (y - yi) / lado * 4 - l, h = (hash % 1024) / 1024 - 0.5;
+      for (const [col, p] of [[c0, 1 - u], [Math.min(15, c0 + 1), u]]) {
+        const k = l * 16 + col;
+        SOM_M[k] += p * peso; SOM_Y[k] += p * peso * (l + ny); SOM_H[k] += p * peso * h;
+      }
+    };
     if (grafo.aberto) {
-      // A centered graph plays the artist's genre with a little of each neighbour's; the overview, only the bed.
       somIdx ??= new Map(A.generos.map((g, i) => [g, i]));
-      const lista = grafo.generosCentro();
-      z = lista ? 12 : 1;
-      if (lista) for (const [g, w] of lista) { const i = somIdx.get(g); if (i !== undefined) { somG[i] += w; somX[i] += w * W / 2; } }
+      grafo.pontosVisiveis((x, y, nome, hash, peso) => { const g = somIdx.get(nome); if (g !== undefined) juntar(x, y, g, hash, peso); });
+      z = grafo.centro ? 12 : 5 * grafo.zoom;            // centered, the full band; the overview opens up with its zoom
     } else {
-      // Tight: there is more screen at the edges than at the center, and a wide kernel lets it outvote the sights.
-      const r2 = (Math.min(W, H) * 0.25) ** 2;
       SOM_BPM.fill(0); SOM_TOM.fill(0);
       let somaF = 0, dance = 0, acoustic = 0, electronic = 0;
       const comFeats = feats.length > 0 && ptFila;
       paraCadaVisivel((i, x, y) => {
-        const w = Math.exp(-((x - W / 2) ** 2 + (y - H / 2) ** 2) / r2), g = A.genero[i];
-        somG[g] += w; somX[g] += w * x;
+        juntar(x, y, A.genero[i], A.hash[i], 1);
+        const w = Math.exp(-((x - W / 2) ** 2 + (y - H / 2) ** 2) / r2);
         const f = comFeats && feats[A.acervo[i]], r = f ? ptFila[i] : -1;
         if (r < 0 || !f.bpm[r]) return;
         SOM_BPM[Math.min(259, f.bpm[r])] += w;
@@ -653,13 +669,22 @@
         tempero = { bpm, ...tomDaRegiao(), densidade: 0.45 + 0.8 * dance / somaF, brilho: 1 + 0.6 * (electronic - acoustic) / somaF };
       }
     }
+    // Height on screen gives the contour; the mean identity of a cell's tracks, wide when few dots share it, the detail.
+    let total = 0;
+    for (let k = 0; k < 64; k++) {
+      const m = SOM_M[k];
+      total += m;
+      SOM_G[k] = m ? (2 - SOM_Y[k] / m) * 3 + (SOM_H[k] / m) * 7 : 0;
+    }
+    const leitura = total ? { m: SOM_M, g: SOM_G } : null;
     const antes = somCam, seg = antes ? Math.max(0.05, (agora - antes.t) / 1000) : 1;
     somCam = { t: agora, cx, cy, k, yaw, pitch };
     const velocidade = !antes ? 0 : (Math.hypot(cx - antes.cx, cy - antes.cy) * k + Math.abs(Math.log(k / antes.k)) * 800
       + (Math.abs(yaw - antes.yaw) + Math.abs(pitch - antes.pitch)) * 400) / seg / 1500;
     const l = Math.floor(Math.log2(Math.max(1, k / k0))) + 2;
     return { pesos: somG, somaX: somX, largura: W, z, giro: Math.min(1, (Math.abs(yaw % Math.PI) + Math.abs(pitch)) / 1.45), velocidade,
-      semente: 1 + (Math.floor(cx * 2 ** l) * 7919 + Math.floor(cy * 2 ** l) * 104729 + l) % 2147483629, tempero };
+      semente: 1 + (Math.floor(cx * 2 ** l) * 7919 + Math.floor(cy * 2 ** l) * 104729 + l) % 2147483629, tempero, leitura,
+      lugar: grafo.aberto ? lugarDe(grafo.centro) : { x: cx, y: cy, vel: Math.min(1, velocidade) } };
   }
 
   // Close up, each dot rings once as it crosses the sights, in the middle of the screen.

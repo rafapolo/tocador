@@ -130,7 +130,7 @@ test('longe só a cama; perto entram baixo, ritmo, acordes e melodia', async ({ 
   expect(c[1].perc).toBeGreaterThan(0.5);
   expect(c[1].mel).toBe(0);
   expect(c[2].mel).toBe(1);
-  expect(await page.evaluate(() => filtroSom(1) < 500 && filtroSom(12) > 3000)).toBe(true);
+  expect(await page.evaluate(() => filtroSom(1) < 1000 && filtroSom(3) > 3000 && filtroSom(12) > 10000)).toBe(true);
 });
 
 test('toda família soa sem saturar, e dois gêneros dividem o mesmo relógio', async ({ page }) => {
@@ -162,6 +162,11 @@ test('toda família soa sem saturar, e dois gêneros dividem o mesmo relógio', 
   expect(r.mistura.vozes.find(v => v.nome === 'punk').mult).toBe(2);   // punk ~ o dobro do samba: grade dobrada, não outro tempo
 });
 
+test('toda família tem linha melódica: nenhum gênero deixa os pontos mudos', async ({ page }) => {
+  await boot(page);
+  expect(await page.evaluate(() => RECEITAS_ATLAS.familias.filter(f => !RECEITAS_ATLAS.receita(f).mel))).toEqual([]);
+});
+
 test('receitas: padrões do tamanho da grade e nenhum rótulo sem família', async ({ page }) => {
   await boot(page);
   const erros = await page.evaluate(() => {
@@ -171,6 +176,8 @@ test('receitas: padrões do tamanho da grade e nenhum rótulo sem família', asy
       if (96 % r.passos) e.push(`${f}: passos`);
       for (const p of [...Object.values(r.perc), r.baixo?.p, r.acorde?.p, r.mel?.r]) if (p && p.length % r.passos) e.push(`${f}: ${p}`);
       if (!r.escalaNotas) e.push(`${f}: escala`);
+      if (r.groove && !(r.groove.cel.length && r.groove.cel.every(x => Math.abs(x) < 0.5))) e.push(`${f}: groove`);
+      if (r.eco && !r.eco.em.length) e.push(`${f}: eco`);
     }
     for (const g of ['Latin---Samba', 'Latin---Coisa Nova', 'Rock---Punk', 'Blues---Delta Blues', 'Non-Music---Poetry', 'Stage & Screen---Score']) if (!R.receita(R.familiaDe(g))) e.push(g);
     return e;
@@ -178,4 +185,89 @@ test('receitas: padrões do tamanho da grade e nenhum rótulo sem família', asy
   expect(erros).toEqual([]);
   expect(await page.evaluate(() => [RECEITAS_ATLAS.familiaDe('Latin---Samba'), RECEITAS_ATLAS.familiaDe('Jazz---Bossa Nova'), RECEITAS_ATLAS.familiaDe('Reggae---Inexistente')]))
     .toEqual(['samba', 'bossa', 'reggae']);
+});
+
+test('guitarra distorcida segue o peso da família, e a forma traz viradas e a parte B', async ({ page }) => {
+  test.setTimeout(60000);
+  await boot(page);
+  const r = await page.evaluate(async () => {
+    const sr = 22050;
+    async function render(nome, peso, seg) {
+      const ac = new OfflineAudioContext(2, seg * sr, sr), m = criarMotorSom(ac);
+      m.saida.gain.value = 1;
+      m.definir({ fatias: [{ nome, peso }], camadas: camadasSom(20), cam: filtroSom(20), sala: 0 }, true);
+      const formas = [];
+      for (let t = 0.5; t < seg - 0.5; t += 0.5) { m.avancar(t); formas.push({ ...m.estado().forma }); }
+      const d = (await ac.startRendering()).getChannelData(0);
+      return { rms: Math.sqrt(d.reduce((a, x) => a + x * x, 0) / d.length), formas };
+    }
+    const cheio = await render('punk', 1, 4), fraco = await render('punk', 0.05, 4), longo = await render('techno', 1, 60);
+    return { cheio: cheio.rms, fraco: fraco.rms, viradas: new Set(longo.formas.map(f => f.virada)).size, b: longo.formas.some(f => f.b) };
+  });
+  expect(r.fraco).toBeLessThan(r.cheio * 0.35);        // antes o amp ignorava o fader da família
+  expect(r.viradas).toBe(3);
+  expect(r.b).toBe(true);
+});
+
+test('a melodia nasce dos pontos: mexer pouco muda pouco, e o que some da tela some da melodia', async ({ page }) => {
+  test.setTimeout(60000);
+  await boot(page);
+  const r = await page.evaluate(async () => {
+    const roll = f => {
+      const m = new Float32Array(64), g = new Float32Array(64);
+      for (let k = 0; k < 64; k++) { m[k] = f(k % 16, k >> 4); g[k] = 4 * Math.sin(k * 0.7 + f(k % 16, k >> 4)); }
+      return { m, g };
+    };
+    function frase(leitura, nomes = [['samba', 1]]) {
+      const ac = new OfflineAudioContext(2, 22050 * 8, 22050), m = criarMotorSom(ac);
+      m.saida.gain.value = 1;
+      m.definir({ fatias: nomes.map(([nome, peso]) => ({ nome, peso })), camadas: camadasSom(20), cam: 8000, sala: 0.2, leitura, lugar: { x: 0, y: 0, vel: 0 } }, true);
+      m.avancar(7);
+      return m.estado();
+    }
+    const base = c => 1 + Math.sin(c * 1.3), a = frase(roll((c, l) => base(c) + l)).frase;
+    const perto = frase(roll((c, l) => base(c + 0.08) + l)).frase, longe = frase(roll((c, l) => base(c + 7) + 3 * Math.cos(l * c))).frase;
+    const vazio = frase({ m: new Float32Array(64), g: new Float32Array(64) }).frase;
+    return { a, perto, longe, vazio, dois: frase(roll(base), [['samba', 0.6], ['punk', 0.4]]).melodista, cantam: frase(roll(base), [['samba', 0.6], ['rock', 0.4]]).vozes.length };
+  });
+  const iguais = (x, y) => x.filter(n => y.includes(n)).length / Math.max(x.length, y.length);
+  expect(r.a.length).toBeGreaterThan(3);
+  expect(iguais(r.a, r.perto)).toBeGreaterThan(0.6);
+  expect(iguais(r.a, r.longe)).toBeLessThan(iguais(r.a, r.perto));
+  expect(r.vazio).toEqual([]);
+  expect(r.dois).toBe('samba');
+  expect(r.cantam).toBe(2);
+});
+
+test('navegando, os pontos à vista reescrevem a frase', async ({ page }) => {
+  await boot(page);
+  await page.keyboard.press('+');
+  await expect.poll(async () => (await som(page)).regente).toBeTruthy();
+  await page.evaluate(() => window.__atlas.focar(0, 6));       // de perto a melodia entra
+  const frase = () => page.evaluate(() => JSON.stringify(window.__atlas.som().frase));
+  await expect.poll(frase, { timeout: 10000 }).not.toBe('null');
+  await expect.poll(frase, { timeout: 10000 }).not.toBe('[]');
+  const f0 = await frase();
+  await page.evaluate(() => window.__atlas.focar(window.__atlas.estado().n - 1, 6));
+  await expect.poll(frase, { timeout: 12000 }).not.toBe(f0);
+});
+
+test('onde gêneros se encontram toca uma banda só: um tempo entre eles, um balanço, cada papel com um dono', async ({ page }) => {
+  test.setTimeout(60000);
+  await boot(page);
+  const r = await page.evaluate(async () => {
+    const ac = new OfflineAudioContext(2, 22050 * 10, 22050), m = criarMotorSom(ac);
+    m.saida.gain.value = 1;
+    const fatias = [['samba', 0.34], ['funk', 0.22], ['forro', 0.18], ['reggae', 0.14], ['punk', 0.12]].map(([nome, peso]) => ({ nome, peso }));
+    m.definir({ fatias, camadas: camadasSom(20), cam: 8000, sala: 0.2 }, true);
+    m.avancar(9);
+    const f = m.estado().fusao, cels = ['samba', 'funk', 'forro', 'reggae'].map(n => RECEITAS_ATLAS.receita(n)), d = (await ac.startRendering()).getChannelData(0);
+    return { f, bpms: cels.map(c => c.bpm), cels: cels.map(c => c.groove.cel), pk: d.reduce((a, x) => Math.max(a, Math.abs(x)), 0) };
+  });
+  expect(r.f.generos).toBe(5);
+  expect(r.f.bpm).toBeGreaterThanOrEqual(Math.min(...r.bpms) * 0.9);
+  expect(r.f.bpm).toBeLessThanOrEqual(Math.max(...r.bpms) * 1.1);
+  expect(r.f.bolso.some(x => x !== 0)).toBe(true);
+  expect(r.f.donos.chao).toBe('samba');
+  expect(r.pk).toBeLessThanOrEqual(1);
 });

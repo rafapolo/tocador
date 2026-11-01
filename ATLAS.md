@@ -124,3 +124,90 @@ uv run -q --with matplotlib --with numpy --with pillow python script/build-atlas
 ```
 
 Testes: `npx playwright test tests/atlas.spec.js` (fixtures em `tests/fixtures/build-atlas-fixture.js`).
+
+## Música generativa
+
+Navegar pelo mapa toca uma música gerada na hora, a partir do que a câmera está vendo. Nenhum arquivo de áudio é
+tocado: tudo é sintetizado no navegador com Web Audio. O botão ♪ (tecla `M`) liga e desliga, e o navegador só deixa
+soar depois do primeiro clique ou tecla.
+
+### Como funciona
+
+- **Os pontos são a partitura.** A cada ~200 ms, `regiaoSom()` (`js/atlas.js`) lê o que está à vista como um piano roll
+  de 4 linhas por 16 colunas em volta do centro da tela. Quantos pontos caem em cada célula decide onde há nota, a altura
+  deles na tela dá o contorno, e a identidade das faixas dá o detalhe. Filtrar, arrastar ou dar zoom reescreve as notas
+  seguintes a cada tempo, sem esperar a frase acabar. Mexer pouco muda pouco, e tela vazia não tem melodia. Com o mapa
+  parado, a frase se repete.
+- **Muitos gêneros, uma banda.** Até 6 das 57 famílias de `js/atlas-receitas.js` soam ao mesmo tempo, com ganho de igual
+  potência, para uma zona mista soar tão cheia quanto uma pura. Em vez de empilhar bandas, `fundir()` junta os gêneros:
+  um andamento ponderado entre os deles, um só balanço (a média dos grooves), harmonia emprestada de cada um conforme o
+  peso, sobre o mesmo tom, e baixo e levada que trocam de mãos. Na bateria, cada papel (chão, tronco, condução) tem um
+  dono, e os outros só preenchem os espaços dele. Só há uma melodia: cada nota vem de um gênero, conforme o peso, e todos
+  a cantam no próprio instrumento, então o timbre atravessa junto com o mapa.
+- **Grafo.** Vale o mesmo: os artistas à vista, na visão geral ou em volta de um centro, são a mistura e a partitura.
+  Andar de vizinho em vizinho reescreve a música; o zoom da visão geral abre as camadas.
+- **Zoom.** De longe se ouve só a cama, abafada. Aproximando entram baixo e ritmo, depois acordes, depois melodia. O
+  filtro da câmera abre até por volta de 6×, e a percussão abre uma oitava antes do resto. Perto, cada ponto que cruza
+  o centro da tela soa uma nota curta.
+- **Dados das faixas.** As features da região ajustam o andamento (até ±30% do da família), a densidade do ritmo, o
+  brilho e o tom.
+- **Receita.** Cada família é só dado: padrões de percussão, célula de baixo, levada, harmonia, escala e timbres.
+- **Execução (`js/atlas-som.js`).** O motor toca a receita como uma banda:
+  - **Groove:** cada gênero tem seu microtiming (a célula do samba antecipa as semicolcheias finais do tempo) e cada
+    instrumento seu atraso habitual. Máquinas (house, techno) ficam na grade.
+  - **Forma:** frases de 8 compassos em A A B A, virada a cada 4 compassos, prato na entrada e parada a cada 16.
+  - **Harmonia:** cada acorde usa a inversão que menos se move a partir do anterior, sem a fundamental quando o baixo
+    já a toca, e o baixo chega ao próximo acorde por semitom.
+  - **Melodia:** frases de 4 compassos com um motivo em graus da escala, repetido e variado, que fecham numa nota do
+    acorde e deixam espaço para respirar.
+  - **Timbre:** cordas dedilhadas são Karplus-Strong, pré-calculado em `AudioBuffer` ao primeiro uso; pratos usam as
+    seis ondas quadradas da 808. Há transiente de ataque, sopro, e nenhuma nota sai idêntica à anterior.
+  - **Mixagem:** cada instrumento tem seu lugar no estéreo, a percussão vai mais seca, há sala curta e longa, eco de
+    fita (dub, reggae) e o bumbo empurra o resto (house, techno).
+
+### Como foi criada
+
+A ideia veio do mapa Cantography (`../swissviz/design/sound.md`), que faz o mesmo com dados de empresas:
+de lá vêm as três famílias de som (dados, interface, momentos), a cama com vento, o filtro aberto pelo zoom e as notas
+determinísticas por `hash()`, em que o mesmo lugar sempre soa igual. Depois vieram as receitas por gênero, escritas à
+mão, e o relógio único. As decisões estão em `tasks/generative-music-nav.md` (só local).
+
+A segunda rodada usou uma medida objetiva, porque áudio é difícil de julgar lendo código: o mesmo modelo que pôs as
+faixas no mapa escuta a música sintetizada.
+
+```bash
+node script/render-som-atlas.js /tmp/som                       # ~7 min: 57 famílias, 2 tomadas de 30 s em WAV
+python3 script/avaliar-som-atlas.py /tmp/som --antes antes.json   # precisa do Essentia e dos modelos
+```
+
+A nota principal é o cosseno entre o embedding do render e o centroide das faixas reais da família, no zoom máximo.
+Medindo cada mudança isolada, o resultado desmentiu boa parte das suposições:
+
+| Mudança | O que a medida disse |
+|---|---|
+| Cama de pad alta com a banda tocando | Quase tudo soava como `Electronic---Ambient`; ela agora recua ao entrar a banda |
+| Baixo por Karplus-Strong | Piorou, com o rótulo `Chiptune`; o brilho precisa contar harmônicos, e mesmo corrigido o baixo voltou a ser osciladores |
+| Melodia em primeiro plano | Foi o que mais pesou: sem ela a nota subia, então ela ficou mais baixa e mais esparsa |
+| Microtiming, forma, estéreo | Quase não mudam a nota, porque o modelo olha para o espectro; ficaram por serem o que faz música soar tocada |
+| Coloração de gravação antiga | Ajuda em samba, salsa e jazz, e atrapalha em MPB e folk; só ficou onde mediu melhor |
+
+Resultado: a nota média foi de 0,166 para 0,187, e 35 das 57 famílias subiram. Flamenco, reggae e reggaeton foram as que
+mais ganharam; balada, pós-rock e folk perderam.
+
+A terceira rodada trocou palpite por dado. `script/amostrar-som-real.js` e `script/perfil-som-real.py` medem 888 trechos de
+faixas reais, 16 por família: espectro, andamento e microtiming. A ginga do samba medida ficou muito perto da estimada à
+mão, e o forró real anda a 104 BPM, não a 124. `script/ajustar-som-atlas.py` usa esses perfis para equalizar cada família
+e busca, uma a uma, níveis, sala e timbre da melodia, gravando o resultado no bloco `AJUSTES` de `js/atlas-receitas.js`.
+Ele ajusta numa tomada e valida em outra.
+
+Por fim, a viagem: navegar de verdade pelo mapa inteiro, de samba a rock e ao grafo, gravando o estado do motor. Foi assim
+que apareceram o volume caindo nas zonas mistas e o modo piscando com o mapa parado.
+
+### Limitações da música
+
+- **A nota mede se o som parece o gênero para esse modelo, não se é bonito.** Ela é uma aproximação e nunca substitui
+  o ouvido.
+- **As famílias brasileiras seguem entre as piores** (forró, samba, MPB, bossa), embora sejam o coração dos acervos.
+  Nenhuma tem voz cantada, e as faixas reais quase sempre têm.
+- **Quem está longe ouve outra música.** A nota foi medida no zoom máximo; de longe só há cama.
+- **A fusão não foi avaliada pela nota.** Ela mede uma família por vez; misturas foram conferidas navegando, não de ouvido.
