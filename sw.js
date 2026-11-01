@@ -17,7 +17,7 @@ const CACHE = 'tocador-v5';
 const SHELL = ['./', './index.html', './assets/player.css', './js/acervo-format.js', './js/util.js', './js/som-abas.js', './js/atlas-data.js', './js/virtual-lists.js', './js/ui.js', './js/url-meta.js', './js/browse.js', './js/acervo-features.js', './js/explorar.js', './js/album-view.js', './js/playback.js', './manifest.json'];
 // Best effort: radio.html isn't deployed to the mirrors at all, and a 404 here
 // must not fail the install.
-const EXTRAS = ['./radio.html', './js/radio.js', './assets/radio.css', './3d.html', './js/3d.js', './assets/3d.css', './atlas.html', './js/atlas-data.js', './js/atlas-grafo.js', './js/atlas-receitas.js', './js/atlas-som.js', './js/atlas-visor.js', './js/atlas.js', './assets/atlas.css', './data/resumo-acervo.json'];
+const EXTRAS = ['./radio.html', './js/radio.js', './assets/radio.css', './3d.html', './js/3d.js', './assets/3d.css', './atlas.html', './js/atlas-data.js', './js/atlas-grafo.js', './js/atlas-receitas.js', './js/atlas-som.js', './js/atlas-visor.js', './js/atlas.js', './js/atlas-tour.js', './assets/atlas.css', './data/resumo-acervo.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

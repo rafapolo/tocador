@@ -354,11 +354,11 @@
   }
 
   let voo = null;
-  function voar(ncx, ncy, nk, animar = true, rot = null) {
+  function voar(ncx, ncy, nk, animar = true, rot = null, ms = null) {
     nk = limitarK(nk);
     const [yaw1, pitch1] = rot || [yaw, pitch];
     if (!animar || reduzMovimento) { cx = ncx; cy = ncy; k = nk; yaw = yaw1; pitch = pitch1; rotacao(); voo = null; pedir(); return; }
-    voo = { cx0: cx, cy0: cy, k0: k, cx1: ncx, cy1: ncy, k1: nk, yaw0: yaw, yaw1, pitch0: pitch, pitch1, t0: performance.now(), ms: rot ? 650 : 450 };
+    voo = { cx0: cx, cy0: cy, k0: k, cx1: ncx, cy1: ncy, k1: nk, yaw0: yaw, yaw1, pitch0: pitch, pitch1, t0: performance.now(), ms: ms ?? (rot ? 650 : 450) };
     pedir();
   }
   function passoVoo(agora) {
@@ -1151,9 +1151,9 @@
   // Each click is a history entry (salvarUrl(true)); typing and passive changes only rewrite the current one.
   // The short delay folds one gesture's several changes into one entry, like leaving the graph, which closes
   // it and then selects the artist's dot.
-  let tUrl = 0, novaEntrada = false, restaurando = 0;
+  let tUrl = 0, novaEntrada = false, restaurando = 0, urlPresa = false;   // urlPresa: the tour (js/atlas-tour.js) writes no history
   function salvarUrl(nova = false) {
-    if (restaurando) return;
+    if (restaurando || urlPresa) return;
     novaEntrada ||= nova;
     clearTimeout(tUrl);
     tUrl = setTimeout(() => {
@@ -1363,6 +1363,18 @@
     grafo: () => grafo.estado(),
     grafoTudo: nome => grafo.noTudo(nome),
     som: () => som && { ...som.estado(), features: feats.filter(Boolean).length },
+    // For the tour (js/atlas-tour.js): the data it counts from, the camera it flies, and the state it puts back.
+    dados: () => ({ A, cor, macros: MACROS, nomeMacro, subDe, macroDe }),
+    camera: () => ({ cx, cy, k, k0, yaw, pitch, mapa, W, H, topo: margemTopo() }),
+    voar(ncx, ncy, nk, ms, rot = null) { voar(ncx, ncy, nk, ms > 0, rot, ms); },
+    girarVista(yaw1, pitch1, ms) { if (!A.posZ[mapa]) return false; pivoNoCentro(); voar(cx, cy, k, ms > 0, [yaw1, pitch1], ms); return true; },
+    enquadrarTudo,
+    fecharCartao() { if (sel >= 0) fecharCartao(); },
+    artistaDe(i) { const info = infoDe(i); return info ? parseArtists(info.artista)[0] || null : null; },
+    abrirGrafo,
+    prenderUrl(on) { urlPresa = on; if (on) clearTimeout(tUrl); },
+    querSom(on) { som?.querer(on); },
+    aplicarUrl,
   };
 
   iniciar();

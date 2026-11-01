@@ -1041,6 +1041,8 @@
 
     return {
       alternar,
+      // The tour (js/atlas-tour.js) puts back the choice it changed, whether or not the browser ever let it sound.
+      querer(on) { if (vontade === on) return; vontade = on; if (on) { ignorarOutro = true; dormindo = false; } try { localStorage.setItem(CHAVE, on ? '1' : '0'); } catch {} atualizar(); },
       // the map moved: not asleep
       mexeu() {
         ultimoGesto = performance.now();
