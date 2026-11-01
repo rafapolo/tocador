@@ -651,7 +651,7 @@
     }
     return { tonica: melhor < 0 ? undefined : melhor >> 1, modo: menor / soma > menorTodas / todas ? 'menor' : 'maior' };
   }
-  let somG = null, somX = null, somIdx = null, somCam = null;
+  let somG = null, somX = null, somIdx = null;
   // What the camera looks at: weight per genre (the nearer the center the more it counts), where each sits on
   // screen, and, with the features in, the median tempo, the commonest key and the mood of those same tracks.
   // The graph has no dots to read: each artist is a place of its own.
@@ -712,30 +712,10 @@
       SOM_G[k] = m ? (2 - SOM_Y[k] / m) * 3 + (SOM_H[k] / m) * 7 : 0;
     }
     const leitura = total ? { m: SOM_M, g: SOM_G } : null;
-    const antes = somCam, seg = antes ? Math.max(0.05, (agora - antes.t) / 1000) : 1;
-    somCam = { t: agora, cx, cy, k, yaw, pitch };
-    const velocidade = !antes ? 0 : (Math.hypot(cx - antes.cx, cy - antes.cy) * k + Math.abs(Math.log(k / antes.k)) * 800
-      + (Math.abs(yaw - antes.yaw) + Math.abs(pitch - antes.pitch)) * 400) / seg / 1500;
     const l = Math.floor(Math.log2(Math.max(1, k / k0))) + 2;
-    return { pesos: somG, somaX: somX, largura: W, z, giro: Math.min(1, (Math.abs(yaw % Math.PI) + Math.abs(pitch)) / 1.45), velocidade,
+    return { pesos: somG, somaX: somX, largura: W, z, giro: Math.min(1, (Math.abs(yaw % Math.PI) + Math.abs(pitch)) / 1.45),
       semente: 1 + (Math.floor(cx * 2 ** l) * 7919 + Math.floor(cy * 2 ** l) * 104729 + l) % 2147483629, tempero, leitura,
-      lugar: grafo.aberto ? lugarDe(grafo.centro) : { x: cx, y: cy, vel: Math.min(1, velocidade) } };
-  }
-
-  // Close up, each dot rings once as it crosses the sights, in the middle of the screen.
-  const naMira = new Set();
-  function miraSom() {
-    if (!A || grafo.aberto || t !== tAlvo || k / k0 < 10) { naMira.clear(); return null; }
-    const R = 26, aqui = new Set(), novos = [];
-    paraCadaVisivel((i, x, y) => {
-      const d = Math.hypot(x - W / 2, y - H / 2);
-      if (d > R) return;
-      aqui.add(i);
-      if (!naMira.has(i) && novos.length < 3) novos.push([A.hash[i], A.genero[i], (x / W - 0.5) * 1.5, 0.75 - 0.35 * d / R]);
-    });
-    naMira.clear();
-    for (const i of aqui) naMira.add(i);
-    return novos;
+      lugar: grafo.aberto ? lugarDe(grafo.centro) : { x: cx, y: cy, vel: 0 } };
   }
 
   // ── filters ──
@@ -1281,7 +1261,7 @@
   let som = null;
   function iniciarSom() {
     som = criarSomAtlas({
-      generos: A.generos, regiao: regiaoSom, mira: miraSom, previa: audio, pararPrevia, botao: $('btn-musica'),
+      generos: A.generos, regiao: regiaoSom, previa: audio, pararPrevia, botao: $('btn-musica'),
       aoPrimeiroSom: () => { carregarFeaturesSom().catch(err => console.warn('[atlas] sem features para a música', err)); },
     });
     // The visor colours each family like the map colours its genres: the macro of the first label it plays.

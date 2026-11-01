@@ -33,7 +33,7 @@ ficam em `cenas()`, em `js/atlas-tour.js`. A música é a sonificação do mapa,
 
 A trilha do tour é a própria sonificação do mapa: o que a câmera vê vira a partitura, e cada gênero na tela toca uma
 parte da banda. Por isso a música muda a cada voo: o samba do lugar mais povoado, o rock do outro lado, uma
-raridade de perto (onde cada ponto que cruza a mira toca uma nota), a mistura de uma fusão, a troca Som ↔ Gêneros e
+raridade de perto, a mistura de uma fusão, a troca Som ↔ Gêneros e
 os artistas do grafo.
 
 - Se o **Sonificar** estiver desligado, o tour o liga no clique em ▶ Tour (o clique é o gesto que o navegador exige
@@ -53,7 +53,7 @@ da cena, uma legenda sendo lida), ela desliza devagar, um pouco ao lado e um pou
 | 0 | 0–5 s | o mapa inteiro, aproximando devagar | nada se clica | **atlas** · *N faixas (X do UQT, Y do Hominis Canidae). Cada ponto é uma faixa; o que soa parecido fica perto.* |
 | 1 | 5–11 s | deriva devagar | o ponteiro vai até **Sonificar** (já ligado desde o clique em ▶ Tour) | **sonificar** · *Nenhum som aqui é gravado: o que a câmera vê vira a partitura, e cada gênero na tela toca uma parte da banda.* |
 | 2 | 11–21 s | voa até o maior marco (até 4×); 5 s depois, até o maior marco de outro macro-gênero | a banda muda com a região | **mainstream · Samba** · *N faixas de Samba: o lugar mais povoado do mapa. P% de todas as faixas são Latino.* → **mainstream · Punk** · *Do outro lado, N faixas de Punk (Rock). Ouça a banda mudar com a região.* |
-| 3 | 21–30 s | voa bem perto (até 40×, o zoom em que o rótulo aparece) de dois marcos pequenos | de perto, cada ponto na mira toca uma nota | **raridade · …** · *Só N faixas de …, mas juntas: um lugar próprio no mapa.* → **raridade · …** · *N dos M estilos têm menos de 10 faixas no acervo inteiro.* |
+| 3 | 21–30 s | voa bem perto (até 40×, o zoom em que o rótulo aparece) de dois marcos pequenos | de perto, a banda é só a da raridade | **raridade · …** · *Só N faixas de …, mas juntas: um lugar próprio no mapa.* → **raridade · …** · *N dos M estilos têm menos de 10 faixas no acervo inteiro.* |
 | 4 | 30–39 s | voa até as duas maiores fusões | — | **fusão · …** · *… fica entre A e B: na vizinhança, X% A e Y% B.* |
 | 5 | 39–48 s | o mapa inteiro; no fim, gira em 3D (yaw 0,9, pitch −0,35 rad, 2,8 s) | o ponteiro clica **Gêneros** (os pontos migram para as posições pelos rótulos), depois **Som** | **gêneros** · *No mapa Gêneros, a posição vem só dos rótulos…* → **som** · *No mapa Som, vem do áudio…* → **3D** · *O mapa também tem profundidade…* |
 | 6 | 48–57 s | o grafo | o ponteiro clica **Grafo** (visão geral de todos os artistas); vai até o nome do artista escolhido e o grafo se centra nele; depois clica o primeiro vizinho em "Soa parecido com" e o grafo anda até ele | **grafo** · *No Grafo, cada nome é um artista, perto dos que soam como ele.* → **grafo · Nome** · *Nome, ligado aos artistas que mais soam como ele…* → **grafo · Vizinho** · *Clique num vizinho e o grafo anda até ele.* |

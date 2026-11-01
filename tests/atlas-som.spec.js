@@ -151,8 +151,30 @@ test('a música segue o que está à vista, e o filtro muda o que se ouve', asyn
   await expect.poll(async () => (await som(page)).regente, { timeout: 8000 }).toBe('samba');
   await page.locator('[data-acervo="homi"]').click();          // e a homi é punk e techno
   await expect.poll(async () => (await nomes()).sort()).toEqual(['punk', 'techno']);
-  await page.fill('#busca', 'zzzzzz');                         // nada aceso: só resta o vento
+  await page.fill('#busca', 'zzzzzz');                         // nada aceso: silêncio
   await expect.poll(nomes).toEqual([]);
+});
+
+test('mover e aproximar o mapa não fazem som próprio: sem nada à vista, o voo segue em silêncio', async ({ page }) => {
+  await boot(page);
+  await page.keyboard.press('+');
+  await soando(page);
+  await page.fill('#busca', 'zzzzzz');
+  await calado(page);
+  const maior = await page.evaluate(async () => {
+    const at = window.__atlas, c = at.estado();
+    let max = 0;
+    const ouvir = () => { max = Math.max(max, at.som().rms); };
+    const t = setInterval(ouvir, 30);
+    at.voar(c.cx + 0.2, c.cy - 0.1, c.k * 6, 900);
+    await new Promise(r => setTimeout(r, 1000));
+    at.voar(c.cx - 0.1, c.cy + 0.1, c.k, 900);
+    await new Promise(r => setTimeout(r, 1000));
+    clearInterval(t);
+    return max;
+  });
+  // Sobra só a cauda do regente se apagando (~−60 dB, que o filtro do zoom abre um pouco); o vento que havia passava de 0,02.
+  expect(maior).toBeLessThan(0.003);
 });
 
 test('longe só a cama; perto entram baixo, ritmo, acordes e melodia', async ({ page }) => {

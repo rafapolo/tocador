@@ -62,8 +62,8 @@ soar depois do primeiro clique ou tecla.
 - **Grafo.** Vale o mesmo: os artistas à vista, na visão geral ou em volta de um centro, são a mistura e a partitura.
   Andar de vizinho em vizinho reescreve a música; o zoom da visão geral abre as camadas.
 - **Zoom.** De longe se ouve só a cama, abafada. Aproximando entram baixo e ritmo, depois acordes, depois melodia. O
-  filtro da câmera abre até por volta de 6×, e a percussão abre uma oitava antes do resto. Perto, cada ponto que cruza
-  o centro da tela soa uma nota curta.
+  filtro da câmera abre até por volta de 6×, e a percussão abre uma oitava antes do resto. Mover ou aproximar o mapa
+  não faz som próprio (sem vento, sem notas na mira): só muda o que está à vista, e portanto a mistura e as camadas.
 - **Dados das faixas.** As features da região ajustam o andamento (até ±30% do da família), a densidade do ritmo, o
   brilho e o tom.
 - **Receita.** Cada família é só dado: padrões de percussão, célula de baixo, levada, harmonia, escala e timbres.
@@ -83,7 +83,7 @@ soar depois do primeiro clique ou tecla.
 ### Como foi criada
 
 A ideia veio do mapa [Cantography](https://github.com/rafapolo/cantography/blob/main/design/sound.md), que faz o mesmo com dados de empresas:
-de lá vêm as três famílias de som (dados, interface, momentos), a cama com vento, o filtro aberto pelo zoom e as notas
+de lá vêm as três famílias de som (dados, interface, momentos), a cama (o vento de lá foi tirado depois), o filtro aberto pelo zoom e as notas
 determinísticas por `hash()`, em que o mesmo lugar sempre soa igual. Depois vieram as receitas por gênero, escritas à
 mão, e o relógio único. As decisões estão em `tasks/generative-music-nav.md` (só local).
 

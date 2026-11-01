@@ -183,16 +183,6 @@
       amps.set(dest, e);
       return e;
     }
-    // wind: as fast as the map moves
-    const vento = ac.createBufferSource();
-    vento.buffer = ruido; vento.loop = true;
-    const ventoF = ac.createBiquadFilter();
-    ventoF.type = 'bandpass'; ventoF.frequency.value = 600; ventoF.Q.value = 0.8;
-    const ventoG = ac.createGain();
-    ventoG.gain.value = 0;
-    vento.connect(ventoF); ventoF.connect(ventoG); ventoG.connect(saida);
-    vento.start();
-
     const ondas = new Map();
     function onda(nome) {
       let w = ondas.get(nome);
@@ -839,16 +829,6 @@
 
     // ── sounds off the grid ──
     // Data: a dot crossing the sights. Past the camera's filter: it is the sharpest thing on the map.
-    function ponto(chave, nomeFamilia, pan, vel) {
-      const r = receita(nomeFamilia);
-      const esc = ESCALAS[r.mel?.escala || r.escala] || ESCALAS.maior;
-      const m = 72 + tonica + esc[Math.floor(hash(chave) * esc.length)] + (hash(chave, 2) < 0.3 ? 12 : 0);
-      const p = ac.createStereoPanner();
-      p.pan.value = limita(pan, -0.8, 0.8);
-      p.connect(leito);
-      nota('caixinha', m, ac.currentTime + 0.01, 0.1, vel, p);
-      setTimeout(() => p.disconnect(), 2500);
-    }
     // Interface: a dry click and note, no room.
     function tap(graus = [0], vel = 0.5) {
       const t = ac.currentTime + 0.005;
@@ -879,12 +859,7 @@
     }
 
     return {
-      saida, avancar, definir, ponto, tap, swell, medidor,
-      vento(x) {
-        const t = ac.currentTime;
-        ventoG.gain.setTargetAtTime(0.09 * Math.sqrt(x), t, x > 0.01 ? 0.1 : 0.4);
-        ventoF.frequency.setTargetAtTime(300 + 1400 * x, t, 0.2);
-      },
+      saida, avancar, definir, tap, swell, medidor,
       estado() {
         return {
           bpm: Math.round(bpm), tonica, modo, regente: regente?.nome ?? null, melodista: melodista?.nome ?? null,
@@ -903,8 +878,8 @@
   // Muffled with the whole map in view, open by the time the rhythm is in: percussion is an octave ahead (camP).
   const filtroDe = z => limita(900 * z ** 1.4, 220, 16000);
 
-  // o: { generos, regiao(), mira(), previa, pararPrevia(), botao, aoPrimeiroSom() }. regiao() says what the camera
-  // sees: { pesos, somaX, largura, z, giro, velocidade, semente, tempero, leitura, lugar } or null while nothing can be read.
+  // o: { generos, regiao(), previa, pararPrevia(), botao, aoPrimeiroSom() }. regiao() says what the camera
+  // sees: { pesos, somaX, largura, z, giro, semente, tempero, leitura, lugar } or null while nothing can be read.
   function criarSomAtlas(o) {
     const famDe = o.generos.map(familiaDe);
     const lerPref = () => { try { return localStorage.getItem(CHAVE); } catch { return null; } };
@@ -912,7 +887,7 @@
     let ativado = false, previaTocando = false, outroSom = false, ignorarOutro = false, dormindo = false;
     let destravado = false;                  // the context has really run: until then the button can't promise sound
     const Ctx = global.AudioContext || global.webkitAudioContext;
-    let ac = null, m = null, relogio = 0, tDesliga = 0, ultimaAnalise = 0, ultimaMira = 0, ultimoGesto = performance.now();
+    let ac = null, m = null, relogio = 0, tDesliga = 0, ultimaAnalise = 0, ultimoGesto = performance.now();
 
     const emEspera = () => vontade && outroSom && !ignorarOutro;
     const audivel = () => ativado && vontade && !previaTocando && !emEspera() && !document.hidden && !dormindo;
@@ -949,7 +924,6 @@
       if (agora - ultimoGesto > DORME_MS) { dormindo = true; atualizar(); return; }
       m.avancar(ac.currentTime + 0.14);
       if (agora - ultimaAnalise >= 200) { ultimaAnalise = agora; analisar(); }
-      if (agora - ultimaMira >= 90) { ultimaMira = agora; mirar(); }
     }
 
     function analisar() {
@@ -967,14 +941,8 @@
       const fatias = top.map(([nome, c]) => ({ nome, peso: c.peso / (soma || 1), pan: (c.x / c.peso / (R.largura || 1) - 0.5) * 1.5 }))
         .filter(f => f.peso >= 0.05);
       const camadas = camadasDe(R.z);
-      if (!fatias.length) camadas.cama = 0;       // the empty space between clusters: only the wind
+      if (!fatias.length) camadas.cama = 0;       // the empty space between clusters: silence
       m.definir({ fatias, camadas, cam: filtroDe(R.z), sala: limita(0.18 + R.giro * 0.35, 0, 0.7) + (receita(fatias[0]?.nome || 'pop').sala || 0) * 0.3, tempero: R.tempero, semente: R.semente, leitura: R.leitura, lugar: R.lugar });
-      m.vento(limita(R.velocidade, 0, 1));
-    }
-
-    function mirar() {
-      const lista = o.mira?.();
-      if (lista) for (const [chave, g, pan, vel] of lista) m.ponto(chave, famDe[g], pan, vel);
     }
 
     function atualizar() {
