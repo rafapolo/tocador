@@ -1,4 +1,4 @@
-// atlas-tour.js — o tour de 1 minuto do /atlas (roteiro em TOUR.md). Um ponteiro desenhado clica nos controles de
+// atlas-tour.js — o tour de quase 2 minutos do /atlas (roteiro em TOUR.md). Um ponteiro desenhado clica nos controles de
 // verdade, a câmera voa pelos lugares que os dados apontam (nenhum nome ou número fixo aqui: tudo é contado no
 // navegador) e a trilha é a própria sonificação, que reage ao que a câmera vê. ▶ Tour ou ?tour=1 (&t=<s> pula);
 // Esc ou ✕ esc encerram e devolvem mapa, filtros, grafo, seleção e câmera. Carregado depois de js/atlas.js, cujo
@@ -218,29 +218,44 @@
         esconderPonteiro();
         focar(null);
       } },
-      { id: 'travessia', dur: 15, async fn() {
+      { id: 'travessia', dur: 60, async fn() {
         const T = D.trav, { m1 } = D;
-        const zoom = m => Math.min(4, Math.max(2.5, zoomDoRotulo(m.n)));
         if (!T) {
+          const zoom = m => Math.min(4, Math.max(2.5, zoomDoRotulo(m.n)));
           if (!m1) { legenda('mainstream', 'Os lugares mais povoados do mapa.'); return; }
           await irPara(m1.x, alvoY(m1, zoom(m1)), zoom(m1));
           legenda(`mainstream · ${m1.sub}`, `${fmt(m1.n)} faixas de ${m1.sub}: o lugar mais povoado do mapa.`);
           return;
         }
-        // De uma ponta à outra do mapa, uma parada por lugar grande no caminho: a legenda narra cada um e a banda,
-        // que é a fusão do que está à vista, troca de pele aos poucos.
+        // De uma ponta à outra do mapa, uma parada por lugar grande no caminho, e a câmera respira para a música se
+        // ouvir: entre as paradas ela se afasta (de longe, só a cama abafada) e em cada uma aproxima até 8× (entram
+        // baixo, ritmo, acordes e por fim a melodia; camadasSom() em js/atlas-som.js). A banda é a fusão do que está à
+        // vista, então no caminho os dois lugares tocam juntos.
+        const PERTO = 8, LONGE = 1.4;
         const ini = T[0], fim = T[T.length - 1], kicker = `de ${ini.sub} a ${fim.sub}`, trilha = [];
+        const chegar = async (m, ms) => {
+          const c = at.camera(), y = alvoY(m, PERTO);
+          if (run.rapido || reduzMovimento) { at.voar(m.x, y, c.k0 * PERTO, 0); return; }
+          at.voar(m.x, y, c.k0 * PERTO, ms);
+          await espera(ms);
+        };
         for (const [j, m] of T.entries()) {
           const antes = T[j - 1];
-          await irPara(m.x, alvoY(m, zoom(m)), zoom(m), j ? 1250 : 2000);
+          if (antes && !run.rapido && !reduzMovimento) {
+            const c = at.camera();
+            at.voar((antes.x + m.x) / 2, (antes.y + m.y) / 2, c.k0 * LONGE, 3000);   // abre: as camadas saem
+            legenda(kicker, `De longe, só a cama: ${antes.sub} e ${m.sub} soam juntos, abafados.`);
+            await espera(3000);
+          }
+          await chegar(m, j ? 3500 : 4500);                                         // fecha: as camadas entram
           trilha.push(m.sub);
           legenda(kicker,
-            j === 0 ? `${m.sub}: ${fmt(m.n)} faixas de ${m.nomeMacro}. Daqui até ${fim.sub}, do outro lado do mapa, ouça a banda mudar a cada passo.`
+            j === 0 ? `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}. De perto entram baixo, ritmo, acordes e melodia; daqui até ${fim.sub}, ouça a banda mudar.`
               : m === fim ? `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}: o outro lado. ${trilha.join(' → ')}.`
                 : m === m1 ? `${m.sub}: ${fmt(m.n)} faixas, o lugar mais povoado do mapa. ${pct(D.porMacro[m.macro] / D.N)}% de todas as faixas são ${m.nomeMacro}.`
                   : antes && antes.macro !== m.macro ? `${m.sub}, ${fmt(m.n)} faixas: aqui ${antes.nomeMacro} vira ${m.nomeMacro}.`
                     : `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}, no caminho.`);
-          if (m !== fim) await espera(j === 0 || m === m1 ? 1000 : 350);
+          if (m !== fim) await espera(j === 0 ? 4500 : 3000);
         }
       } },
       { id: 'raridades', dur: 8, async fn() {

@@ -5,7 +5,7 @@ Canidae (~79 mil) como pontos num mapa. Faixas que soam parecido ficam perto. D�
 arrastar, girar em 3D (botão direito do mouse no desktop; no celular, ligue o ⟳ e arraste com um dedo) e clicar numa faixa para ouvir no player.
 
 Para uma visita guiada, o botão **▶ Tour** (tecla `T`, ou [tocador.cc/atlas?tour=1](https://tocador.cc/atlas?tour=1))
-faz em 1 minuto o caminho pelo mainstream, pelas raridades, pelas fusões, pelos mapas Som e Gêneros e pelo grafo,
+faz em quase 2 minutos o caminho pelo mainstream, pelas raridades, pelas fusões, pelos mapas Som e Gêneros e pelo grafo,
 com a sonificação tocando o que a câmera vê. O roteiro, cena a cena, está em [TOUR.md](TOUR.md).
 
 ![prévia](assets/atlas-og.jpg)

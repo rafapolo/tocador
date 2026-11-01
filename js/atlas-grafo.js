@@ -112,11 +112,17 @@
       return out;
     }
 
-    // Height at the bottom taken by the panel and, while a preview plays over the graph, by the card.
+    // Height at the bottom taken by the panel, by the card while a preview plays over the graph, and during the tour
+    // by its caption. The tour pins the panel at the top right (js/atlas-tour.js, .em-tour in assets/atlas.css): a
+    // panel up there takes no height at the bottom, or the graph gets squeezed into a strip above it.
+    const painelNoAlto = r => r.height > 0 && r.top < camada.clientHeight * 0.4;
     function reservaBaixo() {
-      const cartao = $('cartao');
-      const topo = Math.min($('grafo-painel').getBoundingClientRect().top, cartao.hidden ? Infinity : cartao.getBoundingClientRect().top);
-      return camada.clientHeight - topo + 12;
+      const H = camada.clientHeight, cartao = $('cartao'), painel = $('grafo-painel').getBoundingClientRect(), tops = [H - 4];
+      if (!painelNoAlto(painel)) tops.push(painel.top);
+      if (!cartao.hidden) tops.push(cartao.getBoundingClientRect().top);
+      const legenda = document.body.classList.contains('em-tour') && $('tour-legenda');
+      if (legenda) tops.push(legenda.getBoundingClientRect().top);
+      return H - Math.min(...tops) + 12;
     }
     const chaveLinha = (a, b) => (a < b ? a * D.n + b : b * D.n + a);
     function nivelDe(lista) {
@@ -132,8 +138,12 @@
     // The part of the screen free for the graph.
     function areaLivre() {
       const W = camada.clientWidth, H = camada.clientHeight;
-      const topo = $('controles').getBoundingClientRect().bottom + 16;
+      // The tour hides the controls (still laid out, at opacity 0): there the graph may use the space under the title.
+      const topo = document.body.classList.contains('em-tour') ? $('topo').querySelector('h1').getBoundingClientRect().bottom + 16
+        : $('controles').getBoundingClientRect().bottom + 16;
       const area = { l: 16, r: W - 16, t: topo, b: H - reservaBaixo() };
+      const painel = $('grafo-painel').getBoundingClientRect();
+      if (painelNoAlto(painel) && painel.left > W / 2) area.r = painel.left - 16;   // the tour's panel, top right
       const aw = Math.max(120, area.r - area.l), ah = Math.max(120, area.b - area.t);
       const meioX = area.l + aw / 2, meioY = area.t + ah / 2;
       pivAlvo = { x: meioX, y: meioY };

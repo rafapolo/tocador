@@ -442,6 +442,8 @@ button { font: inherit; color: inherit; }
 @media (max-width: 720px) {
   #tour-legenda { bottom: calc(min(11vh, 96px) + 8px + var(--safe-b)); }
   .em-tour #grafo-painel { top: auto; bottom: calc(min(11vh, 96px) + 110px); }
+  /* No tour o painel fica baixo: sem as capas, o grafo ganha a altura delas (os vizinhos ficam, o tour clica num). */
+  .em-tour #grafo-capas, .em-tour #grafo-detalhe { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   #tour-ponteiro { transition: none; }

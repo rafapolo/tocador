@@ -24,11 +24,11 @@ async function boot(page, url = '/atlas.html') {
 const tour = page => page.evaluate(() => window.__atlasTour.estado());
 const estado = page => page.evaluate(() => window.__atlas.estado());
 
-test('▶ Tour fica ativo quando o mapa carrega, começa pela abertura com os totais contados e dura 1 minuto', async ({ page }) => {
+test('▶ Tour fica ativo quando o mapa carrega, começa pela abertura com os totais contados e dura 105 s, um minuto dele na travessia', async ({ page }) => {
   await boot(page);
   const btn = page.locator('#btn-tour');
   await expect(btn).toBeEnabled();
-  expect((await tour(page)).total).toBe(60);
+  expect((await tour(page)).total).toBe(105);
   await btn.click();
   await expect(page.locator('body')).toHaveClass(/em-tour/);
   await expect(page.locator('#tour')).toBeVisible();
@@ -74,14 +74,14 @@ test('✕ esc também encerra', async ({ page }) => {
 });
 
 test('?tour=1 começa sozinho e sai do endereço; &t= começa na cena daquele segundo', async ({ page }) => {
-  await boot(page, '/atlas?tour=1&t=42&acervo=uqt');
+  await boot(page, '/atlas?tour=1&t=87&acervo=uqt');
   await expect.poll(async () => (await tour(page)).cena).toBe('som-generos');
   const u = new URL(page.url());
   expect(u.searchParams.has('tour')).toBe(false);
   expect(u.searchParams.has('t')).toBe(false);
   const t = (await tour(page)).t;
-  expect(t).toBeGreaterThanOrEqual(41);
-  expect(t).toBeLessThan(45);
+  expect(t).toBeGreaterThanOrEqual(86);
+  expect(t).toBeLessThan(90);
   // depois do Esc o acervo do endereço volta
   await page.keyboard.press('Escape');
   await page.waitForTimeout(500);
