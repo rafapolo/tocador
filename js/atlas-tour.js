@@ -102,7 +102,7 @@
   }
 
   // A câmera voa até (x, y) no zoom z. De perto para longe, sobe um pouco antes, para o salto ler como viagem.
-  async function irPara(x, y, z, ms = 2600) {
+  async function irPara(x, y, z, ms = 2200) {
     const c = at.camera();
     if (run.rapido || reduzMovimento) { at.voar(x, y, c.k0 * z, 0); return; }
     const longe = Math.hypot(x - c.cx, y - c.cy) * c.k > c.W * 0.6;
@@ -171,15 +171,15 @@
     const nomeAcervo = { uqt: 'UQT', homi: 'Hominis Canidae' };
     const partes = D.acervos.map((a, j) => `${fmt(D.porAcervo[j])} do ${nomeAcervo[a] || a}`);
     return [
-      { id: 'abertura', dur: 9, async fn() {
+      { id: 'abertura', dur: 5, async fn() {
         at.fecharCartao();
         at.enquadrarTudo(!run.rapido);
         legenda('atlas', `${fmt(D.N)} faixas (${partes.join(', ')}). Cada ponto é uma faixa; o que soa parecido fica perto.`);
-        await espera(2500);
+        await espera(1200);
         const c = at.camera();
-        if (!run.rapido && !reduzMovimento) at.voar(c.cx, c.cy, c.k0 * 1.15, 6000);
+        if (!run.rapido && !reduzMovimento) at.voar(c.cx, c.cy, c.k0 * 1.15, 3800);
       } },
-      { id: 'sonificar', dur: 12, async fn() {
+      { id: 'sonificar', dur: 6, async fn() {
         const s = at.som(), btn = $('btn-musica');
         if (!s || btn.disabled) {
           legenda('sonificar', 'Este navegador não toca a sonificação; o tour segue em silêncio.');
@@ -188,63 +188,63 @@
         }
         await clicar(btn, { clica: false });      // ligada em iniciar(), ainda dentro do clique em ▶ Tour
         legenda('sonificar', 'Nenhum som aqui é gravado: o que a câmera vê vira a partitura, e cada gênero na tela toca uma parte da banda.');
-        await espera(1500);
+        await espera(1200);
         esconderPonteiro();
         focar(null);
       } },
-      { id: 'mainstream', dur: 20, async fn() {
+      { id: 'mainstream', dur: 10, async fn() {
         const { m1, m2 } = D;
         if (!m1) { legenda('mainstream', 'Os lugares mais povoados do mapa.'); return; }
         const z1 = Math.min(4, zoomDoRotulo(m1.n));
         await irPara(m1.x, alvoY(m1, z1), z1);
         legenda(`mainstream · ${m1.sub}`, `${fmt(m1.n)} faixas de ${m1.sub}: o lugar mais povoado do mapa. ${pct(D.porMacro[m1.macro] / D.N)}% de todas as faixas são ${m1.nomeMacro}.`);
-        await espera(6500);
+        await espera(2800);
         if (!m2) return;
         const z2 = Math.min(4, zoomDoRotulo(m2.n));
-        await irPara(m2.x, alvoY(m2, z2), z2, 3200);
+        await irPara(m2.x, alvoY(m2, z2), z2, 2600);
         legenda(`mainstream · ${m2.sub}`, `Do outro lado, ${fmt(m2.n)} faixas de ${m2.sub} (${m2.nomeMacro}). Ouça a banda mudar com a região.`);
       } },
-      { id: 'raridades', dur: 16, async fn() {
+      { id: 'raridades', dur: 9, async fn() {
         const [r1, r2] = D.raros;
         if (!r1) { legenda('raridades', `${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`); return; }
         const z1 = zoomDoRotulo(r1.n);
         await irPara(r1.x, alvoY(r1, z1), z1);
         legenda(`raridade · ${r1.sub}`, `Só ${fmt(r1.n)} faixas de ${r1.sub}, mas juntas: um lugar próprio no mapa.`);
-        await espera(4500);
+        await espera(2200);
         if (!r2) return;
         const z2 = zoomDoRotulo(r2.n);
         await irPara(r2.x, alvoY(r2, z2), z2);
         legenda(`raridade · ${r2.sub}`, `${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`);
       } },
-      { id: 'fusoes', dur: 18, async fn() {
+      { id: 'fusoes', dur: 9, async fn() {
         if (!D.fus.length) { legenda('fusões', 'Entre as regiões ficam as pontes, onde um gênero encosta no outro.'); return; }
         for (const [j, f] of D.fus.entries()) {
           const z = Math.min(8, zoomDoRotulo(f.n));
           await irPara(f.x, alvoY(f, z), z);
           legenda(`fusão · ${f.sub}`, `${f.sub} fica entre ${f.nomeMacro} e ${f.outro}: na vizinhança, ${pct(f.pa)}% ${f.nomeMacro} e ${pct(f.pb)}% ${f.outro}.`);
-          if (j === 0) await espera(5000);
+          if (j === 0) await espera(2200);
         }
       } },
-      { id: 'som-generos', dur: 18, async fn() {
+      { id: 'som-generos', dur: 9, async fn() {
         at.enquadrarTudo(!run.rapido);
-        await espera(900);
+        await espera(500);
         await clicar(document.querySelector('[data-mapa="rotulos"]'));
         legenda('gêneros', 'No mapa Gêneros, a posição vem só dos rótulos que o modelo deu: os grupos ficam limpos, mas repetem o rótulo.');
-        await espera(5500);
+        await espera(2300);
         await clicar(document.querySelector('[data-mapa="som"]'));
         legenda('som', 'No mapa Som, vem do áudio: o que soa parecido fica junto, tenha o rótulo que tiver.');
         esconderPonteiro(); focar(null);
-        await espera(3500);
-        if (!run.rapido && !reduzMovimento && at.girarVista(0.9, -0.35, 4200)) {
+        await espera(1000);
+        if (!run.rapido && !reduzMovimento && at.girarVista(0.9, -0.35, 2800)) {
           legenda('3D', 'O mapa também tem profundidade: arraste com o botão direito, ou ligue o ⟳, para girar.');
         }
       } },
-      { id: 'grafo', dur: 20, async fn() {
+      { id: 'grafo', dur: 9, async fn() {
         at.fecharCartao();
         at.enquadrarTudo(false);
         await clicar($('btn-grafo'));
         legenda('grafo', 'No Grafo, cada nome é um artista, perto dos que soam como ele.');
-        await espera(4500);
+        await espera(1500);
         const nome = D.artista;
         if (!nome) return;
         const no = at.grafoTudo(nome);
@@ -252,14 +252,14 @@
         await at.abrirGrafo(nome);
         focar($('grafo-painel'));
         legenda(`grafo · ${nome}`, `${nome}, ligado aos artistas que mais soam como ele. Os mais longe do centro ficam mais apagados.`);
-        await espera(6000);
+        await espera(2300);
         const viz = $('grafo-parecidos-lista')?.querySelector('button');
         if (!viz) return;
         const vizinho = viz.textContent.trim();
         await clicar(viz);
         legenda(`grafo · ${vizinho}`, 'Clique num vizinho e o grafo anda até ele.');
       } },
-      { id: 'fim', dur: 7, async fn() {
+      { id: 'fim', dur: 3, async fn() {
         if (at.grafo().aberto) await clicar($('btn-grafo'));
         else at.enquadrarTudo(!run.rapido);
         esconderPonteiro(); focar(null);
@@ -288,6 +288,25 @@
       if (c.nome === c.nome.toLowerCase() && a !== a.toLowerCase()) c.nome = a;
     }
     return [...conta.values()].sort((a, b) => b.n - a.n)[0]?.nome || null;
+  }
+
+  // A câmera nunca fica parada: se nada mexeu nela por DERIVA_MS (uma espera de cena, uma legenda lida), ela desliza
+  // devagar, um pouco ao lado e um pouco mais perto, alternando o lado. O próximo voo da cena a substitui. Fica de fora
+  // no grafo (que tem o próprio movimento), ao pular cenas e com movimento reduzido.
+  const DERIVA_MS = 1500;
+  function derivar(r) {
+    let assinatura = '', desde = performance.now(), lado = 1;
+    r.deriva = setInterval(() => {
+      if (r.parado) return clearInterval(r.deriva);
+      const c = at.camera(), agora = performance.now();
+      const a = [c.cx, c.cy, c.k, c.yaw, c.pitch].map(v => v.toFixed(6)).join();
+      if (a !== assinatura) { assinatura = a; desde = agora; return; }
+      if (agora - desde < DERIVA_MS || r.rapido || reduzMovimento || at.grafo().aberto) return;
+      const passo = c.W * 0.05 / c.k;
+      at.voar(c.cx + lado * passo, c.cy - lado * passo * 0.4, c.k * 1.12, 4000);
+      lado = -lado;
+      desde = agora;
+    }, 250);
   }
 
   // ── iniciar e parar ──
@@ -324,6 +343,7 @@
       requestAnimationFrame(progresso);
     };
     requestAnimationFrame(progresso);
+    derivar(run);
     try {
       for (const c of lista) {
         const fim = inicioCena + c.dur;
@@ -336,7 +356,7 @@
         if (run.rapido) run.t0 = performance.now() - inicioCena * 1000;
       }
       run.rapido = false;
-      await espera(1200);
+      await espera(600);
       await encerrar(false);
     } catch (e) {
       if (!(e instanceof Parou)) { console.error('[tour]', e); await encerrar(true); }
@@ -350,6 +370,7 @@
     if (!run) return;
     const r = run;
     r.parado = true;
+    clearInterval(r.deriva);
     for (const p of r.pend) { clearTimeout(p.id); p.rej(new Parou()); }
     r.pend.clear();
     run = null;

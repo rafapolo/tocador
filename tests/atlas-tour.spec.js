@@ -24,11 +24,11 @@ async function boot(page, url = '/atlas.html') {
 const tour = page => page.evaluate(() => window.__atlasTour.estado());
 const estado = page => page.evaluate(() => window.__atlas.estado());
 
-test('▶ Tour fica ativo quando o mapa carrega, começa pela abertura com os totais contados e dura 2 minutos', async ({ page }) => {
+test('▶ Tour fica ativo quando o mapa carrega, começa pela abertura com os totais contados e dura 1 minuto', async ({ page }) => {
   await boot(page);
   const btn = page.locator('#btn-tour');
   await expect(btn).toBeEnabled();
-  expect((await tour(page)).total).toBe(120);
+  expect((await tour(page)).total).toBe(60);
   await btn.click();
   await expect(page.locator('body')).toHaveClass(/em-tour/);
   await expect(page.locator('#tour')).toBeVisible();
@@ -74,14 +74,14 @@ test('✕ esc também encerra', async ({ page }) => {
 });
 
 test('?tour=1 começa sozinho e sai do endereço; &t= começa na cena daquele segundo', async ({ page }) => {
-  await boot(page, '/atlas?tour=1&t=76&acervo=uqt');
+  await boot(page, '/atlas?tour=1&t=40&acervo=uqt');
   await expect.poll(async () => (await tour(page)).cena).toBe('som-generos');
   const u = new URL(page.url());
   expect(u.searchParams.has('tour')).toBe(false);
   expect(u.searchParams.has('t')).toBe(false);
   const t = (await tour(page)).t;
-  expect(t).toBeGreaterThanOrEqual(75);
-  expect(t).toBeLessThan(80);
+  expect(t).toBeGreaterThanOrEqual(39);
+  expect(t).toBeLessThan(43);
   // depois do Esc o acervo do endereço volta
   await page.keyboard.press('Escape');
   await page.waitForTimeout(500);
@@ -108,4 +108,25 @@ test('durante o tour o visor da sonificação vai para a barra preta, e volta ao
   await expect.poll(pai).toBe('tour');
   await page.keyboard.press('Escape');
   await expect.poll(pai).toBe('atlas');
+});
+
+test('a câmera nunca fica parada mais de 8 s no mesmo lugar (aqui, abertura e Sonificar)', async ({ page }) => {
+  test.setTimeout(40_000);
+  await boot(page);
+  await page.locator('#btn-tour').click();
+  await expect(page.locator('body')).toHaveClass(/em-tour/);
+  const parada = await page.evaluate(async () => {
+    let ultima = '', desde = performance.now(), maior = 0;
+    const fim = performance.now() + 13_000;
+    while (performance.now() < fim) {
+      const c = window.__atlas.estado();
+      const a = [c.cx, c.cy, c.k, c.yaw, c.pitch].map(v => (+v).toFixed(6)).join();
+      const agora = performance.now();
+      if (a !== ultima) { ultima = a; desde = agora; }
+      maior = Math.max(maior, agora - desde);
+      await new Promise(r => setTimeout(r, 200));
+    }
+    return maior;
+  });
+  expect(parada).toBeLessThan(8000);
 });
