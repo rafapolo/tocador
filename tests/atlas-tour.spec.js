@@ -141,3 +141,10 @@ test('a travessia vai de uma ponta à outra do mapa, de um macro-gênero a outro
   // as paradas vão se afastando do começo, em ordem
   for (let j = 1; j < T.length; j++) expect(d(T[j], T[0])).toBeGreaterThan(d(T[j - 1], T[0]) - 0.05);
 });
+
+test('/atlas/tour abre o mapa já no tour, e um &t= segue junto', async ({ page }) => {
+  await boot(page, '/atlas/tour/?t=87');
+  await expect.poll(async () => (await tour(page)).cena).toBe('som-generos');
+  expect(new URL(page.url()).pathname).toMatch(/^\/atlas(\.html)?$/);
+  expect(new URL(page.url()).searchParams.has('tour')).toBe(false);
+});

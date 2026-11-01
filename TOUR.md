@@ -2,7 +2,7 @@
 
 O tour é uma viagem de 105 segundos pelo [/atlas](https://tocador.cc/atlas) que mostra como ler o mapa e como ele vira
 música. Um ponteiro desenhado clica nos controles de verdade, então o tour também ensina a usar a página. Para
-assistir, use o botão **▶ Tour** na barra de cima (ou a tecla **T**), ou abra `?tour=1`, que começa sozinho quando o
+assistir, use o botão **▶ Tour** na barra de cima (ou a tecla **T**), ou abra [tocador.cc/atlas/tour](https://tocador.cc/atlas/tour) (o mesmo que `/atlas?tour=1`), que começa sozinho quando o
 mapa termina de carregar. Acrescente `&t=<segundos>` (por exemplo `?tour=1&t=94` para o grafo) para começar perto
 dali: as cenas anteriores passam de uma vez, sem animação. Quando o tour começa, `tour` e `t` saem do endereço, então
 recarregar a página abre o mapa e não o filme. **Esc** ou **✕ esc** encerram o tour e devolvem tudo como estava:

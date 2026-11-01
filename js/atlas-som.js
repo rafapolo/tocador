@@ -106,8 +106,11 @@
     teto.curve = Float32Array.from({ length: 1025 }, (_, i) => Math.tanh(((i - 512) / 512) * 1.2) / Math.tanh(1.2));
     const medidor = ac.createAnalyser();
     medidor.fftSize = 2048;
+    // volume: the zoom's level, after the ceiling so the compressor doesn't win back what it takes off
+    const volume = ac.createGain();
+    volume.gain.value = 1;        // the atlas sets it from the zoom; offline renders and tests keep full level
     saida.connect(hp); hp.connect(comp); comp.connect(lim); lim.connect(trim); trim.connect(teto);
-    teto.connect(ac.destination); teto.connect(medidor);
+    teto.connect(volume); volume.connect(ac.destination); teto.connect(medidor);
 
     const sr = ac.sampleRate;
     const ruido = ac.createBuffer(1, sr * 2, sr);
@@ -859,7 +862,7 @@
     }
 
     return {
-      saida, avancar, definir, tap, swell, medidor,
+      saida, volume, avancar, definir, tap, swell, medidor,
       estado() {
         return {
           bpm: Math.round(bpm), tonica, modo, regente: regente?.nome ?? null, melodista: melodista?.nome ?? null,
@@ -875,6 +878,8 @@
     const l = Math.log2(Math.max(z, 0.5));
     return { cama: 1 - 0.45 * liso(l, 2, 4), baixo: liso(l, 0.3, 1.3), perc: liso(l, 0.5, 1.6), acorde: liso(l, 0.9, 2.2), mel: liso(l, 1.8, 3) };
   }
+  // Quiet from the top: about -14 dB with the whole map in view (z ≤ 1), full level from z ≈ 5.7 in.
+  const volumeDe = z => 0.2 + 0.8 * liso(Math.log2(Math.max(z, 0.5)), 0, 2.5);
   // Muffled with the whole map in view, open by the time the rhythm is in: percussion is an octave ahead (camP).
   const filtroDe = z => limita(900 * z ** 1.4, 220, 16000);
 
@@ -910,6 +915,7 @@
       ac = new Ctx({ latencyHint: 'playback' });
       ac.onstatechange = () => { if (ac.state === 'running') { destravado = true; rotular(); } };
       m = criarMotor(ac);
+      m.volume.gain.value = volumeDe(o.regiao()?.z ?? 1);   // the first note already at the zoom's level
       o.aoPrimeiroSom?.();
     }
 
@@ -942,6 +948,7 @@
         .filter(f => f.peso >= 0.05);
       const camadas = camadasDe(R.z);
       if (!fatias.length) camadas.cama = 0;       // the empty space between clusters: silence
+      m.volume.gain.setTargetAtTime(volumeDe(R.z), ac.currentTime, 0.35);
       m.definir({ fatias, camadas, cam: filtroDe(R.z), sala: limita(0.18 + R.giro * 0.35, 0, 0.7) + (receita(fatias[0]?.nome || 'pop').sala || 0) * 0.3, tempero: R.tempero, semente: R.semente, leitura: R.leitura, lugar: R.lugar });
     }
 
