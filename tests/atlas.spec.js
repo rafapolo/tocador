@@ -630,7 +630,8 @@ for (const [nome, vp] of [['desktop', { width: 1280, height: 800 }], ['mobile', 
   test(`grafo: com um álbum só o painel segue o desenho do cartão (${nome})`, async ({ page }) => {
     await page.setViewportSize(vp);
     await rotear(page);
-    await page.route('**/capa-min.jpg', r => r.fulfill({
+    // Both sizes answer: a real 404 for the micro cover from the live CDN used to race the synthetic error below.
+    await page.route(/capa-m(in|icro)\.jpg$/, r => r.fulfill({
       status: 200, contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
     }));
     const um = { ...uqt, albums: uqt.albums.map((a, i) => ({ ...a, has_cover: i === 0 })) };
