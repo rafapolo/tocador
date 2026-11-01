@@ -260,9 +260,10 @@ button { font: inherit; color: inherit; }
 #grafo-svg.foco #grafo-arestas line.perto { stroke: var(--accent); opacity: 1; }
 #grafo-svg.foco .grafo-no.perto:not(.saindo) circle, #grafo-svg.foco .grafo-no.perto:not(.saindo) text { opacity: 1; }
 #grafo-svg.foco .grafo-no.perto text { fill: var(--text); }
-/* Prévia tocando sobre o grafo: o cartão fica no canto direito, o painel vai para o esquerdo. */
+/* Prévia tocando sobre o grafo: o cartão fica no canto direito (sem o #zoom, que some aqui, encosta na margem), o painel vai para o esquerdo. */
 @media (min-width: 721px) {
-  .em-grafo:has(#cartao:not([hidden])) #grafo-painel { left: 16px; right: auto; width: min(300px, calc(100vw - 444px)); }
+  .em-grafo #cartao { right: 16px; }
+  .em-grafo:has(#cartao:not([hidden])) #grafo-painel { left: 16px; right: auto; width: min(300px, calc(100vw - 388px)); }
 }
 @media (prefers-reduced-motion: reduce) {
   #grafo-capas a, #grafo-capas a:not(.pronta), #grafo-capas img { animation: none; transition: none; }
