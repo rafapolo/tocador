@@ -229,7 +229,9 @@ class VirtualList {
     new ResizeObserver(this._render).observe(container);
   }
 
-  get _rowHeight() { return isMobile() ? 44 : 36; }
+  // Rows with a mini-cover (artists, saved albums) are taller; genre rows stay compact.
+  get _hasThumb() { return this.items.length > 0 && 'cover' in this.items[0]; }
+  get _rowHeight() { return this._hasThumb ? (isMobile() ? 56 : 48) : (isMobile() ? 44 : 36); }
 
   setItems(items) {
     this.items = items;
@@ -250,6 +252,12 @@ class VirtualList {
     this._updateHeight();
     this._render();
     if (preserveScroll) this.container.scrollTop = saved;
+  }
+
+  // Brings a row into view, centered, even when it isn't drawn yet.
+  scrollToValue(value) {
+    const i = this.items.findIndex(x => (x.fullName ?? x.name) === value);
+    if (i >= 0) this.container.scrollTop = Math.max(0, i * this._rowHeight - this.container.clientHeight / 2);
   }
 
   refresh(selectedValue) {
@@ -295,12 +303,15 @@ class VirtualList {
     const item = this.items[i];
     const rh = this._rowHeight;
     const isFlat = !item.type;
-    let node, nameEl, countEl;
+    const thumb = isFlat && 'cover' in item;
+    let node, nameEl, countEl, subEl = null, thumbEl = null;
 
     if (isFlat && recycled && !recycled.dataset.type) {
       node = recycled;
       nameEl = node.querySelector('.browse-name');
       countEl = node.querySelector('.browse-count');
+      subEl = node.querySelector('.browse-sub');
+      thumbEl = node.querySelector('.browse-thumb');
     } else {
       node = document.createElement('button');
       node.setAttribute('role', 'option');
@@ -315,10 +326,19 @@ class VirtualList {
       }
       nameEl = document.createElement('span'); nameEl.className = 'browse-name';
       countEl = document.createElement('span'); countEl.className = 'browse-count';
-      node.append(nameEl, countEl);
+      if (thumb) {
+        thumbEl = document.createElement('img');
+        thumbEl.className = 'browse-thumb'; thumbEl.alt = ''; thumbEl.setAttribute('aria-hidden', 'true');
+        thumbEl.width = thumbEl.height = isMobile() ? 40 : 32;
+        thumbEl.loading = 'lazy'; thumbEl.decoding = 'async';
+        const txt = document.createElement('span'); txt.className = 'browse-text';
+        subEl = document.createElement('span'); subEl.className = 'browse-sub';
+        txt.append(nameEl, subEl);
+        node.append(thumbEl, txt, countEl);
+      } else node.append(nameEl, countEl);
     }
 
-    node.className = 'browse-item' + (item.type === 'child' ? ' browse-item--child' : '');
+    node.className = 'browse-item' + (item.type === 'child' ? ' browse-item--child' : '') + (thumb ? ' browse-item--thumb' : '');
     node.dataset.type = item.type || '';
     node.style.cssText = `top:${i * rh}px`;
     node.dataset.value = item.fullName ?? item.name;
@@ -334,8 +354,17 @@ class VirtualList {
     const sel = val === this._selectedValue;
     node.classList.toggle('selected', sel);
     node.setAttribute('aria-selected', String(sel));
-    nameEl.textContent = item.name;
+    nameEl.textContent = item.label ?? item.name;
     countEl.textContent = item.count;
+    if (thumb) node.title = item.name;   // full text when the row is ellipsised
+    if (subEl) { subEl.textContent = item.sub || ''; subEl.hidden = !item.sub; }
+    if (thumbEl) {
+      thumbEl.width = thumbEl.height = isMobile() ? 40 : 32;
+      // The 96 px capa-micro.jpg exists only for our acervos (script/build-micro-covers.js). An album added since the
+      // last run falls back on capa-min.jpg; null or failed -> inline placeholder, no request.
+      const micro = activeAcervoKey ? item.cover?.replace(/capa-min\.jpg$/, 'capa-micro.jpg') : item.cover;
+      loadCoverImage(thumbEl, micro, item.cover);
+    }
     return node;
   }
 }

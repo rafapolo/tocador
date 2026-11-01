@@ -11,10 +11,11 @@ function buildArtistList() {
   const key = fold;
   // map: fold-key → { canonical name (mixed-case preferred), Set<album.path> }
   const map = new Map();
-  const add = (name, path) => {
+  const add = (name, path, cover) => {
     const k = key(name);
-    if (!map.has(k)) map.set(k, { name, paths: new Set() });
+    if (!map.has(k)) map.set(k, { name, paths: new Set(), cover: null });
     const entry = map.get(k);
+    entry.cover ??= cover;
     const hasDiacritics = s => s !== fold(s);
     // prefer mixed-case over all-uppercase, then accented over plain ASCII
     if (entry.name === entry.name.toUpperCase() && name !== name.toUpperCase()) entry.name = name;
@@ -22,11 +23,11 @@ function buildArtistList() {
     entry.paths.add(path);
   };
   for (const a of albums) {
-    if (a.artists) for (const ar of parseArtists(a.artists)) add(ar, a.path);
-    for (const t of a.tracks) if (t.artists) for (const ar of parseArtists(t.artists)) add(ar, a.path);
+    if (a.artists) for (const ar of parseArtists(a.artists)) add(ar, a.path, a.cover);
+    for (const t of a.tracks) if (t.artists) for (const ar of parseArtists(t.artists)) add(ar, a.path, a.cover);
   }
   _cachedArtists = [...map.values()]
-    .map(({ name, paths }) => ({ name, count: paths.size }))
+    .map(({ name, paths, cover }) => ({ name, count: paths.size, cover }))
     .sort((a, b) => {
       const aLetter = /^\p{L}/u.test(a.name);
       const bLetter = /^\p{L}/u.test(b.name);
@@ -141,19 +142,40 @@ function salvosMudaram() {
   if (browseTab === 'saved') refreshBrowseCounts();
 }
 
-function buildSavedList() {
+// Os salvos deste acervo que existem no catálogo. Um álbum que saiu dele some daqui, mas continua guardado (pode voltar).
+function salvosNoCatalogo() {
   const porPath = new Map(albums.map(a => [a.path.normalize('NFC'), a]));
-  // Um álbum que saiu do catálogo some da lista, mas continua guardado (pode voltar).
-  const daqui = salvosDoAcervo()
-    .map(s => porPath.get(s.path))
-    .filter(Boolean)
-    .map(a => ({ name: a.artists ? `${a.name} — ${a.artists}` : a.name, fullName: a.path, count: a.year > 0 ? a.year : '' }));
+  return salvosDoAcervo().map(s => porPath.get(s.path)).filter(Boolean);
+}
+
+function salvosDeFora() {
+  return Object.entries(_salvosLer()).reduce((t, [id, l]) => t + (id !== activeAcervoId && Array.isArray(l) ? l.length : 0), 0);
+}
+
+// O link leva só o acervo ativo, então o botão conta só ele, e não muda com o filtro de texto da lista.
+function syncShareSaved() {
+  const btn = document.getElementById('share-saved');
+  if (!btn) return;
+  const n = browseTab === 'saved' ? salvosNoCatalogo().length : 0;
+  btn.hidden = !n;
+  if (!n) return;
+  const rotulo = `Compartilhar ${n} ${n === 1 ? 'álbum' : 'álbuns'}`;
+  const fora = salvosDeFora();
+  btn.lastElementChild.textContent = rotulo;
+  btn.title = fora ? `${rotulo} deste acervo: os salvos de outro acervo ficam de fora` : rotulo;
+  btn.setAttribute('aria-label', btn.title);
+}
+
+function buildSavedList() {
+  const daqui = salvosNoCatalogo()
+    .map(a => ({ name: a.artists ? `${a.name} — ${a.artists}` : a.name, label: a.name, sub: a.artists, cover: a.cover, fullName: a.path, count: a.year > 0 ? a.year : '' }));
   // A lista é uma só: o acervo ativo depende da aba, e sem isso os salvos do outro pareciam perdidos.
   // O catálogo dele não está carregado, então esses itens vivem do que foi guardado ao salvar.
   const fora = Object.entries(_salvosLer())
     .filter(([id, lista]) => id !== activeAcervoId && Array.isArray(lista))
     .flatMap(([id, lista]) => lista.filter(s => s && typeof s.path === 'string').map(s => ({
       name: s.artists ? `${s.name} — ${s.artists}` : s.name,
+      label: s.name, sub: s.artists, cover: null,   // outro acervo não carregado: sem URL de capa
       fullName: SALVO_FORA + JSON.stringify([id, s.path]),
       count: KNOWN_ACERVOS[id] ? id : 'outro acervo',
     })));
@@ -241,6 +263,7 @@ function syncGenreTrackFilter() {
 
 function renderBrowsePanel() {
   renderGenreNote();
+  syncShareSaved();
   if (!virtualBrowseList) return;
   if (browseTab === 'genres') {
     const items = getGenreDisplayItems();
@@ -258,6 +281,7 @@ function renderBrowsePanel() {
 function refreshBrowseCounts() {
   if (!virtualBrowseList || !_browsePanelEl) return;
   if (_browsePanelEl.classList.contains('collapsed')) return;
+  syncShareSaved();
   if (browseTab === 'genres') {
     const items = getGenreDisplayItems(); // respects browsePanelQuery
     if (_browseEmptyEl) _browseEmptyEl.hidden = items.length > 0;
@@ -280,6 +304,7 @@ function refreshBrowseCounts() {
 // scrolled out of the strip on mobile, or an artist/genre picked in a drawer
 // that is now closed.
 function activeFilterLabel() {
+  if (sharedAlbums) return `Lista compartilhada (${sharedAlbums.size})`;
   if (activeAlbumSet) return activeAlbumSetLabel || 'Características';
   if (activeArtist) return activeArtist;
   if (activeGenre)  return activeGenre.includes('---') ? activeGenre.split('---')[1] : activeGenre;
@@ -314,15 +339,20 @@ function renderActiveFilterChip() {
   }
 }
 
-// The six filter facets (search, decade, year, artist, genre, audio features) are mutually
-// exclusive: choosing one resets the other four. Cumulative filtering let a
+// The seven filter facets (search, decade, year, artist, genre, audio features, shared
+// playlist) are mutually exclusive: choosing one resets the others. Cumulative filtering let a
 // stale facet silently empty the grid — picking an artist while a search was
 // still live returned zero albums with no visible reason why.
 //
 // `keep` names the facet the caller is about to set; every other facet is
 // cleared along with its URL param and its chrome. This only ever clears, so
-// callers assign their own facet afterwards. Omit `keep` to clear all five.
+// callers assign their own facet afterwards. Omit `keep` to clear them all.
 function resetFacets(keep) {
+  if (keep !== 'lista' && sharedAlbums) {
+    sharedAlbums = null;
+    activeLista = '';
+    removeListaFromUrl();
+  }
   if (keep !== 'features') {
     activeAlbumSet = null;
     activeAlbumSetLabel = '';
@@ -394,6 +424,23 @@ function selectBrowseItem(value, itemType) {
     virtualBrowseList?.refresh(activeArtist);
     if (isMobile()) setTimeout(closeBrowseDrawer, 180);
   }
+}
+
+// A genre tag under an album: the panel opens on that genre, its parent expanded and the row selected. Unlike a click
+// on the row itself this never toggles off, and it leaves the album open.
+function abrirGeneroNoBrowse(valor) {
+  resetFacets('genre');
+  activeGenre = valor;
+  expandedGenres.add(valor.split('---')[0]);
+  browsePanelQuery = '';
+  if (_browseSearchEl) _browseSearchEl.value = '';
+  if (browseTab === 'genres') renderBrowsePanel();
+  else switchBrowseTab('genres');
+  updateBrowseFilterInUrl();
+  filterAlbums();
+  openBrowseDrawer();
+  virtualBrowseList?.refresh(activeGenre);
+  virtualBrowseList?.scrollToValue(activeGenre);
 }
 
 function updateBrowseSelection() {

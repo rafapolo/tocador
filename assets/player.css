@@ -815,6 +815,11 @@ body {
   border-radius: 999px;
   white-space: nowrap;
 }
+.album-genero { transition: color 0.25s, border-color 0.25s; }
+.album-genero.da-faixa { color: var(--color-accent); border-color: var(--color-accent); }
+button.album-genero { background: none; color: inherit; font: inherit; cursor: pointer; }
+button.album-genero:hover { color: var(--color-text); border-color: var(--color-accent); }
+button.album-genero:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 
 #share-artist[hidden] { display: none; }
 
@@ -1984,6 +1989,23 @@ audio {
   color: var(--color-text);
 }
 
+/* Rows with a mini-cover: fixed-size thumb (no layout shift), two-line text, bigger touch target */
+.browse-item--thumb { height: 48px; gap: 10px; padding-left: 10px; }
+.browse-thumb {
+  flex: none; width: 32px; height: 32px; border-radius: 4px; object-fit: cover;
+  background: var(--color-surface-light); opacity: 0.92;
+}
+.browse-thumb.placeholder { opacity: 0.45; }
+.browse-item:hover .browse-thumb, .browse-item:focus-visible .browse-thumb, .browse-item.selected .browse-thumb { opacity: 1; }
+.browse-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px; text-align: left; }
+.browse-text .browse-name { flex: none; line-height: 1.25; }
+.browse-sub {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 0.68rem; line-height: 1.2; color: var(--color-text-muted);
+}
+.browse-sub[hidden] { display: none; }
+.browse-item.selected .browse-sub { color: var(--color-accent-dark); }
+
 .browse-item .browse-count {
   display: block;
   position: static;
@@ -2020,6 +2042,29 @@ audio {
 }
 
 .acervo-index-link[hidden] { display: none; }
+
+.browse-share {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  background: none;
+  font: inherit;
+  font-size: 0.77rem;
+  color: var(--color-text-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.browse-share[hidden] { display: none; }
+
+.browse-share:hover { color: var(--color-accent); }
+
+.browse-share:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 
 .acervo-index-link:hover { color: var(--color-accent); }
 
@@ -2284,10 +2329,13 @@ audio {
   .browse-tabs,
   .browse-search-wrap { padding-left: max(8px, env(safe-area-inset-left)); }
   .acervo-index-link { padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); font-size: 0.88rem; }
+  .browse-share { min-height: 44px; font-size: 0.88rem; }
 
   /* Touch targets ≥44px everywhere in the drawer */
   /* height must stay in lockstep with BrowseList._rowHeight in js/ui.js */
   .browse-item { height: 44px; font-size: 0.88rem; padding-left: max(12px, env(safe-area-inset-left)); }
+  .browse-item--thumb { height: 56px; }
+  .browse-thumb { width: 40px; height: 40px; }
   .browse-item--child { height: 40px; padding-left: max(30px, calc(18px + env(safe-area-inset-left))); }
   .browse-item--child .browse-name { font-size: 0.82rem; }
   .browse-item .browse-count { font-size: 0.72rem; min-width: 26px; }

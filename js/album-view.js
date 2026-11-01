@@ -250,16 +250,38 @@ async function fillAlbumGenres(details) {
   }
   const total = album.tracks.length;
   const tags = [...faixas].sort((a, b) => b[1].n - a[1].n || PT_COLLATOR.compare(a[0], b[0])).map(([nome, { pai, n }]) => {
-    const tag = document.createElement('span');
+    // A tree holds only the genre each album was filed under, so a track's guess may not be there: then its parent.
+    const arvore = buildGenreTree().get(pai);
+    const alvo = !arvore ? null : arvore.subs.has(nome) ? `${pai}---${nome}` : pai;
+    const tag = document.createElement(alvo ? 'button' : 'span');
     tag.className = 'album-genero';
+    tag.dataset.genero = nome;
     tag.textContent = nome;
     tag.title = `${nome === pai ? '' : `${pai}: `}${n} de ${total} faixa${total === 1 ? '' : 's'}`;
+    if (alvo) {
+      tag.type = 'button';
+      tag.addEventListener('click', () => abrirGeneroNoBrowse(alvo));
+    }
     return tag;
   });
   box.replaceChildren(...(tags.length ? tags : [Object.assign(document.createElement('p'), { textContent: 'Este álbum não tem análise de áudio.' })]));
+  _generosAlbum = dados;
+  syncAlbumGenresTrack();
+}
+
+// The tags follow the track: while one of the album's tracks is current, the genres the model heard on it turn golden.
+// Works from what fillAlbumGenres() already loaded, so it never fetches the features by itself.
+let _generosAlbum = null;
+function syncAlbumGenresTrack() {
+  const r = _generosAlbum && selectedAlbum?.tracks.includes(currentTrack) ? currentTrack.src?._row : undefined;
+  const nomes = r !== undefined && _generosAlbum.f.has(r)
+    ? new Set(_generosAlbum.f.genre(r).map(({ name }) => { const [pai, sub] = name.split('---'); return sub || pai; }))
+    : null;
+  document.querySelectorAll('.album-genero').forEach(tag => tag.classList.toggle('da-faixa', !!nomes?.has(tag.dataset.genero)));
 }
 
 function syncTrackPlayingState(container, tracks) {
+  syncAlbumGenresTrack();
   container.querySelectorAll('[data-track-idx]').forEach(item => {
     const isPlaying = tracks[parseInt(item.dataset.trackIdx)] === currentTrack;
     item.classList.toggle('playing', isPlaying);

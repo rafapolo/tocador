@@ -25,7 +25,7 @@ async function boot(page, { semFeatures = false, mistas = false, generos = false
   const indice = Object.fromEntries(JSON.parse(require('zlib').gunzipSync(albumsGz)).albums.map(a => [a.path.normalize('NFC'), 'Latin---Samba']));
   await page.route('**/*-genres.json.gz', r => generos ? r.fulfill(gz(require('zlib').gzipSync(JSON.stringify(indice)))) : r.fulfill({ status: 404 }));
   await page.route('**/*.mp3', r => r.fulfill({ status: 200, body: Buffer.alloc(0) }));
-  await page.route('**/capa-min.jpg', r => r.fulfill({ status: 404 }));
+  await page.route('**/capa-m*.jpg', r => r.fulfill({ status: 404 }));
   await page.route('**/report-error', r => r.fulfill({ status: 204 }));
   await page.goto(url);
   await page.waitForSelector('.album-item', { timeout: 8000 });
@@ -55,6 +55,33 @@ test('o acordeão sob as faixas lista os gêneros detectados, só buscando as fe
   const nomes = await acordeao.locator('.album-genero').allTextContents();
   expect(new Set(nomes).size).toBe(nomes.length);
   expect(pedidos).toBeGreaterThan(0);
+});
+
+test('clicar num gênero do álbum abre a aba Gêneros com o subgênero selecionado', async ({ page }) => {
+  await boot(page, { mistas: true, generos: true });
+  await page.locator('.album-item').first().click();
+  const acordeao = page.locator('#tracks-panel .album-generos');
+  await acordeao.locator('summary').click();
+  await acordeao.locator('button.album-genero', { hasText: 'Samba' }).first().click();
+  const linha = page.locator('.browse-item.browse-item--child.selected');
+  await expect(linha).toBeVisible();
+  await expect(linha).toContainText('Samba');
+  await expect(page.locator('.browse-tab[data-tab="genres"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/genero=Latin/);
+  // outro clique não desfaz a escolha, e o álbum continua aberto
+  await acordeao.locator('button.album-genero', { hasText: 'Samba' }).first().click();
+  await expect(linha).toBeVisible();
+  await expect(page.locator('#album-header')).toBeVisible();
+});
+
+test('as etiquetas de gênero acompanham a faixa atual', async ({ page }) => {
+  await boot(page, { mistas: true, generos: true });
+  await page.locator('.album-item').first().click();
+  const acordeao = page.locator('#tracks-panel .album-generos');
+  await acordeao.locator('summary').click();
+  await expect(acordeao.locator('.album-genero').first()).toBeVisible();
+  await page.locator('#track-list [data-track-idx]').first().click();
+  await expect(acordeao.locator('.album-genero.da-faixa').first()).toBeVisible();
 });
 
 test('abre e fecha, trocando com o painel de navegação', async ({ page }) => {

@@ -40,7 +40,7 @@ async function gotoWithFixture(page, url = '/', { blockAudio = false } = {}) {
   await page.route('**/*.mp3', route => blockAudio
     ? route.abort()
     : route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: fixtureMp3 }));
-  await page.route('**/capa-min.jpg', route => route.fulfill({ status: 404 }));
+  await page.route('**/capa-m*.jpg', route => route.fulfill({ status: 404 }));
   await page.route('**/report-error', route => route.fulfill({ status: 204 }));
   await page.goto(url);
   // Wait for albums grid to be populated
@@ -938,7 +938,8 @@ test('L71: the saved tab also lists albums saved in the other acervo and opens t
   await page.locator('.browse-tab[data-tab="saved"]').click();
   const item = page.locator('#browse-list .browse-item');
   await expect(item).toHaveCount(1);
-  await expect(item).toContainText('Disco — Banda');
+  await expect(item.locator('.browse-name')).toHaveText('Disco');
+  await expect(item.locator('.browse-sub')).toHaveText('Banda');
   await expect(item).toContainText('homi');
   const [aba] = await Promise.all([context.waitForEvent('page'), item.click()]);
   const url = new URL(aba.url());
@@ -989,5 +990,205 @@ test.describe(() => {
     await page.locator('#album-header .album-like').click();
     await expect(page.locator('#browse-list .browse-item')).toHaveCount(0);
     await expect(page.locator('#browse-empty')).toBeVisible();
+  });
+});
+
+// Mini-capa nas linhas do painel de navegação (artistas e salvos): tamanho fixo, placeholder sem request extra.
+test.describe('mini-capa na lista de navegação', () => {
+  test.use({ serviceWorkers: 'block' });
+  test('artistas: cada linha tem mini-capa de tamanho fixo e a lista segue virtualizada', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    await page.evaluate(() => localStorage.removeItem('tocador-browse-collapsed'));
+    await page.reload();
+    await page.waitForSelector('#browse-list .browse-item');
+    const thumbs = page.locator('#browse-list .browse-item .browse-thumb');
+    expect(await thumbs.count()).toBeGreaterThan(0);
+    expect(await page.locator('#browse-list .browse-item').count()).toBeLessThan(40);
+    const box = await thumbs.first().boundingBox();
+    expect(box.width).toBe(32); expect(box.height).toBe(32);
+    // Capa 404: cai no placeholder SVG embutido (data-URI, sem novo request).
+    await expect(thumbs.first()).toHaveClass(/placeholder/);
+    await expect(thumbs.first()).toHaveAttribute('src', /^data:image\/svg\+xml/);
+    // Teclado/ARIA continuam: botão com role option, sem o ícone no nome acessível.
+    const item = page.locator('#browse-list .browse-item').first();
+    await expect(item).toHaveAttribute('role', 'option');
+    await expect(item.locator('.browse-thumb')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('pede a capa de 96 px e, se ela faltar, usa a capa-min', async ({ page }) => {
+    const pedidas = [];
+    page.on('request', r => { if (/capa-m\w+\.jpg/.test(r.url()) && r.resourceType() === 'image') pedidas.push(r.url()); });
+    await gotoWithFixture(page, '/?acervo=uqt');
+    await page.waitForSelector('#browse-list .browse-item');
+    await expect.poll(() => pedidas.some(u => u.endsWith('capa-micro.jpg'))).toBe(true);
+    const micro = pedidas.find(u => u.endsWith('capa-micro.jpg'));
+    await expect.poll(() => pedidas.includes(micro.replace('capa-micro', 'capa-min'))).toBe(true);
+  });
+
+  test('salvos: título e artista em duas linhas, capa vinda do catálogo e placeholder para quem não tem', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    await page.evaluate(() => localStorage.setItem('tocador-salvos', JSON.stringify({
+      homi: [{ path: '2019 - Banda - Disco', name: 'Disco', artists: 'Banda', year: 2019, em: 1 }],
+    })));
+    await page.reload();
+    await page.locator('.browse-tab[data-tab="saved"]').click();
+    const item = page.locator('#browse-list .browse-item');
+    await expect(item).toHaveCount(1);
+    await expect(item.locator('.browse-name')).toHaveText('Disco');
+    await expect(item.locator('.browse-sub')).toHaveText('Banda');
+    await expect(item.locator('.browse-thumb')).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  });
+});
+
+// Playlist compartilhada: o link mostra os álbuns de quem enviou sem mexer nos salvos de quem abre.
+test.describe('shared playlist link', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  const ORDEM = ['Pixinguinha', 'Construção', 'Luiz Gonzaga'];   // de propósito fora da ordem do grid (ano)
+  const idsDe = (page, nomes) => page.evaluate(ns =>
+    ns.map(n => albumShareId(albums.find(a => a.path.includes(n) || a.artists.includes(n)).path)), nomes);
+  const grid = page => page.locator('.album-item').evaluateAll(els => els
+    .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top
+      || a.getBoundingClientRect().left - b.getBoundingClientRect().left)
+    .map(e => e.textContent));
+  const listaUrl = async (page, nomes) => `/?acervo=uqt&lista=${(await idsDe(page, nomes)).join('')}`;
+
+  test('the button copies a /share-playlist link with five characters per album', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'share', { value: undefined });
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__copiado = t; return Promise.resolve(); } } });
+      localStorage.removeItem('tocador-salvos');
+    });
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const btn = page.locator('#share-saved');
+    await expect(btn).toBeHidden();
+    await page.locator('.browse-tab[data-tab="saved"]').click();
+    await expect(btn).toBeHidden();   // aba de salvos vazia
+    await page.locator('.browse-tab[data-tab="artists"]').click();
+
+    for (const nome of ['Construção', 'Pixinguinha']) {
+      await page.locator('.album-item', { hasText: nome }).click();
+      await page.locator('#album-header .album-like').click();
+    }
+    await page.locator('.browse-tab[data-tab="saved"]').click();
+    await expect(btn).toBeVisible();
+    await expect(btn).toHaveText('Compartilhar 2 álbuns');
+    await btn.click();
+    await expect(page.locator('#toast')).toHaveText('Link da playlist copiado');
+    const url = new URL(await page.evaluate(() => window.__copiado));
+    expect(url.origin + url.pathname).toBe('https://tocador.cc/share-playlist');
+    expect(url.searchParams.get('acervo')).toBe('uqt');
+    // O mais recente primeiro, a ordem da lista de salvos.
+    expect(url.searchParams.get('lista')).toBe((await idsDe(page, ['Pixinguinha', 'Construção'])).join(''));
+
+    // Fora da aba de salvos, inclusive na de gêneros, o botão some.
+    await page.locator('.browse-tab[data-tab="artists"]').click();
+    await expect(btn).toBeHidden();
+  });
+
+  test('the share button leaves saved albums of another acervo out and says so', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'share', { value: undefined });
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.resolve() } });
+    });
+    await gotoWithFixture(page, '/?acervo=uqt');
+    await page.evaluate(() => localStorage.setItem('tocador-salvos', JSON.stringify({
+      uqt: [{ path: albums[0].path, name: 'A', artists: 'B', year: 2000, em: 1 }],
+      homi: [{ path: '2019 - Banda - Disco', name: 'Disco', artists: 'Banda', year: 2019, em: 1 }],
+    })));
+    await page.reload();
+    await expect(page.locator('.album-item').first()).toBeVisible();
+    await page.locator('.browse-tab[data-tab="saved"]').click();
+    const btn = page.locator('#share-saved');
+    await expect(btn).toHaveText('Compartilhar 1 álbum');
+    await expect(btn).toHaveAttribute('title', /de outro acervo ficam de fora/);
+    await btn.click();
+    await expect(page.locator('#toast')).toHaveText('Link copiado, sem o salvo de outro acervo');
+  });
+
+  test('/share-playlist has a preview for bots and forwards to the player in link order', async ({ page }) => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'share-playlist.html'), 'utf8');
+    expect(html).toContain('property="og:title"');
+    expect(html).toContain('property="og:description"');
+    expect(html).toMatch(/property="og:image" content="[^"]+\.jpg"/);
+    expect(html).toContain('name="robots" content="noindex"');
+    expect(html).not.toContain('property="og:url"');   // levaria a rede para uma URL sem a lista
+
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const url = await listaUrl(page, ORDEM);
+    await page.goto(url.replace('/?', '/share-playlist?'));
+    await expect(page).toHaveURL(/\/\?acervo=uqt&lista=/);
+    await expect(page.locator('.album-item')).toHaveCount(3);
+    const textos = await grid(page);
+    ORDEM.forEach((nome, i) => expect(textos[i]).toContain(nome));
+    await expect(page.locator('#clear-all-label')).toHaveText('Lista compartilhada (3)');
+    await expect(page.locator('#album-header')).toContainText('Acervo Raro');   // o primeiro do link abre
+  });
+
+  test('opening a link leaves the receiver saved albums byte-identical', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const salvos = JSON.stringify({ uqt: [{ path: await page.evaluate(() => albums.at(-1).path), name: 'Meu', artists: 'Eu', year: 1, em: 1 }] });
+    await page.evaluate(s => localStorage.setItem('tocador-salvos', s), salvos);
+    await page.goto(await listaUrl(page, ORDEM));
+    await expect(page.locator('.album-item')).toHaveCount(3);
+    await page.locator('.album-item', { hasText: 'Construção' }).click();
+    await page.locator('#clear-all-filters').click();
+    await page.reload();
+    await expect(page.locator('.album-item').first()).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('tocador-salvos'))).toBe(salvos);
+  });
+
+  test('the chip and the other facets end the list and drop it from the URL', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const url = await listaUrl(page, ORDEM);
+    await page.goto(url);
+    await expect(page.locator('.album-item')).toHaveCount(3);
+    await page.locator('#clear-all-filters').click();
+    await expect(page.locator('.album-item').nth(3)).toBeVisible();
+    expect(page.url()).not.toContain('lista=');
+
+    await page.goto(url);
+    await expect(page.locator('.album-item')).toHaveCount(3);
+    await page.evaluate(() => { resetFacets('artist'); activeArtist = 'Elis Regina'; updateBrowseFilterInUrl(); filterAlbums(); });
+    await expect(page.locator('#clear-all-label')).toHaveText('Elis Regina');
+    expect(page.url()).not.toContain('lista=');
+    await expect(page.locator('.album-item')).toHaveCount(2);
+  });
+
+  test('unknown ids are reported and a useless list leaves the grid alone', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const [id] = await idsDe(page, ['Construção']);
+    await page.goto(`/?acervo=uqt&lista=${id}00000`);
+    await expect(page.locator('.album-item')).toHaveCount(1);
+    await expect(page.locator('#toast')).toHaveText('1 álbum não está mais no acervo');
+
+    for (const lista of ['00000', 'abc', '<img src=x onerror=alert(1)>']) {
+      await page.goto(`/?acervo=uqt&lista=${encodeURIComponent(lista)}`);
+      await expect(page.locator('.album-item').nth(3)).toBeVisible();
+      await expect(page.locator('#toast')).toHaveText('Nenhum álbum deste link está neste acervo');
+      expect(page.url()).not.toContain('lista=');
+    }
+  });
+
+  test('opening an album and reloading keeps the list', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    await page.goto(await listaUrl(page, ORDEM));
+    await expect(page.locator('.album-item')).toHaveCount(3);
+    await page.locator('.album-item', { hasText: 'Construção' }).click();
+    expect(page.url()).toContain('lista=');
+    await page.reload();
+    await expect(page.locator('.album-item')).toHaveCount(3);
+    await expect(page.locator('#album-header')).toContainText('Construção');
+  });
+
+  test('going back to a link restores the list', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    await page.goto(await listaUrl(page, ORDEM));
+    await expect(page.locator('.album-item')).toHaveCount(3);
+    await page.locator('.album-item', { hasText: 'Construção' }).click();
+    await page.locator('#clear-all-filters').click();
+    await expect(page.locator('.album-item').nth(3)).toBeVisible();
+    await page.goBack();
+    await expect(page.locator('.album-item')).toHaveCount(3);
   });
 });
