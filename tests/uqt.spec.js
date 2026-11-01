@@ -553,7 +553,55 @@ test('K46: stat-hours computed from track durations when meta.hours absent', asy
   await gotoWithFixture(page);
   // The fixture has no meta.hours field — hours must be computed from duration sums.
   const hours = await page.locator('#stat-hours').textContent();
-  expect(hours?.trim()).toMatch(/^\d+ (horas?|dias?) de ♪$/);
+  expect(hours?.trim()).toMatch(/^\d+ (min|horas?|dias?) de ♪$/);
+});
+
+test.describe('header stats and album neighbours', () => {
+  test.use({ serviceWorkers: 'block' });   // page.route can't see what the worker serves
+test('K46b: the header stats follow the active filter, and show the whole acervo without one', async ({ page }) => {
+  await gotoWithFixture(page);
+  const albumsStat = page.locator('#mobile-stat-albums'), hoursStat = page.locator('#stat-hours');
+  const total = await albumsStat.textContent();
+  await expect(albumsStat).toHaveAttribute('title', 'No acervo inteiro');
+  await page.goto('/?ano=1972');                                  // Clube da Esquina only, 475 s
+  await page.waitForSelector('.album-item');
+  await expect(albumsStat).toHaveText('1 álbum');
+  await expect(page.locator('#mobile-stat-artists')).toHaveText('1 artista');
+  await expect(hoursStat).toHaveText('8 min de ♪');
+  await expect(albumsStat).toHaveAttribute('title', 'No filtro atual');
+  await page.goto('/');
+  await page.waitForSelector('.album-item');
+  await expect(albumsStat).toHaveText(total);
+});
+
+test('K46c: "Soa parecido com" lists the artist\'s sound neighbours; one here filters, one elsewhere opens its acervo', async ({ page }) => {
+  // nomes 0..2, k = 2: Chico → [Caetano, Fulano], Caetano → [Chico, Fulano], Fulano (homi) → [Chico, Caetano]
+  const viz = Buffer.from(new Uint16Array([1, 2, 0, 2, 0, 1]).buffer).toString('base64');
+  const payload = { v: 1, k: 2, nomes: ['Chico Buarque', 'Caetano Veloso', 'Fulano Externo'], acervo: [0, 0, 1],
+    acervos: ['uqt', 'homi'], viz: { som: viz, rotulos: viz } };
+  let pedidos = 0;
+  await page.route('**/data/atlas-artistas.json.gz', r => { pedidos++;
+    r.fulfill({ status: 200, headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' },
+      body: require('zlib').gzipSync(JSON.stringify(payload)) }); });
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  const box = page.locator('#tracks-panel .album-parecidos');
+  await expect(box).toBeVisible();
+  expect(pedidos).toBe(0);                                        // only fetched when opened
+  await box.locator('summary').click();
+  const tags = box.locator('.album-genero');
+  await expect(tags).toHaveCount(2);
+  await expect(tags.nth(0)).toHaveText('Caetano Veloso');
+  const fora = tags.nth(1);
+  await expect(fora).toContainText('Fulano Externo');
+  await expect(fora).toContainText('homi');
+  await expect(fora).toHaveAttribute('target', '_blank');
+  expect(new URL(await fora.getAttribute('href'), page.url()).searchParams.get('acervo')).toBe('homi');
+  await tags.nth(0).click();
+  await expect(page).toHaveURL(/artista=Caetano/);
+  await expect(page.locator('.album-item', { hasText: 'Caetano Veloso' }).first()).toBeVisible();
+  await expect(page.locator('.album-item', { hasText: 'Construção' })).toHaveCount(0);
+});
 });
 
 // Regression: ?album= pre-selection must work when the album path contains #.

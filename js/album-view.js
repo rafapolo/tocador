@@ -231,6 +231,70 @@ function renderAlbumGenres() {
   });
 }
 
+// Acordeão "Soa parecido com": os artistas mais próximos pelo som (o embedding de áudio), os mesmos vizinhos do grafo
+// do /atlas. data/atlas-artistas.json.gz (~240 KB) só vem quando alguém abre o acordeão.
+function renderAlbumParecidos() {
+  const known = !!activeAcervoKey && typeof decodeArtistas === 'function';
+  document.querySelectorAll('.album-parecidos').forEach(details => {
+    details.hidden = !selectedAlbum || !known;
+    fillAlbumParecidos(details);
+  });
+}
+
+let _artistasParecidos = null;
+function _carregarParecidos() {
+  _artistasParecidos ??= (async () => {
+    const r = await _exBuscar('data/atlas-artistas.json.gz');
+    try { return r ? decodeArtistas(await _exGz(r)) : null; } catch (e) { console.warn('vizinhos ignorados:', e.message); return null; }
+  })();
+  return _artistasParecidos;
+}
+
+async function fillAlbumParecidos(details) {
+  const album = selectedAlbum, box = details.querySelector('.album-generos-tags');
+  if (!details.open || !album || details.dataset.album === album.path) return;
+  details.dataset.album = album.path;
+  box.replaceChildren(Object.assign(document.createElement('p'), { textContent: 'Carregando…' }));
+  const A = await _carregarParecidos();
+  if (selectedAlbum !== album) return;
+  const vazio = texto => box.replaceChildren(Object.assign(document.createElement('p'), { textContent: texto }));
+  if (!A?.viz.som) { vazio('Os vizinhos de som não carregaram.'); return; }
+  const proprios = parseArtists(album.artists || '').map(n => A.indice.get(chaveArtista(n))).filter(i => i !== undefined);
+  if (!proprios.length) { vazio('Este artista tem poucas faixas analisadas para comparar o som.'); return; }
+  // Os vizinhos de cada artista do álbum, intercalados por posição (o 1º de cada, depois o 2º…), sem repetir.
+  const vistos = new Set(proprios), lista = [];
+  for (let r = 0; r < A.k; r++) for (const i of proprios) {
+    const v = A.viz.som[i * A.k + r];
+    if (v !== undefined && v < A.n && !vistos.has(v)) { vistos.add(v); lista.push(v); }
+  }
+  const aqui = new Set(albums.flatMap(a => [...a.artistKeys]));
+  const tags = lista.slice(0, 10).map(v => {
+    const nome = A.nomes[v], noAcervo = aqui.has(fold(nome)), outro = A.acervos[A.acervo[v]];
+    const tag = document.createElement('a');
+    tag.className = 'album-genero';
+    tag.textContent = nome;
+    if (noAcervo) {
+      tag.href = `${APP_ROOT}?${new URLSearchParams({ acervo: activeAcervoKey, artista: nome })}`;
+      tag.title = `Ver os álbuns de ${nome}`;
+      tag.addEventListener('click', e => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;   // o navegador abre o link
+        e.preventDefault();
+        abrirArtistaNoBrowse(nome);
+      });
+    } else {
+      // Mora no outro acervo: abre lá, numa aba nova, para não cortar o que está tocando.
+      tag.href = `${APP_ROOT}?${new URLSearchParams({ acervo: outro, artista: nome })}`;
+      tag.target = '_blank';
+      tag.rel = 'noopener';
+      tag.title = `${nome}, no acervo ${outro} (abre em nova aba)`;
+      tag.append(Object.assign(document.createElement('small'), { textContent: `↗ ${outro}` }));
+    }
+    return tag;
+  });
+  box.replaceChildren(...tags);
+  if (!tags.length) vazio('Nenhum vizinho de som para este artista.');
+}
+
 async function fillAlbumGenres(details) {
   const album = selectedAlbum, box = details.querySelector('.album-generos-tags');
   if (!details.open || !album || details.dataset.album === album.path) return;
@@ -298,6 +362,7 @@ function renderTrackList() {
     container.replaceChildren();
     renderTrackFilterNote(container, null);
     renderAlbumGenres();
+    renderAlbumParecidos();
     renderedAlbum = null;
     return;
   }
@@ -315,5 +380,6 @@ function renderTrackList() {
   renderTrackFilterNote(container, selectedAlbum.tracks);
   renderedAlbum = selectedAlbum;
   renderAlbumGenres();
+  renderAlbumParecidos();
   container.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }

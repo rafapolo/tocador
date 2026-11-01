@@ -236,6 +236,7 @@ function syncGenreTrackFilter() {
       trackFilter = null;
       trackFilterInfo = null;
       if (typeof _exRefazerFaixas === 'function') _exRefazerFaixas();
+      updateLibraryStats();
     }
     _genreTrackFilter = null;
     return;
@@ -258,6 +259,7 @@ function syncGenreTrackFilter() {
       limpar: clearAllFilters,
     };
     if (typeof _exRefazerFaixas === 'function') _exRefazerFaixas();
+    updateLibraryStats();
   });
 }
 
@@ -443,6 +445,15 @@ function abrirGeneroNoBrowse(valor) {
   virtualBrowseList?.scrollToValue(activeGenre);
 }
 
+// "Soa parecido com" under an album: filters the grid to that artist, like picking the row in the Artistas tab.
+function abrirArtistaNoBrowse(nome) {
+  resetFacets('artist');
+  activeArtist = nome;
+  updateBrowseFilterInUrl();
+  filterAlbums();
+  virtualBrowseList?.refresh(activeArtist);
+}
+
 function updateBrowseSelection() {
   virtualBrowseList?.refresh(browseSelectedValue());
 }
@@ -526,13 +537,31 @@ function isShortcutsModalOpen() {
   return !!document.getElementById('shortcuts-modal')?.classList.contains('open');
 }
 
+// The header follows the grid: with a filter on, hours/albums/artists count what passes (a per-track filter such as
+// Pegada counts only the tracks that pass); with none, the whole acervo.
 function updateLibraryStats() {
+  const filtrado = filteredAlbums.length !== albums.length || !!trackFilter;
+  let seconds = 0;
+  for (const a of filteredAlbums) for (const t of a.tracks) if (!trackFilter || trackAllowed(t)) seconds += t.src?.duration || 0;
+  // meta.hours only when the catalog has no durations at all (it goes stale when albums are merged in)
+  const hours = seconds > 0 ? seconds / 3600 : filtrado ? 0 : parseFloat(db?.meta?.hours) || 0;
+  const days = Math.round(hours / 24);
   const totalAlbums = filteredAlbums.length;
   const totalArtists = new Set(filteredAlbums.map(a => a.artists).filter(Boolean)).size;
+  const hoursEl = document.getElementById('stat-hours');
   const albumsStatEl = document.getElementById('mobile-stat-albums');
   const artistsStatEl = document.getElementById('mobile-stat-artists');
-  if (albumsStatEl) albumsStatEl.textContent = `${totalAlbums} álbun${totalAlbums !== 1 ? 's' : ''}`;
-  if (artistsStatEl) artistsStatEl.textContent = `${totalArtists} artista${totalArtists !== 1 ? 's' : ''}`;
+  if (hoursEl) {
+    hoursEl.textContent = !hours ? ''
+      : days >= 1 ? `${days.toLocaleString('pt-BR')} dia${days === 1 ? '' : 's'} de ♪`
+      : hours >= 1 ? `${Math.round(hours)} hora${Math.round(hours) > 1 ? 's' : ''} de ♪`
+      : `${Math.max(1, Math.round(hours * 60))} min de ♪`;
+  }
+  if (albumsStatEl) albumsStatEl.textContent = `${totalAlbums.toLocaleString('pt-BR')} ${totalAlbums === 1 ? 'álbum' : 'álbuns'}`;
+  if (artistsStatEl) artistsStatEl.textContent = `${totalArtists.toLocaleString('pt-BR')} artista${totalArtists !== 1 ? 's' : ''}`;
+  const titulo = filtrado ? 'No filtro atual' : 'No acervo inteiro';
+  document.querySelector('.header-stats')?.classList.toggle('filtrado', filtrado);
+  for (const el of [hoursEl, albumsStatEl, artistsStatEl]) if (el) el.title = titulo;
 }
 
 // Which KNOWN_ACERVOS entry is loaded. The ?acervo= alias is only present right
@@ -588,20 +617,10 @@ function applyArchiveMeta() {
   const meta = db.meta || {};
   const title = meta.title || 'Tocador';
   const subtitle = meta.subtitle || '';
-  // A soma das durações, que acompanha o catálogo; meta.hours fica velho quando entram álbuns por merge.
-  const totalSeconds = (db.albums || []).reduce((s, a) => s + (a.tracks || []).reduce((ts, t) => ts + (t.duration || 0), 0), 0);
-  const hours = totalSeconds > 0 ? totalSeconds / 3600 : parseFloat(meta.hours) || 0;
-  const days = Math.round(hours / 24);
   const titleAcervoEl = document.getElementById('app-title-acervo');
   const subtitleEl = document.getElementById('app-subtitle');
-  const hoursEl = document.getElementById('stat-hours');
   if (titleAcervoEl) titleAcervoEl.textContent = title !== 'Tocador' ? ` ♪ ${title}` : '';
   // Tab title: the archive until an album is opened, then artist · album.
   document.title = `♪ Tocador · ${title}`;
   if (subtitleEl) subtitleEl.textContent = subtitle;
-  if (hoursEl) {
-    hoursEl.textContent = !hours ? ''
-      : days >= 1 ? `${days} dia${days === 1 ? '' : 's'} de ♪`
-      : `${Math.max(1, Math.round(hours))} hora${Math.round(hours) > 1 ? 's' : ''} de ♪`;
-  }
 }

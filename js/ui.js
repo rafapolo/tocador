@@ -432,7 +432,7 @@ function filterAlbums(quiet = false) {
   _emptyState ??= document.getElementById('empty-state');
   const isFiltered = !!sharedAlbums || !!activeAlbumSet || !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
   if (_countEl) {
-    _countEl.textContent = `${filteredAlbums.length} álbun${filteredAlbums.length !== 1 ? 's' : ''}`;
+    _countEl.textContent = `${filteredAlbums.length} ${filteredAlbums.length === 1 ? 'álbum' : 'álbuns'}`;
     _countEl.classList.toggle('visible', isFiltered);
   }
   if (_clearBtn) _clearBtn.classList.toggle('visible', !!searchQuery);
@@ -441,6 +441,7 @@ function filterAlbums(quiet = false) {
   refreshBrowseCounts();
   renderActiveFilterChip();
   if (typeof syncGenreTrackFilter === 'function') syncGenreTrackFilter();
+  updateLibraryStats();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
@@ -1052,6 +1053,7 @@ async function handleCatalogDecodeError(err, container) {
   document.getElementById('share-artist')?.addEventListener('click', () => { if (activeArtist) shareArtist(activeArtist); });
   document.getElementById('share-saved')?.addEventListener('click', shareSaved);
   document.querySelectorAll('.album-generos').forEach(d => d.addEventListener('toggle', () => fillAlbumGenres(d)));
+  document.querySelectorAll('.album-parecidos').forEach(d => d.addEventListener('toggle', () => fillAlbumParecidos(d)));
   btnShuffle?.addEventListener('click', () => applyShuffle(!shuffleOn));
   btnShuffleMobile?.addEventListener('click', () => applyShuffle(!shuffleOn));
 
