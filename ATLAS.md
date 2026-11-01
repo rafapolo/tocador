@@ -167,7 +167,7 @@ soar depois do primeiro clique ou tecla.
 
 ### Como foi criada
 
-A ideia veio do mapa Cantography (`../swissviz/design/sound.md`), que faz o mesmo com dados de empresas:
+A ideia veio do mapa [Cantography](https://github.com/rafapolo/cantography/blob/main/design/sound.md), que faz o mesmo com dados de empresas:
 de lá vêm as três famílias de som (dados, interface, momentos), a cama com vento, o filtro aberto pelo zoom e as notas
 determinísticas por `hash()`, em que o mesmo lugar sempre soa igual. Depois vieram as receitas por gênero, escritas à
 mão, e o relógio único. As decisões estão em `tasks/generative-music-nav.md` (só local).
