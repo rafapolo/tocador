@@ -91,6 +91,7 @@ let trackFilterInfo = null;     // { frase, titulo, limpar } — como a lista do
 const trackAllowed = t => !trackFilter || trackFilter(t);
 let searchQuery = '';
 let shuffleOn = false;
+let savedQueue = null;          // albums of the "play saved" mode, or null when it's off
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
 let renderedAlbum = null;
 let _consecutiveErrors = 0;
@@ -1023,6 +1024,9 @@ async function handleCatalogDecodeError(err, container) {
   if (savedVolume > 0) _preMuteVolume = savedVolume;
   setVolume(savedVolume);
 
+  document.getElementById('btn-play-saved')?.addEventListener('click', toggleSavedQueue);
+  document.getElementById('share-artist')?.addEventListener('click', () => { if (activeArtist) shareArtist(activeArtist); });
+  document.querySelectorAll('.album-generos').forEach(d => d.addEventListener('toggle', () => fillAlbumGenres(d)));
   btnShuffle?.addEventListener('click', () => applyShuffle(!shuffleOn));
   btnShuffleMobile?.addEventListener('click', () => applyShuffle(!shuffleOn));
 

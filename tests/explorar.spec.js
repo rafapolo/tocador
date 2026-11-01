@@ -41,6 +41,22 @@ const abrir = async page => {
 const ajustar = (page, nome, qual, valor) => page.locator('.ex-feat', { hasText: nome }).locator(`input.ex-${qual}`)
   .evaluate((el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, valor);
 
+test('o acordeão sob as faixas lista os gêneros detectados, só buscando as features ao abrir', async ({ page }) => {
+  let pedidos = 0;
+  page.on('request', r => { if (r.url().includes('-features.json.gz')) pedidos++; });
+  await boot(page);
+  await page.locator('.album-item').first().click();
+  const acordeao = page.locator('#tracks-panel .album-generos');
+  await expect(acordeao).toBeVisible();
+  await expect(acordeao).not.toHaveAttribute('open', '');
+  expect(pedidos).toBe(0);
+  await acordeao.locator('summary').click();
+  await expect(acordeao.locator('.album-genero').first()).toBeVisible();
+  const nomes = await acordeao.locator('.album-genero').allTextContents();
+  expect(new Set(nomes).size).toBe(nomes.length);
+  expect(pedidos).toBeGreaterThan(0);
+});
+
 test('abre e fecha, trocando com o painel de navegação', async ({ page }) => {
   await boot(page);
   await expect(page.locator('#explorar-panel')).toBeHidden();

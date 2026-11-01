@@ -307,6 +307,11 @@ function renderActiveFilterChip() {
     _clearAllBtn.hidden = !label;
     if (label) _clearAllBtn.title = `Limpar filtro: ${label}`;
   }
+  const share = document.getElementById('share-artist');
+  if (share) {
+    share.hidden = !activeArtist;
+    if (activeArtist) share.setAttribute('aria-label', `Compartilhar link de ${activeArtist}`);
+  }
 }
 
 // The six filter facets (search, decade, year, artist, genre, audio features) are mutually
@@ -536,11 +541,10 @@ function applyArchiveMeta() {
   const meta = db.meta || {};
   const title = meta.title || 'Tocador';
   const subtitle = meta.subtitle || '';
-  let hours = meta.hours || '';
-  if (!hours && db.albums) {
-    const totalSeconds = db.albums.reduce((s, a) => s + (a.tracks || []).reduce((ts, t) => ts + (t.duration || 0), 0), 0);
-    if (totalSeconds > 0) hours = Math.round(totalSeconds / 3600).toString();
-  }
+  // A soma das durações, que acompanha o catálogo; meta.hours fica velho quando entram álbuns por merge.
+  const totalSeconds = (db.albums || []).reduce((s, a) => s + (a.tracks || []).reduce((ts, t) => ts + (t.duration || 0), 0), 0);
+  const hours = totalSeconds > 0 ? totalSeconds / 3600 : parseFloat(meta.hours) || 0;
+  const days = Math.round(hours / 24);
   const titleAcervoEl = document.getElementById('app-title-acervo');
   const subtitleEl = document.getElementById('app-subtitle');
   const hoursEl = document.getElementById('stat-hours');
@@ -548,5 +552,9 @@ function applyArchiveMeta() {
   // Tab title: the archive until an album is opened, then artist · album.
   document.title = `♪ Tocador · ${title}`;
   if (subtitleEl) subtitleEl.textContent = subtitle;
-  if (hoursEl) hoursEl.textContent = hours ? `${hours} horas` : '';
+  if (hoursEl) {
+    hoursEl.textContent = !hours ? ''
+      : days >= 1 ? `${days} dia${days === 1 ? '' : 's'} de ♪`
+      : `${Math.max(1, Math.round(hours))} hora${Math.round(hours) > 1 ? 's' : ''} de ♪`;
+  }
 }

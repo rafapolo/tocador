@@ -91,7 +91,7 @@
   // canonical and share links there, so both must go through this one function.
   // Takes the whole album list because distinct paths can fold to the same slug
   // ("Chuva - Chuva" / "Chuva Chuva"): later ones, in catalog order, get -2, -3...
-  function slugify(s) {
+  function slugify(s, vazio) {
     return String(s)
       .normalize('NFKD')
       .replace(/[̀-ͯ]/g, '')
@@ -99,7 +99,7 @@
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 90)
-      .replace(/-+$/, '') || 'album';
+      .replace(/-+$/, '') || vazio || 'album';
   }
 
   function albumSlugs(albums) {
@@ -113,6 +113,29 @@
     });
   }
 
+  // fold(artist) -> slug of the artist's page, /<alias>/artista/<slug>/. Takes the raw catalog albums, and the
+  // player's own parseArtists()/fold() from js/util.js, so the builder and the player can't list different artists.
+  // Slugs follow the order of first appearance in the catalog, so a collision depends only on that order.
+  function artistSlugs(albums, parseArtists, fold) {
+    var used = Object.create(null), out = new Map();
+    function add(name) {
+      var key = fold(name);
+      if (!key || out.has(key)) return;
+      var base = slugify(name, 'artista'), slug = base;
+      for (var i = 2; used[slug]; i++) slug = base + '-' + i;
+      used[slug] = true;
+      out.set(key, slug);
+    }
+    albums.forEach(function (album) {
+      parseArtists(album.artist).forEach(add);
+      (album.tracks || []).forEach(function (t) {
+        if (t.artists) parseArtists(t.artists.replace(/\x00/g, '; ')).forEach(add);
+      });
+    });
+    return out;
+  }
+
   global.decodeAcervo = decodeAcervo;
   global.albumSlugs = albumSlugs;
+  global.artistSlugs = artistSlugs;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

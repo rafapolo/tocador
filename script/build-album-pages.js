@@ -17,6 +17,7 @@
 // Writes, under --out:
 //   <alias>/index.html                 album index for the acervo
 //   <alias>/<slug>/index.html          one page per album
+//   <alias>/artista/<slug>/index.html  one small page per artist, for link previews
 //   sitemap-albums-<alias>.xml         index + album pages, with cover images
 //   sitemap.xml                        sitemap index over the per-acervo files
 //
@@ -27,6 +28,9 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 require('../js/acervo-format.js');
+// js/util.js is a classic script with no exports; these two must be the player's own (see artistSlugs()).
+const { fold, parseArtists } = new Function(
+  `${fs.readFileSync(path.join(__dirname, '..', 'js', 'util.js'), 'utf8')}\nreturn { fold, parseArtists };`)();
 
 const SITE = 'https://tocador.cc';
 
@@ -218,6 +222,50 @@ function albumPage({ template, alias, meta, album, slug }) {
     .replace(/(id="track-list"[^>]*>)(<\/)/, (_, open, close) => open + rows + close);
 }
 
+// Every artist of a catalog with their albums: { name, slug, albums }, keyed like artistSlugs().
+function catalogArtists(albums) {
+  const slugs = globalThis.artistSlugs(albums, parseArtists, fold);
+  const artists = new Map([...slugs].map(([key, slug]) => [key, { name: '', slug, albums: new Set() }]));
+  const add = (text, album) => {
+    for (const name of parseArtists(text)) {
+      const a = artists.get(fold(name));
+      if (!a) continue;
+      a.name ||= name;
+      a.albums.add(album);
+    }
+  };
+  for (const album of albums) {
+    add(album.artist, album);
+    for (const t of album.tracks || []) if (t.artists) add(t.artists.replace(/\x00/g, '; '), album);
+  }
+  return [...artists.values()];
+}
+
+// What a shared artist link unfurls to. Link previews don't run JS, so the name and a cover have to be in the HTML;
+// people go straight on to the player's ?artista= filter. Deliberately not the whole player (a copy per artist would
+// double the size of the Pages site) and not indexed: the albums are the pages worth finding.
+function artistPage({ alias, meta, artist }) {
+  const canonical = `${SITE}/${alias}/artista/${artist.slug}/`;
+  const player = `${SITE}/?${new URLSearchParams({ acervo: alias, artista: artist.name })}`;
+  const albums = [...artist.albums].sort((a, b) => (b.year || 0) - (a.year || 0));
+  const cover = albums.find(a => a.has_cover);
+  const n = albums.length;
+  const title = `♪ ${artist.name} no Tocador`;
+  const desc = `♪ ${artist.name} - ${n} álbu${n === 1 ? 'm' : 'ns'}: ${albums.slice(0, 4).map(a => a.title).join(', ')}${n > 4 ? '…' : ''}`;
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+${headMeta({ title, desc, canonical, image: cover && coverUrl(meta.base_url, cover), ogType: 'music.musician' })}
+<script>location.replace(${JSON.stringify(player).replace(/</g, '\\u003c')})</script>
+</head>
+<body><p><a href="${esc(player)}">${esc(artist.name)} no Tocador</a></p></body>
+</html>
+`;
+}
+
 function indexPage({ alias, meta, entries }) {
   const archive = meta.title || alias;
   const canonical = `${SITE}/${alias}/`;
@@ -286,11 +334,17 @@ function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index
       fs.writeFileSync(path.join(dir, 'index.html'), albumPage({ template, alias, meta, album: e.album, slug: e.slug }));
     }
     fs.writeFileSync(path.join(root, 'index.html'), indexPage({ alias, meta, entries }));
+    const artists = catalogArtists(albums);
+    for (const artist of artists) {
+      const dir = path.join(root, 'artista', artist.slug);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'index.html'), artistPage({ alias, meta, artist }));
+    }
 
     const smName = `sitemap-albums-${alias}.xml`;
     fs.writeFileSync(path.join(out, smName), sitemapFor(alias, entries, meta));
     sitemaps.push(smName);
-    summary.push(`${alias}: ${entries.length} album pages → ${alias}/, ${smName}`);
+    summary.push(`${alias}: ${entries.length} album pages, ${artists.length} artist pages → ${alias}/, ${smName}`);
   }
 
   let index = '<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
@@ -300,7 +354,7 @@ function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index
   return summary;
 }
 
-module.exports = { build, playerTracks, playerTemplate, albumPage, indexPage, sitemapFor };
+module.exports = { build, playerTracks, playerTemplate, albumPage, artistPage, catalogArtists, indexPage, sitemapFor };
 
 if (require.main === module) {
   const args = process.argv.slice(2);

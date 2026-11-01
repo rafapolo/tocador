@@ -221,6 +221,44 @@ function renderTrackFilterNote(listEl, tracks) {
   note.replaceChildren(`${dentro} de ${tracks.length} faixas ${trackFilterInfo?.frase || 'passam no filtro'}; as apagadas são puladas. `, btn);
 }
 
+// Acordeão sob as faixas: os gêneros que o modelo de áudio viu em alguma faixa do álbum, do mais frequente ao menos.
+// As features pesam ~1 MB, por isso só vêm quando alguém abre o acordeão.
+function renderAlbumGenres() {
+  const known = !!(activeAcervoKey || db?.meta?.features_url);
+  document.querySelectorAll('.album-generos').forEach(details => {
+    details.hidden = !selectedAlbum || !known;
+    fillAlbumGenres(details);
+  });
+}
+
+async function fillAlbumGenres(details) {
+  const album = selectedAlbum, box = details.querySelector('.album-generos-tags');
+  if (!details.open || !album || details.dataset.album === album.path) return;
+  details.dataset.album = album.path;
+  box.replaceChildren(Object.assign(document.createElement('p'), { textContent: 'Carregando…' }));
+  const dados = await _exCarregar();
+  if (selectedAlbum !== album) return;
+  const faixas = new Map();              // subgênero -> { pai, n }
+  for (const t of dados ? album.tracks : []) {
+    const r = t.src?._row;
+    if (r === undefined || !dados.f.has(r)) continue;
+    for (const { name } of dados.f.genre(r)) {
+      const [pai, sub] = name.split('---'), nome = sub || pai;
+      const g = faixas.get(nome) || faixas.set(nome, { pai, n: 0 }).get(nome);
+      g.n++;
+    }
+  }
+  const total = album.tracks.length;
+  const tags = [...faixas].sort((a, b) => b[1].n - a[1].n || PT_COLLATOR.compare(a[0], b[0])).map(([nome, { pai, n }]) => {
+    const tag = document.createElement('span');
+    tag.className = 'album-genero';
+    tag.textContent = nome;
+    tag.title = `${nome === pai ? '' : `${pai}: `}${n} de ${total} faixa${total === 1 ? '' : 's'}`;
+    return tag;
+  });
+  box.replaceChildren(...(tags.length ? tags : [Object.assign(document.createElement('p'), { textContent: 'Este álbum não tem análise de áudio.' })]));
+}
+
 function syncTrackPlayingState(container, tracks) {
   container.querySelectorAll('[data-track-idx]').forEach(item => {
     const isPlaying = tracks[parseInt(item.dataset.trackIdx)] === currentTrack;
@@ -237,6 +275,7 @@ function renderTrackList() {
     tracksPanel.classList.add('hidden');
     container.replaceChildren();
     renderTrackFilterNote(container, null);
+    renderAlbumGenres();
     renderedAlbum = null;
     return;
   }
@@ -253,5 +292,6 @@ function renderTrackList() {
   container.replaceChildren(buildTrackItemsFragment(selectedAlbum.tracks, selectedAlbum.artists));
   renderTrackFilterNote(container, selectedAlbum.tracks);
   renderedAlbum = selectedAlbum;
+  renderAlbumGenres();
   container.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }

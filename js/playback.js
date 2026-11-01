@@ -133,14 +133,64 @@ function updateNowPlaying() {
   checkMarquee(_overlayTrackTitle);
 }
 
+// Selects an album without going through openAlbum(), which primes the first track and would cut the audio.
+function switchToAlbum(album) {
+  if (album === selectedAlbum) return;
+  selectedAlbum = album;
+  renderedAlbum = null;
+  renderAlbumHeader();
+  renderTrackList();
+  renderMobileDrawer(album);
+  virtualGrid.refresh();
+  updateMetaTags(album);
+  window.history.pushState({ album: album.path }, '', generateAlbumUrl(album));
+}
+
+// ── Tocar os salvos ───────────────────────────────────────────────────────
+// O coração com play da barra do player toca os álbuns salvos deste acervo, um depois do outro (ou misturados, com o
+// aleatório ligado). A fila é uma foto do momento do clique; o catálogo do outro acervo nem está carregado aqui.
+function syncSavedQueueButton() {
+  const btn = document.getElementById('btn-play-saved');
+  if (!btn) return;
+  const on = !!savedQueue;
+  btn.classList.toggle('active', on);
+  btn.setAttribute('aria-pressed', String(on));
+  btn.title = on ? 'Parar de tocar os salvos' : 'Tocar os álbuns salvos';
+  btn.setAttribute('aria-label', btn.title);
+}
+
+function setSavedQueue(queue) {
+  savedQueue = queue;
+  syncSavedQueueButton();
+}
+
+function toggleSavedQueue() {
+  if (savedQueue) { setSavedQueue(null); return; }
+  const porPath = new Map(albums.map(a => [a.path.normalize('NFC'), a]));
+  const queue = salvosDoAcervo().map(s => porPath.get(s.path)).filter(a => a?.tracks.some(trackAllowed));
+  if (!queue.length) { showToast('Nenhum álbum salvo neste acervo'); return; }
+  setSavedQueue(queue);
+  showToast(`Tocando ${queue.length} ${queue.length === 1 ? 'álbum salvo' : 'álbuns salvos'}`, undefined, { ok: true });
+  const album = queue[shuffleOn ? Math.floor(Math.random() * queue.length) : 0];
+  switchToAlbum(album);
+  playTrack(album.tracks.find(trackAllowed));
+}
+
+// Abrir um álbum de fora da fila encerra o modo: quem escolheu outra coisa não espera voltar aos salvos.
+function savedQueueActive() {
+  if (savedQueue && !savedQueue.includes(selectedAlbum)) setSavedQueue(null);
+  return !!savedQueue;
+}
+
 function playNext() {
+  const inQueue = savedQueueActive();
   if (shuffleOn) {
     if (!albums.length) return;
     let nextAlbum, track;
-    if (trackFilter) {
+    if (trackFilter || inQueue) {
       // Explorar is filtering: shuffle only among the tracks it lets through, inside the albums on the grid.
       const pool = [];
-      for (const a of filteredAlbums) for (const t of a.tracks) if (t !== currentTrack && trackAllowed(t)) pool.push([a, t]);
+      for (const a of inQueue ? savedQueue : filteredAlbums) for (const t of a.tracks) if (t !== currentTrack && trackAllowed(t)) pool.push([a, t]);
       if (!pool.length) return;
       [nextAlbum, track] = pool[Math.floor(Math.random() * pool.length)];
     } else {
@@ -160,16 +210,7 @@ function playNext() {
       } while (track === currentTrack && attempts < 3);
       if (track === currentTrack) return;
     }
-    if (nextAlbum !== selectedAlbum) {
-      selectedAlbum = nextAlbum;
-      renderedAlbum = null;
-      renderAlbumHeader();
-      renderTrackList();
-      renderMobileDrawer(nextAlbum);
-      virtualGrid.refresh();
-      updateMetaTags(nextAlbum);
-      window.history.pushState({ album: nextAlbum.path }, '', generateAlbumUrl(nextAlbum));
-    }
+    switchToAlbum(nextAlbum);
     playTrack(track);
     return;
   }
@@ -179,6 +220,16 @@ function playNext() {
   const next = tracks.find((t, i) => i > idx && trackAllowed(t));
   if (next) {
     playTrack(next);
+  } else if (inQueue) {
+    let i = savedQueue.indexOf(selectedAlbum) + 1;
+    if (i >= savedQueue.length) {
+      if (repeatMode !== 'all') { setSavedQueue(null); return; }   // fim da fila
+      i = 0;
+    }
+    const album = savedQueue.slice(i).find(a => a.tracks.some(trackAllowed));
+    if (!album) { setSavedQueue(null); return; }
+    switchToAlbum(album);
+    playTrack(album.tracks.find(trackAllowed));
   } else if (repeatMode === 'all') {
     const first = tracks.find(trackAllowed);
     if (first) playTrack(first);

@@ -151,6 +151,33 @@ function albumPagePath(album) {
   return slug ? `${APP_ROOT}${activeAcervoKey}/${slug}/` : null;
 }
 
+// The artist's page, /<alias>/artista/<slug>/: a tiny static page for link previews that sends people on to the
+// ?artista= filter. An artist of a third-party catalog has none, so the link is the filter itself.
+let _artistSlugs = null;
+function artistShareUrl(name) {
+  if (activeAcervoKey && db?.albums) {
+    _artistSlugs ??= artistSlugs(db.albums, parseArtists, fold);
+    const slug = _artistSlugs.get(fold(name));
+    if (slug) return `${SITE_ORIGIN}/${activeAcervoKey}/artista/${slug}/`;
+  }
+  const acervo = new URLSearchParams(location.search).get('acervo');
+  return `${location.origin}${APP_ROOT}?${new URLSearchParams({ ...(acervo && { acervo }), artista: name })}`;
+}
+
+async function shareArtist(name) {
+  const url = artistShareUrl(name);
+  if (navigator.share) {
+    try { await navigator.share({ title: `${name} no Tocador`, url }); return; }
+    catch (err) { if (err?.name === 'AbortError') return; }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('Link do artista copiado');
+  } catch {
+    showToast(url, 6000);
+  }
+}
+
 // With a track of this album loaded, the link names it: #tN on the static page
 // (whose tracklist rows carry id="tN" with the player's own numbering), or ?t=N
 // on the player fallback. The preview itself stays album-level either way. The

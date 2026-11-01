@@ -216,6 +216,9 @@
                             <span id="clear-all-label" class="clear-all-label"></span>
                             <span class="clear-all-x" aria-hidden="true">✕</span>
                         </button>
+                        <button id="share-artist" class="album-share" type="button" title="Compartilhar artista" aria-label="Compartilhar artista" hidden>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><line x1="8.2" y1="10.8" x2="15.8" y2="6.2"/><line x1="8.2" y1="13.2" x2="15.8" y2="17.8"/></svg>
+                        </button>
                     </div>
                     <nav class="decade-buttons" id="decade-buttons" aria-label="Filtrar por década"></nav>
                 </div>
@@ -229,6 +232,7 @@
             <aside class="tracks-panel" id="tracks-panel" aria-label="Faixas do álbum">
                 <div class="album-header" id="album-header"></div>
                 <ol class="track-list" id="track-list" aria-label="Lista de faixas"></ol>
+                <details class="album-generos" hidden><summary>Gêneros detectados</summary><div class="album-generos-tags"></div></details>
             </aside>
         </div>
 
@@ -356,6 +360,7 @@
                     </button>
                 </div>
                 <ol id="drawer-track-list" class="drawer-track-list"></ol>
+                <details class="album-generos" hidden><summary>Gêneros detectados</summary><div class="album-generos-tags"></div></details>
             </div>
 
             <div class="player-content">
@@ -492,6 +497,18 @@
                 </div>
 
                 <div class="library-stats">
+                    <button
+                        id="btn-play-saved"
+                        class="btn btn-control btn-extra"
+                        title="Tocar os álbuns salvos"
+                        aria-label="Tocar os álbuns salvos"
+                        aria-pressed="false"
+                    >
+                        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                            <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-9.3-9.4C1.5 7.8 3.6 4.5 7 4.5c2 0 3.9 1.1 5 2.9 1.1-1.8 3-2.9 5-2.9 3.4 0 5.5 3.3 4.3 6.6-1.8 4.8-9.3 9.4-9.3 9.4Z"/>
+                            <path fill="currentColor" d="M10 9.2v6l5-3-5-3Z"/>
+                        </svg>
+                    </button>
                     <button
                         id="btn-shuffle"
                         class="btn btn-control btn-extra"

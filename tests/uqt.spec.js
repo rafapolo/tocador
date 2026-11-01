@@ -537,7 +537,7 @@ test('K46: stat-hours computed from track durations when meta.hours absent', asy
   await gotoWithFixture(page);
   // The fixture has no meta.hours field — hours must be computed from duration sums.
   const hours = await page.locator('#stat-hours').textContent();
-  expect(hours?.trim()).toMatch(/\d+\s*horas?/i);
+  expect(hours?.trim()).toMatch(/^\d+ (horas?|dias?) de ♪$/);
 });
 
 // Regression: ?album= pre-selection must work when the album path contains #.
@@ -866,6 +866,65 @@ test('L70: the album atlas button sits right of the heart and targets the album 
   expect(url.pathname).toMatch(/atlas\.html$/);
   expect(url.searchParams.get('de')).toBe('uqt');
   expect(url.searchParams.get('album')).toContain('Construção');
+});
+
+// Coração com play: toca os salvos deste acervo, um álbum depois do outro.
+test('L72: the heart-play button plays the saved albums in a row and stops at the end', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=uqt');
+  const btn = page.locator('#btn-play-saved');
+  await btn.click();
+  await expect(page.locator('#toast')).toContainText('Nenhum álbum salvo');
+  await expect(btn).toHaveAttribute('aria-pressed', 'false');
+
+  for (const nome of ['Construção', 'Pixinguinha']) {
+    await page.locator('.album-item', { hasText: nome }).click();
+    await page.locator('#album-header .album-like').click();
+  }
+  await page.locator('.album-item', { hasText: 'Luiz Gonzaga' }).click();
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  // O mais recente primeiro: Pixinguinha tem uma faixa só, então a próxima já é de Construção.
+  await expect(page.locator('#album-header h2')).toHaveText('Acervo Raro');
+  await page.evaluate(() => playNext());
+  await expect(page.locator('#album-header h2')).toHaveText('Construção');
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  await page.evaluate(() => { playNext(); playNext(); playNext(); });
+  await expect(btn).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('L73: opening an album outside the saved queue leaves the mode', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=uqt');
+  await page.locator('.album-item', { hasText: 'Pixinguinha' }).click();
+  await page.locator('#album-header .album-like').click();
+  await page.locator('#btn-play-saved').click();
+  await page.locator('.album-item', { hasText: 'Luiz Gonzaga' }).click();
+  await page.evaluate(() => playNext());
+  await expect(page.locator('#btn-play-saved')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#album-header h2')).toHaveText('Saudade do Nordeste');
+});
+
+test('L74: the artist filter offers a link to the artist page', async ({ page }) => {
+  await stubClipboard(page);
+  await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
+  await page.locator('#share-artist').click();
+  await expect(page.locator('#toast')).toContainText('copiado');
+  expect(await page.evaluate(() => window.__copied)).toBe('https://tocador.cc/uqt/artista/elis-regina/');
+  await page.locator('#clear-all-filters').click();
+  await expect(page.locator('#share-artist')).toBeHidden();
+});
+
+test('L75: artist pages carry the preview and send people to the filter', () => {
+  const { artistPage, catalogArtists } = require('../script/build-album-pages.js');
+  const albums = JSON.parse(require('zlib').gunzipSync(fixtureGz)).albums;
+  const artists = catalogArtists(albums);
+  const elis = artists.find(a => a.name === 'Elis Regina');
+  expect([...elis.albums].map(a => a.title).sort()).toEqual(['Elis & Tom', 'Falso Brilhante']);
+  expect(new Set(artists.map(a => a.slug)).size).toBe(artists.length);
+  const html = artistPage({ alias: 'uqt', meta: { base_url: 'https://cdn.tocador.cc/uqt' }, artist: elis });
+  expect(html).toContain('<link rel="canonical" href="https://tocador.cc/uqt/artista/elis-regina/">');
+  expect(html).toContain('og:image');
+  expect(html).toContain('noindex');
+  expect(html).toContain('location.replace("https://tocador.cc/?acervo=uqt&artista=Elis+Regina")');
 });
 
 // O acervo ativo depende da aba: salvos do outro não podem parecer perdidos.
