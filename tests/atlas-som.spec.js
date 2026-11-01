@@ -28,7 +28,8 @@ const aba = (page, msg) => page.evaluate(m => { const c = new BroadcastChannel('
 test('liga por padrão no primeiro gesto, e a roda do mouse sozinha não conta', async ({ page }) => {
   await boot(page);
   const b = page.locator('#btn-musica');
-  await expect(b).toHaveAttribute('aria-pressed', 'true');
+  await expect(b).toHaveAttribute('aria-pressed', 'false');   // nada soa ainda: o botão não promete som
+  await expect(b).toHaveClass(/espera/);
   expect((await som(page)).contexto).toBeNull();
   await page.mouse.move(400, 300);
   await page.mouse.wheel(0, -200);
@@ -36,11 +37,42 @@ test('liga por padrão no primeiro gesto, e a roda do mouse sozinha não conta',
   await page.keyboard.press('+');
   await soando(page);
   expect((await som(page)).contexto).toBe('running');
+  await expect(b).toHaveAttribute('aria-pressed', 'true');
+  await expect(b).not.toHaveClass(/espera/);
+});
+
+test('o primeiro clique em ♪ antes de qualquer gesto começa a música, e o segundo cala', async ({ page }) => {
+  await boot(page);
+  const b = page.locator('#btn-musica');
+  await b.click();
+  await soando(page);
+  await expect(b).toHaveAttribute('aria-pressed', 'true');
+  await b.click();
+  await expect(b).toHaveAttribute('aria-pressed', 'false');
+  expect((await som(page)).audivel).toBe(false);
+});
+
+test('a tecla M antes de qualquer gesto também começa a música', async ({ page }) => {
+  await boot(page);
+  await page.keyboard.press('m');
+  await soando(page);
+  await expect(page.locator('#btn-musica')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('sem Web Audio o ♪ fica desabilitado', async ({ page }) => {
+  await page.addInitScript(() => { delete window.AudioContext; delete window.webkitAudioContext; });
+  await boot(page);
+  await expect(page.locator('#btn-musica')).toBeDisabled();
+  await expect(page.locator('#btn-musica')).toHaveAttribute('aria-pressed', 'false');
+  await page.keyboard.press('m');
+  expect((await som(page)).contexto).toBeNull();
 });
 
 test('♪ desliga, guarda a escolha e a tecla M faz o mesmo', async ({ page }) => {
   await boot(page);
-  await page.locator('#btn-musica').click();     // o primeiro clique no botão já é a escolha: nada chega a tocar
+  await page.keyboard.press('+');
+  await soando(page);
+  await page.locator('#btn-musica').click();
   await expect(page.locator('#btn-musica')).toHaveAttribute('aria-pressed', 'false');
   expect((await som(page)).audivel).toBe(false);
   await page.reload();
@@ -66,6 +98,7 @@ test('a prévia cala a música, que volta quando ela para', async ({ page }) => 
 test('♪ também para uma prévia que esteja tocando', async ({ page }) => {
   await boot(page);
   await page.keyboard.press('+');
+  await soando(page);
   await page.evaluate(() => {
     const a = document.getElementById('previa');
     Object.defineProperty(a, 'paused', { configurable: true, get: () => false });

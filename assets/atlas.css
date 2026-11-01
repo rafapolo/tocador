@@ -145,6 +145,7 @@ button { font: inherit; color: inherit; }
 #zoom-girar[aria-pressed="true"] { background: var(--text); color: var(--bg); }
 #zoom-girar[aria-pressed="true"]:hover { background: var(--text); }
 #btn-musica.espera { color: var(--accent); }
+#btn-musica:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── cartão da faixa ── */
 #cartao {

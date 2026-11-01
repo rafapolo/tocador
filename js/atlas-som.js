@@ -910,25 +910,30 @@
     const lerPref = () => { try { return localStorage.getItem(CHAVE); } catch { return null; } };
     let vontade = lerPref() !== '0';         // on by default
     let ativado = false, previaTocando = false, outroSom = false, ignorarOutro = false, dormindo = false;
+    let destravado = false;                  // the context has really run: until then the button can't promise sound
+    const Ctx = global.AudioContext || global.webkitAudioContext;
     let ac = null, m = null, relogio = 0, tDesliga = 0, ultimaAnalise = 0, ultimaMira = 0, ultimoGesto = performance.now();
 
     const emEspera = () => vontade && outroSom && !ignorarOutro;
     const audivel = () => ativado && vontade && !previaTocando && !emEspera() && !document.hidden && !dormindo;
 
+    const aceso = () => vontade && !emEspera() && destravado;
+
     function rotular() {
-      const b = o.botao, espera = emEspera();
-      b.setAttribute('aria-pressed', String(vontade && !espera));
-      b.classList.toggle('espera', espera);
-      b.title = espera ? 'Em espera: o Tocador está tocando em outra aba. Clique para ouvir a música do mapa assim mesmo'
-        : vontade ? 'Música do mapa ligada: gerada na hora a partir dos gêneros à vista. Clique para silenciar (M)'
-          : 'Música do mapa desligada. Clique para ligar (M)';
+      const b = o.botao, espera = emEspera(), faltaGesto = vontade && !espera && !destravado;
+      b.setAttribute('aria-pressed', String(aceso()));
+      b.classList.toggle('espera', espera || faltaGesto);
+      b.title = !Ctx ? 'Este navegador não consegue sonificar o mapa'
+        : espera ? 'Em espera: o Tocador está tocando em outra aba. Clique para sonificar o mapa assim mesmo'
+          : faltaGesto ? 'A sonificação do mapa começa no primeiro clique ou tecla: o navegador não deixa soar antes disso (M)'
+            : vontade ? 'Sonificação ligada: som sintetizado na hora a partir dos gêneros à vista. Clique para silenciar (M)'
+              : 'Sonificação desligada. Clique para ligar (M)';
     }
 
     function montar() {
-      if (ac) return;
-      const Ctx = global.AudioContext || global.webkitAudioContext;
-      if (!Ctx) return;
+      if (ac || !Ctx) return;
       ac = new Ctx({ latencyHint: 'playback' });
+      ac.onstatechange = () => { if (ac.state === 'running') { destravado = true; rotular(); } };
       m = criarMotor(ac);
       o.aoPrimeiroSom?.();
     }
@@ -995,9 +1000,11 @@
     }
 
     // A browser lets no page sound before a click, touch or key (a wheel doesn't count): any of them starts it,
-    // and every one retries, since iOS only unlocks inside the gesture.
-    function gesto() {
+    // and every one retries, since iOS only unlocks inside the gesture. The ♪ button and M answer for themselves
+    // in alternar(), or the press that starts the music would also read as the one that silences it.
+    function gesto(e) {
       ultimoGesto = performance.now();
+      if (o.botao.contains(e.target) || e.key === 'm' || e.key === 'M') return;
       const primeiro = !ativado;
       ativado = true;
       dormindo = false;
@@ -1018,7 +1025,9 @@
 
     // ♪ also stops a preview: one button that means "no more sound from this page", or "this one, not that one".
     function alternar() {
-      const estava = vontade && !emEspera();
+      if (!Ctx) return;
+      const estava = aceso();
+      ativado = true;
       if (!pv.paused) o.pararPrevia();
       if (estava) vontade = false;
       else { vontade = true; ignorarOutro = true; dormindo = false; }
@@ -1027,6 +1036,7 @@
       if (vontade && m) m.tap([0, 7], 0.6);
     }
     o.botao.addEventListener('click', alternar);
+    o.botao.disabled = !Ctx;
     rotular();
 
     return {
