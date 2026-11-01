@@ -26,6 +26,8 @@ test('A11Y1: album grid has no axe violations', async ({ page }) => {
 
 test('A11Y2: an open album (header + tracklist) has no axe violations', async ({ page }) => {
   await open(page, '/?acervo=uqt');
+  // the grid's entrance animation (.appearing) can outlast the click's stability wait on a slow CI runner
+  await expect(page.locator('.album-item.appearing')).toHaveCount(0, { timeout: 10000 });
   await page.locator('.album-item').first().click();
   await page.waitForSelector('#track-list [data-track-idx]');
   const { violations } = await scan(page);
