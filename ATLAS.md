@@ -191,14 +191,17 @@ Medindo cada mudança isolada, o resultado desmentiu boa parte das suposições:
 | Microtiming, forma, estéreo | Quase não mudam a nota, porque o modelo olha para o espectro; ficaram por serem o que faz música soar tocada |
 | Coloração de gravação antiga | Ajuda em samba, salsa e jazz, e atrapalha em MPB e folk; só ficou onde mediu melhor |
 
-Resultado: a nota média foi de 0,166 para 0,187, e 35 das 57 famílias subiram. Flamenco, reggae e reggaeton foram as que
-mais ganharam; balada, pós-rock e folk perderam.
+Com isso, a nota média foi de 0,166 para 0,187, e 35 das 57 famílias subiram.
 
 A terceira rodada trocou palpite por dado. `script/amostrar-som-real.js` e `script/perfil-som-real.py` medem 888 trechos de
 faixas reais, 16 por família: espectro, andamento e microtiming. A ginga do samba medida ficou muito perto da estimada à
 mão, e o forró real anda a 104 BPM, não a 124. `script/ajustar-som-atlas.py` usa esses perfis para equalizar cada família
 e busca, uma a uma, níveis, sala e timbre da melodia, gravando o resultado no bloco `AJUSTES` de `js/atlas-receitas.js`.
-Ele ajusta numa tomada e valida em outra.
+Ele ajusta numa tomada e valida em outra: numa tomada que a busca nunca ouviu, a nota foi de 0,176 para 0,273.
+
+Resultado final, com o motor atual e o volume das famílias igualado: a nota média foi de **0,166 para 0,265**, e 46 das 57
+famílias subiram. O gênero certo entre os 5 primeiros do modelo foi de 9 para 19 famílias. Nuvem, trap, reggaeton e boom bap
+foram as que mais ganharam. Balada foi a que mais perdeu, e forró, samba, tango, ska e MPB seguem com nota negativa.
 
 Por fim, a viagem: navegar de verdade pelo mapa inteiro, de samba a rock e ao grafo, gravando o estado do motor. Foi assim
 que apareceram o volume caindo nas zonas mistas e o modo piscando com o mapa parado.
@@ -207,7 +210,7 @@ que apareceram o volume caindo nas zonas mistas e o modo piscando com o mapa par
 
 - **A nota mede se o som parece o gênero para esse modelo, não se é bonito.** Ela é uma aproximação e nunca substitui
   o ouvido.
-- **As famílias brasileiras seguem entre as piores** (forró, samba, MPB, bossa), embora sejam o coração dos acervos.
-  Nenhuma tem voz cantada, e as faixas reais quase sempre têm.
+- **Forró, samba e MPB seguem entre as piores**, embora sejam o coração dos acervos. A busca escolheu voz ou coro em
+  16 famílias, mas é um canto sintetizado, sem letra, e não sei se isso explica a distância para as faixas reais.
 - **Quem está longe ouve outra música.** A nota foi medida no zoom máximo; de longe só há cama.
 - **A fusão não foi avaliada pela nota.** Ela mede uma família por vez; misturas foram conferidas navegando, não de ouvido.
