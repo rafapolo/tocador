@@ -3,10 +3,15 @@ import { mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { gzipSync } from 'zlib';
 
-const INPUT  = resolve(import.meta.dir, '../data/genres/genres.json');
-const OUTPUT = resolve(import.meta.dir, '../data/homi-genres.json.gz');
+// --acervo homi (default) | uqt. Only homi has the legacy genres.json; uqt comes from the audio analysis alone.
+const ai = process.argv.indexOf('--acervo');
+const ACERVO = ai > 0 ? process.argv[ai + 1] : 'homi';
+if (!['homi', 'uqt'].includes(ACERVO)) { console.error('--acervo homi|uqt'); process.exit(1); }
 
-const FEATURES = resolve(import.meta.dir, '../data/features/homi.jsonl');
+const INPUT  = ACERVO === 'homi' ? resolve(import.meta.dir, '../data/genres/genres.json') : null;
+const OUTPUT = resolve(import.meta.dir, `../data/${ACERVO}-genres.json.gz`);
+
+const FEATURES = resolve(import.meta.dir, `../data/features/${ACERVO}.jsonl`);
 
 // album -> vote counts. Fresh analysis (analyze-tracks.py) wins; the old genres.json
 // only fills albums that have not been analyzed yet.
@@ -36,7 +41,7 @@ if (await Bun.file(FEATURES).exists()) {
 }
 
 let fromLegacy = 0;
-if (await Bun.file(INPUT).exists()) {
+if (INPUT && await Bun.file(INPUT).exists()) {
   console.log('reading', INPUT);
   const genres = JSON.parse(await Bun.file(INPUT).text());
   for (const [albumKey, tracks] of Object.entries(genres)) {
