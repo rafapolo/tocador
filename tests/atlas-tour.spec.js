@@ -99,3 +99,13 @@ test('com Sonificar desligado, o tour o liga no clique e o desliga ao encerrar',
   await expect.poll(async () => (await som(page)).vontade).toBe(false);
   expect(await page.evaluate(() => localStorage.getItem('tocador-atlas-musica'))).toBe('0');
 });
+
+test('durante o tour o visor da sonificação vai para a barra preta, e volta ao mapa no fim', async ({ page }) => {
+  await boot(page);
+  const pai = () => page.evaluate(() => document.getElementById('visor-som').parentElement.id);
+  expect(await pai()).toBe('atlas');
+  await page.locator('#btn-tour').click();
+  await expect.poll(pai).toBe('tour');
+  await page.keyboard.press('Escape');
+  await expect.poll(pai).toBe('atlas');
+});

@@ -97,6 +97,14 @@
       if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(quadro);
     });
     raf = requestAnimationFrame(quadro);
+    // During the tour the visor sits in its black bar: #atlas is its own stacking context, under #tour, so the
+    // element moves into #tour for the length of it (body.em-tour, js/atlas-tour.js) and back afterwards.
+    const casa = caixa.parentElement;
+    new MutationObserver(() => {
+      const tour = document.body.classList.contains('em-tour') && document.getElementById('tour');
+      const alvo = tour || casa;
+      if (caixa.parentElement !== alvo) alvo.append(caixa);
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     return { visivel: () => visivel, texto: () => texto };
   }
 

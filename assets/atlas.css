@@ -390,6 +390,13 @@ button { font: inherit; color: inherit; }
   width: min(720px, calc(100% - 32px)); text-align: center; pointer-events: none;
 }
 #tour-legenda p { margin: 0; }
+/* O visor da sonificação mora na barra preta durante o tour: o tour é sobre essa música. */
+.em-tour #visor-som {
+  z-index: 41; bottom: calc((min(11vh, 96px) - 62px) / 2 + var(--safe-b)); padding: 4px 10px 0;
+  background: transparent; border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.em-tour #visor-som canvas { height: 38px; }
+@media (max-width: 720px) { .em-tour #visor-som { display: block; } .em-tour #visor-som canvas { height: 30px; } }
 #tour-kicker {
   display: inline-block; padding: 3px 10px; margin-bottom: 8px !important; border-radius: 10px;
   background: var(--glass); color: var(--accent); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
