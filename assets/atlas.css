@@ -106,7 +106,6 @@ button { font: inherit; color: inherit; }
 }
 .seg button + button { border-left: 1px solid var(--border); }
 .seg a { color: var(--text-2); text-decoration: none; }
-#btn-sobre b { font-weight: 600; }
 .seg button[aria-pressed="true"] { background: var(--surface-light); color: var(--text); }
 .seg button:focus-visible, .seg a:focus-visible, #zoom button:focus-visible, .botao:focus-visible, #legenda summary:focus-visible,
 #legenda-lista button:focus-visible, #cartao-fechar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
