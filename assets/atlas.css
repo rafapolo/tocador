@@ -183,6 +183,25 @@ button { font: inherit; color: inherit; }
 }
 #ajuda.some { opacity: 0; }
 
+/* ── visor do som: o que "Sonificar" toca, embaixo no meio ── */
+#visor-som {
+  position: absolute; z-index: 6; left: 50%; bottom: calc(14px + var(--safe-b)); transform: translate(-50%, 8px);
+  width: 280px; padding: 8px 10px 6px; pointer-events: none;
+  background: var(--glass); border: 1px solid var(--border); border-radius: 12px;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  opacity: 0; transition: opacity 0.6s, transform 0.6s;
+}
+#visor-som.ativo { opacity: 1; transform: translate(-50%, 0); }
+#visor-som canvas { display: block; width: 100%; height: 44px; }
+#visor-som p { margin: 4px 0 0; color: var(--text-2); font-size: 11.5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2em; }
+#visor-som.ativo ~ #ajuda, body:has(#visor-som.ativo) #ajuda { opacity: 0; }
+@media (max-width: 720px) {
+  #visor-som { width: 200px; bottom: calc(70px + var(--safe-b)); }
+  #visor-som canvas { height: 32px; }
+  body:has(#cartao:not([hidden])) #visor-som { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { #visor-som { transition: opacity 0.2s; transform: translate(-50%, 0); } }
+
 #carregando {
   position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--bg); transition: opacity 0.5s;

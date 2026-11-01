@@ -1108,3 +1108,20 @@ test('3D: payload sem z esconde o ⟳', async ({ page }) => {
   await boot(page, { faixas: faixas2dGz });
   await expect(page.locator('#zoom-girar')).toBeHidden();
 });
+
+test('a câmera vai para o endereço (x, y, z) quando a vista assenta, e um link com ela abre no mesmo lugar', async ({ page }) => {
+  await boot(page);
+  expect(new URL(page.url()).searchParams.get('x')).toBeNull();    // o mapa inteiro não escreve câmera
+  await page.mouse.move(500, 400);
+  await page.mouse.wheel(0, -600);
+  await expect.poll(() => new URL(page.url()).searchParams.get('z'), { timeout: 4000 }).not.toBeNull();
+  const u = new URL(page.url()), antes = await estado(page);
+  expect(+u.searchParams.get('x')).toBeCloseTo(antes.cx, 4);
+  expect(+u.searchParams.get('y')).toBeCloseTo(antes.cy, 4);
+  expect(+u.searchParams.get('z')).toBeCloseTo(antes.k / antes.k0, 2);
+  await boot(page, { url: u.pathname + u.search });
+  const depois = await estado(page);
+  expect(depois.cx).toBeCloseTo(antes.cx, 4);
+  expect(depois.cy).toBeCloseTo(antes.cy, 4);
+  expect(depois.k / depois.k0).toBeCloseTo(antes.k / antes.k0, 2);
+});

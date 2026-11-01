@@ -1046,6 +1046,7 @@
         ultimoGesto = performance.now();
         if (dormindo) { dormindo = false; atualizar(); }
       },
+      analisador: () => m?.medidor ?? null,   // the output's AnalyserNode, for js/atlas-visor.js
       tap(graus, vel) { if (audivel() && m) m.tap(graus, vel); },
       momento(graus, vel) { if (audivel() && m) m.swell(graus, vel); },
       estado() {

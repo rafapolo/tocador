@@ -35,6 +35,7 @@
   <script src="js/som-abas.js" defer></script>
   <script src="js/atlas-receitas.js" defer></script>
   <script src="js/atlas-som.js" defer></script>
+  <script src="js/atlas-visor.js" defer></script>
   <script src="js/atlas.js" defer></script>
 </head>
 <body>
@@ -112,6 +113,7 @@
     <ul id="legenda-lista"></ul>
   </details>
 
+  <div id="visor-som" aria-hidden="true"><canvas width="280" height="44"></canvas><p></p></div>
   <div id="zoom" role="group" aria-label="Zoom">
     <button id="zoom-girar" type="button" aria-pressed="false" aria-label="Girar em 3D" title="Girar em 3D: arrastar gira a vista" hidden><svg class="ic" aria-hidden="true"><use href="#i-girar"/></svg></button>
     <button id="zoom-mais" type="button" aria-label="Aproximar"><svg class="ic" aria-hidden="true"><use href="#i-mais"/></svg></button>

@@ -304,3 +304,21 @@ test('onde gêneros se encontram toca uma banda só: um tempo entre eles, um bal
   expect(r.f.donos.chao).toBe('samba');
   expect(r.pk).toBeLessThanOrEqual(1);
 });
+
+test('o visor aparece embaixo enquanto a sonificação soa, com os gêneros e o bpm, e some ao calar', async ({ page }) => {
+  await boot(page);
+  const visor = page.locator('#visor-som');
+  await expect(visor).not.toHaveClass(/ativo/);
+  await page.locator('#btn-musica').click();
+  await soando(page);
+  await expect(visor).toHaveClass(/ativo/, { timeout: 6000 });
+  await expect(visor.locator('p')).toHaveText(/ — \d+ bpm$/);
+  const pintado = await page.evaluate(() => {
+    const c = document.querySelector('#visor-som canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++;
+    return n;
+  });
+  expect(pintado).toBeGreaterThan(50);
+  await page.locator('#btn-musica').click();
+  await expect(visor).not.toHaveClass(/ativo/, { timeout: 6000 });
+});

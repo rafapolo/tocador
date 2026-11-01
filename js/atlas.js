@@ -200,7 +200,11 @@
     if (filtro.q) { $('busca').value = filtro.q; buscar(filtro.q, false); }
     atualizarContagem();
     grafo.atualizarPainel();
-    semHistorico(() => selecaoDaUrl(new URLSearchParams(location.search)));
+    semHistorico(() => {
+      const q = new URLSearchParams(location.search);
+      selecaoDaUrl(q);
+      if (!grafo.aberto) cameraDaUrl(q);    // a shared spot wins over the selection's own framing
+    });
   }
 
   // ── WebGL ──
@@ -346,6 +350,7 @@
     // data center then keeps the front view in place
     if (girado()) pivoNoCentro();
     enquadrar(b, animar, 0, [0, 0]);
+    camInicial = voo ? [voo.cx1, voo.cy1, voo.k1] : [cx, cy, k];
   }
 
   let voo = null;
@@ -417,6 +422,36 @@
     const comNomes = desenharFaixas();
     desenharMarcos(comNomes);
     if (mais) pedir();
+    else if (ligado && !voo) {
+      const c = camAtual();
+      if (c !== camSalva) { camSalva = c; salvarUrl(); }
+    }
+  }
+
+  // ── camera in the URL: x, y = world center, z = zoom over the whole-map fit, giro = yaw,pitch,pivot (3D) ──
+  // Rewritten (never a new history entry) once the view settles, so a copied address opens on exactly this spot.
+  let camInicial = null, camSalva = '';
+  const r5 = v => +v.toFixed(5);
+  function camAtual() {
+    if (grafo.aberto || !camInicial) return '';
+    const [fx, fy, fk] = camInicial, tol = 0.01 / k;
+    const padrao = !girado() && Math.abs(k / fk - 1) < 0.02 && Math.abs(cx - fx) < tol * W && Math.abs(cy - fy) < tol * H;
+    if (padrao) return '';
+    const p = new URLSearchParams({ x: r5(cx), y: r5(cy), z: +(k / k0).toFixed(3) });
+    if (girado()) p.set('giro', [yaw, pitch].map(a => +(a * 180 / Math.PI).toFixed(1)).concat(piv.map(r5)).join(','));
+    return p.toString();
+  }
+  // Returns whether the URL had a camera.
+  function cameraDaUrl(q) {
+    const x = parseFloat(q.get('x')), y = parseFloat(q.get('y')), z = parseFloat(q.get('z'));
+    if (![x, y, z].every(Number.isFinite) || z <= 0) return false;
+    const g = (q.get('giro') || '').split(',').map(Number);
+    let rot = [0, 0];
+    if (g.length === 5 && g.every(Number.isFinite) && A.posZ[mapa]) { rot = [g[0] * Math.PI / 180, g[1] * Math.PI / 180]; piv = g.slice(2); }
+    voo = null;
+    voar(x, y, k0 * z, false, rot);
+    camSalva = camAtual();
+    return true;
   }
 
   function posicionarAnel(el, i) {
@@ -1132,6 +1167,7 @@
         if (grafo.centro) p.set('artista', grafo.centro);
       }
       if (sel >= 0) p.set('faixa', `${A.acervos[A.acervo[sel]]}.${A.hash[sel]}`);
+      for (const [c, v] of new URLSearchParams(camAtual())) p.set(c, v);
       const qs = p.toString(), alvo = location.pathname + (qs ? '?' + qs : '');
       if (alvo !== location.pathname + location.search) history[novaEntrada ? 'pushState' : 'replaceState'](null, '', alvo);
       novaEntrada = false;
@@ -1171,6 +1207,7 @@
       if (q.get('grafo')) await grafo.abrir(q.get('artista'));
       else if (grafo.aberto) grafo.fechar(false);
       if (ligado) selecaoDaUrl(q);
+      if (!grafo.aberto) cameraDaUrl(q);
     });
   }
 
@@ -1247,6 +1284,15 @@
       generos: A.generos, regiao: regiaoSom, mira: miraSom, previa: audio, pararPrevia, botao: $('btn-musica'),
       aoPrimeiroSom: () => { carregarFeaturesSom().catch(err => console.warn('[atlas] sem features para a música', err)); },
     });
+    // The visor colours each family like the map colours its genres: the macro of the first label it plays.
+    const corFam = new Map(), nomeFam = new Map(), R = window.RECEITAS_ATLAS;
+    for (const g of A.generos) {
+      const f = R?.familiaDe(g);
+      if (!f || corFam.has(f)) continue;
+      corFam.set(f, MACROS.find(m => m[0] === macroDe(g))?.[2] || COR_OUTROS);
+      nomeFam.set(f, g.includes('---') ? subDe(g) : nomeMacro(g));
+    }
+    window.criarVisorSom?.({ som, cor: f => corFam.get(f) || '#d4a574', nome: f => nomeFam.get(f) || f });
   }
 
   // ── size ──
