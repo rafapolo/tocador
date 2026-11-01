@@ -166,8 +166,7 @@ function setSavedQueue(queue) {
 
 function toggleSavedQueue() {
   if (savedQueue) { setSavedQueue(null); return; }
-  const porPath = new Map(albums.map(a => [a.path.normalize('NFC'), a]));
-  const queue = salvosDoAcervo().map(s => porPath.get(s.path)).filter(a => a?.tracks.some(trackAllowed));
+  const queue = salvosNoCatalogo().filter(a => a.tracks.some(trackAllowed));
   if (!queue.length) { showToast('Nenhum álbum salvo neste acervo'); return; }
   setSavedQueue(queue);
   showToast(`Tocando ${queue.length} ${queue.length === 1 ? 'álbum salvo' : 'álbuns salvos'}`, undefined, { ok: true });

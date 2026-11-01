@@ -35,6 +35,10 @@ function getPlayFromUrl() {
   return new URLSearchParams(window.location.search).get('play') === '1';
 }
 
+function getListaFromUrl() {
+  return new URLSearchParams(window.location.search).get('lista') || '';
+}
+
 function generateAlbumUrl(album, trackNum) {
   const params = new URLSearchParams(window.location.search);
   params.delete('artista');
@@ -116,6 +120,59 @@ function updateBrowseFilterInUrl() {
   window.history.replaceState(state, '', urlWithParams(params));
 }
 
+function removeListaFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  params.delete('lista');
+  const state = selectedAlbum ? { album: selectedAlbum.path } : {};
+  window.history.replaceState(state, '', urlWithParams(params));
+}
+
+// ── Playlist compartilhada (?lista=) ──────────────────────────────────────
+// A lista vive só nesta faceta: quem abre o link vê os álbuns no grid, e os salvos dessa pessoa nem são lidos.
+let _albumsByShareId = null;
+
+// O valor vem de um link, então só serve de chave de busca. Um id pode trazer dois álbuns numa colisão de hash:
+// melhor um álbum a mais do que o errado.
+function albumsFromLista(lista) {
+  const ids = /^[0-9A-Za-z]+$/.test(lista) && lista.length % 5 === 0 ? lista.match(/.{5}/g) : [];
+  if (!_albumsByShareId) {
+    _albumsByShareId = new Map();
+    for (const a of albums) {
+      const id = albumShareId(a.path);
+      const iguais = _albumsByShareId.get(id);
+      if (iguais) iguais.push(a); else _albumsByShareId.set(id, [a]);
+    }
+  }
+  const posicoes = new Map();
+  let perdidos = 0;
+  for (const id of new Set(ids)) {
+    const achados = _albumsByShareId.get(id);
+    if (!achados) { perdidos++; continue; }
+    for (const a of achados) posicoes.set(a, posicoes.size);
+  }
+  return { posicoes, perdidos };
+}
+
+// Põe sharedAlbums de acordo com a URL e diz se há lista. Quem chama roda filterAlbums().
+function aplicarListaDaUrl() {
+  const lista = getListaFromUrl();
+  const { posicoes, perdidos } = lista ? albumsFromLista(lista) : { posicoes: new Map(), perdidos: 0 };
+  if (!posicoes.size) {
+    sharedAlbums = null;
+    activeLista = '';
+    if (lista) {
+      removeListaFromUrl();
+      showToast('Nenhum álbum deste link está neste acervo');
+    }
+    return false;
+  }
+  resetFacets('lista');
+  sharedAlbums = posicoes;
+  activeLista = lista;
+  if (perdidos) showToast(perdidos === 1 ? '1 álbum não está mais no acervo' : `${perdidos} álbuns não estão mais no acervo`);
+  return true;
+}
+
 function setMeta(attr, key, value) {
   let el = document.querySelector(`meta[${attr}="${key}"]`);
   if (!el) { el = document.createElement('meta'); el.setAttribute(attr, key); document.head.appendChild(el); }
@@ -164,18 +221,35 @@ function artistShareUrl(name) {
   return `${location.origin}${APP_ROOT}?${new URLSearchParams({ ...(acervo && { acervo }), artista: name })}`;
 }
 
-async function shareArtist(name) {
-  const url = artistShareUrl(name);
+// Share sheet where there is one, else the clipboard, else the URL itself in a toast.
+async function shareLink(title, url, copied) {
   if (navigator.share) {
-    try { await navigator.share({ title: `${name} no Tocador`, url }); return; }
+    try { await navigator.share({ title, url }); return; }
     catch (err) { if (err?.name === 'AbortError') return; }
   }
   try {
     await navigator.clipboard.writeText(url);
-    showToast('Link do artista copiado');
+    showToast(copied);
   } catch {
     showToast(url, 6000);
   }
+}
+
+function shareArtist(name) {
+  return shareLink(`${name} no Tocador`, artistShareUrl(name), 'Link do artista copiado');
+}
+
+// A static page on tocador.cc gives the link its preview and forwards to the player with ?lista=. Mirrors don't serve
+// it, so the link never uses this origin. Only the active acervo goes in: one link names one acervo.
+function savedShareUrl() {
+  const lista = salvosNoCatalogo().map(a => albumShareId(a.path)).join('');
+  return `${SITE_ORIGIN}/share-playlist?${new URLSearchParams({ acervo: activeAcervoKey ?? activeAcervoId, lista })}`;
+}
+
+function shareSaved() {
+  const fora = salvosDeFora();
+  return shareLink('Uma playlist no Tocador', savedShareUrl(),
+    fora ? `Link copiado, sem ${fora === 1 ? 'o salvo' : `os ${fora} salvos`} de outro acervo` : 'Link da playlist copiado');
 }
 
 // With a track of this album loaded, the link names it: #tN on the static page
@@ -183,7 +257,7 @@ async function shareArtist(name) {
 // on the player fallback. The preview itself stays album-level either way. The
 // first track is left out: opening an album primes it, so it says nothing about
 // what the listener picked, and the album page starts there anyway.
-async function shareAlbum(album) {
+function shareAlbum(album) {
   const track = currentTrack !== album.tracks?.[0] && album.tracks?.includes(currentTrack) ? currentTrack : null;
   const page = albumPageUrl(album);
   const url = page
@@ -192,16 +266,7 @@ async function shareAlbum(album) {
   const title = track
     ? `${track.title} — ${album.name} — ${album.artists}`
     : `${album.name} — ${album.artists}`;
-  if (navigator.share) {
-    try { await navigator.share({ title, url }); return; }
-    catch (err) { if (err?.name === 'AbortError') return; }
-  }
-  try {
-    await navigator.clipboard.writeText(url);
-    showToast(track ? 'Link da faixa copiado' : 'Link do álbum copiado');
-  } catch {
-    showToast(url, 6000);
-  }
+  return shareLink(title, url, track ? 'Link da faixa copiado' : 'Link do álbum copiado');
 }
 
 function updateMetaTags(album) {

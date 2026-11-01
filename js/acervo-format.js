@@ -113,6 +113,18 @@
     });
   }
 
+  // Five base62 characters identifying an album in a shared playlist link (?lista=). Hashes the path, the key the
+  // saved albums already use, so a link survives anything that reorders the catalog; an index would not. Fixed width,
+  // so ids are concatenated without a separator. FNV-1a over UTF-16 code units, like atlasKeyHash().
+  var BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  function albumShareId(path) {
+    var s = String(path).normalize('NFC'), h = 0x811c9dc5;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    var v = (h >>> 0) % 916132832, id = '';   // 62^5
+    for (var n = 0; n < 5; n++) { id = BASE62[v % 62] + id; v = Math.floor(v / 62); }
+    return id;
+  }
+
   // fold(artist) -> slug of the artist's page, /<alias>/artista/<slug>/. Takes the raw catalog albums, and the
   // player's own parseArtists()/fold() from js/util.js, so the builder and the player can't list different artists.
   // Slugs follow the order of first appearance in the catalog, so a collision depends only on that order.
@@ -138,4 +150,5 @@
   global.decodeAcervo = decodeAcervo;
   global.albumSlugs = albumSlugs;
   global.artistSlugs = artistSlugs;
+  global.albumShareId = albumShareId;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
