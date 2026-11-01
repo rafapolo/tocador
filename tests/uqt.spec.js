@@ -799,7 +799,9 @@ test('L62: browse panel links to the loaded acervo album index', async ({ page }
   const link = page.locator('#acervo-index-link');
   await expect(link).toBeVisible();
   await expect(link).toHaveAttribute('href', 'https://tocador.cc/homi/');
-  await expect(link).toHaveText('Índice de álbuns');
+  await expect(link).toHaveText('Índice de álbuns ↗');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveCSS('text-align', 'right');
 });
 
 // Fix #3: --color-text-muted (#7a7268 → #958d83) needed to clear WCAG AA's

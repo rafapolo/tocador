@@ -2039,6 +2039,7 @@ audio {
   font-size: 0.77rem;
   color: var(--color-text-muted);
   text-decoration: none;
+  text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
