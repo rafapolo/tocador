@@ -1,4 +1,4 @@
-// atlas-tour.js — o tour de ~2 minutos do /atlas (roteiro em TOUR.md). Um ponteiro desenhado clica nos controles de
+// atlas-tour.js — o tour de 1 minuto do /atlas (roteiro em TOUR.md). Um ponteiro desenhado clica nos controles de
 // verdade, a câmera voa pelos lugares que os dados apontam (nenhum nome ou número fixo aqui: tudo é contado no
 // navegador) e a trilha é a própria sonificação, que reage ao que a câmera vê. ▶ Tour ou ?tour=1 (&t=<s> pula);
 // Esc ou ✕ esc encerram e devolvem mapa, filtros, grafo, seleção e câmera. Carregado depois de js/atlas.js, cujo
