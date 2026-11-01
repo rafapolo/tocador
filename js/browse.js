@@ -304,7 +304,7 @@ function refreshBrowseCounts() {
 // scrolled out of the strip on mobile, or an artist/genre picked in a drawer
 // that is now closed.
 function activeFilterLabel() {
-  if (sharedAlbums) return `Lista compartilhada (${sharedAlbums.size})`;
+  if (sharedAlbums) return `Playlist (${sharedAlbums.size})`;
   if (activeAlbumSet) return activeAlbumSetLabel || 'Características';
   if (activeArtist) return activeArtist;
   if (activeGenre)  return activeGenre.includes('---') ? activeGenre.split('---')[1] : activeGenre;

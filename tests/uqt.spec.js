@@ -1121,7 +1121,7 @@ test.describe('shared playlist link', () => {
     await expect(page.locator('.album-item')).toHaveCount(3);
     const textos = await grid(page);
     ORDEM.forEach((nome, i) => expect(textos[i]).toContain(nome));
-    await expect(page.locator('#clear-all-label')).toHaveText('Lista compartilhada (3)');
+    await expect(page.locator('#clear-all-label')).toHaveText('Playlist (3)');
     await expect(page.locator('#album-header')).toContainText('Acervo Raro');   // o primeiro do link abre
   });
 
