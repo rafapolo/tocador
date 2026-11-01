@@ -34,6 +34,32 @@
     const m1 = porN[0] || null;
     const m2 = porN.find(m => m1 && m.macro !== m1.macro) || null;
 
+    // Travessia: do lugar do macro-gênero do mainstream mais longe do outro lado (Batucada) até o lugar grande de outro
+    // macro-gênero mais longe do mainstream (Punk), parando nos lugares grandes que ficam no caminho, em ordem.
+    const grandes = marcos.filter(m => m.n >= 400 && m.macro !== OUTROS), pontas = grandes.filter(m => m.n >= 1000);
+    const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
+    const maisLonge = (lista, de) => lista.reduce((r, m) => (!r || dist(m, de) > dist(r, de) ? m : r), null);
+    let trav = null;
+    if (m1) {
+      const fim = maisLonge(pontas.filter(m => m.macro !== m1.macro), m1);
+      const ini = fim && maisLonge(pontas.filter(m => m.macro === m1.macro), fim);
+      if (ini && fim) {
+        const dx = fim.x - ini.x, dy = fim.y - ini.y, L2 = dx * dx + dy * dy, L = Math.sqrt(L2);
+        const BINS = 4, meio = new Array(BINS).fill(null);
+        for (const m of grandes) {
+          if (m === ini || m === fim) continue;
+          const t = ((m.x - ini.x) * dx + (m.y - ini.y) * dy) / L2;
+          const lado = Math.abs((m.x - ini.x) * dy - (m.y - ini.y) * dx) / L;
+          if (t <= 0.03 || t >= 0.95 || lado > 0.14 * L) continue;
+          const j = Math.min(BINS - 1, Math.floor((t - 0.03) / 0.92 * BINS));
+          // o mainstream, se estiver no caminho, ganha a sua parada
+          const peso = x => (x === m1 ? Infinity : x.n);
+          if (!meio[j] || peso(m) > peso(meio[j])) meio[j] = m;
+        }
+        trav = [ini, ...meio.filter(Boolean), fim];
+      }
+    }
+
     // Fusões: na vizinhança de cada marco (grade 40×40 do mapa Som), quanto há do macro dele e do outro mais forte.
     const G = 40, grade = Array.from({ length: G * G }, () => new Uint32Array(OUTROS + 1));
     const pos = A.pos.som;
@@ -50,7 +76,7 @@
       const total = soma.slice(0, OUTROS).reduce((a, b) => a + b, 0);
       return { soma, total };
     };
-    const usados = new Set([m1?.g, m2?.g]);
+    const usados = new Set([m1?.g, m2?.g, ...(trav || []).map(m => m.g)]);
     const fusoes = [];
     for (const m of marcos) {
       if (m.n < 40 || m.macro === OUTROS || usados.has(m.g)) continue;
@@ -80,7 +106,7 @@
     const generosUsados = porGenero.filter(c => c > 0).length;
     const quaseSos = porGenero.filter(c => c > 0 && c < 10).length;
 
-    return { N, porAcervo, acervos: A.acervos, porMacro, m1, m2, fus, raros, generosUsados, quaseSos, OUTROS };
+    return { N, porAcervo, acervos: A.acervos, porMacro, m1, m2, trav, fus, raros, generosUsados, quaseSos, OUTROS };
   }
 
   // Zoom (× o enquadramento do mapa inteiro) em que o rótulo de um marco com n faixas aparece: o mapa só escreve
@@ -179,7 +205,7 @@
         const c = at.camera();
         if (!run.rapido && !reduzMovimento) at.voar(c.cx, c.cy, c.k0 * 1.15, 3800);
       } },
-      { id: 'sonificar', dur: 6, async fn() {
+      { id: 'sonificar', dur: 5, async fn() {
         const s = at.som(), btn = $('btn-musica');
         if (!s || btn.disabled) {
           legenda('sonificar', 'Este navegador não toca a sonificação; o tour segue em silêncio.');
@@ -192,19 +218,32 @@
         esconderPonteiro();
         focar(null);
       } },
-      { id: 'mainstream', dur: 10, async fn() {
-        const { m1, m2 } = D;
-        if (!m1) { legenda('mainstream', 'Os lugares mais povoados do mapa.'); return; }
-        const z1 = Math.min(4, zoomDoRotulo(m1.n));
-        await irPara(m1.x, alvoY(m1, z1), z1);
-        legenda(`mainstream · ${m1.sub}`, `${fmt(m1.n)} faixas de ${m1.sub}: o lugar mais povoado do mapa. ${pct(D.porMacro[m1.macro] / D.N)}% de todas as faixas são ${m1.nomeMacro}.`);
-        await espera(2800);
-        if (!m2) return;
-        const z2 = Math.min(4, zoomDoRotulo(m2.n));
-        await irPara(m2.x, alvoY(m2, z2), z2, 2600);
-        legenda(`mainstream · ${m2.sub}`, `Do outro lado, ${fmt(m2.n)} faixas de ${m2.sub} (${m2.nomeMacro}). Ouça a banda mudar com a região.`);
+      { id: 'travessia', dur: 15, async fn() {
+        const T = D.trav, { m1 } = D;
+        const zoom = m => Math.min(4, Math.max(2.5, zoomDoRotulo(m.n)));
+        if (!T) {
+          if (!m1) { legenda('mainstream', 'Os lugares mais povoados do mapa.'); return; }
+          await irPara(m1.x, alvoY(m1, zoom(m1)), zoom(m1));
+          legenda(`mainstream · ${m1.sub}`, `${fmt(m1.n)} faixas de ${m1.sub}: o lugar mais povoado do mapa.`);
+          return;
+        }
+        // De uma ponta à outra do mapa, uma parada por lugar grande no caminho: a legenda narra cada um e a banda,
+        // que é a fusão do que está à vista, troca de pele aos poucos.
+        const ini = T[0], fim = T[T.length - 1], kicker = `de ${ini.sub} a ${fim.sub}`, trilha = [];
+        for (const [j, m] of T.entries()) {
+          const antes = T[j - 1];
+          await irPara(m.x, alvoY(m, zoom(m)), zoom(m), j ? 1250 : 2000);
+          trilha.push(m.sub);
+          legenda(kicker,
+            j === 0 ? `${m.sub}: ${fmt(m.n)} faixas de ${m.nomeMacro}. Daqui até ${fim.sub}, do outro lado do mapa, ouça a banda mudar a cada passo.`
+              : m === fim ? `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}: o outro lado. ${trilha.join(' → ')}.`
+                : m === m1 ? `${m.sub}: ${fmt(m.n)} faixas, o lugar mais povoado do mapa. ${pct(D.porMacro[m.macro] / D.N)}% de todas as faixas são ${m.nomeMacro}.`
+                  : antes && antes.macro !== m.macro ? `${m.sub}, ${fmt(m.n)} faixas: aqui ${antes.nomeMacro} vira ${m.nomeMacro}.`
+                    : `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}, no caminho.`);
+          if (m !== fim) await espera(j === 0 || m === m1 ? 1000 : 350);
+        }
       } },
-      { id: 'raridades', dur: 9, async fn() {
+      { id: 'raridades', dur: 8, async fn() {
         const [r1, r2] = D.raros;
         if (!r1) { legenda('raridades', `${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`); return; }
         const z1 = zoomDoRotulo(r1.n);
@@ -216,7 +255,7 @@
         await irPara(r2.x, alvoY(r2, z2), z2);
         legenda(`raridade · ${r2.sub}`, `${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`);
       } },
-      { id: 'fusoes', dur: 9, async fn() {
+      { id: 'fusoes', dur: 8, async fn() {
         if (!D.fus.length) { legenda('fusões', 'Entre as regiões ficam as pontes, onde um gênero encosta no outro.'); return; }
         for (const [j, f] of D.fus.entries()) {
           const z = Math.min(8, zoomDoRotulo(f.n));
@@ -225,21 +264,21 @@
           if (j === 0) await espera(2200);
         }
       } },
-      { id: 'som-generos', dur: 9, async fn() {
+      { id: 'som-generos', dur: 8, async fn() {
         at.enquadrarTudo(!run.rapido);
         await espera(500);
         await clicar(document.querySelector('[data-mapa="rotulos"]'));
         legenda('gêneros', 'No mapa Gêneros, a posição vem só dos rótulos que o modelo deu: os grupos ficam limpos, mas repetem o rótulo.');
-        await espera(2300);
+        await espera(2000);
         await clicar(document.querySelector('[data-mapa="som"]'));
         legenda('som', 'No mapa Som, vem do áudio: o que soa parecido fica junto, tenha o rótulo que tiver.');
         esconderPonteiro(); focar(null);
         await espera(1000);
-        if (!run.rapido && !reduzMovimento && at.girarVista(0.9, -0.35, 2800)) {
+        if (!run.rapido && !reduzMovimento && at.girarVista(0.9, -0.35, 2600)) {
           legenda('3D', 'O mapa também tem profundidade: arraste com o botão direito, ou ligue o ⟳, para girar.');
         }
       } },
-      { id: 'grafo', dur: 9, async fn() {
+      { id: 'grafo', dur: 8, async fn() {
         at.fecharCartao();
         at.enquadrarTudo(false);
         await clicar($('btn-grafo'));
@@ -251,7 +290,7 @@
         if (no && !run.rapido && comPonteiro()) await moverPonteiro({ left: no.x, top: no.y, width: 0, height: 0 });
         await at.abrirGrafo(nome);
         focar($('grafo-painel'));
-        legenda(`grafo · ${nome}`, `${nome}, ligado aos artistas que mais soam como ele. Os mais longe do centro ficam mais apagados.`);
+        legenda(`grafo · ${nome}`, `No centro, ${nome}; em volta, os artistas que mais soam parecido. Os mais longe ficam mais apagados.`);
         await espera(2300);
         const viz = $('grafo-parecidos-lista')?.querySelector('button');
         if (!viz) return;

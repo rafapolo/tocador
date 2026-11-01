@@ -74,14 +74,14 @@ test('✕ esc também encerra', async ({ page }) => {
 });
 
 test('?tour=1 começa sozinho e sai do endereço; &t= começa na cena daquele segundo', async ({ page }) => {
-  await boot(page, '/atlas?tour=1&t=40&acervo=uqt');
+  await boot(page, '/atlas?tour=1&t=42&acervo=uqt');
   await expect.poll(async () => (await tour(page)).cena).toBe('som-generos');
   const u = new URL(page.url());
   expect(u.searchParams.has('tour')).toBe(false);
   expect(u.searchParams.has('t')).toBe(false);
   const t = (await tour(page)).t;
-  expect(t).toBeGreaterThanOrEqual(39);
-  expect(t).toBeLessThan(43);
+  expect(t).toBeGreaterThanOrEqual(41);
+  expect(t).toBeLessThan(45);
   // depois do Esc o acervo do endereço volta
   await page.keyboard.press('Escape');
   await page.waitForTimeout(500);
@@ -129,4 +129,15 @@ test('a câmera nunca fica parada mais de 8 s no mesmo lugar (aqui, abertura e S
     return maior;
   });
   expect(parada).toBeLessThan(8000);
+});
+
+test('a travessia vai de uma ponta à outra do mapa, de um macro-gênero a outro, parando nos lugares do caminho', async ({ page }) => {
+  await boot(page);
+  const T = await page.evaluate(() => window.__atlasTour.dados().trav);
+  test.skip(!T, 'o mapa de teste não tem lugares grandes o bastante');
+  expect(T.length).toBeGreaterThanOrEqual(2);
+  expect(T[0].macro).not.toBe(T[T.length - 1].macro);
+  const d = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
+  // as paradas vão se afastando do começo, em ordem
+  for (let j = 1; j < T.length; j++) expect(d(T[j], T[0])).toBeGreaterThan(d(T[j - 1], T[0]) - 0.05);
 });

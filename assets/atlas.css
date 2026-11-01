@@ -222,7 +222,7 @@ button { font: inherit; color: inherit; }
   #btn-musica span, #btn-sobre span { display: none; }
   /* A linha dos filtros já está cheia: o ? usa a sobra ao lado de Som/Gêneros. */
   #controles > .seg:first-child { order: -2; }
-  #controles > .seg-sobre { order: -1; }
+  #controles > .seg-sobre, #controles > .seg:has(#btn-tour) { order: -1; }
   #ajuda { display: none; }
   #legenda { max-width: calc(100% - 96px); }
   #legenda[open] { max-height: 52dvh; overflow: auto; }
@@ -396,7 +396,13 @@ button { font: inherit; color: inherit; }
   background: transparent; border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 .em-tour #visor-som canvas { height: 38px; }
-@media (max-width: 720px) { .em-tour #visor-som { display: block; } .em-tour #visor-som canvas { height: 30px; } }
+/* No celular o ✕ esc ocupa a direita da barra: o visor fica à esquerda e usa o resto da largura, sem cortar a legenda. */
+@media (max-width: 720px) {
+  .em-tour #visor-som { display: block; left: 12px; width: calc(100% - 124px); transform: translate(0, 8px); }
+  .em-tour #visor-som.ativo { transform: none; }
+  .em-tour #visor-som canvas { height: 30px; }
+  .em-tour #visor-som p { text-align: left; }
+}
 #tour-kicker {
   display: inline-block; padding: 3px 10px; margin-bottom: 8px !important; border-radius: 10px;
   background: var(--glass); color: var(--accent); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;

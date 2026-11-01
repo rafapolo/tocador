@@ -21,20 +21,20 @@ const EX_BINS = 24;
 // `busca`: outras palavras que a busca do painel aceita para a característica.
 const EX_GRUPOS = [
   ['Ritmo', true, [
-    { k: 'bpm', nome: 'Andamento', min: 40, max: 200, step: 1, un: ' bpm', busca: 'bpm tempo velocidade rapido lento' },
-    { k: 'dance', nome: 'Dançabilidade', min: 0, max: 100, step: 1, un: '%', busca: 'dancar dancante' },
-    { k: 'party', nome: 'Festa', min: 0, max: 100, step: 1, un: '%', busca: 'animado' },
+    { k: 'bpm', nome: 'Andamento', min: 40, max: 200, step: 1, un: ' bpm', pontas: ['lenta', 'rápida'], busca: 'bpm tempo velocidade rapido lento' },
+    { k: 'dance', nome: 'Dançabilidade', min: 0, max: 100, step: 1, un: '%', pontas: ['parada', 'dançante'], busca: 'dancar dancante' },
+    { k: 'party', nome: 'Festa', min: 0, max: 100, step: 1, un: '%', pontas: ['contida', 'festeira'], busca: 'animado' },
   ]],
   ['Clima', true, [
-    { k: 'happy', nome: 'Alegre', min: 0, max: 100, step: 1, un: '%', busca: 'feliz humor' },
-    { k: 'sad', nome: 'Triste', min: 0, max: 100, step: 1, un: '%', busca: 'melancolico humor' },
-    { k: 'relaxed', nome: 'Relaxante', min: 0, max: 100, step: 1, un: '%', busca: 'calmo tranquilo humor' },
-    { k: 'aggressive', nome: 'Agressivo', min: 0, max: 100, step: 1, un: '%', busca: 'pesado raiva humor' },
+    { k: 'happy', nome: 'Alegre', min: 0, max: 100, step: 1, un: '%', pontas: ['neutra', 'alegre'], busca: 'feliz humor' },
+    { k: 'sad', nome: 'Triste', min: 0, max: 100, step: 1, un: '%', pontas: ['neutra', 'triste'], busca: 'melancolico humor' },
+    { k: 'relaxed', nome: 'Relaxante', min: 0, max: 100, step: 1, un: '%', pontas: ['agitada', 'calma'], busca: 'calmo tranquilo humor' },
+    { k: 'aggressive', nome: 'Agressivo', min: 0, max: 100, step: 1, un: '%', pontas: ['suave', 'pesada'], busca: 'pesado raiva humor' },
   ]],
   ['Timbre', true, [
     { k: 'voice', nome: 'Voz', voz: true, busca: 'vocal cantada instrumental' },
-    { k: 'acoustic', nome: 'Acústico', min: 0, max: 100, step: 1, un: '%', busca: 'acustico' },
-    { k: 'electronic', nome: 'Eletrônico', min: 0, max: 100, step: 1, un: '%', busca: 'eletronico sintetizador' },
+    { k: 'acoustic', nome: 'Acústico', min: 0, max: 100, step: 1, un: '%', pontas: ['elétrica', 'acústica'], busca: 'acustico' },
+    { k: 'electronic', nome: 'Eletrônico', min: 0, max: 100, step: 1, un: '%', pontas: ['orgânica', 'eletrônica'], busca: 'eletronico sintetizador' },
   ]],
 ];
 const EX_PROBS = ['voice', 'dance', 'acoustic', 'electronic', 'happy', 'sad', 'relaxed', 'aggressive', 'party'];
@@ -270,7 +270,7 @@ function _exSlider(d) {
   const med = todos.length ? _exMediana(todos) : null;
 
   const sec = _exEl('div', 'ex-feat');
-  sec.dataset.busca = `${d.nome} ${d.busca || ''}`;
+  sec.dataset.busca = `${d.nome} ${d.busca || ''} ${(d.pontas || []).join(' ')}`;
   const head = _exEl('div', 'ex-feat-head');
   head.append(_exEl('span', 'ex-feat-nome', d.nome));
   const out = _exEl('span', 'ex-feat-out', 'qualquer');
@@ -319,7 +319,12 @@ function _exSlider(d) {
   for (const r of [lo, hi]) { r.addEventListener('input', () => mudou(r)); r.addEventListener('keydown', teclas); }
   wrap.append(_exEl('div', 'ex-track'), lo, hi);
   sec.append(head, hist, wrap);
-  if (med !== null) sec.append(_exEl('div', 'ex-feat-med', `mediana ${Math.round(med)}${d.un}`));
+  // Pontas da régua: dizem para que lado arrastar ("lenta ↔ rápida"), com a mediana no meio.
+  const pe = _exEl('div', 'ex-pontas');
+  pe.append(_exEl('span', null, d.pontas?.[0] ?? ''),
+    _exEl('span', 'ex-feat-med', med !== null ? `mediana ${Math.round(med)}${d.un}` : ''),
+    _exEl('span', null, d.pontas?.[1] ?? ''));
+  sec.append(pe);
   _exCtl[d.k] = { lo, hi, out, reset, hist, d };
   return sec;
 }
