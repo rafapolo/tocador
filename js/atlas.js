@@ -1,7 +1,8 @@
 // atlas.js — /atlas: every uqt + homi track as a point on a 2D map (WebGL), with zoom/pan, pinch,
 // search, genre/acervo filters and a card that links to the player.
 // Classic script, loaded after acervo-format.js (decodeAcervo, albumSlugs), util.js (fold) and
-// atlas-data.js (decodeAtlas, atlasKeyHash), atlas-grafo.js (criarGrafoAtlas). Catalog text only ever
+// atlas-data.js (decodeAtlas, atlasKeyHash), atlas-grafo.js (criarGrafoAtlas), acervo-features.js (decodeFeatures),
+// atlas-som.js (criarSomAtlas). Catalog text only ever
 // reaches the page via textContent.
 (function () {
   'use strict';
@@ -49,6 +50,7 @@
   let sel = -1, hover = -1;
   const cat = {};                 // acervo -> { db, slugs }
   let ptAlb = null, ptTr = null;  // point -> album / track index in its catalog
+  let ptFila = null;              // point -> its row in <acervo>-features.json.gz, the catalog's track order
   let textos = null;              // point -> folded search text (built on first search)
   let ligado = false;             // catalogs linked to the points
 
@@ -150,6 +152,11 @@
     const artista = !exato || fold(exato) === fold(nome) ? nome : exato;
     return `${APP_ROOT}?${new URLSearchParams({ acervo: ak, artista })}`;
   }
+  function albunsDe(nome) {
+    if (!ligado) return 0;
+    porArtista ??= indexarArtistas();
+    return porArtista.get(chaveArtista(nome))?.length ?? 0;
+  }
   function capasDe(nome) {
     if (!ligado) return [];
     porArtista ??= indexarArtistas();
@@ -174,14 +181,17 @@
     for (let i = 0; i < N; i++) porHash[A.acervo[i]].set(A.hash[i], i);
     ptAlb = new Int32Array(N).fill(-1);
     ptTr = new Int32Array(N);
+    ptFila = new Int32Array(N).fill(-1);
     let falhou = 0;
     res.forEach((r, ai) => {
       if (r.status !== 'fulfilled') { falhou++; return; }
       const ak = A.acervos[ai], db = decodeAcervo(r.value), m = porHash[ai];
       cat[ak] = { db, slugs: null };
+      let fila = 0;
       db.albums.forEach((album, bi) => album.tracks.forEach((tr, ti) => {
         const i = m.get(atlasKeyHash(`${album.path}/${tr.file}`.normalize('NFC')));
-        if (i !== undefined) { ptAlb[i] = bi; ptTr[i] = ti; }
+        if (i !== undefined) { ptAlb[i] = bi; ptTr[i] = ti; ptFila[i] = fila; }
+        fila++;
       }));
     });
     ligado = true;
@@ -303,7 +313,8 @@
   }
   const telaX = x => W / 2 + (x - cx) * k;
   const telaY = y => H / 2 - (y - cy) * k;
-  const margemTopo = () => (mobile() ? 140 : 100);
+  let topoBaixo = 100;            // where the top bar ends: one line or two, depending on the width
+  const margemTopo = () => topoBaixo;
   const margemBase = () => (mobile() ? 60 : 30);
 
   function caixa(m, filtroIdx, lo = 0.003, hi = 0.997, projetar = false) {
@@ -402,6 +413,7 @@
     gl.drawArrays(gl.POINTS, 0, N);
     posicionarAnel($('anel-sel'), sel);
     posicionarAnel($('anel-hover'), hover !== sel ? hover : -1);
+    som?.mexeu();
     const comNomes = desenharFaixas();
     desenharMarcos(comNomes);
     if (mais) pedir();
@@ -541,6 +553,131 @@
     return melhor;
   }
 
+  // ── what the music hears: js/atlas-som.js asks these two ──
+  // Every lit point on screen, with its screen position. The grid when flat; rotated, a plain pass (no
+  // allocation per point, so 80k of them every 200 ms stay well under a millisecond or two).
+  function paraCadaVisivel(fn, margem = 0) {
+    const m = mapa, x0 = -margem, x1 = W + margem, y0 = -margem, y1 = H + margem;
+    if (girado()) {
+      const P = A.pos[m], Z = A.posZ[m];
+      for (let i = 0; i < N; i++) {
+        if (!ativo[i]) continue;
+        const X = P[2 * i] / 65535 - piv[0], Y = P[2 * i + 1] / 65535 - piv[1], Zz = (Z ? Z[i] / 65535 : 0.5) - piv[2];
+        const x = telaX(M[0] * X + M[1] * Y + M[2] * Zz + piv[0]), y = telaY(M[3] * X + M[4] * Y + M[5] * Zz + piv[1]);
+        if (x >= x0 && x <= x1 && y >= y0 && y <= y1) fn(i, x, y);
+      }
+      return;
+    }
+    if (!grade || grade.m !== m) montarGrade();
+    const gx0 = Math.max(0, Math.floor((cx - W / 2 / k) * G)), gx1 = Math.min(G - 1, Math.floor((cx + W / 2 / k) * G));
+    const gy0 = Math.max(0, Math.floor((cy - H / 2 / k) * G)), gy1 = Math.min(G - 1, Math.floor((cy + H / 2 / k) * G));
+    for (let gx = gx0; gx <= gx1; gx++) for (let gy = gy0; gy <= gy1; gy++) {
+      const c = gx * G + gy;
+      for (let j = grade.cont[c]; j < grade.cont[c + 1]; j++) {
+        const i = grade.idx[j];
+        if (!ativo[i]) continue;
+        const x = telaX(px(i, m)), y = telaY(py(i, m));
+        if (x >= x0 && x <= x1 && y >= y0 && y <= y1) fn(i, x, y);
+      }
+    }
+  }
+
+  // Per-track audio features, fetched only once the music starts. Rows are the catalog's tracks in order, and
+  // a catalog that changed after the features were built is refused: the music then plays the plain recipes.
+  const feats = [];
+  async function carregarFeaturesSom() {
+    await prontoP;
+    await Promise.allSettled(A.acervos.map(async (ak, ai) => {
+      const db = cat[ak]?.db;
+      if (!db) return;
+      const nome = `data/${ak}-features.json.gz`;
+      const p = await fetchJsonGz(APP_ROOT + nome).catch(() => fetchJsonGz('https://tocador.cc/' + nome));
+      const chaves = [];
+      for (const a of db.albums) for (const tr of a.tracks) chaves.push(`${a.path}/${tr.file}`.normalize('NFC'));
+      feats[ai] = decodeFeatures(p, chaves);
+      for (const v of feats[ai].tom) if (v) SOM_TOM_TODAS[v - 1]++;
+    }));
+  }
+
+  const SOM_BPM = new Float32Array(260), SOM_TOM = new Float32Array(24);
+  // Key detection leans to a few keys, C major first, so the commonest key on screen is C nearly everywhere.
+  // A region's key is the one it has more of than the whole archive does; a broad view has none, and keeps
+  // the family's own.
+  const SOM_TOM_TODAS = new Float32Array(24);
+  function tomDaRegiao() {
+    const soma = SOM_TOM.reduce((a, b) => a + b, 0), todas = SOM_TOM_TODAS.reduce((a, b) => a + b, 0);
+    if (!soma || !todas) return {};
+    let melhor = -1, destaque = 1.3, menor = 0, menorTodas = 0;
+    for (let j = 0; j < 24; j++) {
+      const parte = SOM_TOM[j] / soma, d = parte / (SOM_TOM_TODAS[j] / todas || 1);
+      if (parte >= 0.06 && d > destaque) { destaque = d; melhor = j; }
+      if (j & 1) { menor += SOM_TOM[j]; menorTodas += SOM_TOM_TODAS[j]; }
+    }
+    return { tonica: melhor < 0 ? undefined : melhor >> 1, modo: menor / soma > menorTodas / todas ? 'menor' : 'maior' };
+  }
+  let somG = null, somX = null, somIdx = null, somCam = null;
+  // What the camera looks at: weight per genre (the nearer the center the more it counts), where each sits on
+  // screen, and, with the features in, the median tempo, the commonest key and the mood of those same tracks.
+  function regiaoSom() {
+    if (!A || t !== tAlvo) return null;
+    somG ??= new Float32Array(A.generos.length);
+    somX ??= new Float32Array(A.generos.length);
+    somG.fill(0); somX.fill(0);
+    const agora = performance.now();
+    let z = k / k0, tempero = null;
+    if (grafo.aberto) {
+      // A centered graph plays the artist's genre with a little of each neighbour's; the overview, only the bed.
+      somIdx ??= new Map(A.generos.map((g, i) => [g, i]));
+      const lista = grafo.generosCentro();
+      z = lista ? 12 : 1;
+      if (lista) for (const [g, w] of lista) { const i = somIdx.get(g); if (i !== undefined) { somG[i] += w; somX[i] += w * W / 2; } }
+    } else {
+      // Tight: there is more screen at the edges than at the center, and a wide kernel lets it outvote the sights.
+      const r2 = (Math.min(W, H) * 0.25) ** 2;
+      SOM_BPM.fill(0); SOM_TOM.fill(0);
+      let somaF = 0, dance = 0, acoustic = 0, electronic = 0;
+      const comFeats = feats.length > 0 && ptFila;
+      paraCadaVisivel((i, x, y) => {
+        const w = Math.exp(-((x - W / 2) ** 2 + (y - H / 2) ** 2) / r2), g = A.genero[i];
+        somG[g] += w; somX[g] += w * x;
+        const f = comFeats && feats[A.acervo[i]], r = f ? ptFila[i] : -1;
+        if (r < 0 || !f.bpm[r]) return;
+        SOM_BPM[Math.min(259, f.bpm[r])] += w;
+        if (f.tom[r]) SOM_TOM[f.tom[r] - 1] += w;
+        somaF += w; dance += w * (f.dance[r] + f.party[r]) / 510;
+        acoustic += w * f.acoustic[r] / 255; electronic += w * f.electronic[r] / 255;
+      });
+      if (somaF > 0) {
+        let acc = 0, bpm = 0;
+        while (bpm < 259 && (acc += SOM_BPM[bpm]) < somaF / 2) bpm++;
+        tempero = { bpm, ...tomDaRegiao(), densidade: 0.45 + 0.8 * dance / somaF, brilho: 1 + 0.6 * (electronic - acoustic) / somaF };
+      }
+    }
+    const antes = somCam, seg = antes ? Math.max(0.05, (agora - antes.t) / 1000) : 1;
+    somCam = { t: agora, cx, cy, k, yaw, pitch };
+    const velocidade = !antes ? 0 : (Math.hypot(cx - antes.cx, cy - antes.cy) * k + Math.abs(Math.log(k / antes.k)) * 800
+      + (Math.abs(yaw - antes.yaw) + Math.abs(pitch - antes.pitch)) * 400) / seg / 1500;
+    const l = Math.floor(Math.log2(Math.max(1, k / k0))) + 2;
+    return { pesos: somG, somaX: somX, largura: W, z, giro: Math.min(1, (Math.abs(yaw % Math.PI) + Math.abs(pitch)) / 1.45), velocidade,
+      semente: 1 + (Math.floor(cx * 2 ** l) * 7919 + Math.floor(cy * 2 ** l) * 104729 + l) % 2147483629, tempero };
+  }
+
+  // Close up, each dot rings once as it crosses the sights, in the middle of the screen.
+  const naMira = new Set();
+  function miraSom() {
+    if (!A || grafo.aberto || t !== tAlvo || k / k0 < 10) { naMira.clear(); return null; }
+    const R = 26, aqui = new Set(), novos = [];
+    paraCadaVisivel((i, x, y) => {
+      const d = Math.hypot(x - W / 2, y - H / 2);
+      if (d > R) return;
+      aqui.add(i);
+      if (!naMira.has(i) && novos.length < 3) novos.push([A.hash[i], A.genero[i], (x / W - 0.5) * 1.5, 0.75 - 0.35 * d / R]);
+    });
+    naMira.clear();
+    for (const i of aqui) naMira.add(i);
+    return novos;
+  }
+
   // ── filters ──
   function recalcular() {
     const ak = filtro.acervo === 'todos' ? -1 : A.acervos.indexOf(filtro.acervo);
@@ -597,6 +734,7 @@
   // ── card ──
   function selecionar(i) {
     sel = i;
+    som?.tap([4]);
     const info = infoDe(i);
     const g = A.generos[A.genero[i]];
     const cartao = $('cartao');
@@ -681,6 +819,7 @@
     estadoPrevia(true);
   });
   audio.addEventListener('ended', pararPrevia);
+  window.anunciarSom?.(audio);    // another tab of this map keeps quiet too
 
   // ── tooltip (mouse only) ──
   const dica = $('dica');
@@ -853,6 +992,7 @@
     } else enquadrarTudo(animar);
     grafo.redesenhar();
     salvarUrl(true);
+    if (!restaurando) som?.tap([0, 7], 0.5);
   }
   document.querySelectorAll('[data-mapa]').forEach(b => b.addEventListener('click', () => trocarMapa(b.dataset.mapa)));
 
@@ -862,6 +1002,7 @@
     recalcular();
     grafo.redesenhar();
     salvarUrl(true);
+    if (!restaurando) som?.tap([7], 0.5);
   }
   document.querySelectorAll('[data-acervo]').forEach(b => b.addEventListener('click', () => trocarAcervo(b.dataset.acervo)));
 
@@ -882,6 +1023,7 @@
         filtro.off.has(j) ? filtro.off.delete(j) : filtro.off.add(j);
         if (filtro.off.size === itens.length) filtro.off.clear();
         sincronizarLegenda(); recalcular(); salvarUrl(true);
+        som?.tap(filtro.off.has(j) ? [0] : [7], 0.5);
       });
       b.addEventListener('dblclick', () => {
         filtro.off = new Set(itens.map(x => x[0]).filter(x => x !== j));
@@ -920,6 +1062,7 @@
       case '/': e.preventDefault(); $('busca').focus(); break;
       case 'Escape': if (grafo.aberto) grafo.fechar(); else if (sel >= 0) { fecharCartao(); salvarUrl(true); } break;
       case 'g': case 'G': alternarGrafo(); break;
+      case 'm': case 'M': som?.alternar(); break;
       case '+': case '=': voar(cx, cy, k * 1.5); break;
       case '-': case '_': voar(cx, cy, k / 1.5); break;
       case '0': enquadrarTudo(); break;
@@ -1003,9 +1146,10 @@
     corDe: g => MACROS.find(m => m[0] === macroDe(g))?.[2] || COR_OUTROS,
     rotuloGenero: g => `${subDe(g)} · ${nomeMacro(macroDe(g))}`,
     capasDe,
+    albunsDe,
     urlArtista,
     avisar: texto => { $('contagem').textContent = texto; },
-    aoMudar: () => { atualizarContagem(); salvarUrl(true); },
+    aoMudar: () => { atualizarContagem(); salvarUrl(true); if (grafo.centro) som?.momento([0, 7], 0.4); },
     aoSair: irParaArtista,
   });
   // An artist or album has no point of its own: its tracks sit in the same region of the map, so the most
@@ -1046,6 +1190,7 @@
   function abrirGrafo(nome) {
     if (audio.paused) fecharCartao();
     grafo.abrir(nome);
+    som?.momento();
   }
   function alternarGrafo() {
     if (grafo.aberto) {             // the toggle goes back to the whole map; Esc goes to the artist's dot
@@ -1059,9 +1204,19 @@
   }
   $('btn-grafo').addEventListener('click', alternarGrafo);
 
+  // ── music ──
+  let som = null;
+  function iniciarSom() {
+    som = criarSomAtlas({
+      generos: A.generos, regiao: regiaoSom, mira: miraSom, previa: audio, pararPrevia, botao: $('btn-musica'),
+      aoPrimeiroSom: () => { carregarFeaturesSom().catch(err => console.warn('[atlas] sem features para a música', err)); },
+    });
+  }
+
   // ── size ──
   function medir() {
     const r = canvas.getBoundingClientRect();
+    topoBaixo = $('topo').getBoundingClientRect().bottom + 8;
     const novoW = Math.max(1, r.width), novoH = Math.max(1, r.height);
     dpr = Math.min(2, window.devicePixelRatio || 1);
     const primeiro = W === 1 && H === 1;
@@ -1087,6 +1242,7 @@
     canvas.addEventListener('webglcontextlost', e => e.preventDefault());
     canvas.addEventListener('webglcontextrestored', () => { iniciarGL(); enviarAtivo(); pedir(); });
 
+    iniciarSom();
     montarLegenda();
     if (params.get('mapa') === 'rotulos') { mapa = 'rotulos'; t = tAlvo = 1; document.querySelectorAll('[data-mapa]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mapa === 'rotulos'))); }
     atualizarBtnGirar();
@@ -1097,7 +1253,9 @@
     sincronizarLegenda();
     W = H = 1;
     medir();
-    new ResizeObserver(medir).observe(canvas);
+    const ro = new ResizeObserver(medir);
+    ro.observe(canvas);
+    ro.observe($('topo'));          // the bar wraps when its count text grows, not only with the window
     atualizarContagem();
     if (params.get('grafo')) semHistorico(() => grafo.abrir(params.get('artista')));
     window.addEventListener('popstate', aplicarUrl);
@@ -1122,6 +1280,7 @@
     estado() { return { k, k0, cx, cy, mapa, t, nAtivo, n: N, sel, yaw, pitch, tem3d: !!A.posZ[mapa], girar: modoGirar }; },
     grafo: () => grafo.estado(),
     grafoTudo: nome => grafo.noTudo(nome),
+    som: () => som && { ...som.estado(), features: feats.filter(Boolean).length },
   };
 
   iniciar();

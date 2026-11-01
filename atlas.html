@@ -31,6 +31,10 @@
   <script src="js/util.js" defer></script>
   <script src="js/atlas-data.js" defer></script>
   <script src="js/atlas-grafo.js" defer></script>
+  <script src="js/acervo-features.js" defer></script>
+  <script src="js/som-abas.js" defer></script>
+  <script src="js/atlas-receitas.js" defer></script>
+  <script src="js/atlas-som.js" defer></script>
   <script src="js/atlas.js" defer></script>
 </head>
 <body>
@@ -42,6 +46,7 @@
   <symbol id="i-acervo" viewBox="0 0 24 24"><path d="M3.5 4.5h17v5h-17z"/><path d="M5 9.5V19.5h14V9.5"/><path d="M10 13.5h4"/></symbol>
   <symbol id="i-grafo" viewBox="0 0 24 24"><path d="m12 12-7-6M12 12l7-5M12 12l5 7"/><circle cx="12" cy="12" r="2.6"/><circle cx="5" cy="6" r="1.9"/><circle cx="19" cy="7" r="1.9"/><circle cx="17" cy="19" r="1.9"/></symbol>
   <symbol id="i-girar" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 3.5v4.8h-4.8"/></symbol>
+  <symbol id="i-musica" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></symbol>
   <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-menos" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
   <symbol id="i-inicio" viewBox="0 0 24 24"><path d="m3.5 11 8.5-7 8.5 7"/><path d="M6 9.5V20h12V9.5"/></symbol>
@@ -63,6 +68,7 @@
     <p id="grafo-genero" hidden><span class="ponto"></span><span id="grafo-genero-nome"></span></p>
     <h2 id="grafo-titulo"></h2>
     <p id="grafo-detalhe"></p>
+    <p id="grafo-album" hidden></p>
     <div id="grafo-capas" hidden></div>
     <a id="grafo-ouvir" class="botao" href="./" hidden>♪ no tocador</a>
   </div>
@@ -76,22 +82,25 @@
       <button id="busca-limpar" type="button" aria-label="Limpar busca" hidden><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
     </div>
     <p id="contagem" role="status" aria-live="polite"></p>
+    <nav id="controles" aria-label="Opções do mapa">
+      <div class="seg" role="group" aria-label="Posição dos pontos">
+        <button type="button" data-mapa="som" aria-pressed="true" title="Posição pelo som (embedding de áudio)"><svg class="ic" aria-hidden="true"><use href="#i-som"/></svg>Som</button>
+        <button type="button" data-mapa="rotulos" aria-pressed="false" title="Posição pelos rótulos de gênero"><svg class="ic" aria-hidden="true"><use href="#i-genero"/></svg>Gêneros</button>
+      </div>
+      <div class="seg" role="group" aria-label="Acervo">
+        <button type="button" data-acervo="todos" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-todos"/></svg>Todos</button>
+        <button type="button" data-acervo="uqt" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-acervo"/></svg>UQT</button>
+        <button type="button" data-acervo="homi" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-acervo"/></svg>Homi</button>
+      </div>
+      <div class="seg" role="group" aria-label="Visualização">
+        <button id="btn-grafo" type="button" aria-pressed="false" title="Ver artistas parecidos como grafo (G)"><svg class="ic" aria-hidden="true"><use href="#i-grafo"/></svg>Grafo</button>
+      </div>
+      <div class="seg" role="group" aria-label="Som">
+        <button id="btn-musica" type="button" aria-pressed="true" aria-label="Música do mapa"><svg class="ic" aria-hidden="true"><use href="#i-musica"/></svg><span>Música</span></button>
+      </div>
+    </nav>
   </header>
 
-  <nav id="controles" aria-label="Opções do mapa">
-    <div class="seg" role="group" aria-label="Posição dos pontos">
-      <button type="button" data-mapa="som" aria-pressed="true" title="Posição pelo som (embedding de áudio)"><svg class="ic" aria-hidden="true"><use href="#i-som"/></svg>Som</button>
-      <button type="button" data-mapa="rotulos" aria-pressed="false" title="Posição pelos rótulos de gênero"><svg class="ic" aria-hidden="true"><use href="#i-genero"/></svg>Gêneros</button>
-    </div>
-    <div class="seg" role="group" aria-label="Acervo">
-      <button type="button" data-acervo="todos" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-todos"/></svg>Todos</button>
-      <button type="button" data-acervo="uqt" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-acervo"/></svg>UQT</button>
-      <button type="button" data-acervo="homi" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-acervo"/></svg>Homi</button>
-    </div>
-    <div class="seg" role="group" aria-label="Visualização">
-      <button id="btn-grafo" type="button" aria-pressed="false" title="Ver artistas parecidos como grafo (G)"><svg class="ic" aria-hidden="true"><use href="#i-grafo"/></svg>Grafo</button>
-    </div>
-  </nav>
 
   <details id="legenda">
     <summary>Gêneros</summary>
@@ -126,7 +135,7 @@
     <div id="cartao-progresso" hidden><span></span></div>
   </section>
 
-  <p id="ajuda">arraste para navegar · role para zoom · botão direito (ou o botão girar) gira em 3D · clique numa faixa</p>
+  <p id="ajuda">arraste para navegar · role para zoom · botão direito (ou o botão girar) gira em 3D · clique numa faixa · M liga ou desliga a música</p>
 
   <div id="carregando" role="status">
     <p>Atlas</p>

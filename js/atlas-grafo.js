@@ -28,7 +28,7 @@
   const suave = p => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
   const fmt = n => n.toLocaleString('pt-BR');
 
-  function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, capasDe, urlArtista, aoMudar, aoSair, avisar }) {
+  function criarGrafoAtlas({ raiz, fetchJsonGz, mapa, acervo, corDe, rotuloGenero, capasDe, albunsDe, urlArtista, aoMudar, aoSair, avisar }) {
     const $ = id => document.getElementById(id);
     const camada = $('grafo'), svg = $('grafo-svg'), mundo = $('grafo-mundo');
     const gArestas = $('grafo-arestas'), gNos = $('grafo-nos'), btn = $('btn-grafo');
@@ -539,11 +539,12 @@
         $('grafo-genero').querySelector('.ponto').style.background = corDe(g);
         $('grafo-genero-nome').textContent = rotuloGenero(g);
       }
+      const albuns = nome ? albunsDe(nome) : 0;
       $('grafo-detalhe').textContent = centro >= 0
-        ? `${fmt(D.faixas[centro])} faixas · ligações ${base}. Arraste para girar.`
+        ? `${albuns ? `${fmt(albuns)} ${albuns === 1 ? 'álbum' : 'álbuns'} · ` : ''}${fmt(D.faixas[centro])} faixas · ligações ${base}.`
         : emTudo()
-          ? `Todos os artistas com 3 ou mais faixas, ligados ${base}. Escolha um ponto para ver quem está perto; arraste para girar e role para aproximar.`
-          : `Artistas ligados ${base}. Escolha um para ver quem está perto dele; arraste para girar.`;
+          ? `Todos os artistas com 3 ou mais faixas, ligados ${base}. Escolha um ponto para ver quem está perto.`
+          : `Artistas ligados ${base}. Escolha um para ver quem está perto dele.`;
       desenharCapas(nome);
       const noPlayer = nome && urlArtista(nome, D.acervos[D.acervo[centro]]);
       $('grafo-ouvir').hidden = !noPlayer;
@@ -565,11 +566,21 @@
         a.title = c.titulo;
         a.setAttribute('aria-label', `Abrir ${c.titulo} no tocador`);
         img.src = c.src; img.alt = ''; img.width = img.height = 56; img.loading = 'lazy';
-        img.addEventListener('error', () => { a.remove(); caixa.hidden = !caixa.children.length; });
+        img.addEventListener('error', () => { a.remove(); caixa.hidden = !caixa.children.length; umAlbum(); });
         a.append(img);
         return a;
       }));
       caixa.hidden = !capas.length;
+      umAlbum();
+    }
+
+    // One cover only: the panel takes the layout of #cartao (cover on the left, text beside it).
+    function umAlbum() {
+      const caixa = $('grafo-capas'), so = !caixa.hidden && caixa.children.length === 1;
+      $('grafo-painel').classList.toggle('um-album', so);
+      const info = $('grafo-album');
+      info.hidden = !so;
+      info.textContent = so ? caixa.firstElementChild.title : '';
     }
 
     function aplicarVista() {
@@ -721,6 +732,8 @@
       abrir, fechar, buscar, parecidos, girar,
       get aberto() { return aberto; },
       get centro() { return D && centro >= 0 ? D.nomes[centro] : null; },
+      // [genre label, weight] of the centered artist and its nearest neighbours; null on the overview
+      generosCentro() { return D && centro >= 0 ? [[D.generos[D.genero[centro]], 1], ...[...viz(centro).subarray(0, 4)].map(j => [D.generos[D.genero[j]], 0.3])] : null; },
       redesenhar() { if (aberto && D) desenhar(); },
       atualizarPainel() { if (aberto && D) desenharPainel(); },   // the catalogs arrive after the graph on a direct link
       estado() { return { aberto, tudo: emTudo(), centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), arestas: arestas.length, yaw, pitch }; },

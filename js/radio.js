@@ -313,6 +313,7 @@ function stopHeartbeat() {
 }
 window.addEventListener('pagehide', stopHeartbeat);
 
+window.anunciarSom?.(audio);
 audio.addEventListener('play',    () => { setPlaying(true); tapOverlay.classList.remove('visible'); startHeartbeat(); });
 audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); stopHeartbeat(); });
 audio.addEventListener('playing', () => { clearLoadTimer(); timeoutStreak = 0; setLoading(false); });

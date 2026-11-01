@@ -64,7 +64,7 @@ button { font: inherit; color: inherit; }
 /* ── barra de topo ── */
 #topo {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;
-  display: flex; align-items: center; gap: var(--gap);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px var(--gap);
   padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
   background: linear-gradient(to bottom, rgba(15, 14, 12, 0.95), rgba(15, 14, 12, 0.6) 70%, transparent);
   pointer-events: none;
@@ -73,7 +73,7 @@ button { font: inherit; color: inherit; }
 #voltar { color: var(--text-2); text-decoration: none; font-size: 13px; white-space: nowrap; padding: 6px 2px; }
 #voltar:hover, #voltar:focus-visible { color: var(--accent); }
 #topo h1 { margin: 0; font: 600 22px/1 var(--serif); color: var(--accent); letter-spacing: 0.01em; }
-#busca-wrap { position: relative; flex: 0 1 340px; min-width: 0; }
+#busca-wrap { position: relative; flex: 1 1 140px; max-width: 420px; min-width: 0; }
 #busca {
   width: 100%; height: 36px; padding: 0 32px 0 12px; border-radius: 18px;
   border: 1px solid var(--border); background: rgba(26, 24, 20, 0.9); color: var(--text);
@@ -89,9 +89,15 @@ button { font: inherit; color: inherit; }
 #contagem { margin: 0; color: var(--text-2); font-size: 12.5px; white-space: nowrap; }
 
 /* ── controles ── */
-#controles {
-  position: absolute; z-index: 10; top: calc(58px + env(safe-area-inset-top, 0px)); left: 16px;
-  display: flex; gap: 8px; flex-wrap: wrap;
+/* Same bar as the search: identity and search on the left, what changes the view on the right. Under 1040 px they
+   take a line of their own; between that and 1280 px the labels that repeat themselves make room first. */
+#controles { display: flex; gap: 8px; flex: none; flex-wrap: wrap; margin-left: auto; }
+@media (max-width: 1279px) {
+  [data-acervo] .ic, [data-mapa] .ic, #btn-musica span { display: none; }
+}
+@media (max-width: 1039px) {
+  [data-acervo] .ic, [data-mapa] .ic { display: inline-block; }
+  #controles { flex: 1 1 100%; margin-left: 0; }
 }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--glass); }
 .seg button {
@@ -136,6 +142,7 @@ button { font: inherit; color: inherit; }
 #zoom button[hidden] { display: none; }
 #zoom-girar[aria-pressed="true"] { background: var(--text); color: var(--bg); }
 #zoom-girar[aria-pressed="true"]:hover { background: var(--text); }
+#btn-musica.espera { color: var(--accent); }
 
 /* ── cartão da faixa ── */
 #cartao {
@@ -188,9 +195,10 @@ button { font: inherit; color: inherit; }
   #voltar { font-size: 18px; padding: 4px 6px 4px 0; }
   #topo h1 { font-size: 20px; }
   #contagem { margin-left: auto; font-size: 12px; }
-  #busca-wrap { order: 3; flex: 1 1 100%; }
-  #controles { top: calc(96px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; }
+  #busca-wrap { order: 3; flex: 1 1 100%; max-width: none; }
+  #controles { order: 4; }
   .seg button { padding: 6px 11px; }
+  #btn-musica span { display: none; }
   #ajuda { display: none; }
   #legenda { max-width: calc(100% - 96px); }
   #legenda[open] { max-height: 52dvh; overflow: auto; }
@@ -265,7 +273,17 @@ button { font: inherit; color: inherit; }
 #grafo-capas a { display: block; width: 56px; height: 56px; border-radius: 6px; overflow: hidden; background: var(--surface-light); }
 #grafo-capas a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 #grafo-capas img { display: block; width: 100%; height: 100%; object-fit: cover; }
-#grafo-ouvir { margin-top: 10px; }
+#grafo-ouvir { display: flex; width: fit-content; margin: 10px 0 0 auto; }
+/* Um álbum só: mesmo desenho do #cartao (capa 72px à esquerda, texto ao lado, ação embaixo) */
+#grafo-album { margin: 2px 0 0; color: var(--text-2); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#grafo-album[hidden] { display: none; }
+#grafo-painel.um-album { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: start; }
+#grafo-painel.um-album > :not(#grafo-capas):not(#grafo-ouvir) { grid-column: 2; }
+#grafo-painel.um-album #grafo-capas { display: block; grid-column: 1; grid-row: 1 / span 4; margin: 0; max-height: none; overflow: visible; }
+#grafo-painel.um-album #grafo-capas a { width: 72px; height: 72px; }
+#grafo-painel.um-album #grafo-genero[hidden] { display: none; }
+#grafo-painel.um-album #grafo-titulo { margin: 2px 0; font-size: 16px; font-weight: 600; }
+#grafo-painel.um-album #grafo-ouvir { grid-column: 1 / -1; }
 #grafo-ouvir[hidden] { display: none; }
 .em-grafo #cartao-parecidos { display: none; }
 #grafo-titulo { margin: 0 0 4px; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
@@ -276,8 +294,10 @@ button { font: inherit; color: inherit; }
   #grafo-capas { display: flex; overflow-x: auto; overflow-y: hidden; max-height: none; }
   #grafo-capas a { flex: none; }
   #grafo-painel { left: 12px; right: 12px; width: auto; bottom: calc(12px + var(--safe-b)); }
+  #grafo-painel.um-album #grafo-capas a { width: 64px; height: 64px; }
   .em-grafo:has(#cartao:not([hidden])) #grafo-painel { bottom: calc(var(--cartao-alto, 0px) + 8px); padding: 8px 12px; }
-  .em-grafo:has(#cartao:not([hidden])) #grafo-detalhe, .em-grafo:has(#cartao:not([hidden])) #grafo-capas { display: none; }
+  .em-grafo:has(#cartao:not([hidden])) #grafo-detalhe, .em-grafo:has(#cartao:not([hidden])) #grafo-capas, .em-grafo:has(#cartao:not([hidden])) #grafo-album { display: none; }
+  .em-grafo:has(#cartao:not([hidden])) #grafo-painel.um-album { display: block; }
 }
 
 /* ── ícones dos botões (sprite em atlas.html) ── */

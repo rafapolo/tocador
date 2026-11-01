@@ -339,6 +339,7 @@ test('grafo: artista fora do grafo abre a visão geral e avisa', async ({ page }
 test('grafo: Som e Gêneros trocam as ligações sem fechar o grafo', async ({ page }) => {
   await boot(page, { url: '/atlas?grafo=1&artista=Delta' });
   await expect(page.locator('#grafo-detalhe')).toContainText('pelo som');
+  await expect(page.locator('#grafo-detalhe')).not.toContainText('rraste');
   await page.locator('[data-mapa="rotulos"]').click();
   await expect(page.locator('#grafo-detalhe')).toContainText('rótulos de gênero');
   expect((await grafo(page)).aberto).toBe(true);
@@ -577,6 +578,51 @@ test('grafo: o painel mostra todas as capas do artista, com link em nova aba, se
   await expect(capas.first().locator('img')).toHaveAttribute('src', /capa-min\.jpg$/);
   await expect(page.locator('#grafo-acoes')).toHaveCount(0);
   await expect(page.locator('#grafo-genero')).toBeVisible();
+});
+
+// Um álbum só: o painel ganha o desenho do #cartao (capa à esquerda, texto ao lado, ação embaixo).
+for (const [nome, vp] of [['desktop', { width: 1280, height: 800 }], ['mobile', { width: 390, height: 780 }]]) {
+  test(`grafo: com um álbum só o painel segue o desenho do cartão (${nome})`, async ({ page }) => {
+    await page.setViewportSize(vp);
+    await rotear(page);
+    await page.route('**/capa-min.jpg', r => r.fulfill({
+      status: 200, contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+    }));
+    const um = { ...uqt, albums: uqt.albums.map((a, i) => ({ ...a, has_cover: i === 0 })) };
+    await page.route('**/uqt/data/uqt-albums.json.gz', r => r.fulfill(gz(zlib.gzipSync(JSON.stringify(um)))));
+    await page.goto(`/atlas?grafo=1&artista=${encodeURIComponent(primeiro.artist)}`);
+    await page.evaluate(() => window.__atlas.pronto);
+    const painel = page.locator('#grafo-painel');
+    await expect(page.locator('#grafo-capas a')).toHaveCount(1);
+    await expect(painel).toHaveClass(/um-album/);
+    await expect(page.locator('#grafo-album')).toHaveText(`${primeiro.title} (${primeiro.year})`);
+    const capa = await page.locator('#grafo-capas a').boundingBox();
+    const titulo = await page.locator('#grafo-titulo').boundingBox();
+    const ouvir = await page.locator('#grafo-ouvir').boundingBox();
+    expect(capa.width).toBe(nome === 'mobile' ? 64 : 72);
+    expect(capa.x + capa.width).toBeLessThanOrEqual(titulo.x);           // capa à esquerda do texto
+    expect(Math.abs(capa.y - titulo.y)).toBeLessThan(40);                // e no mesmo topo
+    expect(ouvir.y).toBeGreaterThanOrEqual(capa.y + capa.height);        // ação embaixo
+    await expect(page.locator('#grafo-capas a')).toHaveAttribute('target', '_blank');
+    // Capa que falha: o painel volta ao desenho sem capas, sem sobrar a linha do álbum.
+    await page.evaluate(() => document.querySelector('#grafo-capas img').dispatchEvent(new Event('error')));
+    await expect(painel).not.toHaveClass(/um-album/);
+    await expect(page.locator('#grafo-album')).toBeHidden();
+  });
+}
+
+test('grafo: com várias capas o painel mantém a grade de sempre', async ({ page }) => {
+  await rotear(page);
+  await page.route('**/capa-min.jpg', r => r.fulfill({
+    status: 200, contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+  }));
+  const dois = { ...uqt, albums: [uqt.albums[0], { ...uqt.albums[0], title: 'Outro', path: 'x - outro', year: 1990 }, ...uqt.albums.slice(1)].map(a => ({ ...a, has_cover: true })) };
+  await page.route('**/uqt/data/uqt-albums.json.gz', r => r.fulfill(gz(zlib.gzipSync(JSON.stringify(dois)))));
+  await page.goto(`/atlas?grafo=1&artista=${encodeURIComponent(primeiro.artist)}`);
+  await page.evaluate(() => window.__atlas.pronto);
+  await expect(page.locator('#grafo-capas a')).toHaveCount(2);
+  await expect(page.locator('#grafo-painel')).not.toHaveClass(/um-album/);
+  await expect(page.locator('#grafo-album')).toBeHidden();
 });
 
 test('UQT e Homi usam o mesmo ícone de acervo', async ({ page }) => {

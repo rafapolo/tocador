@@ -86,7 +86,9 @@ let activeDecade = null;
 let activeYear = 0;
 let activeAlbumSet = null;      // Set of album objects chosen by the Explorar panel (audio features)
 let activeAlbumSetLabel = '';
-let trackFilter = null;         // (track) => bool while Explorar is filtering: tracks it rejects are shown disabled and skipped
+let sharedAlbums = null;        // Map album → position of a shared playlist link (?lista=); never touches the saved albums
+let activeLista = '';           // the ?lista= value sharedAlbums came from
+let trackFilter = null;        // (track) => bool while Explorar is filtering: tracks it rejects are shown disabled and skipped
 let trackFilterInfo = null;     // { frase, titulo, limpar } — como a lista do álbum explica e desfaz o trackFilter ativo
 const trackAllowed = t => !trackFilter || trackFilter(t);
 let searchQuery = '';
@@ -258,13 +260,15 @@ function showToast(msg, duration = 3500, { ok = false } = {}) {
   _toastTimer = setTimeout(() => _toastEl.classList.remove('show'), duration);
 }
 
-function loadCoverImage(imgElement, primaryUrl) {
+// `reserva`: where to go when the first URL fails, instead of the placeholder.
+function loadCoverImage(imgElement, primaryUrl, reserva = null) {
   if (!primaryUrl) {
     imgElement.src = PLACEHOLDER_COVER;
     imgElement.classList.add('placeholder');
     return;
   }
   if (failedCovers.has(primaryUrl)) {
+    if (reserva) return loadCoverImage(imgElement, reserva);
     imgElement.src = PLACEHOLDER_COVER;
     imgElement.classList.add('placeholder');
     return;
@@ -277,6 +281,7 @@ function loadCoverImage(imgElement, primaryUrl) {
     // album, which would blacklist the wrong (valid) cover permanently.
     if (imgElement.src !== primaryUrl) return;
     failedCovers.add(primaryUrl);
+    if (reserva) return loadCoverImage(imgElement, reserva);
     imgElement.src = PLACEHOLDER_COVER;
     imgElement.classList.add('placeholder');
   };
@@ -386,6 +391,7 @@ function filterAlbums(quiet = false) {
   const q = fold(searchQuery);
   const ak = activeArtist ? fold(activeArtist) : null;
   filteredAlbums = albums.filter(album => {
+    if (sharedAlbums && !sharedAlbums.has(album)) return false;
     if (activeAlbumSet && !activeAlbumSet.has(album)) return false;
     if (ak && !album.artistKeys.has(ak)) return false;
     if (activeGenre) {
@@ -404,6 +410,7 @@ function filterAlbums(quiet = false) {
       album.pathLower.includes(q) ||
       album.tracks.some(t => t.titleLower.includes(q) || t.artistsLower.includes(q));
   });
+  if (sharedAlbums) filteredAlbums.sort((a, b) => sharedAlbums.get(a) - sharedAlbums.get(b));
 
   const inner = virtualGrid?.inner;
   if (inner && !quiet) {
@@ -415,7 +422,7 @@ function filterAlbums(quiet = false) {
   _countEl ??= document.getElementById('search-count');
   _clearBtn ??= document.getElementById('search-clear');
   _emptyState ??= document.getElementById('empty-state');
-  const isFiltered = !!activeAlbumSet || !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
+  const isFiltered = !!sharedAlbums || !!activeAlbumSet || !!searchQuery || activeDecade !== null || !!activeYear || !!activeGenre || !!activeArtist;
   if (_countEl) {
     _countEl.textContent = `${filteredAlbums.length} álbun${filteredAlbums.length !== 1 ? 's' : ''}`;
     _countEl.classList.toggle('visible', isFiltered);
@@ -481,7 +488,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     const newGenero  = getGeneroFromUrl();
     const newArtista = getArtistaFromUrl();
     const browseChanged = newGenero !== activeGenre || newArtista !== activeArtist;
-    if (q !== searchQuery || yr !== activeYear || browseChanged) {
+    const listaMudou = getListaFromUrl() !== activeLista;
+    if (listaMudou) aplicarListaDaUrl();
+    if (q !== searchQuery || yr !== activeYear || browseChanged || listaMudou) {
       searchQuery = q;
       activeYear = yr;
       activeGenre  = newGenero;
@@ -714,21 +723,26 @@ async function handleCatalogDecodeError(err, container) {
   // Salvou/removeu em outra aba do navegador: o coração e a lista acompanham.
   window.addEventListener('storage', e => { if (e.key === SALVOS_KEY || e.key === null) salvosMudaram(); });
 
-  // Restore search query and year filter from URL
-  const initialQuery = getQueryFromUrl();
-  if (initialQuery) {
-    searchQuery = initialQuery;
-    if (_searchInput) _searchInput.value = initialQuery;
+  // A shared playlist link wins over the other URL filters: the facets are mutually exclusive.
+  if (aplicarListaDaUrl()) {
     filterAlbums();
-  }
-  const initialYear = getYearFromUrl();
-  if (initialYear) { activeYear = initialYear; filterAlbums(); }
+  } else {
+    // Restore search query and year filter from URL
+    const initialQuery = getQueryFromUrl();
+    if (initialQuery) {
+      searchQuery = initialQuery;
+      if (_searchInput) _searchInput.value = initialQuery;
+      filterAlbums();
+    }
+    const initialYear = getYearFromUrl();
+    if (initialYear) { activeYear = initialYear; filterAlbums(); }
 
-  // Restore browse filter from URL
-  const initialGenero = getGeneroFromUrl();
-  const initialArtista = getArtistaFromUrl();
-  if (initialGenero && genreData) { activeGenre = initialGenero; filterAlbums(); }
-  else if (initialArtista) { activeArtist = initialArtista; filterAlbums(); }
+    // Restore browse filter from URL
+    const initialGenero = getGeneroFromUrl();
+    const initialArtista = getArtistaFromUrl();
+    if (initialGenero && genreData) { activeGenre = initialGenero; filterAlbums(); }
+    else if (initialArtista) { activeArtist = initialArtista; filterAlbums(); }
+  }
 
   // Select initial album from URL or first in list
   const albumFromUrl = getAlbumFromUrl();
@@ -803,6 +817,7 @@ async function handleCatalogDecodeError(err, container) {
     overlayBtnPlay?.classList.toggle('loading', on);
   };
 
+  window.anunciarSom?.(audio);    // /atlas keeps its music quiet while this plays
   audio.addEventListener('play',     () => {
     (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('playing');
     overlayBtnPlay?.classList.add('playing');
@@ -1026,6 +1041,7 @@ async function handleCatalogDecodeError(err, container) {
 
   document.getElementById('btn-play-saved')?.addEventListener('click', toggleSavedQueue);
   document.getElementById('share-artist')?.addEventListener('click', () => { if (activeArtist) shareArtist(activeArtist); });
+  document.getElementById('share-saved')?.addEventListener('click', shareSaved);
   document.querySelectorAll('.album-generos').forEach(d => d.addEventListener('toggle', () => fillAlbumGenres(d)));
   btnShuffle?.addEventListener('click', () => applyShuffle(!shuffleOn));
   btnShuffleMobile?.addEventListener('click', () => applyShuffle(!shuffleOn));
