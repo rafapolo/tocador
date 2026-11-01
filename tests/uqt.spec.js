@@ -602,6 +602,20 @@ test('K46c: "Soa parecido com" lists the artist\'s sound neighbours; one here fi
   await expect(page.locator('.album-item', { hasText: 'Caetano Veloso' }).first()).toBeVisible();
   await expect(page.locator('.album-item', { hasText: 'Construção' })).toHaveCount(0);
 });
+
+  test('K46d: only one of "Gêneros detectados" and "Soa parecido com" is open at a time', async ({ page }) => {
+    await page.route('**/data/atlas-artistas.json.gz', r => r.fulfill({ status: 404 }));
+    await gotoWithFixture(page);
+    await page.locator('.album-item', { hasText: 'Construção' }).click();
+    const generos = page.locator('#tracks-panel .album-generos'), parecidos = page.locator('#tracks-panel .album-parecidos');
+    await parecidos.locator('summary').click();
+    await expect(parecidos).toHaveAttribute('open', '');
+    await generos.locator('summary').click();
+    await expect(generos).toHaveAttribute('open', '');
+    await expect(parecidos).not.toHaveAttribute('open', '');
+    await parecidos.locator('summary').click();
+    await expect(generos).not.toHaveAttribute('open', '');
+  });
 });
 
 // Regression: ?album= pre-selection must work when the album path contains #.

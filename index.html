@@ -238,8 +238,8 @@
             <aside class="tracks-panel" id="tracks-panel" aria-label="Faixas do álbum">
                 <div class="album-header" id="album-header"></div>
                 <ol class="track-list" id="track-list" aria-label="Lista de faixas"></ol>
-                <details class="album-generos" hidden><summary>Gêneros detectados</summary><div class="album-generos-tags"></div></details>
-                <details class="album-parecidos" hidden><summary>Soa parecido com</summary><div class="album-generos-tags"></div></details>
+                <details class="album-generos" name="album-extra" hidden><summary>Gêneros detectados</summary><div class="album-generos-tags"></div></details>
+                <details class="album-parecidos" name="album-extra" hidden><summary>Soa parecido com</summary><div class="album-generos-tags"></div></details>
             </aside>
         </div>
 
@@ -367,8 +367,8 @@
                     </button>
                 </div>
                 <ol id="drawer-track-list" class="drawer-track-list"></ol>
-                <details class="album-generos" hidden><summary>Gêneros detectados</summary><div class="album-generos-tags"></div></details>
-                <details class="album-parecidos" hidden><summary>Soa parecido com</summary><div class="album-generos-tags"></div></details>
+                <details class="album-generos" name="album-extra-gaveta" hidden><summary>Gêneros detectados</summary><div class="album-generos-tags"></div></details>
+                <details class="album-parecidos" name="album-extra-gaveta" hidden><summary>Soa parecido com</summary><div class="album-generos-tags"></div></details>
             </div>
 
             <div class="player-content">
@@ -615,7 +615,6 @@
                 <li><kbd>Esc</kbd><span>Fechar painel / limpar filtro</span></li>
                 <li><kbd>?</kbd><span>Esta ajuda</span></li>
             </ul>
-            <p class="shortcuts-footer">Todos os álbuns: <a href="/uqt/">Acervo UQT</a> · <a href="/homi/">Hominis Canidae</a></p>
             <p class="shortcuts-footer">Tocador é um player de acervos musicais de <a href="https://github.com/rafapolo/tocador" target="_blank" rel="noopener">código aberto</a>.</p>
         </div>
     </body>

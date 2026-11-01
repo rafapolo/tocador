@@ -134,6 +134,7 @@ const KNOWN_ACERVOS = {
     label: 'UmQueTenha',
     data: 'https://rafapolo.github.io/uqt/data/uqt-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/uqt',
+    genres: 'https://tocador.cc/data/uqt-genres.json.gz',
   },
   homi: {
     label: 'Hominis Canidae',
@@ -1054,6 +1055,11 @@ async function handleCatalogDecodeError(err, container) {
   document.getElementById('share-saved')?.addEventListener('click', shareSaved);
   document.querySelectorAll('.album-generos').forEach(d => d.addEventListener('toggle', () => fillAlbumGenres(d)));
   document.querySelectorAll('.album-parecidos').forEach(d => d.addEventListener('toggle', () => fillAlbumParecidos(d)));
+  // One of the two open at a time: <details name> does it natively; this covers browsers that predate it.
+  document.querySelectorAll('.album-generos, .album-parecidos').forEach(d => d.addEventListener('toggle', () => {
+    if (!d.open) return;
+    for (const o of d.parentElement.querySelectorAll(':scope > .album-generos, :scope > .album-parecidos')) if (o !== d) o.open = false;
+  }));
   btnShuffle?.addEventListener('click', () => applyShuffle(!shuffleOn));
   btnShuffleMobile?.addEventListener('click', () => applyShuffle(!shuffleOn));
 
