@@ -10,14 +10,20 @@
   const ID = Math.random().toString(36).slice(2);
   const abrir = () => { try { return new BroadcastChannel(CANAL); } catch { return null; } };
 
-  // Tells the other tabs when this <audio> plays or stops, and answers when one of them asks.
-  function anunciarSom(audio) {
+  // Tells the other tabs when this <audio> plays or stops, and answers when one of them asks. When another
+  // tocador tab starts playing, this one pauses (one sound at a time: the atlas preview pauses the player and
+  // vice versa); aoCalar() runs after that pause, for pages whose own UI needs more than the 'pause' event.
+  function anunciarSom(audio, aoCalar) {
     const ch = abrir();
     if (!ch) return;
     const dizer = () => ch.postMessage({ id: ID, tocando: !audio.paused && !audio.ended });
     for (const ev of ['play', 'pause', 'ended']) audio.addEventListener(ev, dizer);
     addEventListener('pagehide', () => ch.postMessage({ id: ID, tocando: false }));
-    ch.onmessage = e => { if (e.data?.pergunta) dizer(); };
+    ch.onmessage = e => {
+      const m = e.data || {};
+      if (m.pergunta) { dizer(); return; }
+      if (m.tocando && m.id && m.id !== ID && !audio.paused) { audio.pause(); aoCalar?.(); }
+    };
   }
 
   // Calls aoMudar(true/false) as "some other tocador tab is playing" changes, asking once at the start.

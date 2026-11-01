@@ -31,6 +31,12 @@ function getTrackNumFromUrl() {
   return parseInt(new URLSearchParams(window.location.search).get('t') || 0);
 }
 
+// ?seg=N: start the URL's track N seconds in (the /atlas preview hands its position over this way).
+function getSegFromUrl() {
+  const n = parseFloat(new URLSearchParams(window.location.search).get('seg'));
+  return n > 0 ? n : 0;
+}
+
 function getPlayFromUrl() {
   return new URLSearchParams(window.location.search).get('play') === '1';
 }
@@ -43,6 +49,7 @@ function generateAlbumUrl(album, trackNum) {
   const params = new URLSearchParams(window.location.search);
   params.delete('artista');
   params.delete('genero');
+  params.delete('seg');    // read once at load; a reload shouldn't jump back there
   const page = ALBUM_PAGES && albumPagePath(album);
   if (page) {
     params.delete('acervo');

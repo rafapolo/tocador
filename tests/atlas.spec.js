@@ -742,6 +742,25 @@ test('clicar num ponto abre o cartão com título, artista e o link do player', 
   expect(new URL(href, page.url()).href).toBe(esperado.href);
 });
 
+test('"♪ no tocador" durante a prévia leva o segundo dela (?seg=); sem prévia, não', async ({ page }) => {
+  await boot(page);
+  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  const ouvir = page.locator('#cartao-ouvir');
+  const seg = async () => {
+    await ouvir.dispatchEvent('contextmenu');     // atualiza o href sem navegar
+    return new URL(await ouvir.getAttribute('href'), page.url()).searchParams.get('seg');
+  };
+  expect(await seg()).toBeNull();
+  await page.evaluate(() => { document.getElementById('previa').play = () => Promise.resolve(); });
+  await page.locator('#cartao-previa').click();
+  await page.evaluate(() => Object.defineProperty(document.getElementById('previa'), 'currentTime', { value: 37.6, configurable: true }));
+  expect(await seg()).toBe('37');
+  expect(new URL(await ouvir.getAttribute('href'), page.url()).searchParams.get('t')).toBe('1');
+  await clicarNoPonto(page, primeiro, primeiro.tracks[3]);   // outra faixa: a prévia não é dela
+  await expect(page.locator('#cartao-titulo')).toHaveText(primeiro.tracks[3].title);
+  expect(await seg()).toBeNull();
+});
+
 test('a numeração do link segue a do player: título repetido em subpasta e faixa sem num', async ({ page }) => {
   await boot(page);
   const t = async faixa => {

@@ -10,7 +10,16 @@ const fixtureGz = fs.readFileSync(fixturePath);
 // one run in three. Long enough that no test outlives it and hits 'ended'.
 const fixtureMp3 = fs.readFileSync(path.join(__dirname, 'fixtures', 'silence.mp3'));
 
-async function gotoWithFixture(page, url = '/', { blockAudio = false } = {}) {
+// The real CDN answers Range with 206; Chromium can't seek a plain 200 body (empty `seekable`).
+function rangedMp3(route) {
+  const m = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range || '');
+  if (!m) return route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes' }, body: fixtureMp3 });
+  const ini = +m[1], fim = m[2] ? Math.min(+m[2], fixtureMp3.length - 1) : fixtureMp3.length - 1;
+  return route.fulfill({ status: 206, body: fixtureMp3.subarray(ini, fim + 1), headers: {
+    'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Content-Range': `bytes ${ini}-${fim}/${fixtureMp3.length}` } });
+}
+
+async function gotoWithFixture(page, url = '/', { blockAudio = false, ranges = false } = {}) {
   // Clear persisted player state so shuffle/repeat start at defaults
   await page.addInitScript(() => {
     localStorage.removeItem('uqt-shuffle');
@@ -39,6 +48,7 @@ async function gotoWithFixture(page, url = '/', { blockAudio = false } = {}) {
   // Block audio and image network requests to keep tests fast
   await page.route('**/*.mp3', route => blockAudio
     ? route.abort()
+    : ranges ? rangedMp3(route)
     : route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: fixtureMp3 }));
   await page.route('**/capa-m*.jpg', route => route.fulfill({ status: 404 }));
   await page.route('**/report-error', route => route.fulfill({ status: 204 }));
@@ -90,6 +100,12 @@ test('A5: ?play=1 with album and track triggers audio load', async ({ page }) =>
   await gotoWithFixture(page, '/?album=1971+-+Chico+Buarque+-+Constru%C3%A7%C3%A3o&t=1&play=1');
   const audioSrc = await page.evaluate(() => document.querySelector('#audio')?.src ?? '');
   expect(audioSrc).toContain('Constru');
+});
+
+test('A5b: ?seg= (the /atlas preview handover) starts the track that many seconds in, and leaves the URL', async ({ page }) => {
+  await gotoWithFixture(page, '/?album=1971+-+Chico+Buarque+-+Constru%C3%A7%C3%A3o&t=1&play=1&seg=4', { ranges: true });
+  await expect.poll(() => page.evaluate(() => document.querySelector('#audio').currentTime)).toBeGreaterThanOrEqual(4);
+  expect(new URL(page.url()).searchParams.get('seg')).toBeNull();
 });
 
 test('A6: ?ano= filters to that exact year only', async ({ page }) => {

@@ -249,6 +249,14 @@ function restorePlaybackPosition(track, audio) {
   audio.addEventListener('loadedmetadata', apply);
 }
 
+// Seeks to `time` once the duration is known (the ?seg= handover from the /atlas preview).
+function startPlaybackAt(audio, time) {
+  const apply = () => {
+    if (isFinite(audio.duration) && time < audio.duration) audio.currentTime = time;
+  };
+  if (audio.readyState >= 1) apply(); else audio.addEventListener('loadedmetadata', apply, { once: true });
+}
+
 let _toastTimer = null;
 function showToast(msg, duration = 3500, { ok = false } = {}) {
   _toastEl ??= document.getElementById('toast');
@@ -773,7 +781,8 @@ async function handleCatalogDecodeError(err, container) {
         const audio = document.getElementById('audio');
         const newSrc = `${BASE_URL}/${t.file}`;
         if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
-        restorePlaybackPosition(t, audio);
+        const seg = getSegFromUrl();
+        if (seg) startPlaybackAt(audio, seg); else restorePlaybackPosition(t, audio);
         if (getPlayFromUrl()) safePlay(audio);
       }
     } else if (getPlayFromUrl() && albumToSelect.tracks.length > 0) {
@@ -817,7 +826,7 @@ async function handleCatalogDecodeError(err, container) {
     overlayBtnPlay?.classList.toggle('loading', on);
   };
 
-  window.anunciarSom?.(audio);    // /atlas keeps its music quiet while this plays
+  window.anunciarSom?.(audio);    // /atlas keeps quiet while this plays; another tab playing pauses it
   audio.addEventListener('play',     () => {
     (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('playing');
     overlayBtnPlay?.classList.add('playing');

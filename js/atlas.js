@@ -841,10 +841,21 @@
     const base = info.db.meta?.base_url;
     audio.src = `${base}/${encodeURIComponent(info.album.path)}/${encodeURIComponent(info.track.file)}`;
     audio.play().catch(() => pararPrevia());
+    previaDe = sel;
     estadoPrevia(true);
   });
+  // "♪ no tocador" during this track's preview: the player picks it up from the same second (?seg=).
+  let previaDe = -1;
+  function passarPrevia() {
+    const ouvir = $('cartao-ouvir');
+    if (sel < 0 || !ouvir.hasAttribute('href')) return;
+    const u = new URL(urlPlayer(sel), location.href), seg = Math.floor(audio.currentTime);
+    if (previaDe === sel && audio.getAttribute('src') && seg > 0) u.searchParams.set('seg', seg);
+    ouvir.href = u.pathname + u.search + u.hash;
+  }
+  for (const ev of ['click', 'auxclick', 'contextmenu']) $('cartao-ouvir').addEventListener(ev, passarPrevia);
   audio.addEventListener('ended', pararPrevia);
-  window.anunciarSom?.(audio);    // another tab of this map keeps quiet too
+  window.anunciarSom?.(audio, pararPrevia);    // other tocador tabs pause while this plays, and vice versa
 
   // ── tooltip (mouse only) ──
   const dica = $('dica');
