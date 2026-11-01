@@ -5,7 +5,7 @@ import { MAP_HARD_CAP, deviceCounts, rawIpCounts, incDevice, decDevice, incRawIp
   BUCKET_CAP, BUCKET_REFILL, deviceTokenBuckets, RAW_BUCKET_CAP, RAW_BUCKET_REFILL, rawIpTokenBuckets, RAW_CONCURRENCY_CAP,
   REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL, reportTokenBuckets, takeFrom, deviceKey } from './lib/limits.js';
 import { state, RADIO_ID_RE, radioListeners, todayListenerIds, ensureToday, markOk, mark4xx, mark5xx,
-  UPSTREAM_FAIL_THRESHOLD, markUpstreamOk, markUpstreamFail, metricsJSON } from './lib/metrics.js';
+  UPSTREAM_FAIL_THRESHOLD, markUpstreamOk, markUpstreamFail, metricsJSON, markPlay } from './lib/metrics.js';
 import { realIp, refererAllowed, blockedBot, goodBotRegex } from './lib/access.js';
 
 
@@ -433,7 +433,10 @@ _server = Bun.serve({
       // also covers the '#'/'?' key-encoding workaround Bun.S3Client needed and
       // the .stat() failures from the 2026-08-20 incident — there's no longer a
       // native-client path left to fall back to.
-      return await signedPassthrough(bucket, path, rangeHeader, isHead);
+      const res = await signedPassthrough(bucket, path, rangeHeader, isHead);
+      // §17 — a track starting: audio, a body, the range (if any) begins at byte 0
+      if (isAudio && !isHead && res.status < 300 && (!rangeHeader || rangeHeader.startsWith('bytes=0-'))) markPlay(device, path);
+      return res;
     } catch (err) {
       const code = err?.status ?? err?.statusCode ?? 500;
       console.error(`[${code}] ${req.method} ${path}: ${err?.message ?? err}`);
