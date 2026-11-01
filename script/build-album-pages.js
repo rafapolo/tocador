@@ -230,7 +230,7 @@ function catalogArtists(albums) {
     for (const name of parseArtists(text)) {
       const a = artists.get(fold(name));
       if (!a) continue;
-      a.name ||= name;
+      if (!a.name || (a.name === a.name.toLowerCase() && name !== name.toLowerCase())) a.name = name;   // "Cartola", not "cartola"
       a.albums.add(album);
     }
   };
