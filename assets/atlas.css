@@ -93,20 +93,22 @@ button { font: inherit; color: inherit; }
    take a line of their own; between that and 1280 px the labels that repeat themselves make room first. */
 #controles { display: flex; gap: 8px; flex: none; flex-wrap: wrap; margin-left: auto; }
 @media (max-width: 1279px) {
-  [data-acervo] .ic, [data-mapa] .ic, #btn-musica span { display: none; }
+  [data-acervo] .ic, [data-mapa] .ic, #btn-musica span, #btn-sobre span { display: none; }
 }
 @media (max-width: 1039px) {
   [data-acervo] .ic, [data-mapa] .ic { display: inline-block; }
   #controles { flex: 1 1 100%; margin-left: 0; }
 }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--glass); }
-.seg button {
+.seg button, .seg a {
   border: 0; background: transparent; color: var(--text-2); padding: 7px 13px; min-height: 34px;
   cursor: pointer; font-size: 13px;
 }
 .seg button + button { border-left: 1px solid var(--border); }
+.seg a { color: var(--text-2); text-decoration: none; }
+#btn-sobre b { font-weight: 600; }
 .seg button[aria-pressed="true"] { background: var(--surface-light); color: var(--text); }
-.seg button:focus-visible, #zoom button:focus-visible, .botao:focus-visible, #legenda summary:focus-visible,
+.seg button:focus-visible, .seg a:focus-visible, #zoom button:focus-visible, .botao:focus-visible, #legenda summary:focus-visible,
 #legenda-lista button:focus-visible, #cartao-fechar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── legenda ── */
@@ -197,8 +199,11 @@ button { font: inherit; color: inherit; }
   #contagem { margin-left: auto; font-size: 12px; }
   #busca-wrap { order: 3; flex: 1 1 100%; max-width: none; }
   #controles { order: 4; }
-  .seg button { padding: 6px 11px; }
-  #btn-musica span { display: none; }
+  .seg button, .seg a { padding: 6px 11px; }
+  #btn-musica span, #btn-sobre span { display: none; }
+  /* A linha dos filtros já está cheia: o ? usa a sobra ao lado de Som/Gêneros. */
+  #controles > .seg:first-child { order: -2; }
+  #controles > .seg-sobre { order: -1; }
   #ajuda { display: none; }
   #legenda { max-width: calc(100% - 96px); }
   #legenda[open] { max-height: 52dvh; overflow: auto; }
@@ -274,6 +279,9 @@ button { font: inherit; color: inherit; }
 #grafo-painel:not(.um-album) > * { grid-column: 1; }
 #grafo-painel:not(.um-album) > #grafo-capas, #grafo-painel:not(.um-album) > #grafo-parecidos { grid-column: 1 / -1; }
 #grafo-painel:not(.um-album) > #grafo-ouvir { grid-column: 2; grid-row: 2 / span 2; align-self: end; margin: 0; }
+/* O ✕ tem célula própria acima da ação: em linha com o gênero, nunca por cima do botão. */
+#grafo-painel:not(.um-album) > #grafo-fechar { position: static; grid-column: 2; grid-row: 1; justify-self: end; margin: -8px -8px 0 0; }
+#grafo-painel:not(.um-album) #grafo-titulo { padding-right: 0; }
 #grafo-fechar {
   position: absolute; top: 6px; right: 6px; z-index: 1; width: 32px; height: 32px; border: 0; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center; padding: 0;
@@ -309,12 +317,13 @@ button { font: inherit; color: inherit; }
 #grafo-album { margin: 2px 0 0; color: var(--text-2); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #grafo-album[hidden] { display: none; }
 #grafo-painel.um-album { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: start; }
-#grafo-painel.um-album > :not(#grafo-capas):not(#grafo-ouvir) { grid-column: 2; }
+#grafo-painel.um-album > :not(#grafo-capas):not(#grafo-ouvir):not(#grafo-parecidos) { grid-column: 2; }
 #grafo-painel.um-album #grafo-capas { display: block; grid-column: 1; grid-row: 1 / span 4; margin: 0; max-height: none; overflow: visible; }
 #grafo-painel.um-album #grafo-capas a { width: 72px; height: 72px; }
 #grafo-painel.um-album #grafo-genero[hidden] { display: none; }
 #grafo-painel.um-album #grafo-titulo { margin: 2px 0; font-size: 16px; font-weight: 600; }
-#grafo-painel.um-album #grafo-ouvir { grid-column: 1 / -1; }
+#grafo-painel.um-album > #grafo-parecidos { grid-column: 1 / -1; }
+#grafo-painel.um-album #grafo-ouvir { grid-column: 1 / -1; width: 100%; margin-left: 0; }
 #grafo-ouvir[hidden] { display: none; }
 .em-grafo #cartao-parecidos { display: none; }
 #grafo-titulo { margin: 0 0 4px; padding-right: 22px; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
@@ -341,7 +350,7 @@ button { font: inherit; color: inherit; }
 
 /* ── ícones dos botões (sprite em atlas.html) ── */
 .ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.seg button, .botao, #cartao-parecidos-lista button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.seg button, .seg a, .botao, #cartao-parecidos-lista button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .seg .ic, #cartao-parecidos-lista .ic { width: 14px; height: 14px; }
 #busca-limpar, #cartao-fechar, #zoom button { display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 #zoom .ic { width: 18px; height: 18px; }

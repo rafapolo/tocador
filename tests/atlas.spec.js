@@ -358,6 +358,11 @@ test('painel do grafo: parecidos levam ao vizinho, ✕ fecha e voltar refaz o ca
   await page.waitForFunction(() => !location.search.includes('artista=Delta'));
   await page.goBack();
   await expect(page.locator('#grafo-titulo')).toHaveText('Delta');
+  for (const largura of [1280, 390]) {                 // o ✕ não pode encostar na ação ao lado do nome
+    await page.setViewportSize({ width: largura, height: 800 });
+    const x = await page.locator('#grafo-fechar').boundingBox(), o = await page.locator('#grafo-ouvir').boundingBox();
+    if (o) expect(x.y + x.height <= o.y || o.x + o.width <= x.x).toBe(true);
+  }
   await page.locator('#grafo-fechar').click();
   await expect(page.locator('#grafo')).toBeHidden();
 });
@@ -375,6 +380,14 @@ test('música no grafo: os artistas à vista são a mistura e a partitura, tamb�
   await page.evaluate(() => window.__atlas.pronto);
   await page.keyboard.press('Shift');
   await expect.poll(async () => (await som())?.vozes?.filter(v => v.peso > 0).length ?? 0, { timeout: 8000 }).toBeGreaterThan(0);
+});
+
+test('? Sobre leva ao ATLAS.md em nova aba', async ({ page }) => {
+  await boot(page);
+  const sobre = page.getByRole('link', { name: 'Sobre o Atlas' });
+  await expect(sobre).toBeVisible();
+  await expect(sobre).toHaveAttribute('href', 'https://github.com/rafapolo/tocador/blob/main/ATLAS.md');
+  await expect(sobre).toHaveAttribute('target', '_blank');
 });
 
 test('grafo: a busca centra no artista e nome hostil fica como texto', async ({ page }) => {
@@ -635,6 +648,11 @@ for (const [nome, vp] of [['desktop', { width: 1280, height: 800 }], ['mobile', 
     expect(capa.x + capa.width).toBeLessThanOrEqual(titulo.x);           // capa à esquerda do texto
     expect(Math.abs(capa.y - titulo.y)).toBeLessThan(40);                // e no mesmo topo
     expect(ouvir.y).toBeGreaterThanOrEqual(capa.y + capa.height);        // ação embaixo
+    const caixa = await painel.boundingBox();                            // nada de coluna vazia embaixo da capa
+    expect(ouvir.x).toBeLessThanOrEqual(capa.x);
+    expect(ouvir.width).toBeGreaterThan(caixa.width * 0.8);
+    const parecidos = await page.locator('#grafo-parecidos').boundingBox();
+    if (parecidos) expect(parecidos.x).toBeLessThanOrEqual(capa.x);
     await expect(page.locator('#grafo-capas a')).toHaveAttribute('target', '_blank');
     // Capa que falha: o painel volta ao desenho sem capas, sem sobrar a linha do álbum.
     await page.evaluate(() => { const i = document.querySelector('#grafo-capas img'); i.dispatchEvent(new Event('error')); });  // da micro para a normal
