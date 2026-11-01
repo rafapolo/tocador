@@ -10,6 +10,14 @@ arrastar, girar em 3D (botão direito do mouse no desktop; no celular, ligue o �
 
 - **Cada ponto é uma faixa.** A cor é o macro-gênero mais provável segundo o classificador (Rock,
   Latino, Eletrônica, Folk/World, Hip Hop, Jazz, Pop, Funk/Soul, Outros).
+- **De onde vêm os gêneros.** Ninguém etiquetou estas faixas à mão. Quem ouve é o
+  [Discogs-EffNet](https://essentia.upf.edu/models.html#discogs-effnet), um modelo do Essentia (MTG,
+  Universitat Pompeu Fabra) treinado com milhões de faixas cujas etiquetas de estilo vieram do
+  [Discogs](https://www.discogs.com/), a base colaborativa de discos. Por isso o vocabulário é o do
+  Discogs: 400 estilos no formato `Gênero---Estilo` (`Latin---Samba`, `Rock---Punk`), e a cor do ponto é a
+  parte antes do `---`. O mesmo modelo dá o embedding de 1280 dimensões que posiciona o mapa "Som". Ele
+  herda os vieses do Discogs: o que lá é raro (samba de enredo, choro, gravações dos anos 1930) ele
+  conhece pouco e tende a encaixar no estilo vizinho mais catalogado.
 - **Os rótulos** (Samba, Punk, Cloud Rap…) ficam na mediana dos pontos de cada subgênero. Só aparecem
   os subgêneros que formam um "lugar", isto é, que não estão espalhados pelo mapa inteiro.
 - **De perto**, a partir de ~10× de zoom, cada ponto ganha o título da faixa.
