@@ -54,7 +54,7 @@ Cole em qualquer página para incorporar a rádio:
 
 ## 🗺️ Atlas
 
-[`tocador.cc/atlas`](https://tocador.cc/atlas) põe as ~79 mil faixas dos dois acervos num mapa: cada ponto é uma faixa, e o que soa parecido fica perto (UMAP do embedding de áudio). Aproxime para ver o nome de cada faixa, gire em 3D com o botão direito do mouse, filtre por gênero ou acervo, busque um artista e clique numa faixa para ouvir no player. Como foi feito, como ler o mapa e por que aparecem fios de pontos: [ATLAS.md](ATLAS.md).
+[`tocador.cc/atlas`](https://tocador.cc/atlas) põe as ~79 mil faixas dos dois acervos num mapa: cada ponto é uma faixa, e o que soa parecido fica perto (UMAP do embedding de áudio). Aproxime para ver o nome de cada faixa, gire em 3D com o botão direito do mouse, filtre por gênero ou acervo, busque um artista e clique numa faixa para ouvir no player. Como foi feito, como ler o mapa e como a música é gerada: [ATLAS.md](ATLAS.md).
 
 <p align="center">
   <a href="https://tocador.cc/atlas"><img src="docs/atlas-demo.jpg" alt="Atlas — o mapa de frente, colorido por gênero" width="49%"></a>
