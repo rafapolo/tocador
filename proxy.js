@@ -5,7 +5,7 @@ import { MAP_HARD_CAP, deviceCounts, rawIpCounts, incDevice, decDevice, incRawIp
   BUCKET_CAP, BUCKET_REFILL, deviceTokenBuckets, RAW_BUCKET_CAP, RAW_BUCKET_REFILL, rawIpTokenBuckets, RAW_CONCURRENCY_CAP,
   REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL, reportTokenBuckets, takeFrom, deviceKey } from './lib/limits.js';
 import { state, RADIO_ID_RE, radioListeners, todayListenerIds, ensureToday, markOk, mark4xx, mark5xx,
-  UPSTREAM_FAIL_THRESHOLD, markUpstreamOk, markUpstreamFail, metricsJSON, markPlay } from './lib/metrics.js';
+  UPSTREAM_FAIL_THRESHOLD, markUpstreamOk, markUpstreamFail, metricsJSON, markPlay, markRefused } from './lib/metrics.js';
 import { realIp, refererAllowed, blockedBot, goodBotRegex } from './lib/access.js';
 
 
@@ -82,13 +82,29 @@ function cacheControlFor(key) {
 // Used for keys Bun's S3Client mishandles (# ?) and for open-ended Range
 // requests, where it saves the separate stat() round trip.
 async function signedPassthrough(bucket, path, rangeHeader, isHead) {
-  let r;
+  let r, hit;
   for (const key of keyCandidates(path)) {
+    hit = key;
     r = await s3GetSigned(bucket, key, isHead ? null : rangeHeader);
     if (r.status !== 404) break;
     r.body?.cancel().catch(() => {}); // don't leak the socket on a retried miss
   }
   markUpstreamOk(); // S3 answered at all — the link is up, whatever the status
+  // A range past the end (the file shrank since the browser cached its size) must say how
+  // big the file is now — `Content-Range: bytes */<total>` (RFC 9110 §15.5.17) — or the
+  // browser can't correct itself. Hetzner's S3 sends its 416 without one, so ask byte 0.
+  if (r.status === 416) {
+    r.body?.cancel().catch(() => {});
+    mark4xx();
+    const headers = { ...corsBase, 'Accept-Ranges': 'bytes' };
+    try {
+      const probe = await s3GetSigned(bucket, hit, 'bytes=0-0');
+      const total = probe.headers.get('content-range')?.match(/\/(\d+)$/)?.[1];
+      probe.body?.cancel().catch(() => {});
+      if (total) headers['Content-Range'] = `bytes */${total}`;
+    } catch { /* still a 416, just without the size */ }
+    return new Response(null, { status: 416, headers });
+  }
   if (!r.ok && r.status !== 206) {
     const code = r.status >= 500 ? 500 : r.status;
     if (code >= 500) mark5xx(); else mark4xx();
@@ -386,7 +402,8 @@ _server = Bun.serve({
     // radio.tocador.cc / tocador.cc, both allowlisted. (A `?ctx=radio` / "Referer contains
     // /radio" bypass used to live here and let any site or curl skip the check.)
     if (isAudio && !refererAllowed(req)) {
-      console.warn(`[HOTLINK] ${realIp(req, server)} ref=${req.headers.get('referer')}`);
+      console.warn(`[HOTLINK] ${realIp(req, server)} ref=${req.headers.get('referer')} ua=${ua.slice(0, 120)}`);
+      markRefused('hotlink', ua);
       mark4xx();
       return new Response('Forbidden', { status: 403, headers: corsBase });
     }
@@ -399,6 +416,7 @@ _server = Bun.serve({
     // looser per-raw-IP backstop so one address can't evade the limit with spoofed UAs.
     if (device && (!takeFrom(deviceTokenBuckets, device, BUCKET_CAP, BUCKET_REFILL)
                 || !takeFrom(rawIpTokenBuckets, ip, RAW_BUCKET_CAP, RAW_BUCKET_REFILL))) {
+      markRefused('rateLimit', ua);
       mark4xx();
       return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '60' } });
     }
@@ -408,11 +426,13 @@ _server = Bun.serve({
     if (device) {
       const deviceActive = deviceCounts.get(device) ?? 0;
       if (deviceActive >= 5) {
+        markRefused('rateLimit', ua);
         mark4xx();
         return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '5' } });
       }
       const rawActive = rawIpCounts.get(ip) ?? 0;
       if (rawActive >= RAW_CONCURRENCY_CAP) {
+        markRefused('rateLimit', ua);
         mark4xx();
         return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '5' } });
       }

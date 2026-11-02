@@ -341,7 +341,7 @@ set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in
   check drops nested copies with the same artist and tracklist. Same-depth albums with equal
   tracklists are kept (reissues, separate posts).
 - **Virtual grid**: ~30 DOM nodes always in the grid regardless of library size. `VirtualGrid` uses absolute positioning + `ResizeObserver`.
-- **Range requests**: Proxy forwards `Range` headers to S3; returns 206 for partial content — required for seek without full download.
+- **Range requests**: Proxy forwards `Range` headers to S3; returns 206 for partial content — required for seek without full download. A range past the end gets 416 with `Content-Range: bytes */<total>` (Hetzner's S3 omits it, so the proxy asks `bytes=0-0`). What each browser's media stack asks for (Safari's `bytes=0-1` probe, `bytes=0-`, `bytes=N-`, HEAD, 416) is pinned in `tests/proxy-contract.test.js`, which, like `tests/proxy-s3-normalization.test.js`, runs the real proxy against the fake S3 in `tests/fixtures/proxy-harness.js`.
 - **S3 bucket policy**: Both buckets (`sambaraiz`, `indie`) are private since 2026-09-27 — the proxy signs
   every request, so nothing needs anonymous access. The policy is a single `Deny` on `s3:GetObject` +
   `s3:ListBucket` for `Principal: "*"` with `Condition: {"StringNotEquals": {"aws:username": "p2100630"}}`
@@ -370,7 +370,7 @@ set -a; . .env; set +a; haloy deploy   # requires HALOY_API_TOKEN + AWS creds in
   beacon still counts as "was here" and isn't removed early like it is from `listeners.now`),
   `listeningHours` (estimated from heartbeat tick count × 15s, not an exact watch-time log),
   `tracksPlayed` (from `track:true` beacons), `requests` (every HTTP request the proxy served today,
-  all endpoints), `sent_MB` (response bytes sent today, audio + covers), `plays` and `topTracks` (the 15 most started tracks today, `[{path, plays}]`, from player, radio and atlas alike: an audio GET whose range starts at byte 0, counted once per device per track per 30 min so Safari's `bytes=0-1` probe and seeks back to 0 don't inflate it; paths only, NFC, `markPlay()` in `lib/metrics.js`, tests in `tests/metrics-top.test.js`). Audio nginx serves from its cache never reaches the proxy and isn't counted. Both
+  all endpoints), `sent_MB` (response bytes sent today, audio + covers), `plays` and `topTracks` (the 15 most started tracks today, `[{path, plays}]`, from player, radio and atlas alike: an audio GET whose range starts at byte 0, counted once per device per track per 30 min so Safari's `bytes=0-1` probe and seeks back to 0 don't inflate it; paths only, NFC, `markPlay()` in `lib/metrics.js`, tests in `tests/metrics-top.test.js`). (nginx caches only `.gz` and images, never audio, so every audio request reaches the proxy.) `today.refused` counts audio the proxy refused, per browser family (`uaFamily()`, `markRefused()`): `rateLimit` (its 429s) and `hotlink` (403s for a missing/foreign Referer, e.g. `chromecast`, `airplay`); nginx's own `limit_req`/`limit_conn` on audio are per raw IP and answer 503 before the proxy, so they aren't in it. Both
   endpoints are reachable at `cdn.tocador.cc` because nginx's catch-all `location /` forwards everything
   to the app; there's no separate internal-only port for them despite `proxy.js`'s comments about port
   9002 not being exposed — that's true of the raw port, not of what nginx proxies through it.
