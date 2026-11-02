@@ -162,3 +162,48 @@ test.describe('shuffle', () => {
     expect(await page.evaluate(() => currentTrack.file)).toBe(first);
   });
 });
+
+test.describe('sleep timer and speed', () => {
+  test('15 min: fades, pauses and gives the volume back', async ({ page }) => {
+    await page.clock.install();
+    await gotoWithFixture(page, '/', { ranges: true });
+    await card(page, 'Construção').locator('.card-play').click();
+    await expect(page.locator('#btn-play')).toHaveClass(/playing/);
+    await page.locator('#btn-timer').click();
+    await page.locator('#timer-menu [data-sleep="15"]').click();
+    await expect(page.locator('#btn-timer .timer-left')).toHaveText('15′');
+    // keep the 10 s silence from ending (and moving on) while the fake clock runs
+    await page.evaluate(() => { const a = document.getElementById('audio'); a.loop = true; });
+    await page.clock.runFor(15 * 60 * 1000 - 5000);
+    const meio = await page.evaluate(() => document.getElementById('audio').volume);
+    expect(meio).toBeLessThan(0.75);
+    await page.clock.runFor(7000);
+    await expect.poll(() => page.evaluate(() => document.getElementById('audio').paused)).toBe(true);
+    expect(await page.evaluate(() => document.getElementById('audio').volume)).toBe(1);
+    await expect(page.locator('#btn-timer .timer-left')).toHaveText('');
+  });
+
+  test('end of track: stops instead of moving on', async ({ page }) => {
+    await gotoWithFixture(page, '/', { ranges: true });
+    await card(page, 'Construção').locator('.card-play').click();
+    await page.locator('#btn-timer').click();
+    await page.locator('#timer-menu [data-sleep="track"]').click();
+    await page.evaluate(() => document.getElementById('audio').dispatchEvent(new Event('ended')));
+    expect(await page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack))).toBe(0);
+    await expect(page.locator('#toast')).toContainText('Timer');
+  });
+
+  test('speed is kept across tracks and reloads', async ({ page }) => {
+    await gotoWithFixture(page, '/', { ranges: true });
+    await card(page, 'Construção').locator('.card-play').click();
+    await page.locator('#btn-timer').click();
+    await page.locator('#timer-menu [data-rate="1.5"]').click();
+    await page.locator('#btn-next').click();
+    await expect.poll(() => page.evaluate(() => document.getElementById('audio').playbackRate)).toBe(1.5);
+    await expect(page.locator('#btn-timer .timer-left')).toHaveText('1,5×');
+    await page.reload();
+    await page.waitForSelector('.album-item');
+    expect(await page.evaluate(() => document.getElementById('audio').defaultPlaybackRate)).toBe(1.5);
+    await page.keyboard.press('Escape');
+  });
+});

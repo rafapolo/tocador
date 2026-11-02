@@ -2593,3 +2593,37 @@ audio {
 .continue-go span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .continue-close { padding: 0 14px; opacity: 0.7; }
 .continue-go:hover, .continue-close:hover { color: var(--color-accent); opacity: 1; }
+
+/* Timer para dormir e velocidade (#btn-timer + #timer-menu) */
+.timer-wrap { position: relative; display: inline-flex; }
+#btn-timer { gap: 3px; width: auto; min-width: 32px; padding-inline: 6px; }
+#btn-timer .timer-left { font-size: 0.68rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+#btn-timer .timer-left:empty { display: none; }
+.timer-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  z-index: 950;
+  width: 248px;
+  padding: 10px 12px 12px;
+  background: rgba(30, 22, 12, 0.98);
+  border: 1px solid var(--color-accent);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+.timer-menu[hidden] { display: none; }
+.timer-menu-title { margin: 4px 0 6px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.7; }
+.timer-opts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.timer-opts button {
+  padding: 5px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 165, 116, 0.4);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.timer-opts button:hover { border-color: var(--color-accent); }
+.timer-opts button[aria-pressed="true"] { background: var(--color-accent); color: #1a120a; border-color: var(--color-accent); font-weight: 700; }
+body.timer-aberto .continue-listening { visibility: hidden; }

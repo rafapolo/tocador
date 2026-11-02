@@ -1062,7 +1062,8 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     }
   });
 
-  audio.addEventListener('ended', playNext);
+  audio.addEventListener('ended', () => { if (!sleepStopsOnEnded()) playNext(); });
+  initTimerMenu(audio);
 
   // Singleton player across tabs: pause this tab when another tab starts playing.
   // BroadcastChannel's constructor can throw SecurityError in Firefox when
