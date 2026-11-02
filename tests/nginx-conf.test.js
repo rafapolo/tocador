@@ -28,3 +28,14 @@ test('nginx limits answer 429 that a cross-origin fetch can read', () => {
   expect(bloco.slice(0, bloco.indexOf('}'))).toMatch(/Access-Control-Allow-Origin "\*" always/);
   expect(conf).not.toMatch(/proxy_intercept_errors\s+on/);   // would add a second ACAO to proxied 429s
 });
+
+// Every listener reached the proxy as 172.18.0.1 (haloy's proxy on the Docker bridge), which
+// made the per-IP limits global. nginx must read the client from X-Forwarded-For, trusting
+// only the bridge and loopback.
+test('nginx takes the client IP from X-Forwarded-For, trusting only the docker bridge', () => {
+  const conf = fs.readFileSync(path.join(__dirname, '..', 'nginx.conf'), 'utf8');
+  const confia = [...conf.matchAll(/^\s*set_real_ip_from\s+([^;]+);/gm)].map(m => m[1].trim());
+  expect(confia).toEqual(['172.16.0.0/12', '127.0.0.1']);
+  expect(conf).toMatch(/^\s*real_ip_header\s+X-Forwarded-For;/m);
+  expect(conf).toMatch(/^\s*real_ip_recursive\s+on;/m);
+});
