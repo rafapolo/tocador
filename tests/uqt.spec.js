@@ -689,7 +689,7 @@ test('L63: share button names the loaded track with a #tN anchor', async ({ page
 const { playerTemplate, albumPage } = require('../script/build-album-pages.js');
 const fixtureCatalog = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'albums.json'), 'utf8'));
 const playerShell = playerTemplate(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'));
-async function gotoAlbumPage(page, slug, hash = '') {
+async function gotoAlbumPage(page, slug, hash = '', opts = {}) {
   const slugs = globalThis.albumSlugs(fixtureCatalog.albums);
   await page.route(/\/uqt\/[a-z0-9-]+\/(\?.*)?$/, route => {
     const s = new URL(route.request().url()).pathname.split('/')[2];
@@ -701,7 +701,7 @@ async function gotoAlbumPage(page, slug, hash = '') {
       body: albumPage({ template: playerShell, alias: 'uqt', meta: fixtureCatalog.meta || {}, album: fixtureCatalog.albums[i], slug: s }),
     });
   });
-  await gotoWithFixture(page, `/uqt/${slug}/${hash}`);
+  await gotoWithFixture(page, `/uqt/${slug}/${hash}`, opts);
 }
 
 test('L64: an album page opens its album and track from the path and #tN', async ({ page }) => {
@@ -711,6 +711,27 @@ test('L64: an album page opens its album and track from the path and #tN', async
   expect(new URL(page.url()).pathname + new URL(page.url()).hash).toBe('/uqt/1971-chico-buarque-construcao/#t2');
   await expect(page.locator('link[rel="canonical"]'))
     .toHaveAttribute('href', 'https://tocador.cc/uqt/1971-chico-buarque-construcao/');
+});
+
+test('L64b: a shared #tN@S link starts the track S seconds in, without autoplay', async ({ page }) => {
+  await gotoAlbumPage(page, '1971-chico-buarque-construcao', '#t2@4', { ranges: true });
+  await expect(page.locator('#track-list .track-item.playing .track-num')).toHaveText('2');
+  await expect.poll(() => page.evaluate(() => document.getElementById('audio').currentTime)).toBeGreaterThanOrEqual(3.9);
+  expect(await page.evaluate(() => document.getElementById('audio').paused)).toBe(true);
+  expect(new URL(page.url()).hash).toBe('#t2');   // the moment is read once, then dropped
+});
+
+test('L63b: sharing past 5 s into a track links that moment', async ({ page }) => {
+  await stubClipboard(page);
+  await gotoWithFixture(page, '/?acervo=uqt', { ranges: true });
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  await page.locator('#track-list .track-item').first().click();
+  await expect.poll(() => page.evaluate(() => document.getElementById('audio').readyState)).toBeGreaterThanOrEqual(1);
+  await page.evaluate(() => { document.getElementById('audio').currentTime = 6.4; });
+  await page.locator('#album-header .album-share').click();
+  await expect(page.locator('#toast')).toContainText('a partir de 0:06');
+  expect(await page.evaluate(() => window.__copied))
+    .toBe('https://tocador.cc/uqt/1971-chico-buarque-construcao/#t1@6');
 });
 
 test('L65: from an album page, other albums and tracks keep path URLs', async ({ page }) => {

@@ -26,14 +26,16 @@ function getYearFromUrl() {
 }
 
 function getTrackNumFromUrl() {
-  const m = location.hash.match(/^#t(\d+)$/);
+  const m = location.hash.match(/^#t(\d+)(?:@\d+)?$/);
   if (m) return parseInt(m[1]);
   return parseInt(new URLSearchParams(window.location.search).get('t') || 0);
 }
 
-// ?seg=N: start the URL's track N seconds in (the /atlas preview hands its position over this way).
+// ?seg=N or #tT@N: start the URL's track N seconds in (the /atlas preview hands its position
+// over with ?seg=; a shared link "from m:ss" uses the fragment on album pages, ?seg= elsewhere).
 function getSegFromUrl() {
-  const n = parseFloat(new URLSearchParams(window.location.search).get('seg'));
+  const h = location.hash.match(/^#t\d+@(\d+)$/);
+  const n = h ? parseFloat(h[1]) : parseFloat(new URLSearchParams(window.location.search).get('seg'));
   return n > 0 ? n : 0;
 }
 
@@ -264,16 +266,26 @@ function shareSaved() {
 // on the player fallback. The preview itself stays album-level either way. The
 // first track is left out: opening an album primes it, so it says nothing about
 // what the listener picked, and the album page starts there anyway.
+// Shares the album; the current track when it isn't the first; and, once the track has
+// played more than 5 s, the moment too (#t5@83 on album pages, &t=5&seg=83 elsewhere).
 function shareAlbum(album) {
-  const track = currentTrack !== album.tracks?.[0] && album.tracks?.includes(currentTrack) ? currentTrack : null;
+  const playing = album.tracks?.includes(currentTrack) ? currentTrack : null;
+  const audio = document.getElementById('audio');
+  const at = playing && audio && audio.currentTime > 5 ? Math.floor(audio.currentTime) : 0;
+  const track = playing && (at || playing !== album.tracks[0]) ? playing : null;
   const page = albumPageUrl(album);
-  const url = page
-    ? (track ? `${page}#t${track.num}` : page)
-    : window.location.origin + generateAlbumUrl(album, track?.num);
+  let url;
+  if (page) url = track ? `${page}#t${track.num}${at ? `@${at}` : ''}` : page;
+  else {
+    const u = new URL(window.location.origin + generateAlbumUrl(album, track?.num));
+    if (at) u.searchParams.set('seg', at);
+    url = u.href;
+  }
   const title = track
     ? `${track.title} — ${album.name} — ${album.artists}`
     : `${album.name} — ${album.artists}`;
-  return shareLink(title, url, track ? 'Link da faixa copiado' : 'Link do álbum copiado');
+  const msg = at ? `Link da faixa a partir de ${formatTime(at)} copiado` : track ? 'Link da faixa copiado' : 'Link do álbum copiado';
+  return shareLink(title, url, msg);
 }
 
 function updateMetaTags(album) {
