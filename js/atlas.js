@@ -631,6 +631,9 @@
       for (const a of db.albums) for (const tr of a.tracks) chaves.push(`${a.path}/${tr.file}`.normalize('NFC'));
       feats[ai] = decodeFeatures(p, chaves);
       for (const v of feats[ai].tom) if (v) SOM_TOM_TODAS[v - 1]++;
+    })).then(rs => rs.forEach((r, ai) => {
+      // allSettled não deixa a falha subir: a música segue sem as features desse acervo.
+      if (r.status === 'rejected') window.reportar?.('atlas', `features da música recusadas: ${A.acervos[ai]} (${r.reason?.message || 'erro'})`, descreverErro(r.reason));
     }));
   }
 
@@ -1296,11 +1299,16 @@
     try { payload = await carregarPayload(); preparar(payload); }
     catch (err) {
       console.error('[atlas]', err);
+      if (navigator.onLine) window.reportar?.('atlas', `mapa não carregou (${err?.code || err?.name || 'erro'})`, descreverErro(err));
       status.textContent = 'Não foi possível carregar o mapa.';
       return;
     }
     try { if (!iniciarGL()) { status.textContent = 'Este navegador não tem WebGL, que o mapa precisa.'; return; } }
-    catch (err) { console.error('[atlas]', err); status.textContent = 'Erro ao iniciar o WebGL.'; return; }
+    catch (err) {
+      console.error('[atlas]', err);
+      window.reportar?.('atlas', `WebGL falhou ao iniciar: ${err?.message || err}`, descreverErro(err));
+      status.textContent = 'Erro ao iniciar o WebGL.'; return;
+    }
     canvas.addEventListener('webglcontextlost', e => e.preventDefault());
     canvas.addEventListener('webglcontextrestored', () => { iniciarGL(); enviarAtivo(); pedir(); });
 
@@ -1324,7 +1332,7 @@
     $('carregando').classList.add('pronto');
     setTimeout(() => $('carregando').hidden = true, 600);
     setTimeout(sumirAjuda, 8000);
-    pronto.ligar(carregarCatalogos().catch(err => { console.error('[atlas]', err); $('contagem').textContent = 'catálogos indisponíveis'; }));
+    pronto.ligar(carregarCatalogos().catch(err => { console.error('[atlas]', err); if (navigator.onLine) window.reportar?.('atlas', `catálogos do atlas não carregaram (${err?.name || 'erro'})`, descreverErro(err)); $('contagem').textContent = 'catálogos indisponíveis'; }));
   }
 
   // Test hook (tests/atlas.spec.js): wait for the catalogs, find a track's point, get its screen spot.

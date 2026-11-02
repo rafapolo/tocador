@@ -72,9 +72,17 @@ function _exCarregar() {
         for (const a of db.albums) for (const t of a.tracks) keys.push(`${a.path}/${t.file}`.normalize('NFC'));
         f = decodeFeatures(await _exGz(r), keys);
         break;
-      } catch (e) { console.warn('features ignoradas:', e.message); }
+      } catch (e) {
+        console.warn('features ignoradas:', e.message);
+        // FEATURES_CATALOG_MISMATCH depois de um ETL: o painel Pegada some para todo mundo.
+        window.reportar?.('features', `features recusadas: ${key || u} (${e.message})`, `${u}\n\n${descreverErro(e)}`);
+      }
     }
-    if (!f) return null;
+    if (!f) {
+      // Nossos acervos sempre têm features: nenhuma URL respondeu.
+      if (key && navigator.onLine) window.reportar?.('features', `features não carregaram: ${key}`, urls.join('\n'));
+      return null;
+    }
     // A linha de features é por faixa: marca cada faixa do catálogo com a sua (`_row`), que as faixas da
     // grade alcançam por `track.src._row`. Um álbum só vira "analisado" se tiver ao menos uma faixa analisada.
     let row = 0, analisados = 0;

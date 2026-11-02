@@ -1,0 +1,59 @@
+name: Data integrity
+
+# Confere os dados derivados (features, gêneros, atlas) contra os catálogos publicados e, quando
+# algo descasou, abre uma issue (ou comenta na que já está aberta). Não bloqueia o deploy: só registra,
+# para que um ETL que esqueceu de regenerar algo apareça no mesmo dia, sem esperar um visitante.
+on:
+  schedule:
+    - cron: '47 3 * * *'   # depois do deploy diário (03:17)
+  push:
+    branches: [main]
+    paths: ['data/**', 'js/acervo-features.js', 'js/atlas-data.js', 'js/acervo-format.js', 'script/check-data-integrity.js']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - name: Check derived data against the published catalogs
+        id: check
+        run: |
+          mkdir -p "$RUNNER_TEMP/catalogs"
+          for pair in uqt=https://rafapolo.github.io/uqt/data/uqt-albums.json.gz \
+                      homi=https://rafapolo.github.io/hominiscanidae/data/homi-albums.json.gz; do
+            curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors "${pair#*=}" \
+              -o "$RUNNER_TEMP/catalogs/${pair%%=*}.json.gz"
+          done
+          set +e
+          bun script/check-data-integrity.js \
+            uqt="$RUNNER_TEMP/catalogs/uqt.json.gz" homi="$RUNNER_TEMP/catalogs/homi.json.gz" \
+            --md "$RUNNER_TEMP/report.md"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: File or update the issue
+        if: steps.check.outputs.status == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE='[dados] dados derivados fora de sincronia com os catálogos'
+          BODY="$(cat "$RUNNER_TEMP/report.md")
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          N=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number,title \
+                -q ".[] | select(.title == \"$TITLE\") | .number" | head -1)
+          if [ -n "$N" ]; then
+            # Só comenta quando o relatório mudou, para não encher a issue com o mesmo texto todo dia.
+            LAST=$(gh issue view "$N" --json body,comments -q '(.comments[-1].body // .body)' | sed '/^Run: /d')
+            NOW=$(printf '%s' "$BODY" | sed '/^Run: /d')
+            if [ "$(printf '%s' "$LAST" | tr -d '[:space:]')" != "$(printf '%s' "$NOW" | tr -d '[:space:]')" ]; then
+              gh issue comment "$N" --body "$BODY"
+            fi
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label bug --label dados
+          fi

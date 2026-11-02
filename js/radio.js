@@ -1,4 +1,3 @@
-const REPORT_URL = 'https://cdn.tocador.cc/report-error';
 const HEARTBEAT_URL = 'https://cdn.tocador.cc/radio-heartbeat';
 // navigator.webdriver catches automation frameworks (Puppeteer/Playwright/Selenium
 // defaults) directly; those account for most of the "not playable" noise here —
@@ -12,32 +11,7 @@ const HEARTBEAT_URL = 'https://cdn.tocador.cc/radio-heartbeat';
 const HAS_FAKE_CHROME_VERSION = /Chrome\/\d+\.\d+\.\d+\.\d{4,}/.test(navigator.userAgent);
 const IS_BOT = navigator.webdriver || HAS_FAKE_CHROME_VERSION || /bot|crawl|spider|headless|googleother|google-extended|read-aloud|inspectiontool|apis-google/i.test(navigator.userAgent);
 
-(function () {
-  const seen = new Set();
-  let count = 0;
-  function report(title, detail) {
-    if (IS_BOT || count >= 3 || seen.has(title)) return;
-    seen.add(title); count++;
-    const body = [`**${title}**`, '', '```', detail, '```', '', `**URL:** ${location.href}`, `**UA:** ${navigator.userAgent}`, `**Time:** ${new Date().toISOString()}`].join('\n');
-    fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, body }), keepalive: true, credentials: 'omit' }).catch(() => {});
-  }
-  window.addEventListener('error', e => {
-    const msg = e.message || String(e);
-    // Cross-origin scripts (loaded without CORS) report as bare "Script error."
-    // with no filename/lineno — that's third-party code (analytics, etc.), not ours.
-    if (msg === 'Script error.' && !e.filename) return;
-    if (e.filename && /umami/i.test(e.filename)) return; // third-party analytics
-    const loc = e.filename ? ` @ ${e.filename.replace(/.*\//, '')}:${e.lineno}` : '';
-    report(`[radio] JS error: ${msg}${loc}`, e.error?.stack || msg);
-  });
-  window.addEventListener('unhandledrejection', e => {
-    const reason = e.reason;
-    if (reason?.name === 'NotAllowedError') { e.preventDefault(); return; }
-    const msg = reason?.message || String(reason);
-    if (/failed to fetch|network error|load failed/i.test(msg)) { e.preventDefault(); return; }
-    report(`[radio] Unhandled rejection: ${msg}`, reason?.stack || new Error().stack || msg);
-  });
-})();
+// Uncaught errors are reported by js/reporter.js (data-pagina="radio").
 
 // Report unplayable tracks to GitHub issues via the proxy
 const _reportedTracks = new Set();
@@ -45,7 +19,7 @@ const _reportedTracks = new Set();
 // hitting new albums (real binge-listening, or a crawler walking the whole
 // catalog) could otherwise file one issue per track with no ceiling. #578-637
 // was 60 such issues, 43 of them from one session inside 66 minutes. Cap it
-// like the JS-error reporter below already does; the server verifies each
+// per category, like js/reporter.js already does; the server verifies each
 // report against the actual file too (see proxy.js), so this is a backstop,
 // not the only guard.
 const MAX_PLAYBACK_REPORTS = 3;
@@ -55,8 +29,9 @@ function reportPlayback(reason) {
   if (_reportedTracks.has(key)) return;
   _reportedTracks.add(key);
   const errCode = audio.error ? `MediaError ${audio.error.code}: ${audio.error.message}` : 'none';
-  const body = [
-    `**[radio] Track not playable — ${reason}**`,
+  // The proxy HEADs the **Audio src:** line before filing (see proxy.js), so keep that format.
+  const detalhe = [
+    `**Track not playable — ${reason}**`,
     '',
     `- **Acervo:** ${acervoParam}`,
     `- **Album:** ${curAlbum.title || curAlbum.path}`,
@@ -64,10 +39,8 @@ function reportPlayback(reason) {
     `- **Track:** ${curTrack.title} (\`${curTrack.file}\`)`,
     `- **Audio src:** \`${curSrc || audio.src}\``,
     `- **Media error:** ${errCode}`,
-    `- **UA:** ${navigator.userAgent}`,
-    `- **Time:** ${new Date().toISOString()}`,
   ].join('\n');
-  fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: `[radio] not playable: ${curAlbum.path}`, body }), keepalive: true, credentials: 'omit' }).catch(() => {});
+  window.reportar?.('reproducao', `not playable: ${curAlbum.path}`, detalhe, { markdown: true });
 }
 
 const ACERVOS = {

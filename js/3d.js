@@ -723,6 +723,7 @@ async function main() {
   } catch (err) {
     setStatus(`Erro: ${err.message}`);
     console.error(err);
+    if (navigator.onLine) window.reportar?.('atlas', `3D não carregou: ${err?.message || err}`, window.descreverErro?.(err) ?? String(err));
   }
 }
 

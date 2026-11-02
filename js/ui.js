@@ -1,65 +1,4 @@
-// Error reporter — posts uncaught JS errors to tocador/issues via the proxy
-(function () {
-  const REPORT_URL = 'https://cdn.tocador.cc/report-error';
-  const seen = new Set();
-  let count = 0;
-  // Real Chrome/Chromium patch numbers have never exceeded ~300; a randomized-UA
-  // bot generator was flooding /radio with spoofed UAs like "Chrome/56.0.4817.1447"
-  // — a 4-digit patch number that has never shipped. Same check, same source.
-  const HAS_FAKE_CHROME_VERSION = /Chrome\/\d+\.\d+\.\d+\.\d{4,}/.test(navigator.userAgent);
-
-  function report(title, detail) {
-    if (navigator.webdriver || HAS_FAKE_CHROME_VERSION || count >= 3 || seen.has(title)) return;
-    seen.add(title);
-    count++;
-    const body = [
-      `**${title}**`,
-      '',
-      '```',
-      detail,
-      '```',
-      '',
-      `**URL:** ${location.href}`,
-      `**UA:** ${navigator.userAgent}`,
-      `**Time:** ${new Date().toISOString()}`,
-    ].join('\n');
-    fetch(REPORT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, body }), keepalive: true, credentials: 'omit' }).catch(() => {});
-  }
-
-  window.addEventListener('error', e => {
-    const msg = e.message || String(e);
-    if (msg.includes('ResizeObserver')) return; // browser noise, not actionable
-    // Cross-origin scripts (loaded without CORS) report as bare "Script error."
-    // with no filename/lineno — that's third-party code (analytics, etc.), not ours.
-    if (msg === 'Script error.' && !e.filename) return;
-    if (e.filename && /umami/i.test(e.filename)) return; // third-party analytics
-    const filename = e.filename ? e.filename.replace(/^https?:\/\/[^/]+\//, '').replace(/\?.*/, '') : '';
-    const loc = filename ? ` @ ${filename}:${e.lineno}` : '';
-    report(`[tocador] JS error: ${msg}${loc}`, e.error?.stack || msg);
-  });
-
-  window.addEventListener('unhandledrejection', e => {
-    const reason = e.reason;
-    if (reason?.name === 'NotAllowedError') { e.preventDefault(); return; }
-    const msg = reason?.message || String(reason);
-    if (/failed to fetch|network error|load failed/i.test(msg)) { e.preventDefault(); return; }
-    const syntheticStack = new Error().stack || '';
-    const stack = (reason?.stack && reason.stack !== msg) ? reason.stack : syntheticStack;
-    const conn = navigator.connection;
-    const extra = [
-      `**online:** ${navigator.onLine}`,
-      conn ? `**connection:** ${[conn.effectiveType, conn.downlink && conn.downlink + 'Mbps'].filter(Boolean).join(' ')}` : null,
-      `**acervo:** ${new URLSearchParams(location.search).get('acervo') || location.pathname}`,
-      window.__lastFetchUrl ? `**last fetch:** ${window.__lastFetchUrl}` : null,
-    ].filter(Boolean).join('\n');
-    report(`[tocador] Unhandled rejection: ${msg}`, `${stack}\n\n${extra}`);
-  });
-})();
-
-function trackedFetch(url, opts) {
-  window.__lastFetchUrl = url;
-  return fetch(url, opts);
-}
+// Error reporting (uncaught errors, reportar(), trackedFetch) lives in js/reporter.js, loaded first.
 
 // Defends against acervo-format.js failing to load before this script runs
 // (e.g. a flaky fetch, or a stale service-worker cache serving an old shell
@@ -568,7 +507,30 @@ function normalizeAcervoParam(raw) {
   return key;
 }
 
-async function handleCatalogDecodeError(err, container) {
+// A track that errored while the listener wanted it playing. The proxy HEADs the
+// **Audio src:** line and drops the report when the file is fine (a flaky phone network,
+// a headless browser without a decoder), and drops anything outside cdn.tocador.cc.
+// Three in a row pause playback: that gets its own title, the CDN-down signal.
+function reportPlaybackError(track, pausou) {
+  if (!window.reportar || !navigator.onLine) return;
+  const album = selectedAlbum?.tracks?.includes(track) ? selectedAlbum : albums.find(a => a.tracks.includes(track));
+  const audio = document.getElementById('audio');
+  const err = audio.error;
+  const detalhe = [
+    `- **Acervo:** ${activeAcervoKey || activeAcervoId}`,
+    `- **Album:** ${album?.name || '?'}`,
+    `- **Path:** \`${album?.path || '?'}\``,
+    `- **Track:** ${track.title} (\`${track.src?.file || track.file || ''}\`)`,
+    `- **Audio src:** \`${audio.currentSrc || audio.src}\``,
+    `- **Media error:** ${err ? `MediaError ${err.code}: ${err.message}` : 'none'}`,
+    `- **Erros seguidos:** ${_consecutiveErrors}`,
+  ].join('\n');
+  const titulo = pausou ? `reprodução pausada: ${_consecutiveErrors} faixas seguidas falharam`
+    : `not playable: ${album?.path || track.title}`;
+  window.reportar('reproducao', titulo, detalhe, { markdown: true });
+}
+
+async function handleCatalogDecodeError(err, container, reportCatalogo) {
   const RELOAD_KEY = 'tocador-stale-reload';
   if (err?.code === 'UNSUPPORTED_ACERVO_VERSION' && !sessionStorage.getItem(RELOAD_KEY)) {
     sessionStorage.setItem(RELOAD_KEY, '1');
@@ -580,6 +542,8 @@ async function handleCatalogDecodeError(err, container) {
     location.reload();
     return;
   }
+  // Reaching here, the stale-cache reload didn't help or the payload is plain broken.
+  reportCatalogo?.();
   const p = document.createElement('p');
   p.className = 'album-not-found';
   p.textContent = err?.code === 'UNSUPPORTED_ACERVO_VERSION'
@@ -633,11 +597,18 @@ async function handleCatalogDecodeError(err, container) {
       // A dead catalog URL (third-party ?acervo= gone, typo'd link) must not leave a
       // skeleton forever, nor stick in sessionStorage so every reload fails again.
       console.warn('[tocador] catalog fetch failed:', dataUrl, err);
+      // Only our own acervos: a dead third-party ?acervo= URL isn't ours to file.
+      const k = resolveAcervoKey(dataUrl, acervoParam);
+      if (k && navigator.onLine) window.reportar?.('catalogo', `catálogo não carregou: ${k}`, `${dataUrl}\n\n${descreverErro(err)}`);
       catalogFailed = true;
       return null;
     }),
     genresUrl
-      ? decompressGzUrl(genresUrl).then(t => JSON.parse(t)).catch(() => null)
+      ? decompressGzUrl(genresUrl).then(t => JSON.parse(t)).catch(err => {
+          // Without it the Gêneros tab disappears for everyone: worth an issue.
+          if (navigator.onLine) window.reportar?.('features', `índice de gêneros não carregou: ${resolveAcervoKey(dataUrl, acervoParam) ?? genresUrl}`, `${genresUrl}\n\n${descreverErro(err)}`);
+          return null;
+        })
       : Promise.resolve(null),
   ]);
   if (catalogFailed) {
@@ -660,7 +631,9 @@ async function handleCatalogDecodeError(err, container) {
     db = decodeAcervo(JSON.parse(json));
   } catch (err) {
     skeletonEl.remove();
-    await handleCatalogDecodeError(err, albumsList);
+    const k = resolveAcervoKey(dataUrl, acervoParam);
+    await handleCatalogDecodeError(err, albumsList, k && (() => window.reportar?.('catalogo',
+      `catálogo não decodificou: ${k} (${err?.code || err?.name || 'erro'})`, `${dataUrl}\n\n${descreverErro(err)}`)));
     return;
   }
   genreData = genresRaw;
@@ -858,6 +831,7 @@ async function handleCatalogDecodeError(err, container) {
       // Several tracks failing in a row usually means the proxy/network is down,
       // not that individual files are broken — stop thrashing through the whole
       // library and tell the user instead of silently skipping forever.
+      reportPlaybackError(errored, _consecutiveErrors >= MAX_CONSECUTIVE_ERRORS);
       if (_consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
         showToast('Vários erros de reprodução seguidos — reprodução pausada.', 6000);
         audio.pause();

@@ -148,6 +148,10 @@ process.on('unhandledRejection', (r)   => { console.error('unhandledRejection:',
 if (import.meta.main) startServer();
 
 function startServer() {
+// Categories js/reporter.js sends; each is a label on tocador/issues (created by hand, see
+// script/check-data-integrity.js and .github/workflows/data-integrity.yml for 'dados').
+const REPORT_CATEGORIAS = new Set(['js', 'catalogo', 'features', 'reproducao', 'atlas']);
+
 _server = Bun.serve({
   port: PORT,
   hostname: '127.0.0.1',   // §3 — never 0.0.0.0; only nginx on loopback connects here
@@ -241,6 +245,9 @@ _server = Bun.serve({
       try { payload = await req.json(); }
       catch { mark4xx(); return new Response('Bad Request', { status: 400, headers: corsBase }); }
       const { title, body } = payload;
+      // js/reporter.js tags each report with a category, which becomes a label next to 'bug'.
+      // Unknown or missing (an old cached page) just gets 'bug'.
+      const categoria = REPORT_CATEGORIAS.has(payload.categoria) ? payload.categoria : null;
       if (!title || typeof title !== 'string' || typeof body !== 'string') {
         mark4xx();
         return new Response('Bad Request', { status: 400, headers: corsBase });
@@ -261,22 +268,25 @@ _server = Bun.serve({
       // this reliably (each album gets its own title, so per-title dedup doesn't
       // collapse them, and bot UAs can mimic real ones) — so confirm the file is
       // actually broken server-side, which the report can't spoof, before filing.
-      if (normalizedTitle.startsWith('[radio] not playable:')) {
+      // Same check for the player's reports (categoria 'reproducao'), not just the radio's. A
+      // playback report for audio outside cdn.tocador.cc (a third-party ?acervo=) isn't ours to file.
+      if (categoria === 'reproducao' || /^\[\w+\] not playable:/.test(normalizedTitle)) {
         const srcMatch = body.match(/\*\*Audio src:\*\* `([^`]+)`/);
         const src = srcMatch?.[1];
-        if (src && /^https:\/\/cdn\.tocador\.cc\//.test(src)) {
-          try {
-            const check = await fetch(src, { method: 'HEAD', headers: { Referer: 'https://tocador.cc/' }, signal: AbortSignal.timeout(5000) });
-            const ct = check.headers.get('content-type') || '';
-            const len = Number(check.headers.get('content-length') || 0);
-            if (check.ok && ct.startsWith('audio/') && len > 10_000) {
-              console.log(`[report-error] skipped, file verified playable: ${src}`);
-              return new Response('OK (file verified playable)', { status: 200, headers: corsBase });
-            }
-          } catch (err) {
-            // HEAD failed/timed out — corroborates rather than contradicts the
-            // report, so fall through and file it.
+        if (!src || !/^https:\/\/cdn\.tocador\.cc\//.test(src)) {
+          return new Response('OK (not our audio)', { status: 200, headers: corsBase });
+        }
+        try {
+          const check = await fetch(src, { method: 'HEAD', headers: { Referer: 'https://tocador.cc/' }, signal: AbortSignal.timeout(5000) });
+          const ct = check.headers.get('content-type') || '';
+          const len = Number(check.headers.get('content-length') || 0);
+          if (check.ok && ct.startsWith('audio/') && len > 10_000) {
+            console.log(`[report-error] skipped, file verified playable: ${src}`);
+            return new Response('OK (file verified playable)', { status: 200, headers: corsBase });
           }
+        } catch (err) {
+          // HEAD failed/timed out — corroborates rather than contradicts the
+          // report, so fall through and file it.
         }
       }
       try {
@@ -301,7 +311,7 @@ _server = Bun.serve({
 
         const gh = await fetch('https://api.github.com/repos/rafapolo/tocador/issues', {
           method: 'POST', headers: ghHeaders,
-          body: JSON.stringify({ title: normalizedTitle, body, labels: ['bug'] }),
+          body: JSON.stringify({ title: normalizedTitle, body, labels: categoria ? ['bug', categoria] : ['bug'] }),
         });
         if (gh.ok) markOk(); else mark5xx();
         return new Response(gh.ok ? 'Created' : 'GitHub error', { status: gh.ok ? 201 : gh.status, headers: corsBase });

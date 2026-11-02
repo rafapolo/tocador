@@ -245,7 +245,13 @@ let _artistasParecidos = null;
 function _carregarParecidos() {
   _artistasParecidos ??= (async () => {
     const r = await _exBuscar('data/atlas-artistas.json.gz');
-    try { return r ? decodeArtistas(await _exGz(r)) : null; } catch (e) { console.warn('vizinhos ignorados:', e.message); return null; }
+    if (!r) { if (navigator.onLine) window.reportar?.('features', 'atlas-artistas.json.gz não carregou', 'Soa parecido com fica vazio'); return null; }
+    try { return decodeArtistas(await _exGz(r)); }
+    catch (e) {
+      console.warn('vizinhos ignorados:', e.message);
+      window.reportar?.('features', `atlas-artistas.json.gz recusado (${e.code || e.message})`, descreverErro(e));
+      return null;
+    }
   })();
   return _artistasParecidos;
 }
