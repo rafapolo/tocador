@@ -1113,6 +1113,8 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   document.getElementById('search-clear')?.addEventListener('click', clearSearch);
   document.getElementById('empty-clear-btn')?.addEventListener('click', clearAllFilters);
   document.getElementById('clear-all-filters')?.addEventListener('click', clearAllFilters);
+  // O título é o "início": limpa todos os filtros e volta o grid ao topo, sem mexer no álbum aberto nem no áudio.
+  document.getElementById('app-title-text')?.addEventListener('click', clearAllFilters);
 
   // ── Browse panel events ─────────────────────────────────────────────────
 

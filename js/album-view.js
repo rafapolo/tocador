@@ -116,7 +116,7 @@ function renderAlbumHeader() {
   share.className = 'album-share';
   share.title = 'Compartilhar';
   share.setAttribute('aria-label', `Compartilhar link de ${album.name}`);
-  share.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><line x1="8.2" y1="10.8" x2="15.8" y2="6.2"/><line x1="8.2" y1="13.2" x2="15.8" y2="17.8"/></svg>';
+  share.innerHTML = '<svg viewBox="1 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><line x1="8.2" y1="10.8" x2="15.8" y2="6.2"/><line x1="8.2" y1="13.2" x2="15.8" y2="17.8"/></svg>';
   share.addEventListener('click', () => shareAlbum(album));
 
   const like = document.createElement('button');
@@ -293,7 +293,6 @@ async function fillAlbumParecidos(details) {
       tag.target = '_blank';
       tag.rel = 'noopener';
       tag.title = `${nome}, no acervo ${outro} (abre em nova aba)`;
-      tag.append(Object.assign(document.createElement('small'), { textContent: `↗ ${outro}` }));
     }
     return tag;
   });

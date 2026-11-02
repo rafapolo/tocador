@@ -593,8 +593,7 @@ test('K46c: "Soa parecido com" lists the artist\'s sound neighbours; one here fi
   await expect(tags).toHaveCount(2);
   await expect(tags.nth(0)).toHaveText('Caetano Veloso');
   const fora = tags.nth(1);
-  await expect(fora).toContainText('Fulano Externo');
-  await expect(fora).toContainText('homi');
+  await expect(fora).toHaveText('Fulano Externo');
   await expect(fora).toHaveAttribute('target', '_blank');
   expect(new URL(await fora.getAttribute('href'), page.url()).searchParams.get('acervo')).toBe('homi');
   await tags.nth(0).click();
@@ -991,6 +990,18 @@ test('L74: the artist filter offers a link to the artist page', async ({ page })
   expect(await page.evaluate(() => window.__copied)).toBe('https://tocador.cc/uqt/artista/elis-regina/');
   await page.locator('#clear-all-filters').click();
   await expect(page.locator('#share-artist')).toBeHidden();
+});
+
+test('L74b: clicking the app title clears every filter and keeps the open album', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
+  await expect(page.locator('#clear-all-label')).toHaveText('Elis Regina');
+  const total = await page.evaluate(() => albums.length);
+  await page.locator('.album-item').first().click();
+  const aberto = await page.locator('#album-header h2').textContent();
+  await page.locator('#app-title-text').click();
+  await expect(page).not.toHaveURL(/artista=/);
+  expect(await page.evaluate(() => filteredAlbums.length)).toBe(total);
+  await expect(page.locator('#album-header h2')).toHaveText(aberto);
 });
 
 test('L75: artist pages carry the preview and send people to the filter', () => {
