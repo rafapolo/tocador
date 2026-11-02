@@ -25,12 +25,6 @@ function getYearFromUrl() {
   return parseInt(new URLSearchParams(window.location.search).get('ano') || 0);
 }
 
-const SORT_ORDERS = ['ano', 'titulo', 'artista', 'aleatorio'];   // '' = year, newest first
-function getOrdemFromUrl() {
-  const o = new URLSearchParams(window.location.search).get('ordem') || '';
-  return SORT_ORDERS.includes(o) ? o : '';
-}
-
 function getTrackNumFromUrl() {
   const m = location.hash.match(/^#t(\d+)(?:@\d+)?$/);
   if (m) return parseInt(m[1]);

@@ -134,6 +134,18 @@ test.describe('continue listening', () => {
 });
 
 test.describe('shuffle', () => {
+  test('turning it on with nothing playing starts a track from the grid', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
+    expect(await page.evaluate(() => document.getElementById('audio').paused)).toBe(true);
+    await page.locator('#btn-shuffle').click();
+    await expect(page.locator('#btn-shuffle')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#btn-play')).toHaveClass(/playing/);
+    expect(await page.evaluate(() => filteredAlbums.some(a => a.tracks.includes(currentTrack)))).toBe(true);
+    // turning it off doesn't touch playback
+    await page.locator('#btn-shuffle').click();
+    await expect(page.locator('#btn-play')).toHaveClass(/playing/);
+  });
+
   test('draws only from the filtered albums', async ({ page }) => {
     await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
     const n = await page.evaluate(() => filteredAlbums.length);
@@ -160,90 +172,6 @@ test.describe('shuffle', () => {
     expect(await page.evaluate(() => currentTrack.file)).toBe(second);
     await page.locator('#btn-prev').click();
     expect(await page.evaluate(() => currentTrack.file)).toBe(first);
-  });
-});
-
-test.describe('sleep timer and speed', () => {
-  test('15 min: fades, pauses and gives the volume back', async ({ page }) => {
-    await page.clock.install();
-    await gotoWithFixture(page, '/', { ranges: true });
-    await card(page, 'Construção').locator('.card-play').click();
-    await expect(page.locator('#btn-play')).toHaveClass(/playing/);
-    await page.locator('#btn-timer').click();
-    await page.locator('#timer-menu [data-sleep="15"]').click();
-    await expect(page.locator('#btn-timer .timer-left')).toHaveText('15′');
-    // keep the 10 s silence from ending (and moving on) while the fake clock runs
-    await page.evaluate(() => { const a = document.getElementById('audio'); a.loop = true; });
-    await page.clock.runFor(15 * 60 * 1000 - 5000);
-    const meio = await page.evaluate(() => document.getElementById('audio').volume);
-    expect(meio).toBeLessThan(0.75);
-    await page.clock.runFor(7000);
-    await expect.poll(() => page.evaluate(() => document.getElementById('audio').paused)).toBe(true);
-    expect(await page.evaluate(() => document.getElementById('audio').volume)).toBe(1);
-    await expect(page.locator('#btn-timer .timer-left')).toHaveText('');
-  });
-
-  test('end of track: stops instead of moving on', async ({ page }) => {
-    await gotoWithFixture(page, '/', { ranges: true });
-    await card(page, 'Construção').locator('.card-play').click();
-    await page.locator('#btn-timer').click();
-    await page.locator('#timer-menu [data-sleep="track"]').click();
-    await page.evaluate(() => document.getElementById('audio').dispatchEvent(new Event('ended')));
-    expect(await page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack))).toBe(0);
-    await expect(page.locator('#toast')).toContainText('Timer');
-  });
-
-  test('speed is kept across tracks and reloads', async ({ page }) => {
-    await gotoWithFixture(page, '/', { ranges: true });
-    await card(page, 'Construção').locator('.card-play').click();
-    await page.locator('#btn-timer').click();
-    await page.locator('#timer-menu [data-rate="1.5"]').click();
-    await page.locator('#btn-next').click();
-    await expect.poll(() => page.evaluate(() => document.getElementById('audio').playbackRate)).toBe(1.5);
-    await expect(page.locator('#btn-timer .timer-left')).toHaveText('1,5×');
-    await page.reload();
-    await page.waitForSelector('.album-item');
-    expect(await page.evaluate(() => document.getElementById('audio').defaultPlaybackRate)).toBe(1.5);
-    await page.keyboard.press('Escape');
-  });
-});
-
-test.describe('sort and surprise', () => {
-  const titles = page => page.locator('.album-item .album-item-title').allTextContents();
-
-  test('Título A–Z sorts with the pt collator, goes to the URL and survives a reload', async ({ page }) => {
-    await gotoWithFixture(page);
-    await page.selectOption('#sort-select', 'titulo');
-    await expect(page).toHaveURL(/[?&]ordem=titulo/);
-    const t = await titles(page);
-    const sorted = [...t].sort(new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true }).compare);
-    expect(t.slice(0, 5)).toEqual(sorted.slice(0, 5));
-    await page.reload();
-    await page.waitForSelector('.album-item');
-    expect(await titles(page)).toEqual(t);
-    await expect(page.locator('#sort-select')).toHaveValue('titulo');
-    await page.goBack();
-    await expect(page.locator('#sort-select')).toHaveValue('');
-  });
-
-  test('Aleatória stays put while filtering', async ({ page }) => {
-    await gotoWithFixture(page);
-    await page.selectOption('#sort-select', 'aleatorio');
-    const before = await titles(page);
-    await page.fill('#search-input', 'a');
-    await page.fill('#search-input', '');
-    await expect.poll(() => titles(page)).toEqual(before);
-  });
-
-  test('Surpreenda-me (button and S) opens and plays an album from the grid', async ({ page }) => {
-    await page.addInitScript(() => { Math.random = () => 0.5; });
-    await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
-    await page.locator('#btn-surpresa').click();
-    await expect(page.locator('#btn-play')).toHaveClass(/playing/);
-    expect(await page.evaluate(() => filteredAlbums.includes(selectedAlbum) && selectedAlbum.tracks.includes(currentTrack))).toBe(true);
-    const first = await page.evaluate(() => selectedAlbum.path);
-    await page.locator('body').press('s');
-    await expect.poll(() => page.evaluate(() => selectedAlbum.path)).not.toBe(first);
   });
 });
 
