@@ -169,24 +169,84 @@ const ALBUM_PAGES = location.origin === 'https://tocador.cc' ||
 // Resume-playback-position persistence: remembers only the most recently
 // playing track, so a reload/restored session can continue where it left off
 // instead of always restarting a restored track at 0:00.
+// Where the listener stopped, one entry per acervo: { file, albumPath, time, updatedAt }.
+// `dismissed` hides the "Continuar" strip until the next save. The old single key
+// ('tocador-position', { file, time }) is read once and moved under the acervo that has the file.
 const PLAYBACK_POSITION_KEY = 'tocador-position';
+const positionKey = () => `${PLAYBACK_POSITION_KEY}:${activeAcervoId || ''}`;
+
+function readSavedPosition() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(positionKey()) || 'null');
+    if (saved) return saved;
+    const old = JSON.parse(localStorage.getItem(PLAYBACK_POSITION_KEY) || 'null');
+    if (!old?.file) return null;
+    const album = albums.find(a => a.tracks.some(t => t.file === old.file));
+    if (!album) return null;
+    const moved = { file: old.file, albumPath: album.path, time: old.time, updatedAt: Date.now() };
+    localStorage.setItem(positionKey(), JSON.stringify(moved));
+    localStorage.removeItem(PLAYBACK_POSITION_KEY);
+    return moved;
+  } catch { return null; }
+}
 
 function savePlaybackPosition(track, audio) {
   if (!track) return;
+  const album = selectedAlbum?.tracks.includes(track) ? selectedAlbum : albums.find(a => a.tracks.includes(track));
   try {
-    localStorage.setItem(PLAYBACK_POSITION_KEY, JSON.stringify({ file: track.file, time: audio.currentTime }));
+    localStorage.setItem(positionKey(), JSON.stringify({
+      file: track.file, albumPath: album?.path, time: audio.currentTime, updatedAt: Date.now(),
+    }));
   } catch {}
 }
 
 function restorePlaybackPosition(track, audio) {
-  let saved;
-  try { saved = JSON.parse(localStorage.getItem(PLAYBACK_POSITION_KEY) || 'null'); } catch { return; }
+  const saved = readSavedPosition();
   if (!saved || saved.file !== track.file || !(saved.time > 3)) return;
   const apply = () => {
     if (isFinite(audio.duration) && saved.time < audio.duration) audio.currentTime = saved.time;
     audio.removeEventListener('loadedmetadata', apply);
   };
   audio.addEventListener('loadedmetadata', apply);
+}
+
+// A visit with no album in the URL: offer to pick up where the listener stopped (never autoplays).
+const CONTINUE_MAX_AGE = 30 * 24 * 3600 * 1000;
+function offerContinueListening() {
+  const saved = readSavedPosition();
+  if (!saved || saved.dismissed || !(saved.time > 3) || !(Date.now() - (saved.updatedAt || 0) < CONTINUE_MAX_AGE)) return;
+  const album = albums.find(a => a.path === saved.albumPath) ?? albums.find(a => a.tracks.some(t => t.file === saved.file));
+  const track = album?.tracks.find(t => t.file === saved.file);
+  if (!track) return;
+  const bar = document.createElement('div');
+  bar.className = 'continue-listening';
+  bar.setAttribute('role', 'region');
+  bar.setAttribute('aria-label', 'Continuar ouvindo');
+  const go = document.createElement('button');
+  go.type = 'button';
+  go.className = 'continue-go';
+  const label = document.createElement('span');
+  label.textContent = `Continuar de ${formatTime(saved.time)}: ${track.title} — ${album.name}`;
+  go.append(label);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'continue-close';
+  close.setAttribute('aria-label', 'Dispensar');
+  close.textContent = '✕';
+  bar.append(go, close);
+  const fechar = () => bar.remove();
+  go.addEventListener('click', () => {
+    fechar();
+    openAlbum(album);
+    playTrack(track);
+    startPlaybackAt(document.getElementById('audio'), saved.time);
+    virtualGrid?.scrollToSelected();
+  });
+  close.addEventListener('click', () => {
+    fechar();
+    try { localStorage.setItem(positionKey(), JSON.stringify({ ...saved, dismissed: true })); } catch {}
+  });
+  document.body.append(bar);
 }
 
 // Seeks to `time` once the duration is known (the ?seg= handover from the /atlas preview).
@@ -827,6 +887,8 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     }
   }
 
+  if (!albumFromUrl) offerContinueListening();
+
   const playerCover = document.getElementById('player-cover');
   if (playerCover && !playerCover.src) {
     playerCover.src = PLACEHOLDER_COVER;
@@ -1088,7 +1150,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       btnRepeat.setAttribute('aria-label', labels[mode]);
       btnRepeat.setAttribute('aria-pressed', String(isActive));
     }
-    localStorage.setItem('tocador-repeat', mode);
+    try { localStorage.setItem('tocador-repeat', mode); } catch {}
   }
 
   function applyShuffle(val) {
@@ -1103,7 +1165,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       btnShuffleMobile.setAttribute('aria-pressed', String(shuffleOn));
       btnShuffleMobile.setAttribute('aria-label', shuffleOn ? 'Modo aleatório: ativado' : 'Modo aleatório: desativado');
     }
-    localStorage.setItem('tocador-shuffle', shuffleOn);
+    try { localStorage.setItem('tocador-shuffle', shuffleOn); } catch {}
   }
 
   const volumeIcon = document.getElementById('volume-icon');
@@ -1114,7 +1176,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     if (volumeSlider) volumeSlider.value = vol;
     if (_volumeWave) _volumeWave.style.display = vol === 0 ? 'none' : '';
     volumeIcon?.setAttribute('aria-label', vol === 0 ? 'Ativar som' : 'Silenciar');
-    localStorage.setItem('tocador-volume', vol);
+    try { localStorage.setItem('tocador-volume', vol); } catch {}
   }
 
   // Restore persisted state

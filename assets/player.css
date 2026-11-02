@@ -2553,3 +2553,43 @@ audio {
 
 .ic-x { vertical-align: -1px; }
 .ex-chip .ic-x, .ex-sugestao .ic-x, .track-filter-note .ic-x { margin: 0 3px; }
+
+/* "Continuar: faixa — álbum (m:ss)": floats above the player bar, so it shifts no layout */
+.continue-listening {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--player-bar-h, 96px) + 12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  max-width: min(92vw, 560px);
+  background: rgba(30, 22, 12, 0.96);
+  border: 1px solid var(--color-accent);
+  border-radius: 22px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  animation: continue-in 0.25s ease both;
+}
+@keyframes continue-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+@media (prefers-reduced-motion: reduce) { .continue-listening { animation: none; } }
+.continue-listening button {
+  background: none;
+  border: 0;
+  color: var(--color-text, #f5e6d3);
+  font: inherit;
+  cursor: pointer;
+  min-height: 44px;
+}
+.continue-go {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 16px;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.continue-go::before { content: '▶'; color: var(--color-accent); }
+.continue-go span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.continue-close { padding: 0 14px; opacity: 0.7; }
+.continue-go:hover, .continue-close:hover { color: var(--color-accent); opacity: 1; }

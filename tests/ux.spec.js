@@ -90,3 +90,45 @@ test.describe('actionable playback errors', () => {
     expect(await page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack))).toBe(0);
   });
 });
+
+test.describe('continue listening', () => {
+  async function seed(page, entry) {
+    await page.addInitScript(e => {
+      if (sessionStorage.getItem('pw-seeded')) return;
+      sessionStorage.setItem('pw-seeded', '1');
+      localStorage.setItem('tocador-position', JSON.stringify(e));   // the old single key: migrated
+    }, entry);
+  }
+
+  test('a bare visit offers the saved track and resumes it where it stopped', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const file = await page.evaluate(() => albums.find(a => a.name.includes('Construção')).tracks[1].file);
+    await page.evaluate(() => localStorage.clear());
+    await seed(page, { file, time: 5 });
+    await page.reload();
+    const bar = page.locator('.continue-listening');
+    await expect(bar).toContainText('Continuar de 0:05:');
+    await expect(bar).toContainText('Construção');
+    await bar.locator('.continue-go').click();
+    await expect(bar).toHaveCount(0);
+    await expect(page.locator('#album-header h2')).toContainText('Construção');
+    await expect(page.locator('#btn-play')).toHaveClass(/playing/);
+    await expect.poll(() => page.evaluate(() => document.getElementById('audio').currentTime)).toBeGreaterThanOrEqual(4);
+    expect(await page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack))).toBe(1);
+    expect(await page.evaluate(() => localStorage.getItem('tocador-position'))).toBeNull();
+  });
+
+  test('dismissed, it stays hidden on the next visit; an album URL never shows it', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const file = await page.evaluate(() => albums[0].tracks[0].file);
+    await seed(page, { file, time: 30 });
+    await page.reload();
+    await page.locator('.continue-listening .continue-close').click();
+    await page.reload();
+    await page.waitForSelector('.album-item');
+    await expect(page.locator('.continue-listening')).toHaveCount(0);
+    await page.goto(await page.evaluate(() => generateAlbumUrl(albums[2])));
+    await page.waitForSelector('.album-item');
+    await expect(page.locator('.continue-listening')).toHaveCount(0);
+  });
+});
