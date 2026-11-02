@@ -203,36 +203,45 @@ function savedQueueActive() {
   return !!savedQueue;
 }
 
+// Shuffle draws from what the grid shows (the search, decade, artist, genre, Pegada or
+// shared-list filter; the saved queue when it's on): an album first, uniformly, then one of
+// its playable tracks, so big compilations don't crowd everything else out. The last
+// SHUFFLE_RECENT tracks are skipped while there's anything else to play.
+const SHUFFLE_RECENT = 50;
+const shuffleRecent = [];
+const shuffleHistory = [];   // [album, track] pairs, for "previous" in shuffle
+function pickShuffleTrack(pool) {
+  const albumsOk = pool.filter(a => a.tracks.some(t => t !== currentTrack && trackAllowed(t)));
+  if (!albumsOk.length) return null;
+  const recent = new Set(shuffleRecent);
+  let pick = null;
+  for (let tries = 0; tries < 12 && !pick; tries++) {
+    const a = albumsOk[Math.floor(Math.random() * albumsOk.length)];
+    const ts = a.tracks.filter(t => t !== currentTrack && trackAllowed(t) && !recent.has(t));
+    if (ts.length) pick = [a, ts[Math.floor(Math.random() * ts.length)]];
+  }
+  if (!pick) {   // everything left was heard recently: take any playable track
+    const a = albumsOk[Math.floor(Math.random() * albumsOk.length)];
+    const ts = a.tracks.filter(t => t !== currentTrack && trackAllowed(t));
+    pick = [a, ts[Math.floor(Math.random() * ts.length)]];
+  }
+  shuffleRecent.push(pick[1]);
+  if (shuffleRecent.length > SHUFFLE_RECENT) shuffleRecent.shift();
+  return pick;
+}
+
 function playNext() {
   const inQueue = savedQueueActive();
   if (shuffleOn) {
-    if (!albums.length) return;
-    let nextAlbum, track;
-    if (trackFilter || inQueue) {
-      // Explorar is filtering: shuffle only among the tracks it lets through, inside the albums on the grid.
-      const pool = [];
-      for (const a of inQueue ? savedQueue : filteredAlbums) for (const t of a.tracks) if (t !== currentTrack && trackAllowed(t)) pool.push([a, t]);
-      if (!pool.length) return;
-      [nextAlbum, track] = pool[Math.floor(Math.random() * pool.length)];
-    } else {
-      // Avoid flatMap allocation: pick a random album (weighted by track count), then a random track.
-      // Falls back to retry if the single track selected is currentTrack (rare; at most 1 retry).
-      const totalTracks = albums.reduce((s, a) => s + a.tracks.length, 0);
-      if (totalTracks <= 1) return;
-      let attempts = 0;
-      do {
-        let r = Math.floor(Math.random() * totalTracks);
-        for (let ai = 0; ai < albums.length; ai++) {
-          const tlen = albums[ai].tracks.length;
-          if (r < tlen) { nextAlbum = albums[ai]; track = albums[ai].tracks[r]; break; }
-          r -= tlen;
-        }
-        attempts++;
-      } while (track === currentTrack && attempts < 3);
-      if (track === currentTrack) return;
+    const pick = pickShuffleTrack(inQueue ? savedQueue : filteredAlbums);
+    if (!pick) return;
+    if (currentTrack) {
+      const from = selectedAlbum?.tracks.includes(currentTrack) ? selectedAlbum : albums.find(a => a.tracks.includes(currentTrack));
+      if (from) shuffleHistory.push([from, currentTrack]);
+      if (shuffleHistory.length > 200) shuffleHistory.shift();
     }
-    switchToAlbum(nextAlbum);
-    playTrack(track);
+    switchToAlbum(pick[0]);
+    playTrack(pick[1]);
     return;
   }
   if (!selectedAlbum || !currentTrack) return;
@@ -264,6 +273,12 @@ function playPrevious() {
   const audio = document.getElementById('audio');
   if (audio && audio.currentTime > 3) {
     audio.currentTime = 0;
+    return;
+  }
+  if (shuffleOn && shuffleHistory.length) {
+    const [album, track] = shuffleHistory.pop();
+    switchToAlbum(album);
+    playTrack(track);
     return;
   }
   const idx = selectedAlbum.tracks.indexOf(currentTrack);

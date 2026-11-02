@@ -132,3 +132,33 @@ test.describe('continue listening', () => {
     await expect(page.locator('.continue-listening')).toHaveCount(0);
   });
 });
+
+test.describe('shuffle', () => {
+  test('draws only from the filtered albums', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
+    const n = await page.evaluate(() => filteredAlbums.length);
+    expect(n).toBeGreaterThanOrEqual(2);
+    expect(n).toBeLessThan(await page.evaluate(() => albums.length));
+    await page.locator('#btn-shuffle').click();
+    await page.locator('.album-item').first().locator('.card-play').click();
+    for (let i = 0; i < 10; i++) {
+      await page.locator('#btn-next').click();
+      expect(await page.evaluate(() => filteredAlbums.some(a => a.tracks.includes(currentTrack)))).toBe(true);
+    }
+  });
+
+  test('previous walks back through what shuffle played', async ({ page }) => {
+    await gotoWithFixture(page);
+    await page.locator('#btn-shuffle').click();
+    await card(page, 'Construção').locator('.card-play').click();
+    const first = await page.evaluate(() => currentTrack.file);
+    await page.locator('#btn-next').click();
+    const second = await page.evaluate(() => currentTrack.file);
+    await page.locator('#btn-next').click();
+    await page.evaluate(() => { document.getElementById('audio').currentTime = 0; });
+    await page.locator('#btn-prev').click();
+    expect(await page.evaluate(() => currentTrack.file)).toBe(second);
+    await page.locator('#btn-prev').click();
+    expect(await page.evaluate(() => currentTrack.file)).toBe(first);
+  });
+});
