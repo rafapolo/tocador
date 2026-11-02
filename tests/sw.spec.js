@@ -3,6 +3,8 @@
 // cache e o ?v= dos scripts era ignorado, porque a chave do cache era só o caminho.
 const { test, expect } = require('@playwright/test');
 
+test.use({ serviceWorkers: 'allow' });   // the config blocks them for every other spec
+
 async function comWorker(page) {
   await page.goto('/?acervo=uqt');
   await page.evaluate(async () => {

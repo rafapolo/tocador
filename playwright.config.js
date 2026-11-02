@@ -16,6 +16,9 @@ module.exports = defineConfig({
     baseURL: `http://localhost:${PORT}`,
     actionTimeout: 5000,
     navigationTimeout: 10000,
+    // page.route() can't see what a service worker fetches: once sw.js controls the page (any
+    // reload), catalogs came from the real GitHub instead of the fixtures. sw.spec.js opts back in.
+    serviceWorkers: 'block',
   },
   webServer: {
     command: `npx serve . -p ${PORT}`,
@@ -35,7 +38,10 @@ module.exports = defineConfig({
     // isn't deterministic; radio has no Safari-specific code the main player doesn't share).
     {
       name: 'webkit',
-      use: { browserName: 'webkit' },
+      // WebKit's media loader fetches <audio> past page.route(), so unrouted tracks reached the
+      // live CDN (the "Version/27.2 ref=http://localhost" hotlink refusals in /metrics, ~70 per
+      // run). A dead proxy for everything but localhost makes those fail here instead.
+      use: { browserName: 'webkit', proxy: { server: 'http://127.0.0.1:9', bypass: 'localhost,127.0.0.1' } },
       testIgnore: ['**/*.test.js', '**/cdn.spec.js', '**/radio.spec.js'],
     },
   ],

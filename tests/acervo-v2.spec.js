@@ -85,13 +85,13 @@ test('V3: album with a derived path still builds a working audio URL', async ({ 
 // guards the encoding regression covered by K43.
 test('V4: album with a non-derivable path round-trips through v2', async ({ page }) => {
   await gotoWith(page, v2Gz);
-  await page.locator('.album-item', { hasText: 'Álbum com # no caminho' }).click();
-  await expect(page.locator('#track-list .track-item').first()).toBeVisible();
-
+  // Opening the album already primes track 1 (audio.src + load()): that is the request to
+  // catch. Waiting only around the track click raced it and lost whenever the prime came first.
   const [request] = await Promise.all([
     page.waitForRequest(req => req.url().includes('.mp3'), { timeout: 15000 }),
-    page.locator('#track-list .track-item').first().click(),
+    page.locator('.album-item', { hasText: 'Álbum com # no caminho' }).click(),
   ]);
+  await expect(page.locator('#track-list .track-item').first()).toBeVisible();
   const url = request.url();
   expect(url).toContain('%23');
   expect(url).not.toMatch(/#[^/]/);

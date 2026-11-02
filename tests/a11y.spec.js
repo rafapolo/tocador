@@ -12,6 +12,10 @@ async function open(page, url) {
     headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' },
     body: fixtureGz,
   }));
+  // Nothing reaches the live CDN: an unrouted <audio> here was the source of the WebKit
+  // "Version/27.2 ref=http://localhost" hotlink refusals in production's /metrics.
+  await page.route('**/*-genres.json.gz', route => route.fulfill({ status: 404 }));
+  await page.route('https://cdn.tocador.cc/**', route => route.fulfill({ status: 404 }));
   await page.goto(url);
   await page.waitForSelector('.album-item');
 }

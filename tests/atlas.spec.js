@@ -607,7 +607,8 @@ test('grafo: desligar o botão volta ao mapa 3D inteiro, sem cartão; Esc ainda 
 
 test('grafo: o painel mostra todas as capas do artista, com link em nova aba, sem botões', async ({ page }) => {
   await rotear(page);
-  await page.route('**/capa-min.jpg', r => r.fulfill({
+  // Both sizes: the micro cover used to come from the live CDN, which this test silently needed.
+  await page.route(/capa-m(in|icro)\.jpg$/, r => r.fulfill({
     status: 200, contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
   }));
   // A fixture não tem capas: aqui todo álbum do catálogo passa a ter.
