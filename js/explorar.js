@@ -50,7 +50,7 @@ async function _exBuscar(rel) {
 }
 
 async function _exGz(resp) {
-  return JSON.parse(await new Response(resp.body.pipeThrough(new DecompressionStream('gzip'))).text());
+  return JSON.parse(await gunzipText(resp));
 }
 
 const _exPl = (x, um, varios) => `${x.toLocaleString('pt-BR')} ${x === 1 ? um : varios}`;

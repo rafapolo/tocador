@@ -1,4 +1,5 @@
-// Acervo payload format — shared by index.html, radio.html and 3d.html.
+// Acervo payload format — shared by index.html, radio.html, 3d.html and atlas.html,
+// plus gunzipText(), the one .json.gz decompressor they all use (see the end).
 //
 // v1 (original) is a plain array of album objects, each carrying its own tracks.
 // v2 is the same data transposed into columns: one array per field, with the
@@ -147,6 +148,42 @@
     return out;
   }
 
+  // gunzipText(src) → Promise<string>: src is a fetch Response or the bytes of a .json.gz.
+  // Every page decompresses its catalogs through here. Browsers without
+  // DecompressionStream (iOS < 16.4, Firefox < 113, Chrome < 80; iPhones stuck on iOS 15
+  // are common in Brazil) load js/fflate-gunzip.js (~5 KB) once, from next to this file.
+  // Bytes that aren't gzip pass through as text: some servers decode a .gz on the way.
+  var SELF_URL = (typeof document !== 'undefined' && document.currentScript && document.currentScript.src) || '';
+  var _fflate = null;
+  function loadFflate() {
+    if (global.fflate) return Promise.resolve(global.fflate);
+    if (!_fflate) {
+      _fflate = new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = new URL('fflate-gunzip.js', SELF_URL || document.baseURI).href;
+        s.onload = function () { global.fflate ? resolve(global.fflate) : reject(new Error('fflate não carregou')); };
+        s.onerror = function () { _fflate = null; reject(new Error('não foi possível carregar fflate-gunzip.js')); };
+        document.head.appendChild(s);
+      });
+    }
+    return _fflate;
+  }
+  function gunzipText(src) {
+    var isResp = typeof Response !== 'undefined' && src instanceof Response;
+    if (isResp && typeof DecompressionStream !== 'undefined') {
+      return new Response(src.body.pipeThrough(new DecompressionStream('gzip'))).text();
+    }
+    return Promise.resolve(isResp ? src.arrayBuffer() : src).then(function (buf) {
+      var bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+      if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return new TextDecoder().decode(bytes);
+      if (typeof DecompressionStream !== 'undefined') {
+        return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+      }
+      return loadFflate().then(function (f) { return new TextDecoder().decode(f.gunzipSync(bytes)); });
+    });
+  }
+
+  global.gunzipText = gunzipText;
   global.decodeAcervo = decodeAcervo;
   global.albumSlugs = albumSlugs;
   global.artistSlugs = artistSlugs;

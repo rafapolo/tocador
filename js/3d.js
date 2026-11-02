@@ -534,7 +534,7 @@ function setStatus(msg) {
 // this module) specifically so decodeAcervo exists by the time it's needed, but
 // a flaky fetch or a stale cached shell can still leave it undefined.
 function ensureDecodeAcervo() {
-  if (typeof decodeAcervo === 'function') return Promise.resolve();
+  if (typeof decodeAcervo === 'function' && typeof gunzipText === 'function') return Promise.resolve();
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = 'js/acervo-format.js';
@@ -547,11 +547,8 @@ function ensureDecodeAcervo() {
 async function loadAlbumData() {
   const res = await fetch(_dataUrl);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ds = new DecompressionStream('gzip');
-  const decompressed = res.body.pipeThrough(ds);
-  const text = await new Response(decompressed).text();
-  await ensureDecodeAcervo();
-  return decodeAcervo(JSON.parse(text));
+  await ensureDecodeAcervo();   // gunzipText() lives in acervo-format.js too
+  return decodeAcervo(JSON.parse(await gunzipText(res)));
 }
 
 // ─── Render loop ──────────────────────────────────────────────────────────────
@@ -598,8 +595,8 @@ async function tryLoadAtlas() {
     try {
       const res = await fetch(`${base}/3d-atlas/atlas-map.json.gz`);
       if (!res.ok) continue;
-      const ds = new DecompressionStream('gzip');
-      const text = await new Response(res.body.pipeThrough(ds)).text();
+      await ensureDecodeAcervo();
+      const text = await gunzipText(res);
       _atlasBase = base;
       return JSON.parse(text);
     } catch {}

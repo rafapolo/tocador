@@ -586,7 +586,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   async function decompressGzUrl(url) {
     const resp = await trackedFetch(url);
     if (!resp.ok) throw new Error(resp.status);
-    return new Response(resp.body.pipeThrough(new DecompressionStream('gzip'))).text();
+    return gunzipText(resp);
   }
 
   if (genresUrl) genreLoading = true;

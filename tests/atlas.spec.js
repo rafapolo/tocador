@@ -1039,11 +1039,11 @@ test('sem WebGL: a página avisa que precisa dele e não trava', async ({ page }
   await expect(page.locator('#carregando')).toBeVisible();
 });
 
-test('sem DecompressionStream: mensagem clara em vez de "Carregando…"', async ({ page }) => {
+test('sem DecompressionStream (iOS < 16.4): o mapa carrega pelo fflate-gunzip.js', async ({ page }) => {
   await page.addInitScript(() => { delete window.DecompressionStream; });
-  await rotear(page);
-  await page.goto('/atlas.html');
-  await expect(page.locator('#carregando-status')).toHaveText(/antigo demais/);
+  await boot(page);
+  expect(await page.evaluate(() => typeof window.fflate?.gunzipSync)).toBe('function');
+  await expect(page.locator('#carregando-status')).not.toHaveText(/antigo demais|Não foi possível/);
 });
 
 for (const [nome, resposta] of [['abortada', r => r.abort()], ['com erro 500', r => r.fulfill({ status: 500, body: 'erro' })]]) {

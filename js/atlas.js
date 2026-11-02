@@ -58,12 +58,8 @@
   async function fetchJsonGz(url) {
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`${resp.status} ${url}`);
-    const buf = new Uint8Array(await resp.arrayBuffer());
-    // GitHub Pages serves .gz as-is; some servers decode it on the way. Look at the bytes.
-    const text = buf[0] === 0x1f && buf[1] === 0x8b
-      ? await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
-      : new TextDecoder().decode(buf);
-    return JSON.parse(text);
+    // GitHub Pages serves .gz as-is; some servers decode it on the way. gunzipText() looks at the bytes.
+    return JSON.parse(await gunzipText(await resp.arrayBuffer()));
   }
   async function carregarPayload() {
     try { return await fetchJsonGz(APP_ROOT + PAYLOAD); }
@@ -1295,7 +1291,6 @@
     const status = $('carregando-status');
     const params = new URLSearchParams(location.search);
     let payload;
-    if (typeof DecompressionStream === 'undefined') { status.textContent = 'Este navegador é antigo demais para o mapa.'; return; }
     try { payload = await carregarPayload(); preparar(payload); }
     catch (err) {
       console.error('[atlas]', err);

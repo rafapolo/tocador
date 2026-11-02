@@ -37,6 +37,13 @@ test('R1: radio widget removes .loading class after acervo loads', async ({ page
   await expect(page.locator('.widget')).not.toHaveClass(/loading/);
 });
 
+test('R1b: sem DecompressionStream (iOS < 16.4) a rádio carrega pelo fflate-gunzip.js', async ({ page }) => {
+  await page.addInitScript(() => { delete window.DecompressionStream; });
+  await gotoRadio(page);
+  expect(await page.evaluate(() => typeof window.fflate?.gunzipSync)).toBe('function');
+  await expect(page.locator('#track-title')).not.toHaveText('Carregando…');
+});
+
 test('R2: radio shows a track title after load', async ({ page }) => {
   await gotoRadio(page);
   const title = page.locator('#track-title');

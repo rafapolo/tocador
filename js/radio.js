@@ -369,7 +369,7 @@ coverImg.addEventListener('error', () => {
 // specifically so decodeAcervo exists before this script runs, but a flaky
 // fetch or a stale cached shell can still leave it undefined.
 function ensureDecodeAcervo() {
-  if (typeof decodeAcervo === 'function') return Promise.resolve();
+  if (typeof decodeAcervo === 'function' && typeof gunzipText === 'function') return Promise.resolve();
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = 'js/acervo-format.js';
@@ -386,10 +386,9 @@ async function load() {
   const entry   = ACERVOS[param];
   const url     = entry?.data ?? param;
 
-  const ds   = new DecompressionStream('gzip');
-  const blob = await new Response((await fetch(url)).body.pipeThrough(ds)).blob();
-  await ensureDecodeAcervo();
-  const db   = decodeAcervo(JSON.parse(await blob.text()));
+  const resp = await fetch(url);
+  await ensureDecodeAcervo();   // gunzipText() lives in acervo-format.js too
+  const db   = decodeAcervo(JSON.parse(await gunzipText(resp)));
 
   BASE_URL      = db.meta?.base_url || entry?.base_url || '';
   const all     = db.albums.filter(a => a.tracks?.length);
