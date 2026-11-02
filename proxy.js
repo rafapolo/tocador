@@ -132,6 +132,23 @@ async function signedPassthrough(bucket, path, rangeHeader, isHead) {
 }
 
 
+// Re-streams `body`, calling `release` exactly once when it ends, errors or is
+// cancelled by the client (Bun cancels a response body when the socket closes).
+function releaseOnEnd(body, release) {
+  const reader = body.getReader();
+  let released = false;
+  const fin = () => { if (!released) { released = true; release(); } };
+  return new ReadableStream({
+    async pull(ctrl) {
+      try {
+        const { value, done } = await reader.read();
+        if (done) { fin(); ctrl.close(); } else ctrl.enqueue(value);
+      } catch (err) { fin(); ctrl.error(err); }
+    },
+    cancel(reason) { fin(); return reader.cancel(reason).catch(() => {}); },
+  }, { highWaterMark: 0 });
+}
+
 // §6 — Range header regex (hoisted to avoid per-request allocation)
 const RANGE_RE = /^bytes=(\d{0,15})-(\d{0,15})$/;
 
@@ -410,7 +427,7 @@ _server = Bun.serve({
 
     // §3 — resolve client IP + device fingerprint only for audio (images are unrestricted)
     const ip = isAudio ? realIp(req, server) : null;
-    const device = ip ? deviceKey(ip, req) : null;
+    let device = ip ? deviceKey(ip, req) : null;
 
     // §4 — token bucket: per-device (30 req burst, 0.5 tokens/s ≈ 30/min) plus a
     // looser per-raw-IP backstop so one address can't evade the limit with spoofed UAs.
@@ -466,6 +483,17 @@ _server = Bun.serve({
       const res = await signedPassthrough(bucket, path, rangeHeader, isHead);
       // §17 — a track starting: audio, a body, the range (if any) begins at byte 0
       if (isAudio && !isHead && res.status < 300 && (!rangeHeader || rangeHeader.startsWith('bytes=0-'))) markPlay(device, path);
+      // The device's stream slot is held until the body is fully sent or the client
+      // goes away, not just until the headers are out: otherwise "5 streams per
+      // device" capped only request starts, and a downloader could pull any number
+      // of files at once. A slot that never gets released (a stuck socket) is still
+      // swept after 5 min by lib/limits.js.
+      if (device && res.body) {
+        const slotDevice = device, slotIp = ip;
+        device = null; // the finally below must not release it a second time
+        return new Response(releaseOnEnd(res.body, () => { decDevice(slotDevice); decRawIp(slotIp); }),
+          { status: res.status, headers: res.headers });
+      }
       return res;
     } catch (err) {
       const code = err?.status ?? err?.statusCode ?? 500;

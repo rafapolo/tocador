@@ -111,3 +111,38 @@ test('uaFamily sorts the media stacks apart', () => {
   expect(uaFamily(UAS.edge)).toBe('edge');
   expect(uaFamily('curl/8.7.1')).toBe('outro');
 });
+
+describe('stream slots', () => {
+  // tasks/protecao-scrapers-2026-10-31.md item 2: the 5-streams-per-device cap used to free its
+  // slot once the headers were out, so a downloader could pull any number of files at once.
+  // Raw sockets that never read keep each body in flight (fetch would buffer it whole).
+  const net = require('node:net');
+  const BIG = 'indie/2020 - Banda - Disco/02 Longa.mp3';
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0 slots';
+
+  function openStalled() {
+    return new Promise((resolve, reject) => {
+      const s = net.connect(h.port, '127.0.0.1', () => {
+        s.write(`GET /${BIG.split('/').map(encodeURIComponent).join('/')} HTTP/1.1\r\nHost: 127.0.0.1\r\n`
+          + `User-Agent: ${UA}\r\nReferer: https://tocador.cc/\r\nRange: bytes=0-\r\n\r\n`);
+      });
+      s.once('data', (chunk) => { s.pause(); resolve({ s, status: Number(String(chunk).split(' ')[1]) }); });
+      s.on('error', reject);
+    });
+  }
+
+  test('a slot is held until the body is sent, and freed when the client leaves', async () => {
+    h.stored.set(BIG, Buffer.alloc(64 * 1024 * 1024, 0x41));
+    const open = [];
+    for (let i = 0; i < 5; i++) open.push(await openStalled());
+    expect(open.map((o) => o.status)).toEqual([206, 206, 206, 206, 206]);
+    const sixth = await openStalled();
+    expect(sixth.status).toBe(429);
+    sixth.s.destroy();
+    open.pop().s.destroy();
+    await Bun.sleep(200);
+    const again = await openStalled();
+    expect(again.status).toBe(206);
+    for (const o of [...open, again]) o.s.destroy();
+  });
+});

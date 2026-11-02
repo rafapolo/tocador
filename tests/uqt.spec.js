@@ -647,7 +647,7 @@ test('K48: no album in fixture produces an audio URL with a bare # in the path',
 });
 
 // ── L. Accessibility / CLS / LCP regressions (chrome-devtools-mcp audit) ───
-// L49-L54 pin the fixes from tasks/perf-audit-chrome-devtools-mcp.md so they
+// L49-L54 pin the fixes from tasks/done/perf-audit-chrome-devtools-mcp.md so they
 // can't silently regress. L55-L58 add coverage for adjacent checks from the
 // audit tool's own a11y-debugging and debug-optimize-lcp skills that weren't
 // previously exercised.
