@@ -290,16 +290,19 @@ function hideToast() {
 // Tracks whose file the CDN answered 404 this session: shown as unavailable in the lists.
 const unavailableTracks = new Set();
 
-// Why did the audio fail? 'offline', 'missing' (404), 'limited' (429), 'blocked' (403: the
-// browser sent no Referer, e.g. Firefox with a strict referrer policy) or 'server'. A HEAD
-// through fetch() carries Origin, so the hotlink check passes even when <audio> was refused.
-async function classifyAudioError(src) {
+// Why did the audio fail? 'offline', 'missing' (404), 'limited' (429), 'blocked' (403),
+// 'server' (5xx, an unreachable server, or a network error on a file that exists), or
+// 'unplayable' (the file is there, MediaError 3/4: corrupt or a format this browser won't
+// decode). A HEAD through fetch() carries Origin, so it passes the hotlink check even when
+// <audio> sent no Referer — that case also lands in 'unplayable', it can't be told apart here.
+async function classifyAudioError(src, mediaCode) {
   if (!navigator.onLine) return 'offline';
   try {
     const r = await fetch(src, { method: 'HEAD', cache: 'no-store' });
     if (r.status === 404) return 'missing';
     if (r.status === 429) return 'limited';
     if (r.status === 403) return 'blocked';
+    if (r.ok) return mediaCode === 2 ? 'server' : 'unplayable';   // 2 = MEDIA_ERR_NETWORK
     return 'server';
   } catch {
     return navigator.onLine ? 'server' : 'offline';
@@ -1025,8 +1028,9 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     if (!currentTrack || !_playRequested) return;
     const errored = currentTrack;
     const src = audio.currentSrc || audio.src;
+    const mediaCode = audio.error?.code;
     _consecutiveErrors++;
-    const kind = await classifyAudioError(src);
+    const kind = await classifyAudioError(src, mediaCode);
     if (currentTrack !== errored) return;   // the listener moved on while we asked
     const retry = { label: 'Tentar de novo', onClick: () => { _consecutiveErrors = 0; playTrack(errored); } };
     if (kind === 'offline') {
@@ -1053,8 +1057,9 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       showToast('Vários erros de reprodução seguidos — reprodução pausada', 15000, { action: retry });
       return;
     }
-    if (kind === 'missing') {
-      showToast(`Faixa indisponível: ${errored.title} — pulando…`);
+    if (kind === 'missing' || kind === 'unplayable') {
+      showToast(kind === 'missing' ? `Faixa indisponível: ${errored.title} — pulando…`
+        : `Não foi possível tocar: ${errored.title} — pulando…`);
       // Only auto-skip if the user hasn't already moved on (manually picked another
       // track) and this track's error is still the audio element's current state —
       // otherwise a stale timeout can yank the user off a track they just chose.
@@ -1064,7 +1069,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       return;
     }
     const msg = kind === 'limited' ? 'Muitos pedidos ao servidor — espere alguns segundos'
-      : kind === 'blocked' ? 'O servidor recusou a faixa (o navegador não enviou a origem da página)'
+      : kind === 'blocked' ? 'O servidor recusou a faixa'
       : 'Servidor de áudio indisponível';
     showToast(msg, 15000, { action: retry });
   });

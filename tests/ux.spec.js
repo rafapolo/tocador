@@ -246,3 +246,18 @@ test.describe('sort and surprise', () => {
     await expect.poll(() => page.evaluate(() => selectedAlbum.path)).not.toBe(first);
   });
 });
+
+test('a file that exists but will not decode is skipped, not stuck behind a retry', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.unroute('**/*.mp3');
+  let first = true;
+  await page.route('**/*.mp3', r => {
+    if (r.request().method() === 'HEAD') return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' } });
+    if (first) { first = false; return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: 'isto não é um mp3' }); }
+    return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: require('./helpers').fixtureMp3 });
+  });
+  await card(page, 'Construção').locator('.card-play').click();
+  const titulo = await page.evaluate(() => selectedAlbum.tracks[0].title);
+  await expect(page.locator('#toast')).toContainText(`Não foi possível tocar: ${titulo}`);
+  await expect.poll(() => page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack)), { timeout: 5000 }).toBe(1);
+});
