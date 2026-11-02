@@ -1,4 +1,4 @@
-// Item 6 de tasks/compat-navegadores-2026-11-02.md: com a tela bloqueada, o iOS pode recusar o
+// Item 6 de tasks/done/compat-navegadores-2026-11-02.md: com a tela bloqueada, o iOS pode recusar o
 // play() da próxima faixa (NotAllowedError) e o álbum parava em silêncio. safePlay() agora tenta
 // de novo quando a página volta a ficar visível, e avisa se ainda assim não der.
 const { test, expect } = require('@playwright/test');

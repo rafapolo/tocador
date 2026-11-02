@@ -1,4 +1,4 @@
-// UX features from tasks/ux-improvements.md. Fixture: tests/fixtures/albums.json.gz (via helpers).
+// UX features from tasks/done/ux-improvements.md. Fixture: tests/fixtures/albums.json.gz (via helpers).
 const { test, expect } = require('@playwright/test');
 const { gotoWithFixture } = require('./helpers');
 

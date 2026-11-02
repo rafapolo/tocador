@@ -1,6 +1,6 @@
 // Navegadores sem DecompressionStream (iOS < 16.4, Firefox < 113, Chrome < 80): o acervo,
 // os gêneros e as features do painel Pegada passam por gunzipText() (js/acervo-format.js),
-// que nesse caso carrega js/fflate-gunzip.js uma vez. Ver tasks/compat-navegadores-2026-11-02.md, item 3.
+// que nesse caso carrega js/fflate-gunzip.js uma vez. Ver tasks/done/compat-navegadores-2026-11-02.md, item 3.
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');

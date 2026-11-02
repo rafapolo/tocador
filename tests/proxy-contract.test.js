@@ -90,7 +90,7 @@ describe.each(Object.entries(UAS))('%s', (name, ua) => {
 });
 
 describe('cast receivers and stripped Referers', () => {
-  // Item 2 of tasks/compat-navegadores-2026-11-02.md: these fetch the URL themselves, with no
+  // Item 2 of tasks/done/compat-navegadores-2026-11-02.md: these fetch the URL themselves, with no
   // Referer. Today that is a 403 (hotlink check); this pins the behaviour until it's decided.
   test('a Chromecast fetch with no Referer is refused, and counted as chromecast', async () => {
     const ua = 'Mozilla/5.0 (X11; Linux armv7l) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 CrKey/1.56.500000';
@@ -113,7 +113,7 @@ test('uaFamily sorts the media stacks apart', () => {
 });
 
 describe('stream slots', () => {
-  // tasks/protecao-scrapers-2026-10-31.md item 2: the 5-streams-per-device cap used to free its
+  // tasks/done/protecao-scrapers-2026-10-31.md item 2: the 5-streams-per-device cap used to free its
   // slot once the headers were out, so a downloader could pull any number of files at once.
   // Raw sockets that never read keep each body in flight (fetch would buffer it whole).
   const net = require('node:net');
