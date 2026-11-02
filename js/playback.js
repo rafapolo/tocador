@@ -10,12 +10,34 @@ function safePlay(audio) {
   if (p?.catch) p.catch(err => {
     if (err.name === 'NotAllowedError') {
       (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('autoplay-blocked');
+      // The queue turned to the next track while the page was hidden (screen locked, another
+      // app) and the browser refused to start it: iOS can do this, and the album then stopped
+      // in silence. Try again when the page comes back, and say so if that fails too.
+      if (document.hidden) retomarAoVoltar(audio);
     } else if (err.name === 'NotSupportedError') {
       showToast('Arquivo não suportado ou indisponível', 4000);
     } else if (err.name !== 'AbortError') {
       showToast(`Erro ao reproduzir: ${err.message}`, 4000);
     }
   });
+}
+
+let _retomando = false;
+function retomarAoVoltar(audio) {
+  if (_retomando) return;
+  _retomando = true;
+  const src = audio.currentSrc || audio.src;
+  const aoVoltar = () => {
+    if (document.hidden) return;
+    document.removeEventListener('visibilitychange', aoVoltar);
+    _retomando = false;
+    // Only if nothing changed meanwhile: the listener paused, or picked another track.
+    if (!audio.paused || (audio.currentSrc || audio.src) !== src) return;
+    const p = audio.play();
+    const avisar = () => showToast('A próxima faixa não começou com a tela bloqueada — toque ▶ para continuar', 6000);
+    if (p?.catch) p.catch(e => { if (e.name === 'NotAllowedError') avisar(); });
+  };
+  document.addEventListener('visibilitychange', aoVoltar);
 }
 
 // Zero the progress UI immediately on track change — before any media event
