@@ -198,14 +198,52 @@ function startPlaybackAt(audio, time) {
 }
 
 let _toastTimer = null;
-function showToast(msg, duration = 3500, { ok = false } = {}) {
+// `action: { label, onClick }` adds a button; the toast stays up while it has focus or the
+// pointer, and clicking it closes the toast.
+function showToast(msg, duration = 3500, { ok = false, action = null } = {}) {
   _toastEl ??= document.getElementById('toast');
   if (!_toastEl) return;
   clearTimeout(_toastTimer);
   _toastEl.textContent = msg;
   _toastEl.classList.toggle('ok', ok);
+  _toastEl.classList.toggle('has-action', !!action);
+  if (action) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = action.label;
+    btn.addEventListener('click', () => { hideToast(); action.onClick(); });
+    _toastEl.append(' ', btn);
+  }
   _toastEl.classList.add('show');
-  _toastTimer = setTimeout(() => _toastEl.classList.remove('show'), duration);
+  const armar = () => { clearTimeout(_toastTimer); _toastTimer = setTimeout(hideToast, duration); };
+  _toastEl.onfocusin = _toastEl.onpointerenter = () => clearTimeout(_toastTimer);
+  _toastEl.onfocusout = _toastEl.onpointerleave = () => { if (!_toastEl.contains(document.activeElement)) armar(); };
+  armar();
+}
+function hideToast() {
+  if (!_toastEl) return;
+  clearTimeout(_toastTimer);
+  _toastEl.classList.remove('show', 'has-action');
+}
+
+// Tracks whose file the CDN answered 404 this session: shown as unavailable in the lists.
+const unavailableTracks = new Set();
+
+// Why did the audio fail? 'offline', 'missing' (404), 'limited' (429), 'blocked' (403: the
+// browser sent no Referer, e.g. Firefox with a strict referrer policy) or 'server'. A HEAD
+// through fetch() carries Origin, so the hotlink check passes even when <audio> was refused.
+async function classifyAudioError(src) {
+  if (!navigator.onLine) return 'offline';
+  try {
+    const r = await fetch(src, { method: 'HEAD', cache: 'no-store' });
+    if (r.status === 404) return 'missing';
+    if (r.status === 429) return 'limited';
+    if (r.status === 403) return 'blocked';
+    return 'server';
+  } catch {
+    return navigator.onLine ? 'server' : 'offline';
+  }
 }
 
 // `reserva`: where to go when the first URL fails, instead of the placeholder.
@@ -414,6 +452,21 @@ function openAlbum(album) {
   window.history.pushState({ album: album.path, t: primedNum }, '', generateAlbumUrl(album, primedNum));
 }
 
+// The ▶ over a grid cover: the album that's already playing toggles pause/play; any other
+// album opens (as a plain click would) and starts its first playable track.
+function playAlbumFromCard(album, item) {
+  const audio = document.getElementById('audio');
+  if (selectedAlbum === album && currentTrack && album.tracks.includes(currentTrack)) {
+    if (audio.paused) safePlay(audio); else audio.pause();
+    return;
+  }
+  document.querySelector('#albums-list .album-item.active')?.classList.remove('active');
+  item.classList.add('active');
+  openAlbum(album);
+  const first = album.tracks.find(trackAllowed) ?? album.tracks[0];
+  if (first) playTrack(first);
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
   const albumsList = document.querySelector('#albums-list');
 
@@ -423,6 +476,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (!item) return;
     e.preventDefault();
     const album = filteredAlbums[parseInt(item.dataset.albumIdx)];
+    if (album && e.target.closest('.card-play')) { playAlbumFromCard(album, item); return; }
     if (!album || (selectedAlbum === album && currentTrack != null)) return;
 
     albumsList.querySelector('.album-item.active')?.classList.remove('active');
@@ -803,6 +857,16 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   };
 
   window.anunciarSom?.(audio);    // /atlas keeps quiet while this plays; another tab playing pauses it
+  // Which grid card holds the current track (its ▶ turns into ⏸ while it plays).
+  const markPlayingCard = () => {
+    document.body.classList.toggle('is-playing', !audio.paused);
+    for (const el of document.querySelectorAll('#albums-list .album-item')) {
+      const a = filteredAlbums[el.dataset.albumIdx];
+      el.classList.toggle('playing-album', !!(a && currentTrack && a.tracks.includes(currentTrack)));
+    }
+  };
+  audio.addEventListener('play', markPlayingCard);
+  audio.addEventListener('pause', markPlayingCard);
   audio.addEventListener('play',     () => {
     (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('playing');
     overlayBtnPlay?.classList.add('playing');
@@ -823,28 +887,63 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   audio.addEventListener('canplay',  () => setLoading(false));
   audio.addEventListener('playing',  () => { setLoading(false); _consecutiveErrors = 0; });
   const MAX_CONSECUTIVE_ERRORS = 3;
-  audio.addEventListener('error', () => {
+  // When the network comes back with a track stuck on an error the listener had asked to
+  // hear, pick it up again (a retry toast may still be up; this saves the tap).
+  let _retomarAoReconectar = false;
+  window.addEventListener('online', () => {
+    if (!_retomarAoReconectar || !currentTrack) return;
+    _retomarAoReconectar = false;
+    hideToast();
+    playTrack(currentTrack);
+  });
+
+  audio.addEventListener('error', async () => {
     setLoading(false);
-    if (currentTrack && _playRequested) {
-      const errored = currentTrack;
-      _consecutiveErrors++;
-      // Several tracks failing in a row usually means the proxy/network is down,
-      // not that individual files are broken — stop thrashing through the whole
-      // library and tell the user instead of silently skipping forever.
-      reportPlaybackError(errored, _consecutiveErrors >= MAX_CONSECUTIVE_ERRORS);
-      if (_consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-        showToast('Vários erros de reprodução seguidos — reprodução pausada.', 6000);
-        audio.pause();
-        return;
+    if (!currentTrack || !_playRequested) return;
+    const errored = currentTrack;
+    const src = audio.currentSrc || audio.src;
+    _consecutiveErrors++;
+    const kind = await classifyAudioError(src);
+    if (currentTrack !== errored) return;   // the listener moved on while we asked
+    const retry = { label: 'Tentar de novo', onClick: () => { _consecutiveErrors = 0; playTrack(errored); } };
+    if (kind === 'offline') {
+      _retomarAoReconectar = true;
+      showToast('Sem conexão — a faixa volta quando a rede voltar', 15000, { action: retry });
+      return;
+    }
+    // Several tracks failing in a row usually means the proxy/network is down,
+    // not that individual files are broken — stop thrashing through the whole
+    // library and tell the user instead of silently skipping forever.
+    reportPlaybackError(errored, _consecutiveErrors >= MAX_CONSECUTIVE_ERRORS);
+    if (kind === 'missing') {
+      unavailableTracks.add(errored);
+      const idx = selectedAlbum?.tracks.indexOf(errored) ?? -1;
+      if (idx >= 0) {
+        for (const li of document.querySelectorAll(`#track-list [data-track-idx="${idx}"], #drawer-track-list [data-track-idx="${idx}"]`)) {
+          li.classList.add('unavailable');
+          li.title = 'Arquivo indisponível no servidor';
+        }
       }
-      showToast('Erro ao carregar áudio — pulando...');
+    }
+    if (_consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+      audio.pause();
+      showToast('Vários erros de reprodução seguidos — reprodução pausada', 15000, { action: retry });
+      return;
+    }
+    if (kind === 'missing') {
+      showToast(`Faixa indisponível: ${errored.title} — pulando…`);
       // Only auto-skip if the user hasn't already moved on (manually picked another
       // track) and this track's error is still the audio element's current state —
       // otherwise a stale timeout can yank the user off a track they just chose.
       setTimeout(() => {
         if (currentTrack === errored && audio.error) playNext();
       }, 1500);
+      return;
     }
+    const msg = kind === 'limited' ? 'Muitos pedidos ao servidor — espere alguns segundos'
+      : kind === 'blocked' ? 'O servidor recusou a faixa (o navegador não enviou a origem da página)'
+      : 'Servidor de áudio indisponível';
+    showToast(msg, 15000, { action: retry });
   });
 
   const progressFill = document.querySelector('#progress-fill');

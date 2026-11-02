@@ -129,11 +129,18 @@ class VirtualGrid {
       meta  = document.createElement('div');
       meta.className = 'album-item-meta';
       info.append(title, meta);
-      item.append(cover, info);
+      // Play shortcut over the cover. Not a <button>: interactive content can't live inside
+      // the card's <a>, and the link's name must stay the visible title. Mouse and touch use
+      // it; keyboard users already have Enter (open) then Space/K (play).
+      const play = document.createElement('span');
+      play.className = 'card-play';
+      play.setAttribute('aria-hidden', 'true');
+      item.append(cover, play, info);
     }
 
     item.className = 'album-item';
     if (selectedAlbum === album) item.classList.add('active');
+    if (currentTrack && album.tracks.includes(currentTrack)) item.classList.add('playing-album');
     item.dataset.albumIdx = i;
     item.href = generateAlbumUrl(album);
     item.style.cssText = `position:absolute;width:${this.itemWidth}px;top:${pad + row * this.rowHeight}px;left:${pad + col * (this.itemWidth + gap)}px`;

@@ -15,9 +15,9 @@ function safePlay(audio) {
       // in silence. Try again when the page comes back, and say so if that fails too.
       if (document.hidden) retomarAoVoltar(audio);
     } else if (err.name === 'NotSupportedError') {
-      showToast('Arquivo não suportado ou indisponível', 4000);
+      // The <audio> 'error' listener (js/ui.js) finds out why and says so, with a retry.
     } else if (err.name !== 'AbortError') {
-      showToast(`Erro ao reproduzir: ${err.message}`, 4000);
+      showToast('Não foi possível tocar a faixa', 4000);
     }
   });
 }

@@ -177,6 +177,10 @@ function buildTrackItemsFragment(tracks, albumArtists) {
     item.setAttribute('tabindex', '0');
     item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title}`);
     if (currentTrack === track) { item.classList.add('playing'); item.setAttribute('aria-current', 'true'); }
+    if (unavailableTracks.has(track)) {
+      item.classList.add('unavailable');
+      item.title = 'Arquivo indisponível no servidor';
+    }
     if (!trackAllowed(track)) {
       // Fora do filtro ativo (Pegada ou gênero): continua listada, mas não toca nem entra na sequência.
       item.classList.add('filtered-out');
