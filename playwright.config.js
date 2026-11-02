@@ -1,5 +1,10 @@
 const { defineConfig } = require('@playwright/test');
 
+// Two runs at once (another session, a git worktree) must not share one static server: with
+// reuseExistingServer the second run tests the first one's tree, and loses its server when the
+// first run ends (dozens of ~1 s failures). Give each its own: PW_PORT=3457 npx playwright test
+const PORT = Number(process.env.PW_PORT) || 3456;
+
 module.exports = defineConfig({
   testDir: './tests',
   // Playwright owns *.spec.js; *.test.js belongs to `bun test` (see the
@@ -8,13 +13,13 @@ module.exports = defineConfig({
   testIgnore: ['**/*.test.js'],
   timeout: 20000,
   use: {
-    baseURL: 'http://localhost:3456',
+    baseURL: `http://localhost:${PORT}`,
     actionTimeout: 5000,
     navigationTimeout: 10000,
   },
   webServer: {
-    command: 'npx serve . -p 3456',
-    port: 3456,
+    command: `npx serve . -p ${PORT}`,
+    port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 10000,
   },
