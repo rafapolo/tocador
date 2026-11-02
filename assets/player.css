@@ -2627,3 +2627,22 @@ audio {
 .timer-opts button:hover { border-color: var(--color-accent); }
 .timer-opts button[aria-pressed="true"] { background: var(--color-accent); color: #1a120a; border-color: var(--color-accent); font-weight: 700; }
 body.timer-aberto .continue-listening { visibility: hidden; }
+
+/* Ordem da grade e "Surpreenda-me", ao lado da busca */
+.sort-select, .btn-surpresa {
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, rgba(212, 165, 116, 0.25));
+  background: var(--color-surface-light, rgba(255, 255, 255, 0.04));
+  color: var(--color-text, #f5e6d3);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.sort-select { padding: 0 8px; max-width: 116px; line-height: 34px; }
+.btn-surpresa { width: 36px; display: grid; place-items: center; padding: 0; }
+.sort-select:hover, .btn-surpresa:hover { border-color: var(--color-accent); color: var(--color-accent); }
+@media (max-width: 768px) {
+  .sort-select { max-width: 80px; font-size: 0.75rem; padding: 0 4px; }
+}

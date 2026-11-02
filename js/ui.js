@@ -433,6 +433,52 @@ function getDecades() {
   return _cachedDecades;
 }
 
+// Grid order (?ordem=): '' keeps the catalog's year-descending order. "aleatorio" is stable for
+// the session (a seed in sessionStorage), so the grid doesn't reshuffle on every filter.
+let sortOrder = '';
+let _shuffleRank = null;
+function albumComparator(order) {
+  const year = a => a.year > 0 ? a.year : 9999;
+  if (order === 'ano') return (a, b) => year(a) - year(b);
+  if (order === 'titulo') return (a, b) => PT_COLLATOR.compare(a.name, b.name);
+  if (order === 'artista') return (a, b) => PT_COLLATOR.compare(a.artists, b.artists) || year(a) - year(b);
+  if (!_shuffleRank) {
+    let seed = 0;
+    try { seed = Number(sessionStorage.getItem('tocador-ordem-semente')) || 0; } catch {}
+    if (!seed) { seed = 1 + Math.floor(Math.random() * 2 ** 31); try { sessionStorage.setItem('tocador-ordem-semente', seed); } catch {} }
+    _shuffleRank = new Map();
+    for (const a of albums) {   // mulberry32 over the seed, one draw per album in catalog order
+      seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      _shuffleRank.set(a, ((t ^ (t >>> 14)) >>> 0));
+    }
+  }
+  return (a, b) => _shuffleRank.get(a) - _shuffleRank.get(b);
+}
+
+function setSortOrder(order, push = true) {
+  sortOrder = SORT_ORDERS.includes(order) ? order : '';
+  const sel = document.getElementById('sort-select');
+  if (sel) sel.value = sortOrder;
+  const params = new URLSearchParams(window.location.search);
+  if (sortOrder) params.set('ordem', sortOrder); else params.delete('ordem');
+  const state = selectedAlbum ? { album: selectedAlbum.path } : {};
+  if (push) window.history.pushState(state, '', urlWithParams(params));
+  filterAlbums();
+}
+
+// "Surpreenda-me": an album the grid shows, picked at random, scrolled to, opened and played.
+function surpriseMe() {
+  if (!filteredAlbums.length) return;
+  const others = filteredAlbums.length > 1 ? filteredAlbums.filter(a => a !== selectedAlbum) : filteredAlbums;
+  const album = others[Math.floor(Math.random() * others.length)];
+  openAlbum(album);
+  virtualGrid?.scrollToSelected();
+  const first = album.tracks.find(trackAllowed) ?? album.tracks[0];
+  if (first) playTrack(first);
+}
+
 function filterAlbums(quiet = false) {
   const q = fold(searchQuery);
   const ak = activeArtist ? fold(activeArtist) : null;
@@ -457,6 +503,7 @@ function filterAlbums(quiet = false) {
       album.tracks.some(t => t.titleLower.includes(q) || t.artistsLower.includes(q));
   });
   if (sharedAlbums) filteredAlbums.sort((a, b) => sharedAlbums.get(a) - sharedAlbums.get(b));
+  else if (sortOrder) filteredAlbums.sort(albumComparator(sortOrder));
 
   const inner = virtualGrid?.inner;
   if (inner && !quiet) {
@@ -553,7 +600,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     const browseChanged = newGenero !== activeGenre || newArtista !== activeArtist;
     const listaMudou = getListaFromUrl() !== activeLista;
     if (listaMudou) aplicarListaDaUrl();
-    if (q !== searchQuery || yr !== activeYear || browseChanged || listaMudou) {
+    const ordemMudou = getOrdemFromUrl() !== sortOrder;
+    if (ordemMudou) {
+      sortOrder = getOrdemFromUrl();
+      const sel = document.getElementById('sort-select');
+      if (sel) sel.value = sortOrder;
+    }
+    if (q !== searchQuery || yr !== activeYear || browseChanged || listaMudou || ordemMudou) {
       searchQuery = q;
       activeYear = yr;
       activeGenre  = newGenero;
@@ -799,7 +852,15 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   _tracksPanelEl    = document.getElementById('tracks-panel');
 
   buildAlbums();
+  sortOrder = getOrdemFromUrl();
   filteredAlbums = [...albums];
+  if (sortOrder) filteredAlbums.sort(albumComparator(sortOrder));
+  const sortSel = document.getElementById('sort-select');
+  if (sortSel) {
+    sortSel.value = sortOrder;
+    sortSel.addEventListener('change', () => setSortOrder(sortSel.value));
+  }
+  document.getElementById('btn-surpresa')?.addEventListener('click', surpriseMe);
   renderDecadeButtons();
   virtualGrid.setItems(filteredAlbums);
   updateLibraryStats();
@@ -1356,7 +1417,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
         updateBrowseFilterInUrl(); filterAlbums(); updateBrowseSelection(); return;
       }
     }
-    if (e.target.closest('input, textarea, [contenteditable]')) return;
+    if (e.target.closest('input, textarea, select, [contenteditable]')) return;
     switch (e.key) {
       case '?':
         e.preventDefault();
@@ -1390,6 +1451,9 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       case 'e':
         // preventDefault: o painel foca a própria busca, que receberia o "e" digitado.
         if (!e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); toggleExplorar(); }
+        break;
+      case 's':
+        if (!e.metaKey && !e.ctrlKey && !e.altKey) surpriseMe();
         break;
       case 'g':
         if (!e.metaKey && !e.ctrlKey && !e.altKey && genreData) {

@@ -207,3 +207,42 @@ test.describe('sleep timer and speed', () => {
     await page.keyboard.press('Escape');
   });
 });
+
+test.describe('sort and surprise', () => {
+  const titles = page => page.locator('.album-item .album-item-title').allTextContents();
+
+  test('Título A–Z sorts with the pt collator, goes to the URL and survives a reload', async ({ page }) => {
+    await gotoWithFixture(page);
+    await page.selectOption('#sort-select', 'titulo');
+    await expect(page).toHaveURL(/[?&]ordem=titulo/);
+    const t = await titles(page);
+    const sorted = [...t].sort(new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true }).compare);
+    expect(t.slice(0, 5)).toEqual(sorted.slice(0, 5));
+    await page.reload();
+    await page.waitForSelector('.album-item');
+    expect(await titles(page)).toEqual(t);
+    await expect(page.locator('#sort-select')).toHaveValue('titulo');
+    await page.goBack();
+    await expect(page.locator('#sort-select')).toHaveValue('');
+  });
+
+  test('Aleatória stays put while filtering', async ({ page }) => {
+    await gotoWithFixture(page);
+    await page.selectOption('#sort-select', 'aleatorio');
+    const before = await titles(page);
+    await page.fill('#search-input', 'a');
+    await page.fill('#search-input', '');
+    await expect.poll(() => titles(page)).toEqual(before);
+  });
+
+  test('Surpreenda-me (button and S) opens and plays an album from the grid', async ({ page }) => {
+    await page.addInitScript(() => { Math.random = () => 0.5; });
+    await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
+    await page.locator('#btn-surpresa').click();
+    await expect(page.locator('#btn-play')).toHaveClass(/playing/);
+    expect(await page.evaluate(() => filteredAlbums.includes(selectedAlbum) && selectedAlbum.tracks.includes(currentTrack))).toBe(true);
+    const first = await page.evaluate(() => selectedAlbum.path);
+    await page.locator('body').press('s');
+    await expect.poll(() => page.evaluate(() => selectedAlbum.path)).not.toBe(first);
+  });
+});

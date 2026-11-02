@@ -219,6 +219,17 @@
                                 ✕
                             </button>
                         </div>
+                        <label for="sort-select" class="sr-only">Ordenar álbuns</label>
+                        <select id="sort-select" class="sort-select" title="Ordenar álbuns">
+                            <option value="">Ano ↓</option>
+                            <option value="ano">Ano ↑</option>
+                            <option value="titulo">Título A–Z</option>
+                            <option value="artista">Artista A–Z</option>
+                            <option value="aleatorio">Aleatória</option>
+                        </select>
+                        <button id="btn-surpresa" class="btn-surpresa" type="button" title="Surpreenda-me (S)" aria-label="Surpreenda-me: tocar um álbum ao acaso">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>
+                        </button>
                         <button id="clear-all-filters" class="clear-all-filters" hidden aria-label="Limpar filtro ativo">
                             <span id="clear-all-label" class="clear-all-label"></span>
                             <span class="clear-all-x" aria-hidden="true">✕</span>
@@ -648,6 +659,7 @@
                 <li><kbd>B</kbd><span>Painel artistas/gêneros</span></li>
                 <li><kbd>G</kbd><span>Aba de gêneros</span></li>
                 <li><kbd>E</kbd><span>Pegada (filtrar pelo som)</span></li>
+                <li><kbd>S</kbd><span>Surpreenda-me (álbum ao acaso)</span></li>
                 <li><kbd>Esc</kbd><span>Fechar painel / limpar filtro</span></li>
                 <li><kbd>?</kbd><span>Esta ajuda</span></li>
             </ul>
