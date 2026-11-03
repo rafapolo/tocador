@@ -18,9 +18,11 @@ const decodeAcervo = new Function(readFileSync(join(ROOT, 'js/acervo-format.js')
 const F = new Function(readFileSync(join(ROOT, 'js/acervo-features.js'), 'utf8')
   + '\nreturn { FEATURES_FORMAT, FEATURE_KEYS, FEATURE_PROBS, featuresFingerprint };')();
 
+// HOMI_CATALOG / UQT_CATALOG (relative to the repo root) point at another copy, e.g. the published one when the
+// archive repo is checked out on a branch with an older catalog.
 export const CATALOGS = {
-  homi: '../hominiscanidae/data/homi-albums.json.gz',
-  uqt: '../uqt/data/uqt-albums.json.gz',
+  homi: process.env.HOMI_CATALOG || '../hominiscanidae/data/homi-albums.json.gz',
+  uqt: process.env.UQT_CATALOG || '../uqt/data/uqt-albums.json.gz',
 };
 
 const b64 = u8 => Buffer.from(u8.buffer, u8.byteOffset, u8.length).toString('base64');

@@ -60,9 +60,21 @@
     Object.keys(p.viz).forEach(function (m) { viz[m] = view(Uint16Array, p.viz[m]); });
     // Optional: an older payload has no layout and the graph falls back to its own, for a part of the artists.
     Object.keys(p.pos || {}).forEach(function (m) { pos[m] = view(Int16Array, p.pos[m]); });
+    // Optional: sound neighbours of albums no artist node covers, by acervo, keyed by albumShareId() (5 characters).
+    var albuns = {};
+    Object.keys(p.albuns || {}).forEach(function (a) {
+      var b = p.albuns[a], som = view(Uint16Array, b.som), ix = new Map();
+      for (var i = 0; i * 5 < b.ids.length; i++) ix.set(b.ids.substr(i * 5, 5), i);
+      albuns[a] = { ix: ix, som: som };
+    });
+    function vizAlbum(acervo, id) {
+      var b = albuns[acervo], i = b && b.ix.get(id);
+      return i === undefined ? null : Array.prototype.slice.call(b.som, i * p.k, (i + 1) * p.k);
+    }
     return {
       n: p.nomes.length, k: p.k, nomes: p.nomes, chaves: chaves, indice: indice, generos: p.generos,
       acervos: p.acervos, faixas: p.faixas, genero: p.genero, acervo: p.acervo, viz: viz, pos: pos,
+      vizAlbum: vizAlbum,
     };
   }
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 // export-faixas-artistas.js — prints {"uqt": {"<album path>/<file>": ["Artista", …]}, "homi": …} from the
-// published catalogs, for script/build-artistas-parecidos.py. Keys are NFC, like the audio analysis, and
+// published catalogs, for script/build-artistas-parecidos.py, plus "_albuns": {"uqt": [[albumShareId, [track key, …]], …]}
+// so the graph can give an album no artist node covers neighbours of its own. Keys are NFC, like the audio analysis, and
 // artists go through parseArtists() so a graph node is the same artist the player's browse panel lists.
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -9,14 +10,16 @@ import { fileURLToPath } from 'node:url';
 import { CATALOGS } from './build-features-web.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const decodeAcervo = new Function(readFileSync(join(ROOT, 'js/acervo-format.js'), 'utf8') + '\nreturn decodeAcervo;')();
+const { decodeAcervo, albumShareId } = new Function(readFileSync(join(ROOT, 'js/acervo-format.js'), 'utf8') +
+  '\nreturn { decodeAcervo, albumShareId };')();
 const parseArtists = new Function(readFileSync(join(ROOT, 'js/util.js'), 'utf8') + '\nreturn parseArtists;')();
 
-const out = {};
+const out = { _albuns: {} };
 for (const [acervo, path] of Object.entries(CATALOGS)) {
   const db = decodeAcervo(JSON.parse(gunzipSync(readFileSync(join(ROOT, path))).toString('utf8')));
-  const m = out[acervo] = {};
+  const m = out[acervo] = {}, albuns = out._albuns[acervo] = [];
   for (const a of db.albums) {
+    albuns.push([albumShareId(a.path), a.tracks.map(t => `${a.path}/${t.file}`.normalize('NFC'))]);
     for (const t of a.tracks) {
       const nomes = parseArtists(t.artists || a.artist);
       if (nomes.length) m[`${a.path}/${t.file}`.normalize('NFC')] = nomes;

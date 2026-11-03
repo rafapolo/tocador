@@ -576,6 +576,25 @@ test('K46c: "Soa parecido com" lists the artist\'s sound neighbours; one here fi
   await expect(page.locator('.album-item', { hasText: 'Construção' })).toHaveCount(0);
 });
 
+test('K46e: "Soa parecido com" falls back on the album\'s own neighbours when no artist of it is in the graph', async ({ page }) => {
+  // Chico Buarque is not a node here; the payload gives the album itself neighbours, keyed by albumShareId().
+  const u16 = a => Buffer.from(new Uint16Array(a).buffer).toString('base64');
+  const albumShareId = new Function(require('fs').readFileSync(require('path').join(__dirname, '../js/acervo-format.js'), 'utf8')
+    + '\nreturn albumShareId;')();
+  const id = albumShareId('1971 - Chico Buarque - Construção');
+  const payload = { v: 1, k: 2, nomes: ['Caetano Veloso', 'Fulano Externo'], acervo: [0, 1], acervos: ['uqt', 'homi'],
+    viz: { som: u16([1, 0]), rotulos: u16([1, 0]) }, albuns: { homi: { ids: id, som: u16([1, 0]) } } };
+  await page.route('**/data/atlas-artistas.json.gz', r => r.fulfill({ status: 200,
+    headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body: require('zlib').gzipSync(JSON.stringify(payload)) }));
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  const box = page.locator('#tracks-panel .album-parecidos');
+  await box.locator('summary').click();
+  const tags = box.locator('.album-genero');
+  await expect(tags).toHaveText(['Fulano Externo', 'Caetano Veloso']);
+  await expect(box).not.toContainText('ainda não foram analisadas');
+});
+
   test('K46d: only one of "Gêneros detectados" and "Soa parecido com" is open at a time', async ({ page }) => {
     await page.route('**/data/atlas-artistas.json.gz', r => r.fulfill({ status: 404 }));
     await gotoWithFixture(page);

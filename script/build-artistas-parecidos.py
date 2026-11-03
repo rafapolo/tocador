@@ -10,6 +10,10 @@ Cada artista vira a média das suas faixas (L2 por faixa, depois L2 no artista).
 que dá contraste: sem isso quase todo cosseno passa de 0,9. Ficam os artistas com MIN_FAIXAS ou mais e, para
 cada um, os K mais próximos.
 
+Um álbum em que nenhum artista (do álbum ou das faixas) virou nó — pouco material, ou sem artista — ganha os seus
+próprios vizinhos: a média das suas faixas, no mesmo espaço de som, contra os artistas do grafo. Vão em `albuns`,
+por acervo, com a id de albumShareId() (js/acervo-format.js); o grafo não os desenha, só o "Soa parecido com".
+
 O UMAP só entra para desenhar: `pos` guarda onde cada artista fica na visão geral, com todos os artistas (x, y, z
 em ±32767, por mapa). Os vizinhos continuam vindo do cosseno.
 
@@ -83,6 +87,7 @@ rotulos = {}
 def ix(l):
     return rotulos.setdefault(l, len(rotulos))
 
+faixa_emb = {a: {} for a in ACERVOS}   # chave do catálogo -> embedding L2 da faixa, para os álbuns fora do grafo
 soma_som = {}
 soma_rot = defaultdict(Counter)
 n_faixas = Counter()
@@ -99,12 +104,13 @@ for a in ACERVOS:
         if not v.get('genre') or v.get('emb') is None:
             continue
         k = unicodedata.normalize('NFC', k0)
+        e = np.asarray(E[v['emb']], dtype=np.float32)
+        e = e / (np.linalg.norm(e) + 1e-8)
+        faixa_emb[a][k if k in cat else alias.get(k, k)] = e
         nomes_faixa = cat.get(k) or cat.get(alias.get(k))
         if not nomes_faixa:
             sem_artista += 1
             continue
-        e = np.asarray(E[v['emb']], dtype=np.float32)
-        e = e / (np.linalg.norm(e) + 1e-8)
         g = np.array([p for _, p in v['genre']], float)
         g /= np.linalg.norm(g) or 1
         for nome in dict.fromkeys(chave(x) for x in nomes_faixa):
@@ -128,6 +134,7 @@ print(f'artistas: {n} de {len(n_faixas)} (com {MIN_FAIXAS}+ faixas); faixas sem 
 
 S = np.stack([soma_som[x] for x in nomes])
 S /= np.linalg.norm(S, axis=1, keepdims=True) + 1e-8
+media_S = S.mean(0)
 R = np.zeros((n, len(rotulos)), dtype=np.float32)
 for i, x in enumerate(nomes):
     for j, p in soma_rot[x].items():
@@ -135,6 +142,31 @@ for i, x in enumerate(nomes):
 R /= np.linalg.norm(R, axis=1, keepdims=True) + 1e-8
 S, R = contraste(S), contraste(R)
 viz = {'som': vizinhos(S), 'rotulos': vizinhos(R)}
+
+no_grafo = set(nomes)
+albuns = {}
+for a in ACERVOS:
+    ids, vetores, sem_faixas = [], [], 0
+    for sid, chaves in artistas['_albuns'][a]:
+        if any(chave(x) in no_grafo for k in chaves for x in artistas[a].get(k, ())):
+            continue
+        es = [faixa_emb[a][k] for k in chaves if k in faixa_emb[a]]
+        if not es:
+            sem_faixas += 1
+            continue
+        v = np.mean(es, 0)
+        v = v / (np.linalg.norm(v) + 1e-8) - media_S
+        ids.append(sid)
+        vetores.append(v / (np.linalg.norm(v) + 1e-8))
+    if len(set(ids)) != len(ids):
+        sys.exit(f'{a}: ids de álbum repetidas entre os álbuns fora do grafo')
+    out = np.zeros((len(ids), K), dtype=np.uint16)
+    for i in range(0, len(ids), 512):
+        sim = np.stack(vetores[i:i + 512]) @ S.T
+        top = np.argpartition(-sim, K, axis=1)[:, :K]
+        out[i:i + len(sim)] = np.take_along_axis(top, np.argsort(-np.take_along_axis(sim, top, 1), axis=1), 1)
+    albuns[a] = {'ids': ''.join(ids), 'som': out}
+    print(f'{a}: {len(ids)} álbuns fora do grafo com vizinhos próprios; {sem_faixas} sem faixa analisada', file=sys.stderr)
 
 if args.amostra is not None and len(args.amostra):
     idx = {x: i for i, x in enumerate(nomes)}
@@ -161,6 +193,7 @@ payload = {
     'acervos': list(ACERVOS),
     'viz': {m: b64(v.astype('<u2')) for m, v in viz.items()},
     'pos': {'som': b64(layout(S)), 'rotulos': b64(layout(R))},
+    'albuns': {a: {'ids': v['ids'], 'som': b64(v['som'].astype('<u2'))} for a, v in albuns.items()},
 }
 dest = os.path.join(ROOT, 'data', 'atlas-artistas.json.gz')
 with gzip.GzipFile(dest, 'wb', mtime=0, compresslevel=9) as f:

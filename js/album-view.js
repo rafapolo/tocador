@@ -255,12 +255,18 @@ async function fillAlbumParecidos(details) {
   if (selectedAlbum !== album) return;
   const vazio = texto => box.replaceChildren(Object.assign(document.createElement('p'), { textContent: texto }));
   if (!A?.viz.som) { vazio('Os vizinhos de som não carregaram.'); return; }
-  const proprios = parseArtists(album.artists || '').map(n => A.indice.get(chaveArtista(n))).filter(i => i !== undefined);
-  if (!proprios.length) { vazio('Este artista tem poucas faixas analisadas para comparar o som.'); return; }
+  // Os artistas do álbum primeiro, depois os das faixas (coletâneas, participações), os que viraram nó do grafo.
+  const nomesAlbum = [...parseArtists(album.artists || '')];
+  for (const t of album.tracks) if (t.artists !== album.artists) nomesAlbum.push(...parseArtists(t.artists || ''));
+  const proprios = [...new Set(nomesAlbum.map(n => A.indice.get(chaveArtista(n))).filter(i => i !== undefined))];
+  // Nenhum: o próprio álbum tem vizinhos no payload, da média das suas faixas.
+  const doAlbum = proprios.length ? null : A.vizAlbum?.(activeAcervoKey, albumShareId(album.path));
+  if (!proprios.length && !doAlbum) { vazio('As faixas deste álbum ainda não foram analisadas para comparar o som.'); return; }
   // Os vizinhos de cada artista do álbum, intercalados por posição (o 1º de cada, depois o 2º…), sem repetir.
+  const fileiras = doAlbum ? [doAlbum] : proprios.map(i => A.viz.som.subarray(i * A.k, (i + 1) * A.k));
   const vistos = new Set(proprios), lista = [];
-  for (let r = 0; r < A.k; r++) for (const i of proprios) {
-    const v = A.viz.som[i * A.k + r];
+  for (let r = 0; r < A.k; r++) for (const f of fileiras) {
+    const v = f[r];
     if (v !== undefined && v < A.n && !vistos.has(v)) { vistos.add(v); lista.push(v); }
   }
   const aqui = new Set(albums.flatMap(a => [...a.artistKeys]));
