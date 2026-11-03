@@ -109,10 +109,15 @@ test('♪ também para uma prévia que esteja tocando', async ({ page }) => {
   await expect(page.locator('#btn-musica')).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('outra aba do tocador tocando deixa em espera, e clicar em ♪ ouve assim mesmo', async ({ page, context }) => {
+test('outra aba do tocador tocando deixa em espera; clicar em ♪ pausa a outra aba, e uma faixa nova lá cala a sonificação', async ({ page, context }) => {
   await boot(page);
   const outra = await context.newPage();
   await outra.goto('/atlas.html');
+  await outra.evaluate(() => {                        // a outra aba escuta o canal, como o anunciarSom() do player
+    window.recebidas = [];
+    const c = new BroadcastChannel('tocador-som');
+    c.onmessage = e => window.recebidas.push(e.data);
+  });
   await aba(outra, { id: 'player', tocando: true });
   const b = page.locator('#btn-musica');
   await expect(b).toHaveAttribute('aria-pressed', 'false');
@@ -122,8 +127,14 @@ test('outra aba do tocador tocando deixa em espera, e clicar em ♪ ouve assim m
   await b.click();
   await expect(b).toHaveAttribute('aria-pressed', 'true');
   expect((await som(page)).espera).toBe(false);
-  await aba(outra, { id: 'player', tocando: false });
+  await expect.poll(() => outra.evaluate(() => window.recebidas.some(m => m.calar))).toBe(true);   // pede ao player que pause
+  await aba(outra, { id: 'player', tocando: false });  // o player pausou
   await expect(b).not.toHaveClass(/espera/);
+  await soando(page);
+  await aba(outra, { id: 'player', tocando: true });   // uma faixa começa no player: a sonificação cala
+  await expect(b).toHaveClass(/espera/);
+  await expect(b).toHaveAttribute('aria-pressed', 'false');
+  await calado(page);
   await outra.close();
 });
 

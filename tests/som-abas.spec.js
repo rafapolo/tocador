@@ -39,3 +39,13 @@ test('a aba que começa a tocar pausa a que tocava, e vice-versa', async ({ cont
   expect(await pausada(player)).toBe(false);
   expect(await atlas.evaluate(() => window.calados)).toBe(1);
 });
+
+test('calarOutrasAbas() pausa o <audio> das outras abas, e não deixa ninguém em espera', async ({ context }) => {
+  const atlas = await aba(context), player = await aba(context);
+  await player.evaluate(() => { window.mudancas = []; ouvirSomDasAbas(on => window.mudancas.push(on)); });
+  await tocar(player);
+  await atlas.evaluate(() => calarOutrasAbas());      // clique em Sonificar
+  await expect.poll(() => pausada(player)).toBe(true);
+  expect(await player.evaluate(() => window.calados)).toBe(1);
+  expect(await player.evaluate(() => window.mudancas)).toEqual([]);   // 'calar' não é "tocando"
+});

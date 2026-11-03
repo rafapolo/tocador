@@ -904,7 +904,7 @@
       b.setAttribute('aria-pressed', String(aceso()));
       b.classList.toggle('espera', espera || faltaGesto);
       b.title = !Ctx ? 'Este navegador não consegue sonificar o mapa'
-        : espera ? 'Em espera: o Tocador está tocando em outra aba. Clique para sonificar o mapa assim mesmo'
+        : espera ? 'Em espera: o Tocador está tocando em outra aba. Clique para pausá-lo e sonificar o mapa'
           : faltaGesto ? 'A sonificação do mapa começa no primeiro clique ou tecla: o navegador não deixa soar antes disso (M)'
             : vontade ? 'Sonificação ligada: som sintetizado na hora a partir dos gêneros à vista. Clique para silenciar (M)'
               : 'Sonificação desligada. Clique para ligar (M)';
@@ -992,11 +992,14 @@
     pv.addEventListener('play', () => { previaTocando = true; atualizar(); });
     for (const ev of ['pause', 'ended', 'emptied']) pv.addEventListener(ev, () => { previaTocando = false; atualizar(); });
 
+    // One sound at a time, both ways: a track starting in another tab silences the sonification (even one
+    // turned on over it), and turning the sonification on pauses that tab (tomarSom()).
     global.ouvirSomDasAbas?.(on => {
       outroSom = on;
-      if (!on) ignorarOutro = false;
+      ignorarOutro = false;
       atualizar();
     });
+    function tomarSom() { ignorarOutro = true; dormindo = false; global.calarOutrasAbas?.(); }
 
     // ♪ also stops a preview: one button that means "no more sound from this page", or "this one, not that one".
     function alternar() {
@@ -1005,7 +1008,7 @@
       ativado = true;
       if (!pv.paused) o.pararPrevia();
       if (estava) vontade = false;
-      else { vontade = true; ignorarOutro = true; dormindo = false; }
+      else { vontade = true; tomarSom(); }
       try { localStorage.setItem(CHAVE, vontade ? '1' : '0'); } catch {}
       atualizar();
       if (vontade && m) m.tap([0, 7], 0.6);
@@ -1017,7 +1020,7 @@
     return {
       alternar,
       // The tour (js/atlas-tour.js) puts back the choice it changed, whether or not the browser ever let it sound.
-      querer(on) { if (vontade === on) return; vontade = on; if (on) { ignorarOutro = true; dormindo = false; } try { localStorage.setItem(CHAVE, on ? '1' : '0'); } catch {} atualizar(); },
+      querer(on) { if (vontade === on) return; vontade = on; if (on) tomarSom(); try { localStorage.setItem(CHAVE, on ? '1' : '0'); } catch {} atualizar(); },
       // the map moved: not asleep
       mexeu() {
         ultimoGesto = performance.now();

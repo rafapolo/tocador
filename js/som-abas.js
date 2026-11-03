@@ -22,7 +22,7 @@
     ch.onmessage = e => {
       const m = e.data || {};
       if (m.pergunta) { dizer(); return; }
-      if (m.tocando && m.id && m.id !== ID && !audio.paused) { audio.pause(); aoCalar?.(); }
+      if ((m.tocando || m.calar) && m.id && m.id !== ID && !audio.paused) { audio.pause(); aoCalar?.(); }
     };
   }
 
@@ -41,6 +41,15 @@
     ch.postMessage({ pergunta: true });
   }
 
+  // Asks every other tocador tab to pause its <audio>, for a sound that isn't an <audio> (the /atlas
+  // sonification). A 'calar' message is not "playing": ouvirSomDasAbas() ignores it, so no tab waits on it.
+  let chCalar = null;
+  function calarOutrasAbas() {
+    chCalar ??= abrir();
+    chCalar?.postMessage({ id: ID, calar: true });
+  }
+
   global.anunciarSom = anunciarSom;
+  global.calarOutrasAbas = calarOutrasAbas;
   global.ouvirSomDasAbas = ouvirSomDasAbas;
 })(window);
