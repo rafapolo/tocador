@@ -449,3 +449,16 @@ button { font: inherit; color: inherit; }
   #tour-ponteiro { transition: none; }
   #tour-legenda.entra { animation: none; }
 }
+/* ?tour=1 pede um clique antes de começar: sem ele o navegador não deixa a sonificação soar. */
+#tour-convite { position: fixed; inset: 0; z-index: 45; display: grid; place-items: center; background: rgba(0, 0, 0, 0.55); }
+#tour-convite > div {
+  width: min(420px, calc(100% - 32px)); padding: 22px 24px; border: 1px solid var(--border); border-radius: 14px;
+  background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); text-align: center;
+}
+#tour-convite p { margin: 0 0 10px; color: var(--text-2); }
+#tour-convite p:first-child { font: 500 22px/1.2 var(--serif); color: var(--text); }
+#tour-convite button {
+  margin-top: 6px; padding: 9px 18px; border: 1px solid var(--accent); border-radius: 18px;
+  background: transparent; color: var(--accent); font-size: 15px; cursor: pointer;
+}
+#tour-convite button:hover, #tour-convite button:focus-visible { background: var(--accent); color: var(--bg); outline: none; }

@@ -127,20 +127,13 @@
     });
   }
 
-  // A câmera voa até (x, y) no zoom z. De perto para longe, sobe um pouco antes, para o salto ler como viagem.
+  // A câmera desliza até (x, y) no zoom z, sem recuar no caminho: afastar calaria baixo, ritmo e melodia
+  // (camadasSom() em js/atlas-som.js), e o tour é sobre essa música.
   async function irPara(x, y, z, ms = 2200) {
     const c = at.camera();
     if (run.rapido || reduzMovimento) { at.voar(x, y, c.k0 * z, 0); return; }
-    const longe = Math.hypot(x - c.cx, y - c.cy) * c.k > c.W * 0.6;
-    if (longe && c.k > c.k0 * 1.6) {
-      at.voar((c.cx + x) / 2, (c.cy + y) / 2, c.k0 * 1.3, ms * 0.45);
-      await espera(ms * 0.45);
-      at.voar(x, y, c.k0 * z, ms * 0.55);
-      await espera(ms * 0.55);
-    } else {
-      at.voar(x, y, c.k0 * z, ms);
-      await espera(ms);
-    }
+    at.voar(x, y, c.k0 * z, ms);
+    await espera(ms);
   }
   // O marco fica um pouco acima do meio, longe da legenda do tour.
   const alvoY = (m, z) => { const c = at.camera(); return m.y - (c.H * 0.08) / (c.k0 * z); };
@@ -221,17 +214,16 @@
       { id: 'travessia', dur: 60, async fn() {
         const T = D.trav, { m1 } = D;
         if (!T) {
-          const zoom = m => Math.min(4, Math.max(2.5, zoomDoRotulo(m.n)));
+          const zoom = m => Math.max(8, zoomDoRotulo(m.n));
           if (!m1) { legenda('mainstream', 'Os lugares mais povoados do mapa.'); return; }
           await irPara(m1.x, alvoY(m1, zoom(m1)), zoom(m1));
           legenda(`mainstream · ${m1.sub}`, `${fmt(m1.n)} faixas de ${m1.sub}: o lugar mais povoado do mapa.`);
           return;
         }
-        // De uma ponta à outra do mapa, uma parada por lugar grande no caminho, e a câmera respira para a música se
-        // ouvir: entre as paradas ela se afasta (de longe, só a cama abafada) e em cada uma aproxima até 8× (entram
-        // baixo, ritmo, acordes e por fim a melodia; camadasSom() em js/atlas-som.js). A banda é a fusão do que está à
-        // vista, então no caminho os dois lugares tocam juntos.
-        const PERTO = 8, LONGE = 1.4;
+        // De uma ponta à outra do mapa, uma parada por lugar grande no caminho. A câmera fica a 8× o tempo todo (com
+        // baixo, ritmo, acordes e melodia; camadasSom() em js/atlas-som.js) e só desliza de um lugar ao outro, para a
+        // música nunca cair: a banda é a fusão do que está à vista, então no caminho os dois lugares tocam juntos.
+        const PERTO = 8;
         const ini = T[0], fim = T[T.length - 1], kicker = `de ${ini.sub} a ${fim.sub}`, trilha = [];
         const chegar = async (m, ms) => {
           const c = at.camera(), y = alvoY(m, PERTO);
@@ -241,13 +233,8 @@
         };
         for (const [j, m] of T.entries()) {
           const antes = T[j - 1];
-          if (antes && !run.rapido && !reduzMovimento) {
-            const c = at.camera();
-            at.voar((antes.x + m.x) / 2, (antes.y + m.y) / 2, c.k0 * LONGE, 3000);   // abre: as camadas saem
-            legenda(kicker, `De longe, só a cama: ${antes.sub} e ${m.sub} soam juntos, abafados.`);
-            await espera(3000);
-          }
-          await chegar(m, j ? 3500 : 4500);                                         // fecha: as camadas entram
+          if (antes && !run.rapido) legenda(kicker, `A caminho de ${m.sub}: ${antes.sub} e ${m.sub} tocam juntos.`);
+          await chegar(m, j ? 6500 : 4500);                                         // desliza, sem recuar
           trilha.push(m.sub);
           legenda(kicker,
             j === 0 ? `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}. De perto entram baixo, ritmo, acordes e melodia; daqui até ${fim.sub}, ouça a banda mudar.`
@@ -261,19 +248,19 @@
       { id: 'raridades', dur: 8, async fn() {
         const [r1, r2] = D.raros;
         if (!r1) { legenda('raridades', `${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`); return; }
-        const z1 = zoomDoRotulo(r1.n);
+        const z1 = Math.max(8, zoomDoRotulo(r1.n));
         await irPara(r1.x, alvoY(r1, z1), z1);
         legenda(`raridade · ${r1.sub}`, `Só ${fmt(r1.n)} faixas de ${r1.sub}, mas juntas: um lugar próprio no mapa.`);
         await espera(2200);
         if (!r2) return;
-        const z2 = zoomDoRotulo(r2.n);
+        const z2 = Math.max(8, zoomDoRotulo(r2.n));
         await irPara(r2.x, alvoY(r2, z2), z2);
         legenda(`raridade · ${r2.sub}`, `${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`);
       } },
       { id: 'fusoes', dur: 8, async fn() {
         if (!D.fus.length) { legenda('fusões', 'Entre as regiões ficam as pontes, onde um gênero encosta no outro.'); return; }
         for (const [j, f] of D.fus.entries()) {
-          const z = Math.min(8, zoomDoRotulo(f.n));
+          const z = Math.max(8, zoomDoRotulo(f.n));   // nunca menos de 8×: abaixo disso a melodia sai
           await irPara(f.x, alvoY(f, z), z);
           legenda(`fusão · ${f.sub}`, `${f.sub} fica entre ${f.nomeMacro} e ${f.outro}: na vizinhança, ${pct(f.pa)}% ${f.nomeMacro} e ${pct(f.pb)}% ${f.outro}.`);
           if (j === 0) await espera(2200);
@@ -468,8 +455,26 @@
     q.delete('tour'); q.delete('t');
     const qs = q.toString();
     history.replaceState(history.state, '', location.pathname + (qs ? '?' + qs : ''));
-    iniciar(pular);
+    // Sem um clique o navegador não deixa a sonificação soar, e o tour é sobre ela: pede o clique antes de começar.
+    if (!at.som() || $('btn-musica')?.disabled) iniciar(pular);
+    else convidar(pular);
   });
+
+  // O convite de ?tour=1: um botão que dá ao navegador o gesto que libera o áudio e começa o tour dentro dele.
+  function convidar(pularPara) {
+    const el = document.createElement('div');
+    el.id = 'tour-convite';
+    el.innerHTML = '<div><p>Tour do Atlas</p><p>A trilha é a própria sonificação do mapa: clique para ligar o som e começar.</p>'
+      + '<button type="button">▶ Começar com som</button></div>';
+    document.body.append(el);
+    const b = el.querySelector('button');
+    const fora = e => { if (e.key === 'Escape') fechar(); };
+    const fechar = () => { el.remove(); document.removeEventListener('keydown', fora, true); };
+    b.addEventListener('click', () => { fechar(); iniciar(pularPara); });
+    el.addEventListener('click', e => { if (e.target === el) fechar(); });
+    document.addEventListener('keydown', fora, true);
+    b.focus();
+  }
 
   window.__atlasTour = {
     iniciar, parar,

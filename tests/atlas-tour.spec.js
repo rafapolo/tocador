@@ -22,6 +22,16 @@ async function boot(page, url = '/atlas.html') {
   await page.evaluate(() => window.__atlas.pronto);
 }
 const tour = page => page.evaluate(() => window.__atlasTour.estado());
+// ?tour=1 só começa com um clique: o navegador não deixa a sonificação soar sem um gesto.
+async function comecarDoConvite(page) {
+  const b = page.locator('#tour-convite button');
+  if (await page.evaluate(() => !!window.__atlas.som())) {
+    await expect(b).toBeVisible();
+    expect((await tour(page)).ativo).toBe(false);
+    await b.click();
+    await expect(page.locator('#tour-convite')).toHaveCount(0);
+  }
+}
 const estado = page => page.evaluate(() => window.__atlas.estado());
 
 test('▶ Tour fica ativo quando o mapa carrega, começa pela abertura com os totais contados e dura 105 s, um minuto dele na travessia', async ({ page }) => {
@@ -75,6 +85,7 @@ test('✕ esc também encerra', async ({ page }) => {
 
 test('?tour=1 começa sozinho e sai do endereço; &t= começa na cena daquele segundo', async ({ page }) => {
   await boot(page, '/atlas?tour=1&t=87&acervo=uqt');
+  await comecarDoConvite(page);
   await expect.poll(async () => (await tour(page)).cena).toBe('som-generos');
   const u = new URL(page.url());
   expect(u.searchParams.has('tour')).toBe(false);
@@ -144,7 +155,18 @@ test('a travessia vai de uma ponta à outra do mapa, de um macro-gênero a outro
 
 test('/atlas/tour abre o mapa já no tour, e um &t= segue junto', async ({ page }) => {
   await boot(page, '/atlas/tour/?t=87');
+  await comecarDoConvite(page);
   await expect.poll(async () => (await tour(page)).cena).toBe('som-generos');
   expect(new URL(page.url()).pathname).toMatch(/^\/atlas(\.html)?$/);
+  expect(new URL(page.url()).searchParams.has('tour')).toBe(false);
+});
+
+test('?tour=1 pede um clique para ligar o som; Esc no convite não começa o tour', async ({ page }) => {
+  await boot(page, '/atlas?tour=1');
+  test.skip(!(await page.evaluate(() => !!window.__atlas.som())), 'sem Web Audio não há convite');
+  await expect(page.locator('#tour-convite button')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#tour-convite')).toHaveCount(0);
+  expect((await tour(page)).ativo).toBe(false);
   expect(new URL(page.url()).searchParams.has('tour')).toBe(false);
 });
