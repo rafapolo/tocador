@@ -565,7 +565,7 @@ function updateLibraryStats() {
   const albumsStatEl = document.getElementById('mobile-stat-albums');
   const artistsStatEl = document.getElementById('mobile-stat-artists');
   if (hoursEl) {
-    hoursEl.textContent = !hours ? ''
+    hoursEl.textContent = !hours ? (filtrado ? '0 min de ♪' : '')   // a filter with nothing says 0; an acervo without durations says nothing
       : days >= 1 ? `${days.toLocaleString('pt-BR')} dia${days === 1 ? '' : 's'} de ♪`
       : hours >= 1 ? `${Math.round(hours)} hora${Math.round(hours) > 1 ? 's' : ''} de ♪`
       : `${Math.max(1, Math.round(hours * 60))} min de ♪`;

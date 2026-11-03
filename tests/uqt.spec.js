@@ -114,6 +114,19 @@ test('B12: <1940 shows albums with year < 1950', async ({ page }) => {
   await expect(page.locator('.album-item').first()).toContainText('Pixinguinha');
 });
 
+test('B12b: the decade select lists no empty option and hides itself with nothing to pick', async ({ page }) => {
+  await gotoWithFixture(page);
+  await expect(page.locator('#decade-select option[value="pre1940"]')).toHaveCount(1);
+  // No album before 1950 → no "<1940 (0)"
+  await page.evaluate(() => { albums = albums.filter(a => a.year >= 1950); _cachedDecades = null; renderDecadeSelect(); });
+  await expect(page.locator('#decade-select option[value="pre1940"]')).toHaveCount(0);
+  await expect(page.locator('#decade-select option[value="noyear"]')).toHaveCount(0);
+  await expect(page.locator('#decade-select')).toBeVisible();
+  // No year at all → no select
+  await page.evaluate(() => { albums = albums.map(a => ({ ...a, year: null })); _cachedDecades = null; renderDecadeSelect(); });
+  await expect(page.locator('#decade-select')).toBeHidden();
+});
+
 test('B13: "Sem data" shows albums with no year', async ({ page }) => {
   await gotoWithFixture(page);
   await page.selectOption('#decade-select', 'noyear');
@@ -525,6 +538,11 @@ test('K46b: the header stats follow the active filter, and show the whole acervo
   await expect(page.locator('#mobile-stat-artists')).toHaveText('1 artista');
   await expect(hoursStat).toHaveText('8 min de ♪');
   await expect(albumsStat).toHaveAttribute('title', 'No filtro atual');
+  await page.fill('#search-input', 'zzzz nada assim');            // a filter with nothing says 0, it doesn't vanish
+  await expect(page.locator('.album-item')).toHaveCount(0);
+  await expect(hoursStat).toHaveText('0 min de ♪');
+  await expect(albumsStat).toHaveText('0 álbuns');
+  await expect(page.locator('#mobile-stat-artists')).toHaveText('0 artistas');
   await page.goto('/');
   await page.waitForSelector('.album-item');
   await expect(albumsStat).toHaveText(total);

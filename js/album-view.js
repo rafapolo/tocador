@@ -21,10 +21,16 @@ function renderDecadeSelect() {
   const bump = k => count.set(k, (count.get(k) || 0) + 1);
   for (const a of albums) bump(!a.year ? 'noyear' : a.year < 1950 ? 'pre1940' : String(Math.floor(a.year / 10) * 10));
   const n = k => ` (${(count.get(k) || 0).toLocaleString('pt-BR')})`;
-  const opts = [opt('all', 'Década'), opt('pre1940', '<1940' + n('pre1940'), '1900–1949')];
+  // An option with 0 albums is left out (unless it's the active one, e.g. from the URL);
+  // with no decade to pick at all, the select hides itself.
+  const has = k => count.get(k) || String(activeDecade) === k;
+  const opts = [opt('all', 'Década')];
+  if (has('pre1940')) opts.push(opt('pre1940', '<1940' + n('pre1940'), '1900–1949'));
   for (const decade of getDecades()) opts.push(opt(String(decade), String(decade) + n(String(decade)), `${decade}–${decade + 9}`));
-  if (count.get('noyear')) opts.push(opt('noyear', 'Sem data' + n('noyear')));
+  if (has('noyear')) opts.push(opt('noyear', 'Sem data' + n('noyear')));
   select.replaceChildren(...opts);
+  // Only "Sem data" left means every album lacks a year: picking it would equal "Década".
+  select.classList.toggle('vazio', opts.every(o => o.value === 'all' || o.value === 'noyear') && activeDecade === null);
   syncDecadeSelect();
   if (select.dataset.bound) return;
   select.dataset.bound = '1';

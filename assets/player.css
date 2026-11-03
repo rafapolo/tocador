@@ -2520,6 +2520,7 @@ audio {
 
 /* Shared playlist link: "Playlist compartilhada · N álbuns  [▶ Tocar] [⤮ Aleatório]", one compact row under the search */
 .playlist-bar[hidden], .decade-select[hidden] { display: none; }
+.decade-select.vazio { display: none; }   /* no decade to pick */
 @media (max-width: 480px) { .playlist-bar-extra { display: none; } }
 .playlist-bar {
   display: flex;
