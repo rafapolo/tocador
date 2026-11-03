@@ -1274,4 +1274,51 @@ test.describe('shared playlist link', () => {
     await page.goBack();
     await expect(page.locator('.album-item')).toHaveCount(3);
   });
+
+  // Quem abre o link ganha uma barra para tocar a playlist inteira, na ordem ou misturada.
+  const tocando = page => page.evaluate(() => ({ album: selectedAlbum?.path, paused: document.getElementById('audio').paused,
+    fila: savedQueue?.length ?? 0, shuffle: shuffleOn }));
+
+  test('the offer plays the list in link order, album after album', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    await page.goto(await listaUrl(page, ORDEM));
+    const bar = page.locator('.playlist-offer');
+    await expect(bar).toContainText('Playlist compartilhada · 3 álbuns');
+    await expect(page.locator('.continue-listening')).toHaveCount(1);   // no "continue" offer on top of it
+    await bar.locator('.playlist-play').click();
+    await expect(bar).toHaveCount(0);
+    let s = await tocando(page);
+    expect(s.album).toContain('Pixinguinha');
+    expect(s).toMatchObject({ fila: 3, shuffle: false });
+    await expect(page.locator('#btn-play-saved')).toHaveAttribute('aria-pressed', 'false');   // not the saved albums
+    await page.evaluate(() => playNext());   // Pixinguinha has one track: the next one is the next album
+    s = await tocando(page);
+    expect(s.album).toContain('Construção');
+  });
+
+  test('the shuffle button of the offer mixes the list and stays inside it', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const ids = await idsDe(page, ORDEM);
+    const paths = await page.evaluate(ns => ns.map(n => albums.find(a => a.path.includes(n) || a.artists.includes(n)).path), ORDEM);
+    await page.goto(`/?acervo=uqt&lista=${ids.join('')}`);
+    await page.locator('.playlist-offer .playlist-shuffle').click();
+    await expect(page.locator('#btn-shuffle')).toHaveAttribute('aria-pressed', 'true');
+    for (let i = 0; i < 6; i++) {
+      expect(paths).toContain((await tocando(page)).album);
+      await page.evaluate(() => playNext());
+    }
+  });
+
+  test('no offer with an album in the url, and the close button dismisses it', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const url = await listaUrl(page, ORDEM);
+    const path = await page.evaluate(() => albums.find(a => a.path.includes('Construção')).path);
+    await page.goto(`${url}&album=${encodeURIComponent(path)}`);
+    await expect(page.locator('#album-header')).toContainText('Construção');
+    await expect(page.locator('.playlist-offer')).toHaveCount(0);
+    await page.goto(url);
+    await page.locator('.playlist-offer .continue-close').click();
+    await expect(page.locator('.playlist-offer')).toHaveCount(0);
+    expect((await tocando(page)).paused).toBe(true);
+  });
 });

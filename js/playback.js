@@ -174,20 +174,21 @@ function switchToAlbum(album) {
 function syncSavedQueueButton() {
   const btn = document.getElementById('btn-play-saved');
   if (!btn) return;
-  const on = !!savedQueue;
+  const on = !!savedQueue && savedQueueKind === 'salvos';
   btn.classList.toggle('active', on);
   btn.setAttribute('aria-pressed', String(on));
   btn.title = on ? 'Parar de tocar os salvos' : 'Tocar os álbuns salvos';
   btn.setAttribute('aria-label', btn.title);
 }
 
-function setSavedQueue(queue) {
+function setSavedQueue(queue, kind = 'salvos') {
   savedQueue = queue;
+  savedQueueKind = kind;
   syncSavedQueueButton();
 }
 
 function toggleSavedQueue() {
-  if (savedQueue) { setSavedQueue(null); return; }
+  if (savedQueue && savedQueueKind === 'salvos') { setSavedQueue(null); return; }
   const queue = salvosNoCatalogo().filter(a => a.tracks.some(trackAllowed));
   if (!queue.length) { showToast('Nenhum álbum salvo neste acervo'); return; }
   setSavedQueue(queue);
