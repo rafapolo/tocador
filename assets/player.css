@@ -2594,35 +2594,41 @@ audio {
 .continue-close { padding: 0 14px; opacity: 0.7; }
 .continue-go:hover, .continue-close:hover { color: var(--color-accent); opacity: 1; }
 
-/* Shared playlist link: "Playlist compartilhada · N álbuns  [▶ Tocar] [⤮ Aleatório] ✕" in the same floating pill */
-.playlist-offer { gap: 4px; padding-left: 16px; }
-.playlist-offer-label {
+/* Shared playlist link: "Playlist compartilhada · N álbuns  [▶ Tocar] [⤮ Aleatório]" in the decade row's place */
+.decade-buttons[hidden], .playlist-bar[hidden] { display: none; }
+.playlist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 8px;
+  width: 100%;
+  min-height: 60px;   /* the decade row's height: no jump when one swaps for the other */
+}
+.playlist-bar-label { font-size: 0.85rem; color: var(--color-text-secondary); margin-right: 4px; }
+/* Same look as the album header's round buttons (.album-share), stretched into a pill to hold a label */
+.playlist-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px 0 12px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 17px;
+  font: inherit;
   font-size: 0.85rem;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.85;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, transform 0.15s;
 }
-.playlist-offer .playlist-play, .playlist-offer .playlist-shuffle {
-  flex: none;
-  padding: 0 10px;
-  font-weight: 600;
-  font-size: 0.85rem;
+.playlist-btn svg { flex: none; }
+.playlist-btn:hover, .playlist-btn:focus-visible { color: var(--color-accent); border-color: var(--color-accent); }
+.playlist-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.playlist-btn:active { transform: scale(0.95); }
+@media (max-width: 768px) {
+  .playlist-bar { min-height: 0; padding: 2px 0; }
+  .playlist-bar-label { flex-basis: 100%; text-align: center; margin: 0; }
 }
-.playlist-offer .playlist-play::before { content: '▶ '; color: var(--color-accent); }
-.playlist-offer .playlist-shuffle::before { content: '⤮'; color: var(--color-accent); font-size: 1.25em; margin-right: 4px; vertical-align: -0.08em; }
-@media (max-width: 480px) {
-  .playlist-offer { padding-left: 14px; gap: 0; max-width: 96vw; }
-  .playlist-offer-label { flex: none; }
-  .playlist-offer-extra { display: none; }
-  .playlist-offer .playlist-play, .playlist-offer .playlist-shuffle { padding: 0 7px; }
-  .playlist-offer .continue-close { padding: 0 10px; }
-}
-@media (max-width: 350px) {
-  .playlist-offer-label, .playlist-offer .playlist-play, .playlist-offer .playlist-shuffle { font-size: 0.78rem; }
-  .playlist-offer .playlist-play, .playlist-offer .playlist-shuffle { padding: 0 5px; }
-  .playlist-offer .continue-close { padding: 0 8px; }
-}
-.playlist-offer .playlist-play:hover, .playlist-offer .playlist-shuffle:hover { color: var(--color-accent); }
 

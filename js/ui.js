@@ -250,51 +250,29 @@ function offerContinueListening() {
   document.body.append(bar);
 }
 
-// A shared playlist link (?lista=) with no album in the URL: offer to play the list in link order or mixed.
-// Never autoplays; it goes away once anything plays. The list plays through the same queue as the saved albums.
-function offerSharedPlaylist(setShuffle) {
+// A shared playlist link (?lista=): its buttons take the decade row's place while the list is on the grid.
+// Both play the whole list through the saved-albums queue: in link order, or mixed with shuffle on.
+function syncPlaylistBar() {
+  const bar = document.getElementById('playlist-bar');
+  if (!bar) return;
+  const on = !!sharedAlbums;
+  bar.hidden = !on;
+  document.getElementById('decade-buttons')?.toggleAttribute('hidden', on);
+  if (!on) return;
+  const n = filteredAlbums.length;
+  document.getElementById('playlist-bar-label').textContent = `Playlist compartilhada · ${n} ${n === 1 ? 'álbum' : 'álbuns'}`;
+}
+
+function playSharedPlaylist(mixed, setShuffle) {
   const queue = filteredAlbums.filter(a => a.tracks.some(trackAllowed));
-  if (!queue.length) return;
-  const bar = document.createElement('div');
-  bar.className = 'continue-listening playlist-offer';
-  bar.setAttribute('role', 'region');
-  bar.setAttribute('aria-label', 'Playlist compartilhada');
-  const label = document.createElement('span');
-  label.className = 'playlist-offer-label';
-  const extra = document.createElement('span');
-  extra.className = 'playlist-offer-extra';
-  extra.textContent = ' compartilhada';
-  label.append('Playlist', extra, ` · ${queue.length} ${queue.length === 1 ? 'álbum' : 'álbuns'}`);
-  const botao = (cls, texto, titulo) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = cls;
-    b.textContent = texto;
-    b.title = titulo;
-    return b;
-  };
-  const play = botao('playlist-play', 'Tocar', 'Tocar a playlist na ordem do link');
-  const mix = botao('playlist-shuffle', 'Aleatório', 'Tocar a playlist misturada');
-  const close = botao('continue-close', '✕', 'Dispensar');
-  close.setAttribute('aria-label', 'Dispensar');
-  bar.append(label, play, mix, close);
-  const audio = document.getElementById('audio');
-  const fechar = () => { bar.remove(); audio?.removeEventListener('play', fechar); };
-  audio?.addEventListener('play', fechar);
-  const start = mixed => {
-    fechar();
-    setShuffle(mixed);
-    setSavedQueue(queue, 'lista');
-    const pick = mixed ? pickShuffleTrack(queue) : [queue[0], queue[0].tracks.find(trackAllowed)];
-    if (!pick) return;
-    switchToAlbum(pick[0]);
-    playTrack(pick[1]);
-    virtualGrid?.scrollToSelected();
-  };
-  play.addEventListener('click', () => start(false));
-  mix.addEventListener('click', () => start(true));
-  close.addEventListener('click', fechar);
-  document.body.append(bar);
+  if (!sharedAlbums || !queue.length) return;
+  setShuffle(mixed);
+  setSavedQueue(queue, 'lista');
+  const pick = mixed ? pickShuffleTrack(queue) : [queue[0], queue[0].tracks.find(trackAllowed)];
+  if (!pick) return;
+  switchToAlbum(pick[0]);
+  playTrack(pick[1]);
+  virtualGrid?.scrollToSelected();
 }
 
 // Seeks to `time` once the duration is known (the ?seg= handover from the /atlas preview).
@@ -531,6 +509,7 @@ function filterAlbums(quiet = false) {
   renderActiveFilterChip();
   if (typeof syncGenreTrackFilter === 'function') syncGenreTrackFilter();
   updateLibraryStats();
+  syncPlaylistBar();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
@@ -938,10 +917,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     }
   }
 
-  if (!albumFromUrl) {
-    if (sharedAlbums) offerSharedPlaylist(applyShuffle);
-    else offerContinueListening();
-  }
+  if (!albumFromUrl && !sharedAlbums) offerContinueListening();
 
   const playerCover = document.getElementById('player-cover');
   if (playerCover && !playerCover.src) {
@@ -1258,6 +1234,8 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     if (shuffleOn && audio.paused) playNext();
   };
   btnShuffle?.addEventListener('click', toggleShuffle);
+  document.getElementById('playlist-play')?.addEventListener('click', () => playSharedPlaylist(false, applyShuffle));
+  document.getElementById('playlist-shuffle')?.addEventListener('click', () => playSharedPlaylist(true, applyShuffle));
   btnShuffleMobile?.addEventListener('click', toggleShuffle);
 
   btnRepeat?.addEventListener('click', () => {
