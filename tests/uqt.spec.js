@@ -97,6 +97,7 @@ test('B10: clearing search (✕ button) resets to full list', async ({ page }) =
 test('B11: the decade select filters to the decade and clears the search', async ({ page }) => {
   await gotoWithFixture(page);
   await page.fill('#search-input', 'Elis');
+  await expect(page.locator('#decade-select option[value="1970"]')).toHaveText('1970 (4)');
   await page.selectOption('#decade-select', '1970');
   await expect(page.locator('#search-input')).toHaveValue('');
   await expect(page.locator('#decade-select')).toHaveClass(/active/);

@@ -395,7 +395,7 @@ body {
 .decade-select {
   flex: none;
   height: 34px;
-  max-width: 110px;
+  max-width: 130px;
   padding: 0 26px 0 10px;
   background: var(--color-surface-light) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a89580' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 9px center;
   border: 1px solid var(--color-border);
@@ -1504,7 +1504,7 @@ audio {
     gap: 0;
   }
   .playlist-bar { margin-top: 6px; }
-  .decade-select { max-width: 92px; padding-left: 8px; font-size: 0.8rem; }
+  .decade-select { max-width: 124px; padding-left: 8px; font-size: 0.8rem; }
 
   /* Tracklist toggle button: visible on mobile */
   .mobile-only {

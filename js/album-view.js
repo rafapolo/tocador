@@ -3,7 +3,8 @@
 // Loaded after ui.js; everything here runs at call time, after DOMContentLoaded.
 
 // ── Decade select (filled once on init) ───────────────────────────────────
-// "Década" (no filter), "<1940", one per decade the acervo has, "Sem data" when some album has no year.
+// "Década" (no filter), "<1940", one per decade the acervo has, "Sem data" when some album has no year,
+// each with its album count: "2010 (12)".
 
 function renderDecadeSelect() {
   const select = document.getElementById('decade-select');
@@ -15,9 +16,14 @@ function renderDecadeSelect() {
     if (title) o.title = title;
     return o;
   };
-  const opts = [opt('all', 'Década'), opt('pre1940', '<1940', '1900–1949')];
-  for (const decade of getDecades()) opts.push(opt(String(decade), String(decade), `${decade}–${decade + 9}`));
-  if (albums.some(a => !a.year)) opts.push(opt('noyear', 'Sem data'));
+  // Album counts per option, over the whole acervo (a decade replaces any other facet anyway).
+  const count = new Map();
+  const bump = k => count.set(k, (count.get(k) || 0) + 1);
+  for (const a of albums) bump(!a.year ? 'noyear' : a.year < 1950 ? 'pre1940' : String(Math.floor(a.year / 10) * 10));
+  const n = k => ` (${(count.get(k) || 0).toLocaleString('pt-BR')})`;
+  const opts = [opt('all', 'Década'), opt('pre1940', '<1940' + n('pre1940'), '1900–1949')];
+  for (const decade of getDecades()) opts.push(opt(String(decade), String(decade) + n(String(decade)), `${decade}–${decade + 9}`));
+  if (count.get('noyear')) opts.push(opt('noyear', 'Sem data' + n('noyear')));
   select.replaceChildren(...opts);
   syncDecadeSelect();
   if (select.dataset.bound) return;
