@@ -332,6 +332,8 @@ async function classifyAudioError(src, mediaCode) {
     if (r.status === 404) return 'missing';
     if (r.status === 429) return 'limited';
     if (r.status === 403) return 'blocked';
+    // 200 com corpo de 0 bytes: o arquivo está vazio no bucket, o CDN está de pé.
+    if (r.ok && r.headers.get('content-length') === '0') return 'empty';
     if (r.ok) return mediaCode === 2 ? 'server' : 'unplayable';   // 2 = MEDIA_ERR_NETWORK
     return 'server';
   } catch {
@@ -1002,6 +1004,8 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     _consecutiveErrors++;
     const kind = await classifyAudioError(src, mediaCode);
     if (currentTrack !== errored) return;   // the listener moved on while we asked
+    // Arquivo vazio é defeito da faixa, não sinal de CDN fora: não conta para a pausa por erros seguidos.
+    if (kind === 'empty') _consecutiveErrors = 0;
     const retry = { label: 'Tentar de novo', onClick: () => { _consecutiveErrors = 0; playTrack(errored); } };
     if (kind === 'offline') {
       _retomarAoReconectar = true;
@@ -1012,13 +1016,13 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     // not that individual files are broken — stop thrashing through the whole
     // library and tell the user instead of silently skipping forever.
     reportPlaybackError(errored, _consecutiveErrors >= MAX_CONSECUTIVE_ERRORS);
-    if (kind === 'missing') {
+    if (kind === 'missing' || kind === 'empty') {
       unavailableTracks.add(errored);
       const idx = selectedAlbum?.tracks.indexOf(errored) ?? -1;
       if (idx >= 0) {
         for (const li of document.querySelectorAll(`#track-list [data-track-idx="${idx}"], #drawer-track-list [data-track-idx="${idx}"]`)) {
           li.classList.add('unavailable');
-          li.title = 'Arquivo indisponível no servidor';
+          li.title = kind === 'empty' ? 'Arquivo vazio no servidor' : 'Arquivo indisponível no servidor';
         }
       }
     }
@@ -1027,8 +1031,9 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       showToast('Vários erros de reprodução seguidos — reprodução pausada', 15000, { action: retry });
       return;
     }
-    if (kind === 'missing' || kind === 'unplayable') {
+    if (kind === 'missing' || kind === 'empty' || kind === 'unplayable') {
       showToast(kind === 'missing' ? `Faixa indisponível: ${errored.title} — pulando…`
+        : kind === 'empty' ? `Faixa vazia: ${errored.title} — pulando…`
         : `Não foi possível tocar: ${errored.title} — pulando…`);
       // Only auto-skip if the user hasn't already moved on (manually picked another
       // track) and this track's error is still the audio element's current state —

@@ -58,6 +58,22 @@ test.describe('actionable playback errors', () => {
     await expect.poll(() => page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack)), { timeout: 5000 }).toBe(1);
   });
 
+  // MP3 de 0 bytes (os 74 do uqt) é problema do arquivo, não do CDN: pula e marca cada um, e as
+  // três faixas vazias seguidas não disparam o "Vários erros seguidos" (que é o aviso de CDN fora).
+  test('empty (0-byte) files are marked and skipped without the CDN-down pause', async ({ page }) => {
+    await gotoWithFixture(page);
+    await page.unroute('**/*.mp3');
+    await page.route('**/*.mp3', r => r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': '0' }, body: '' }));
+    await card(page, 'Construção').locator('.card-play').click();
+    const titulo = await page.evaluate(() => selectedAlbum.tracks[0].title);
+    await expect(page.locator('#toast')).toContainText(`Faixa vazia: ${titulo}`);
+    const itens = page.locator('#track-list .track-item');
+    await expect(itens.nth(0)).toHaveClass(/unavailable/);
+    await expect(itens.nth(1)).toHaveClass(/unavailable/, { timeout: 5000 });
+    await expect(itens.nth(2)).toHaveClass(/unavailable/, { timeout: 5000 });
+    await expect(page.locator('#toast')).not.toContainText('Vários erros');
+  });
+
   test('offline: no skip, a retry button, and it resumes when the network is back', async ({ page, context }) => {
     await gotoWithFixture(page);
     await page.unroute('**/*.mp3');

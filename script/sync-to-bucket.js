@@ -64,7 +64,10 @@ function walkDir(dir, base = dir) {
       entries.push(...walkDir(full, base));
     } else {
       const ext = path.extname(name).toLowerCase();
-      if (ALLOWED_EXTS.has(ext)) {
+      if (ext === '.mp3' && stat.size === 0) {
+        // Um MP3 de 0 bytes subiria como objeto vazio e o player o listaria sem nunca tocar.
+        console.warn(`skipping ${path.relative(base, full)} (MP3 vazio, 0 bytes)`);
+      } else if (ALLOWED_EXTS.has(ext)) {
         entries.push({ localPath: full, relativePath: path.relative(base, full), size: stat.size });
       } else {
         console.warn(`skipping ${path.relative(base, full)} (ext: ${ext || 'none'})`);
