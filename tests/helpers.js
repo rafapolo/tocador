@@ -64,4 +64,11 @@ async function gotoWithFixture(page, url = '/', { blockAudio = false, ranges = f
   await page.waitForSelector('.album-item', { timeout: 8000 });
 }
 
-module.exports = { fixtureGz, fixtureMp3, rangedMp3, gotoWithFixture };
+// A tab the app opens (target=_blank, cmd/ctrl + click) has none of the page's routes, so it would load the
+// real catalogs from GitHub raw and hit the CDN, which also stalled a test in CI. Call before the click that
+// opens it: everything off localhost is aborted for the whole context; the opener's page routes still win.
+function keepNewTabsLocal(context) {
+  return context.route(u => !/^http:\/\/(localhost|127\.0\.0\.1)[:/]/.test(u.href), r => r.abort());
+}
+
+module.exports = { fixtureGz, fixtureMp3, rangedMp3, gotoWithFixture, keepNewTabsLocal };

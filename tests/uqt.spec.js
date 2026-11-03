@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
 
-const { fixtureGz, fixtureMp3, rangedMp3, gotoWithFixture } = require('./helpers');
+const { fixtureGz, fixtureMp3, rangedMp3, gotoWithFixture, keepNewTabsLocal } = require('./helpers');
 
 // ── A. Initial Load & URL State ───────────────────────────────────────────
 
@@ -320,8 +320,10 @@ test('G30b: cmd/ctrl + click on an artist opens the search in a new tab and leav
   await page.locator('.album-item', { hasText: 'Elis & Tom' }).click();
   const link = page.locator('#album-header .artist-link').filter({ hasText: 'Elis Regina' }).first();
   await expect(link).toHaveAttribute('href', /[?&]q=Elis\+Regina/);
+  await keepNewTabsLocal(context);
   const [aba] = await Promise.all([context.waitForEvent('page'), link.click({ modifiers: ['ControlOrMeta'] })]);
-  expect(new URL(aba.url()).searchParams.get('q')).toBe('Elis Regina');
+  // A new tab starts at about:blank; wait for its navigation instead of reading the url right away.
+  await aba.waitForURL(u => u.searchParams.get('q') === 'Elis Regina', { waitUntil: 'commit' });
   await aba.close();
   await expect(page.locator('#search-input')).toHaveValue('');
 });
@@ -1000,7 +1002,9 @@ test('L71: the saved tab also lists albums saved in the other acervo and opens t
   await expect(item.locator('.browse-name')).toHaveText('Disco');
   await expect(item.locator('.browse-sub')).toHaveText('Banda');
   await expect(item).toContainText('homi');
+  await keepNewTabsLocal(context);
   const [aba] = await Promise.all([context.waitForEvent('page'), item.click()]);
+  await aba.waitForURL(u => u.searchParams.has('acervo'), { waitUntil: 'commit' });
   const url = new URL(aba.url());
   expect(url.searchParams.get('acervo')).toBe('homi');
   expect(url.searchParams.get('album')).toBe('2019 - Banda - Disco');
