@@ -1,4 +1,4 @@
-// atlas-tour.js — o tour de quase 2 minutos do /atlas (roteiro em TOUR.md). Um ponteiro desenhado clica nos controles de
+// atlas-tour.js — o tour de 2 minutos do /atlas (roteiro em TOUR.md). Um ponteiro desenhado clica nos controles de
 // verdade, a câmera voa pelos lugares que os dados apontam (nenhum nome ou número fixo aqui: tudo é contado no
 // navegador) e a trilha é a própria sonificação, que reage ao que a câmera vê. ▶ Tour ou ?tour=1 (&t=<s> pula);
 // Esc ou ✕ esc encerram e devolvem mapa, filtros, grafo, seleção e câmera. Carregado depois de js/atlas.js, cujo
@@ -185,6 +185,8 @@
   }
   function esconderPonteiro() { if (ui) ui.ponteiro.hidden = true; }
 
+  const PASSOS_GRAFO = 3;      // vizinhos que o tour visita no grafo
+
   // ── as cenas ── (tempos em TOUR.md; cada cena dura exatamente `dur` s, esperando o que faltar)
   function cenas(D) {
     return [
@@ -288,12 +290,18 @@
           legenda('3D', 'O mapa também tem profundidade: arraste com o botão direito, ou ligue o ⟳, para girar.');
         }
       } },
-      { id: 'grafo', dur: 8, async fn() {
+      { id: 'grafo', dur: 20, async fn() {
         at.fecharCartao();
         await clicar($('btn-grafo'));
         legenda('grafo', 'No Grafo, cada nome é um artista, perto dos que soam como ele.');
         await espera(1500);
-        const nome = D.artista;
+        // Entre os artistas frequentes perto do mainstream, o de caminhada mais variada: o samba, por exemplo, é uma
+        // bacia funda, e a partir do mais frequente a banda tocaria samba os três passos.
+        let nome = D.artista, plano = [];
+        for (const c of D.artistas) {
+          const w = at.grafoCaminho?.(c, PASSOS_GRAFO);
+          if (w && w.nota > (plano.nota ?? -1)) { nome = c; plano = w.nomes; plano.nota = w.nota; }
+        }
         if (!nome) return;
         const no = at.grafoTudo(nome);
         if (no && !run.rapido && comPonteiro()) await moverPonteiro({ left: no.x, top: no.y, width: 0, height: 0 });
@@ -301,25 +309,49 @@
         focar($('grafo-painel'));
         legenda(`grafo · ${nome}`, `No centro, ${nome}; em volta, os artistas que mais soam parecido. Os mais longe ficam mais apagados.`);
         await espera(2300);
-        const viz = $('grafo-parecidos-lista')?.querySelector('button');
-        if (!viz) return;
-        const vizinho = viz.textContent.trim();
-        await clicar(viz);
-        legenda(`grafo · ${vizinho}`, 'Clique num vizinho e o grafo anda até ele.');
+        // Anda pelo grafo para a banda (que toca os artistas à vista, grafo.pontosVisiveis()) mudar com ele: segue o
+        // plano; sem ele (ou se o botão não estiver lá), vai a um vizinho ainda não visitado, de outro gênero quando
+        // houver, senão o mais longe da lista (a ordem é do mais perto), que tende a sair do aglomerado.
+        const { subDe, nomeMacro } = at.dados(), rotulo = g => (g ? (g.includes('---') ? subDe(g) : nomeMacro(g)) : '');
+        const vistos = new Set([nome.toLowerCase()]);
+        for (let passo = 0; passo < PASSOS_GRAFO; passo++) {
+          const bts = [...($('grafo-parecidos-lista')?.querySelectorAll('button') || [])]
+            .filter(b => !vistos.has(b.textContent.trim().toLowerCase()));
+          if (!bts.length) return;
+          const g0 = at.grafo().genero;
+          const viz = bts.find(b => b.textContent.trim() === plano[passo])
+            || bts.find(b => b.dataset.g && b.dataset.g !== g0) || bts[bts.length - 1];
+          const vizinho = viz.textContent.trim();
+          vistos.add(vizinho.toLowerCase());
+          await clicar(viz);
+          const g1 = at.grafo().genero, de = rotulo(g0), para = rotulo(g1), fam = g => window.RECEITAS_ATLAS?.familiaDe(g) ?? g;
+          legenda(`grafo · ${vizinho}`,
+            de && para && fam(g0) !== fam(g1)
+              ? (passo === 0 ? `De ${de} para ${para} num clique: a banda toca os artistas à vista, então troca de parte com o grafo.`
+                : `De ${de} para ${para}: a banda troca de parte com o grafo.`)
+              : passo === 0 ? 'Clique num vizinho e o grafo anda até ele. A banda toca os artistas à vista, então anda junto.'
+                : `${vizinho}, ainda perto de ${para || de}: a banda muda aos poucos.`);
+          if (passo < PASSOS_GRAFO - 1) await espera(3400);
+        }
       } },
-      { id: 'fim', dur: 3, async fn() {
+      { id: 'fim', dur: 6, async fn() {
         // Sai do grafo como o Esc: no ponto do artista, de perto, para a banda não cair no fim.
         if (at.grafo().aberto) at.fecharGrafo(8);
         esconderPonteiro(); focar(null);
         legenda('tocador.cc/atlas', 'Arraste, aproxime e clique numa faixa para ouvir.');
+        // O tour começou de frente: gira de volta à mesma vista, em torno do ponto do artista, depois de pousar nele.
+        await espera(700);
+        const c = at.camera();
+        if (c.yaw || c.pitch) at.girarVista(0, 0, run.rapido ? 0 : 2600);
       } },
     ];
   }
   const DURACAO = () => cenas({ acervos: [], porAcervo: [], fus: [], raros: [] }).reduce((s, c) => s + c.dur, 0);
 
-  // O artista do grafo: o mais frequente perto do lugar mais povoado (precisa dos catálogos ligados).
-  function artistaDoTour(D) {
-    if (!D.m1) return null;
+  // Os candidatos a artista do grafo: os mais frequentes perto do lugar mais povoado, do mais ao menos (precisa dos
+  // catálogos ligados). A cena escolhe entre eles o de caminhada mais variada; D.artista é o primeiro.
+  function artistasDoTour(D) {
+    if (!D.m1) return [];
     const { A } = at.dados(), pos = A.pos.som, perto = [];
     for (let i = 0; i < A.n; i++) {
       const d = (pos[2 * i] / 65535 - D.m1.x) ** 2 + (pos[2 * i + 1] / 65535 - D.m1.y) ** 2;
@@ -335,7 +367,7 @@
       c.n++;
       if (c.nome === c.nome.toLowerCase() && a !== a.toLowerCase()) c.nome = a;
     }
-    return [...conta.values()].sort((a, b) => b.n - a.n)[0]?.nome || null;
+    return [...conta.values()].sort((a, b) => b.n - a.n).slice(0, 15).map(c => c.nome);
   }
 
   // A câmera nunca fica parada: se nada mexeu nela por DERIVA_MS (uma espera de cena, uma legenda lida), ela desliza
@@ -367,7 +399,7 @@
     if (ligouSom) musica.click();
     try { await at.pronto; } finally { iniciando = false; }
     const D = calcular();
-    D.artista = artistaDoTour(D);
+    D.artistas = artistasDoTour(D); D.artista = D.artistas[0] || null;
     const lista = cenas(D), total = lista.reduce((s, c) => s + c.dur, 0);
     run = { parado: false, rapido: false, pend: new Set(), cena: null, t0: 0, total, ligouSom,
       antes: { busca: location.search, camera: at.camera() } };
@@ -487,6 +519,6 @@
     iniciar, parar,
     duracao: DURACAO,
     estado: () => ({ ativo: !!run, cena: run?.cena ?? null, t: run ? (performance.now() - run.t0) / 1000 : 0, total: run?.total ?? DURACAO() }),
-    dados: () => { const D = calcular(); D.artista = artistaDoTour(D); return D; },
+    dados: () => { const D = calcular(); D.artistas = artistasDoTour(D); D.artista = D.artistas[0] || null; return D; },
   };
 })();

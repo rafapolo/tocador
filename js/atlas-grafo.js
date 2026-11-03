@@ -583,7 +583,7 @@
       lista.scrollLeft = 0;
       lista.replaceChildren(...ids.map(j => {
         const b = document.createElement('button'), p = document.createElement('span');
-        b.type = 'button'; b.dataset.i = j;
+        b.type = 'button'; b.dataset.i = j; b.dataset.g = D.generos[D.genero[j]];
         p.className = 'ponto'; p.style.background = corDe(D.generos[D.genero[j]]);
         b.append(p, D.nomes[j]);
         return b;
@@ -814,7 +814,31 @@
       get zoom() { return vista.k; },
       redesenhar() { if (aberto && D) desenhar(); },
       atualizarPainel() { if (aberto && D) desenharPainel(); },   // the catalogs arrive after the graph on a direct link
-      estado() { return { aberto, tudo: emTudo(), centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), arestas: arestas.length, yaw, pitch }; },
+      estado() { return { aberto, tudo: emTudo(), centro: D && centro >= 0 ? D.nomes[centro] : null, nos: nos.map(i => D.nomes[i]), genero: D && centro >= 0 ? D.generos[D.genero[centro]] : null, arestas: arestas.length, yaw, pitch }; },
+      // A walk for the tour: of every path of `passos` steps through each artist's first neighbours (its "Soa
+      // parecido com" buttons) from `nome`, never back to an artist already seen, the one crossing the most music
+      // families (js/atlas-receitas.js; macro-genres count extra), so the band changes along it. { nomes, nota }, or
+      // null before the payload loads.
+      caminho(nome, passos = 3) {
+        const i0 = D ? indice(nome) : -1;
+        if (i0 < 0) return null;
+        let melhor = { nomes: [], nota: -1 };
+        const macro = g => String(g).split('---')[0];
+        const familia = g => global.RECEITAS_ATLAS?.familiaDe(g) ?? g;
+        const nota = c => { const g = c.map(i => D.generos[D.genero[i]]); return new Set(g.map(familia)).size + 0.5 * new Set(g.map(macro)).size; };
+        const andar = c => {
+          if (c.length > passos) {
+            const n = nota(c);
+            if (n > melhor.nota) melhor = { nomes: c.slice(1).map(i => D.nomes[i]), nota: n };
+            return;
+          }
+          for (const j of viz(c[c.length - 1]).slice(0, MAX_PARECIDOS)) {
+            if (j >= 0 && j < D.nomes.length && !c.includes(j)) andar([...c, j]);
+          }
+        };
+        andar([i0]);
+        return melhor.nomes.length ? melhor : null;
+      },
       noTudo(nome) { const i = indice(nome); return emTudo() && T?.x && i >= 0 ? { x: T.sx[i], y: T.sy[i], r: T.sr[i] } : null; },
     };
   }

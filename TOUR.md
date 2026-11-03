@@ -1,6 +1,6 @@
 # Tour do Atlas: o roteiro
 
-O tour é uma viagem de 105 segundos pelo [/atlas](https://tocador.cc/atlas) que mostra como ler o mapa e como ele vira
+O tour é uma viagem de 120 segundos pelo [/atlas](https://tocador.cc/atlas) que mostra como ler o mapa e como ele vira
 música. Um ponteiro desenhado clica nos controles de verdade, então o tour também ensina a usar a página. Para
 assistir, use o botão **▶ Tour** na barra de cima (ou a tecla **T**), ou abra [tocador.cc/atlas/tour](https://tocador.cc/atlas/tour) (o mesmo que `/atlas?tour=1`), que começa sozinho quando o
 mapa termina de carregar. Acrescente `&t=<segundos>` (por exemplo `?tour=1&t=94` para o grafo) para começar perto
@@ -44,7 +44,7 @@ os artistas do grafo.
 
 ## Cenas
 
-Duração total: 105 s, um minuto deles na travessia, para dar tempo de ouvir a banda mudar. A câmera nunca fica parada mais de 8 s no mesmo lugar: se nada a mexeu por 1,5 s (uma espera
+Duração total: 120 s, um minuto deles na travessia, para dar tempo de ouvir a banda mudar. A câmera nunca fica parada mais de 8 s no mesmo lugar: se nada a mexeu por 1,5 s (uma espera
 da cena, uma legenda sendo lida), ela desliza devagar, um pouco ao lado e um pouco mais perto, até o próximo voo
 (`derivar()`; fora do grafo, que tem o próprio movimento, e sem a deriva com movimento reduzido).
 
@@ -56,8 +56,8 @@ da cena, uma legenda sendo lida), ela desliza devagar, um pouco ao lado e um pou
 | 3 | 70–78 s | voa bem perto (até 40×, o zoom em que o rótulo aparece) de dois marcos pequenos | de perto, a banda é só a da raridade | **raridade · …** · *Só N faixas de …, mas juntas: um lugar próprio no mapa.* → **raridade · …** · *N dos M estilos têm menos de 10 faixas no acervo inteiro.* |
 | 4 | 78–86 s | voa até as duas maiores fusões | — | **fusão · …** · *… fica entre A e B: na vizinhança, X% A e Y% B.* |
 | 5 | 86–94 s | a 8× no lugar mais povoado, o mesmo rótulo em cada mapa (trocar o mapa enquadraria o mapa inteiro e calaria a banda); no fim, gira em 3D (yaw 0,9, pitch −0,35 rad, 2,8 s) | o ponteiro clica **Gêneros** (os pontos migram para as posições pelos rótulos), depois **Som** | **gêneros** · *No mapa Gêneros, a posição vem só dos rótulos…* → **som** · *No mapa Som, vem do áudio…* → **3D** · *O mapa também tem profundidade…* |
-| 6 | 94–102 s | o grafo | o ponteiro clica **Grafo** (visão geral de todos os artistas); vai até o nome do artista escolhido e o grafo se centra nele; depois clica o primeiro vizinho em "Soa parecido com" e o grafo anda até ele | **grafo** · *No Grafo, cada nome é um artista, perto dos que soam como ele.* → **grafo · Nome** · *Nome, ligado aos artistas que mais soam como ele…* → **grafo · Vizinho** · *Clique num vizinho e o grafo anda até ele.* |
-| 7 | 102–105 s | sai do grafo como o Esc, no ponto do artista a 8× | o grafo fecha | **tocador.cc/atlas** · *Arraste, aproxime e clique numa faixa para ouvir.* |
+| 6 | 94–114 s | o grafo | o ponteiro clica **Grafo** (visão geral de todos os artistas); vai até o nome do artista escolhido e o grafo se centra nele; depois clica três vizinhos seguidos em "Soa parecido com", pela caminhada que cruza mais famílias da sonificação (a banda toca os artistas à vista, então muda a cada passo; hoje Elza Soares → Miltinho → Jorge Ben Jor → Jorge Ben, Samba → Bossa → MPB) | **grafo** · *No Grafo, cada nome é um artista, perto dos que soam como ele.* → **grafo · Nome** · *No centro, Nome; em volta…* → **grafo · Vizinho** · *Clique num vizinho e o grafo anda até ele. A banda toca os artistas à vista…* → *De A para B: a banda troca de parte com o grafo.* |
+| 7 | 114–120 s | sai do grafo como o Esc, no ponto do último artista a 8×; depois gira de volta (2,6 s) à vista de frente com que o tour começou | o grafo fecha | **tocador.cc/atlas** · *Arraste, aproxime e clique numa faixa para ouvir.* |
 
 Ao fim, o tour devolve mapa, filtros, grafo e seleção (a câmera vai para onde o endereço devolvido a levar).
 
@@ -76,8 +76,11 @@ todo), com quantas faixas tem (`A.marcos.som` no payload, feito por `script/buil
   vizinhança 3×3 da sua célula por macro-gênero (sem "Outros"): A é o macro-gênero do marco, B o outro mais
   presente ali. A nota da fusão é a menor das duas fatias, então ganha o lugar mais dividido ao meio; B precisa ter
   ao menos 20%. Entram as duas melhores com pares A–B diferentes.
-- **Artista do grafo (cena 6):** entre as 400 faixas mais perto do marco mainstream, o artista que mais aparece
-  (precisa dos catálogos carregados e de 3 faixas ou mais no grafo).
+- **Artista do grafo (cena 6):** entre as 400 faixas mais perto do marco mainstream, os 15 artistas que mais aparecem
+  (precisa dos catálogos carregados e de 3 faixas ou mais no grafo); fica o de caminhada mais variada: de todos os
+  caminhos de 3 passos pelos 6 primeiros vizinhos, sem voltar a um artista, o que cruza mais famílias de receita
+  (`familiaDe()`), com meio ponto por macro-gênero (`caminho()` em `js/atlas-grafo.js`). Do mais frequente (Beth
+  Carvalho) o samba levaria 8 passos para acabar.
 - **Zoom de cada voo:** o mínimo em que o mapa escreve o rótulo daquele marco (`n ≥ 1200 / z^1,7`, a regra de
   `desenharMarcos()`), com folga de 20%.
 

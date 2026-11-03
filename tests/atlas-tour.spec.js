@@ -34,11 +34,11 @@ async function comecarDoConvite(page) {
 }
 const estado = page => page.evaluate(() => window.__atlas.estado());
 
-test('▶ Tour fica ativo quando o mapa carrega, começa pela abertura com os totais contados e dura 105 s, um minuto dele na travessia', async ({ page }) => {
+test('▶ Tour fica ativo quando o mapa carrega, começa pela abertura com os totais contados e dura 120 s, um minuto dele na travessia', async ({ page }) => {
   await boot(page);
   const btn = page.locator('#btn-tour');
   await expect(btn).toBeEnabled();
-  expect((await tour(page)).total).toBe(105);
+  expect((await tour(page)).total).toBe(120);
   await btn.click();
   await expect(page.locator('body')).toHaveClass(/em-tour/);
   await expect(page.locator('#tour')).toBeVisible();
@@ -169,4 +169,19 @@ test('?tour=1 pede um clique para ligar o som; Esc no convite não começa o tou
   await expect(page.locator('#tour-convite')).toHaveCount(0);
   expect((await tour(page)).ativo).toBe(false);
   expect(new URL(page.url()).searchParams.has('tour')).toBe(false);
+});
+
+test('o fim gira de volta à vista de frente com que o tour começou', async ({ page }) => {
+  await boot(page);
+  test.skip(!(await estado(page)).tem3d, 'o mapa de teste não tem profundidade');
+  await page.evaluate(() => new Promise(res => {
+    window.__atlasTour.iniciar(114);
+    const olhar = () => {
+      // a cena do 3D foi pulada: gira à mão, como ela deixaria, logo que o fim começa
+      if (window.__atlasTour.estado().cena === 'fim') { window.__atlas.girarVista(0.9, -0.35, 0); res(); } else requestAnimationFrame(olhar);
+    };
+    olhar();
+  }));
+  expect((await estado(page)).yaw).toBeCloseTo(0.9, 2);
+  await expect.poll(async () => { const e = await estado(page); return Math.abs(e.yaw) + Math.abs(e.pitch); }, { timeout: 6000 }).toBeLessThan(1e-6);
 });

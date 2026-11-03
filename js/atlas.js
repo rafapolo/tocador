@@ -1345,6 +1345,7 @@
     estado() { return { k, k0, cx, cy, mapa, t, nAtivo, n: N, sel, yaw, pitch, tem3d: !!A.posZ[mapa], girar: modoGirar }; },
     grafo: () => grafo.estado(),
     grafoTudo: nome => grafo.noTudo(nome),
+    grafoCaminho: (nome, max) => grafo.caminho(nome, max),
     som: () => som && { ...som.estado(), features: feats.filter(Boolean).length },
     // For the tour (js/atlas-tour.js): the data it counts from, the camera it flies, and the state it puts back.
     dados: () => ({ A, cor, macros: MACROS, nomeMacro, subDe, macroDe }),
