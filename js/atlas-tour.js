@@ -193,8 +193,9 @@
         at.enquadrarTudo(!run.rapido);
         legenda('atlas', `${fmt(D.N)} faixas. Cada ponto é uma faixa; o que soa parecido fica perto.`);
         await espera(1200);
-        const c = at.camera();
-        if (!run.rapido && !reduzMovimento) at.voar(c.cx, c.cy, c.k0 * 1.15, 3800);
+        // De longe a banda é só a cama, quase muda: o tour desce logo até a primeira parada e não sobe mais.
+        const m = D.trav?.[0] || D.m1;
+        if (m) await irPara(m.x, alvoY(m, 8), 8, 3800);
       } },
       { id: 'sonificar', dur: 5, async fn() {
         const s = at.som(), btn = $('btn-musica');
@@ -265,12 +266,21 @@
         }
       } },
       { id: 'som-generos', dur: 8, async fn() {
-        at.enquadrarTudo(!run.rapido);
-        await espera(500);
+        // Trocar o mapa enquadra o mapa inteiro, que calaria a banda: logo depois do clique a câmera vai, a 8×, ao
+        // lugar mais povoado naquele mapa (o mesmo rótulo nos dois), sem passar pelo mapa inteiro.
+        const g = D.m1?.g, perto = async mapa => {
+          const q = g === undefined ? null : (at.dados().A.marcos[mapa] || []).find(x => x[0] === g);
+          if (!q) return;
+          const m = { x: q[1] / 65535, y: q[2] / 65535 };
+          if (run.rapido || reduzMovimento) { at.voar(m.x, alvoY(m, 8), at.camera().k0 * 8, 0); return; }
+          at.voar(m.x, alvoY(m, 8), at.camera().k0 * 8, 1600);
+        };
         await clicar(document.querySelector('[data-mapa="rotulos"]'));
+        await perto('rotulos');
         legenda('gêneros', 'No mapa Gêneros, a posição vem só dos rótulos que o modelo deu: os grupos ficam limpos, mas repetem o rótulo.');
         await espera(2000);
         await clicar(document.querySelector('[data-mapa="som"]'));
+        await perto('som');
         legenda('som', 'No mapa Som, vem do áudio: o que soa parecido fica junto, tenha o rótulo que tiver.');
         esconderPonteiro(); focar(null);
         await espera(1000);
@@ -280,7 +290,6 @@
       } },
       { id: 'grafo', dur: 8, async fn() {
         at.fecharCartao();
-        at.enquadrarTudo(false);
         await clicar($('btn-grafo'));
         legenda('grafo', 'No Grafo, cada nome é um artista, perto dos que soam como ele.');
         await espera(1500);
@@ -299,8 +308,8 @@
         legenda(`grafo · ${vizinho}`, 'Clique num vizinho e o grafo anda até ele.');
       } },
       { id: 'fim', dur: 3, async fn() {
-        if (at.grafo().aberto) await clicar($('btn-grafo'));
-        else at.enquadrarTudo(!run.rapido);
+        // Sai do grafo como o Esc: no ponto do artista, de perto, para a banda não cair no fim.
+        if (at.grafo().aberto) at.fecharGrafo(8);
         esconderPonteiro(); focar(null);
         legenda('tocador.cc/atlas', 'Arraste, aproxime e clique numa faixa para ouvir.');
       } },

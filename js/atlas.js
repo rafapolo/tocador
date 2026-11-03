@@ -1227,7 +1227,7 @@
     if (bi >= 0) for (let i = 0; i < N; i++) if (A.acervo[i] === ai && ptAlb[i] === bi) dele.push(i);
     if (!irParaFaixas(dele)) $('contagem').textContent = 'Álbum fora do mapa';
   }
-  function irParaArtista(nome) {
+  function irParaArtista(nome, zoom) {
     if (!ligado) return;
     const c = chaveArtista(nome), porTexto = new Map(), dele = [];
     for (let i = 0; i < N; i++) {
@@ -1236,7 +1236,7 @@
       if (!porTexto.has(artista)) porTexto.set(artista, parseArtists(artista).some(a => chaveArtista(a) === c));
       if (porTexto.get(artista)) dele.push(i);
     }
-    irParaFaixas(dele);
+    irParaFaixas(dele, zoom);
   }
   // A playing preview goes on over the graph, with its card still there to stop it.
   function abrirGrafo(nome) {
@@ -1355,6 +1355,8 @@
     fecharCartao() { if (sel >= 0) fecharCartao(); },
     artistaDe(i) { const info = infoDe(i); return info ? parseArtists(info.artista)[0] || null : null; },
     abrirGrafo,
+    // closes the graph like Esc, but lands at `z` × the fit (the tour keeps the band whole at 8×)
+    fecharGrafo(z) { const n = grafo.centro; grafo.fechar(false); if (n) irParaArtista(n, k0 * z); },
     prenderUrl(on) { urlPresa = on; if (on) clearTimeout(tUrl); },
     querSom(on) { som?.querer(on); },
     aplicarUrl,

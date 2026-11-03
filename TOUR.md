@@ -50,16 +50,16 @@ da cena, uma legenda sendo lida), ela desliza devagar, um pouco ao lado e um pou
 
 | # | tempo | câmera | o que acontece | kicker · frase |
 |---|---|---|---|---|
-| 0 | 0–5 s | o mapa inteiro, aproximando devagar | nada se clica | **atlas** · *N faixas. Cada ponto é uma faixa; o que soa parecido fica perto.* |
+| 0 | 0–5 s | o mapa inteiro por 1,2 s, depois desce a 8× até a primeira parada da travessia (de longe a banda é quase muda, e daí em diante a câmera não sobe mais) | nada se clica | **atlas** · *N faixas. Cada ponto é uma faixa; o que soa parecido fica perto.* |
 | 1 | 5–10 s | deriva devagar | o ponteiro vai até **Sonificar** (já ligado desde o clique em ▶ Tour) | **sonificar** · *Nenhum som aqui é gravado: o que a câmera vê vira a partitura, e cada gênero na tela toca uma parte da banda.* |
 | 2 | 10–70 s | travessia a 8× o tempo todo (baixo, ritmo, acordes e melodia sempre soando): a câmera só desliza de um lugar ao outro, sem recuar, em 6,5 s por trecho (os dois lugares tocam juntos no caminho), com 3 a 4,5 s em cada lugar: do lugar grande (≥1000 faixas) do macro-gênero do mainstream mais longe do outro lado até o lugar grande de outro macro-gênero mais longe do mainstream, parando em até 4 lugares (≥400 faixas) no caminho, em ordem (hoje Batucada → Samba → African → Folk → Indie Rock → Punk) | a legenda narra cada parada (o mainstream ganha sua frase, a troca de macro-gênero é dita) e a banda, fusão do que está à vista, muda aos poucos | **de Batucada a Punk** · *Batucada: N faixas de Latino. Daqui até Punk…* → … → *Punk, N faixas de Rock: o outro lado. Batucada → … → Punk.* |
 | 3 | 70–78 s | voa bem perto (até 40×, o zoom em que o rótulo aparece) de dois marcos pequenos | de perto, a banda é só a da raridade | **raridade · …** · *Só N faixas de …, mas juntas: um lugar próprio no mapa.* → **raridade · …** · *N dos M estilos têm menos de 10 faixas no acervo inteiro.* |
 | 4 | 78–86 s | voa até as duas maiores fusões | — | **fusão · …** · *… fica entre A e B: na vizinhança, X% A e Y% B.* |
-| 5 | 86–94 s | o mapa inteiro; no fim, gira em 3D (yaw 0,9, pitch −0,35 rad, 2,8 s) | o ponteiro clica **Gêneros** (os pontos migram para as posições pelos rótulos), depois **Som** | **gêneros** · *No mapa Gêneros, a posição vem só dos rótulos…* → **som** · *No mapa Som, vem do áudio…* → **3D** · *O mapa também tem profundidade…* |
+| 5 | 86–94 s | a 8× no lugar mais povoado, o mesmo rótulo em cada mapa (trocar o mapa enquadraria o mapa inteiro e calaria a banda); no fim, gira em 3D (yaw 0,9, pitch −0,35 rad, 2,8 s) | o ponteiro clica **Gêneros** (os pontos migram para as posições pelos rótulos), depois **Som** | **gêneros** · *No mapa Gêneros, a posição vem só dos rótulos…* → **som** · *No mapa Som, vem do áudio…* → **3D** · *O mapa também tem profundidade…* |
 | 6 | 94–102 s | o grafo | o ponteiro clica **Grafo** (visão geral de todos os artistas); vai até o nome do artista escolhido e o grafo se centra nele; depois clica o primeiro vizinho em "Soa parecido com" e o grafo anda até ele | **grafo** · *No Grafo, cada nome é um artista, perto dos que soam como ele.* → **grafo · Nome** · *Nome, ligado aos artistas que mais soam como ele…* → **grafo · Vizinho** · *Clique num vizinho e o grafo anda até ele.* |
-| 7 | 102–105 s | volta ao mapa inteiro | o ponteiro clica **Grafo** de novo, que fecha | **tocador.cc/atlas** · *Arraste, aproxime e clique numa faixa para ouvir.* |
+| 7 | 102–105 s | sai do grafo como o Esc, no ponto do artista a 8× | o grafo fecha | **tocador.cc/atlas** · *Arraste, aproxime e clique numa faixa para ouvir.* |
 
-Ao fim, o tour devolve mapa, filtros, grafo e seleção e deixa a câmera no mapa inteiro.
+Ao fim, o tour devolve mapa, filtros, grafo e seleção (a câmera vai para onde o endereço devolvido a levar).
 
 ## De onde vêm os lugares e os números
 
