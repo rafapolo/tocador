@@ -74,6 +74,32 @@ test.describe('actionable playback errors', () => {
     await expect(page.locator('#toast')).not.toContainText('Vários erros');
   });
 
+  // Faixas conhecidas como quebradas (js/faixas-indisponiveis.js) ficam no catálogo, listadas desativadas:
+  // não tocam, não recebem clique e a sequência passa por cima delas.
+  test('known-broken tracks stay listed but disabled, and playback skips them', async ({ page }) => {
+    await page.route('**/js/faixas-indisponiveis.js', r => r.fulfill({ contentType: 'text/javascript', body: `
+      const FAIXAS_INDISPONIVEIS = {};
+      function faixaIndisponivel(b, p, f) {
+        if (p === '1971 - Chico Buarque - Construção' && f === '01 Construção.mp3') return 'vazio';
+        if (p === '1930 - Pixinguinha - Acervo Raro') return 'truncado';
+      }` }));
+    await gotoWithFixture(page);
+    await card(page, 'Construção').locator('.card-play').click();
+    const itens = page.locator('#track-list .track-item');
+    await expect(itens).toHaveCount(3);                                   // still listed
+    await expect(itens.nth(0)).toHaveClass(/indisponivel/);
+    await expect(itens.nth(0)).toHaveAttribute('aria-disabled', 'true');
+    await expect.poll(() => page.evaluate(() => currentTrack.title)).toBe('Deus lhe Pague');   // started on the 2nd
+    await itens.nth(0).click({ force: true });                            // a click does nothing
+    expect(await page.evaluate(() => currentTrack.title)).toBe('Deus lhe Pague');
+    await page.evaluate(() => playPrevious());                            // previous never lands on it
+    expect(await page.evaluate(() => currentTrack.title)).not.toBe('Construção');
+    // An album with nothing playable opens, lists its track, and says so instead of playing
+    await card(page, 'Pixinguinha').locator('.card-play').click();
+    await expect(page.locator('#track-list .track-item.indisponivel')).toHaveCount(1);
+    await expect(page.locator('#toast')).toContainText('Nenhuma faixa deste álbum está disponível');
+  });
+
   test('offline: no skip, a retry button, and it resumes when the network is back', async ({ page, context }) => {
     await gotoWithFixture(page);
     await page.unroute('**/*.mp3');

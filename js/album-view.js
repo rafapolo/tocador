@@ -158,6 +158,15 @@ function buildTrackItemsFragment(tracks, albumArtists) {
       item.classList.add('unavailable');
       item.title = 'Arquivo indisponível no servidor';
     }
+    if (track.indisponivel) {
+      // Known-broken file (js/faixas-indisponiveis.js): listed so the album stays whole, never played.
+      item.classList.add('unavailable', 'indisponivel');
+      item.setAttribute('aria-disabled', 'true');
+      item.setAttribute('tabindex', '-1');
+      const motivo = track.indisponivel === 'truncado' ? 'arquivo incompleto' : 'arquivo vazio';
+      item.setAttribute('aria-label', `Faixa ${track.num}: ${track.title} (indisponível: ${motivo})`);
+      item.title = `Indisponível: ${motivo} no acervo de origem. Procurando outra cópia.`;
+    }
     if (!trackAllowed(track)) {
       // Fora do filtro ativo (Pegada ou gênero): continua listada, mas não toca nem entra na sequência.
       item.classList.add('filtered-out');

@@ -103,7 +103,7 @@ function pickRandom() {
   for (let i = 0; i < 20; i++) {
     const a = albums[rand(albums.length)];
     const t = a.tracks[rand(a.tracks.length)];
-    if (!failedTracks.has(`${a.path}/${t.file}`)) return { album: a, track: t };
+    if (!failedTracks.has(`${a.path}/${t.file}`) && !faixaIndisponivel(BASE_URL, a.path, t.file)) return { album: a, track: t };
   }
   const a = albums[rand(albums.length)];
   return { album: a, track: a.tracks[rand(a.tracks.length)] };

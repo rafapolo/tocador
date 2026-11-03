@@ -400,13 +400,12 @@ fn collect_mp3s(folder: &Path) -> Vec<PathBuf> {
                         && name.ends_with(".mp3")
                         && !name.starts_with("._")
                 })
-                // Um MP3 de 0 bytes (cópia de origem que veio vazia) não toca: não vira faixa.
-                .filter(|e| {
-                    let vazio = e.metadata().map(|m| m.len() == 0).unwrap_or(false);
-                    if vazio {
-                        eprintln!("aviso: MP3 vazio ignorado: {}", e.path().display());
+                // Um MP3 de 0 bytes (cópia de origem que veio vazia) continua no catálogo, para o álbum
+                // ficar inteiro; o player o mostra desativado se ele estiver em js/faixas-indisponiveis.js.
+                .inspect(|e| {
+                    if e.metadata().map(|m| m.len() == 0).unwrap_or(false) {
+                        eprintln!("aviso: MP3 vazio (liste em js/faixas-indisponiveis.js): {}", e.path().display());
                     }
-                    !vazio
                 })
                 .map(|e| e.path())
                 .collect()
@@ -905,17 +904,18 @@ fn main() {
 mod tests {
     use super::{collect_mp3s, parse_folder_name};
 
-    // MP3 de 0 bytes não entra no catálogo: o player o listaria e ele nunca tocaria.
+    // MP3 de 0 bytes continua no catálogo (com aviso): o álbum fica inteiro e o player o desativa.
     #[test]
-    fn zero_byte_mp3s_are_skipped() {
+    fn zero_byte_mp3s_are_kept() {
         let dir = std::env::temp_dir().join(format!("generate-albums-vazio-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("1. Vazia.mp3"), b"").unwrap();
         std::fs::write(dir.join("2. Cheia.mp3"), b"ID3").unwrap();
-        let nomes: Vec<String> = collect_mp3s(&dir).iter()
+        let mut nomes: Vec<String> = collect_mp3s(&dir).iter()
             .map(|p| p.file_name().unwrap().to_string_lossy().into_owned()).collect();
+        nomes.sort();
         std::fs::remove_dir_all(&dir).unwrap();
-        assert_eq!(nomes, vec!["2. Cheia.mp3".to_string()]);
+        assert_eq!(nomes, vec!["1. Vazia.mp3".to_string(), "2. Cheia.mp3".to_string()]);
     }
 
     fn artist(name: &str) -> String {

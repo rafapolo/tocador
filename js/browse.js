@@ -555,7 +555,7 @@ function isShortcutsModalOpen() {
 function updateLibraryStats() {
   const filtrado = filteredAlbums.length !== albums.length || !!trackFilter;
   let seconds = 0;
-  for (const a of filteredAlbums) for (const t of a.tracks) if (!trackFilter || trackAllowed(t)) seconds += t.src?.duration || 0;
+  for (const a of filteredAlbums) for (const t of a.tracks) if (!t.indisponivel && (!trackFilter || trackAllowed(t))) seconds += t.src?.duration || 0;
   // meta.hours only when the catalog has no durations at all (it goes stale when albums are merged in)
   const hours = seconds > 0 ? seconds / 3600 : filtrado ? 0 : parseFloat(db?.meta?.hours) || 0;
   const days = Math.round(hours / 24);

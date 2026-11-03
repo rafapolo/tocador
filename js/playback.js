@@ -64,6 +64,7 @@ function resetProgressUI(track) {
 }
 
 function playTrack(track) {
+  if (track?.indisponivel) return;   // a known-broken file (js/faixas-indisponiveis.js) never plays
   currentTrack = track;
   updateNowPlaying();
   const audio = document.getElementById('audio');
@@ -189,13 +190,13 @@ function setSavedQueue(queue, kind = 'salvos') {
 
 function toggleSavedQueue() {
   if (savedQueue && savedQueueKind === 'salvos') { setSavedQueue(null); return; }
-  const queue = salvosNoCatalogo().filter(a => a.tracks.some(trackAllowed));
+  const queue = salvosNoCatalogo().filter(a => a.tracks.some(trackPlayable));
   if (!queue.length) { showToast('Nenhum álbum salvo neste acervo'); return; }
   setSavedQueue(queue);
   showToast(`Tocando ${queue.length} ${queue.length === 1 ? 'álbum salvo' : 'álbuns salvos'}`, undefined, { ok: true });
   const album = queue[shuffleOn ? Math.floor(Math.random() * queue.length) : 0];
   switchToAlbum(album);
-  playTrack(album.tracks.find(trackAllowed));
+  playTrack(album.tracks.find(trackPlayable));
 }
 
 // Abrir um álbum de fora da fila encerra o modo: quem escolheu outra coisa não espera voltar aos salvos.
@@ -212,18 +213,18 @@ const SHUFFLE_RECENT = 50;
 const shuffleRecent = [];
 const shuffleHistory = [];   // [album, track] pairs, for "previous" in shuffle
 function pickShuffleTrack(pool) {
-  const albumsOk = pool.filter(a => a.tracks.some(t => t !== currentTrack && trackAllowed(t)));
+  const albumsOk = pool.filter(a => a.tracks.some(t => t !== currentTrack && trackPlayable(t)));
   if (!albumsOk.length) return null;
   const recent = new Set(shuffleRecent);
   let pick = null;
   for (let tries = 0; tries < 12 && !pick; tries++) {
     const a = albumsOk[Math.floor(Math.random() * albumsOk.length)];
-    const ts = a.tracks.filter(t => t !== currentTrack && trackAllowed(t) && !recent.has(t));
+    const ts = a.tracks.filter(t => t !== currentTrack && trackPlayable(t) && !recent.has(t));
     if (ts.length) pick = [a, ts[Math.floor(Math.random() * ts.length)]];
   }
   if (!pick) {   // everything left was heard recently: take any playable track
     const a = albumsOk[Math.floor(Math.random() * albumsOk.length)];
-    const ts = a.tracks.filter(t => t !== currentTrack && trackAllowed(t));
+    const ts = a.tracks.filter(t => t !== currentTrack && trackPlayable(t));
     pick = [a, ts[Math.floor(Math.random() * ts.length)]];
   }
   shuffleRecent.push(pick[1]);
@@ -248,7 +249,7 @@ function playNext() {
   if (!selectedAlbum || !currentTrack) return;
   const tracks = selectedAlbum.tracks;
   const idx = tracks.indexOf(currentTrack);
-  const next = tracks.find((t, i) => i > idx && trackAllowed(t));
+  const next = tracks.find((t, i) => i > idx && trackPlayable(t));
   if (next) {
     playTrack(next);
   } else if (inQueue) {
@@ -257,12 +258,12 @@ function playNext() {
       if (repeatMode !== 'all') { setSavedQueue(null); return; }   // fim da fila
       i = 0;
     }
-    const album = savedQueue.slice(i).find(a => a.tracks.some(trackAllowed));
+    const album = savedQueue.slice(i).find(a => a.tracks.some(trackPlayable));
     if (!album) { setSavedQueue(null); return; }
     switchToAlbum(album);
-    playTrack(album.tracks.find(trackAllowed));
+    playTrack(album.tracks.find(trackPlayable));
   } else if (repeatMode === 'all') {
-    const first = tracks.find(trackAllowed);
+    const first = tracks.find(trackPlayable);
     if (first) playTrack(first);
   }
 }
@@ -284,7 +285,7 @@ function playPrevious() {
   }
   const idx = selectedAlbum.tracks.indexOf(currentTrack);
   let prev = null;
-  for (let i = idx - 1; i >= 0; i--) if (trackAllowed(selectedAlbum.tracks[i])) { prev = selectedAlbum.tracks[i]; break; }
+  for (let i = idx - 1; i >= 0; i--) if (trackPlayable(selectedAlbum.tracks[i])) { prev = selectedAlbum.tracks[i]; break; }
   if (prev) playTrack(prev);
   else if (audio) audio.currentTime = 0;
 }

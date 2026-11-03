@@ -30,6 +30,9 @@ let activeLista = '';           // the ?lista= value sharedAlbums came from
 let trackFilter = null;        // (track) => bool while Explorar is filtering: tracks it rejects are shown disabled and skipped
 let trackFilterInfo = null;     // { frase, titulo, limpar } — como a lista do álbum explica e desfaz o trackFilter ativo
 const trackAllowed = t => !trackFilter || trackFilter(t);
+// Playable = not a known-broken file (js/faixas-indisponiveis.js) and inside the active filter.
+// Every "what plays next" decision goes through this; trackAllowed alone is the filter's own verdict.
+const trackPlayable = t => !t.indisponivel && trackAllowed(t);
 let searchQuery = '';
 let shuffleOn = false;
 let savedQueue = null;          // albums of the "play saved" mode, or null when it's off
@@ -268,11 +271,11 @@ function syncPlaylistBar() {
 }
 
 function playSharedPlaylist(mixed, setShuffle) {
-  const queue = filteredAlbums.filter(a => a.tracks.some(trackAllowed));
+  const queue = filteredAlbums.filter(a => a.tracks.some(trackPlayable));
   if (!sharedAlbums || !queue.length) return;
   setShuffle(mixed);
   setSavedQueue(queue, 'lista');
-  const pick = mixed ? pickShuffleTrack(queue) : [queue[0], queue[0].tracks.find(trackAllowed)];
+  const pick = mixed ? pickShuffleTrack(queue) : [queue[0], queue[0].tracks.find(trackPlayable)];
   if (!pick) return;
   switchToAlbum(pick[0]);
   playTrack(pick[1]);
@@ -423,6 +426,8 @@ function buildAlbums() {
         titleLower: fold(track.title),
         artistsLower: fold(trackArtist),
         src: track,              // catalog track (carries `_row` once the audio features load)
+        // 'vazio' | 'truncado' for a file known not to play: listed disabled, never played or counted
+        indisponivel: typeof faixaIndisponivel === 'function' ? faixaIndisponivel(BASE_URL, album.path, track.file) : undefined,
       };
     });
     const genre = genreData?.[album.path.normalize('NFC')] ?? null;
@@ -535,10 +540,14 @@ function openAlbum(album) {
   if (album.tracks.length > 0) {
     const audio = document.getElementById('audio');
     if (audio.paused) {
-      currentTrack = album.tracks.find(trackAllowed) ?? album.tracks[0];
-      updateNowPlaying();
-      const newSrc = `${BASE_URL}/${currentTrack.file}`;
-      if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
+      // An album whose every file is broken primes nothing: the player keeps what it had.
+      const primed = album.tracks.find(trackPlayable) ?? album.tracks.find(t => !t.indisponivel);
+      if (primed) {
+        currentTrack = primed;
+        updateNowPlaying();
+        const newSrc = `${BASE_URL}/${currentTrack.file}`;
+        if (audio.src !== newSrc) { audio.src = newSrc; audio.load(); }
+      }
     }
   }
 
@@ -559,8 +568,9 @@ function playAlbumFromCard(album, item) {
   document.querySelector('#albums-list .album-item.active')?.classList.remove('active');
   item.classList.add('active');
   openAlbum(album);
-  const first = album.tracks.find(trackAllowed) ?? album.tracks[0];
+  const first = album.tracks.find(trackPlayable) ?? album.tracks.find(t => !t.indisponivel);
   if (first) playTrack(first);
+  else showToast('Nenhuma faixa deste álbum está disponível');
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -622,14 +632,14 @@ document.addEventListener('DOMContentLoaded', async function () {
   document.querySelector('#track-list').addEventListener('click', e => {
     const item = e.target.closest('[data-track-idx]');
     const tr = item && selectedAlbum?.tracks[parseInt(item.dataset.trackIdx)];
-    if (tr && trackAllowed(tr)) playTrack(tr);
+    if (tr && trackPlayable(tr)) playTrack(tr);
   });
 
   // Delegated click: mobile drawer track list
   document.querySelector('#drawer-track-list')?.addEventListener('click', e => {
     const item = e.target.closest('[data-track-idx]');
     const tr = item && selectedAlbum?.tracks[parseInt(item.dataset.trackIdx)];
-    if (tr && trackAllowed(tr)) playTrack(tr);
+    if (tr && trackPlayable(tr)) playTrack(tr);
   });
 
 
