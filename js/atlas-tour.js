@@ -187,13 +187,11 @@
 
   // ── as cenas ── (tempos em TOUR.md; cada cena dura exatamente `dur` s, esperando o que faltar)
   function cenas(D) {
-    const nomeAcervo = { uqt: 'UQT', homi: 'Hominis Canidae' };
-    const partes = D.acervos.map((a, j) => `${fmt(D.porAcervo[j])} do ${nomeAcervo[a] || a}`);
     return [
       { id: 'abertura', dur: 5, async fn() {
         at.fecharCartao();
         at.enquadrarTudo(!run.rapido);
-        legenda('atlas', `${fmt(D.N)} faixas (${partes.join(', ')}). Cada ponto é uma faixa; o que soa parecido fica perto.`);
+        legenda('atlas', `${fmt(D.N)} faixas. Cada ponto é uma faixa; o que soa parecido fica perto.`);
         await espera(1200);
         const c = at.camera();
         if (!run.rapido && !reduzMovimento) at.voar(c.cx, c.cy, c.k0 * 1.15, 3800);
