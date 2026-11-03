@@ -986,6 +986,10 @@ a.album-genero:hover { color: var(--color-text); border-color: var(--color-accen
   cursor: pointer;
 }
 
+@media (min-width: 769px) {
+  #player-title { cursor: pointer; }
+}
+
 .player-cover.placeholder {
   object-fit: contain;
   padding: 4px;

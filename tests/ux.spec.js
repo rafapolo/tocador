@@ -231,3 +231,17 @@ test('a file that exists but will not decode is skipped, not stuck behind a retr
   await expect(page.locator('#toast')).toContainText(`Não foi possível tocar: ${titulo}`);
   await expect.poll(() => page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack)), { timeout: 5000 }).toBe(1);
 });
+
+test('clicking the player title brings the tracks panel back to the playing album', async ({ page }) => {
+  await gotoWithFixture(page);
+  const c = card(page, 'Construção');
+  await c.hover();
+  await c.locator('.card-play').click();
+  await expect(page.locator('#btn-play')).toHaveClass(/playing/);
+  await card(page, 'Clube da Esquina').click();
+  await expect(page.locator('#album-header h2')).toContainText('Clube da Esquina');
+  await page.locator('#player-title').click();
+  await expect(page.locator('#album-header h2')).toContainText('Construção');
+  await expect(page.locator('#track-list .track-item').first()).toHaveClass(/playing/);
+  expect(await page.evaluate(() => document.getElementById('audio').paused)).toBe(false);   // the audio is not cut
+});

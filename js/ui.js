@@ -940,7 +940,8 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     playerCover.src = PLACEHOLDER_COVER;
     playerCover.classList.add('placeholder');
   }
-  playerCover?.addEventListener('click', () => {
+  // A capa e o título do player trazem o painel de faixas de volta ao álbum que está tocando.
+  const mostrarAlbumTocando = () => {
     if (!currentTrack) return;
     const playingAlbum = albums.find(a => a.tracks.includes(currentTrack));
     if (!playingAlbum || playingAlbum === selectedAlbum) return;
@@ -954,7 +955,10 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       renderMobileDrawer(playingAlbum);
       openMobileDrawer();
     }
-  });
+  };
+  playerCover?.addEventListener('click', mostrarAlbumTocando);
+  // No celular o toque no título já abre o overlay do que está tocando (.now-playing-compact).
+  document.getElementById('player-title')?.addEventListener('click', () => { if (!isMobile()) mostrarAlbumTocando(); });
 
   const audio = document.getElementById('audio');
 
