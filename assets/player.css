@@ -329,10 +329,9 @@ body {
   box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.2);
 }
 
-/* One row: [browse btn (mobile only)] [search input] [active-filter chip].
+/* One row: [browse btn (mobile only)] [search input] [decade select] [active-filter chip].
    The chip rides here rather than owning a row of its own — a row that appears
-   on every filter change pushed the grid down, and hanging it off the decade
-   strip wrapped that strip to two lines. This row is fixed-height and never
+   on every filter change pushed the grid down. This row is fixed-height and never
    wraps, so the chip costs the input a little width and nothing else moves. */
 .search-group {
   display: flex;
@@ -392,71 +391,33 @@ body {
   display: block;
 }
 
-.decade-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  /* Empty until the acervo loads (buttons are generated from which decades
-     it actually has), then wraps to ~2 rows at typical widths — reserve
-     that so #albums-list below it doesn't get pushed down mid-load (CLS).
-     Keep in lockstep with .decade-btn's padding/font-size below. */
-  min-height: 60px;
-}
-
-.decade-btn {
-  padding: 4px 8px;
-  background: var(--color-surface-light);
+/* Decade filter: a compact select beside the search (it replaced a row of buttons on 2026-11-03) */
+.decade-select {
+  flex: none;
+  height: 34px;
+  max-width: 110px;
+  padding: 0 26px 0 10px;
+  background: var(--color-surface-light) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a89580' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 9px center;
   border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
   border-radius: 4px;
-  font-size: 0.9375em;
-  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: var(--transition-fast);
 }
+.decade-select:hover { border-color: var(--color-accent); }
+.decade-select:focus-visible { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.2); }
+.decade-select.active { border-color: var(--color-accent); color: var(--color-accent); font-weight: 600; }
+.decade-select option { background: var(--color-surface); color: var(--color-text); }
 
-.decade-btn:hover {
-  background: var(--color-surface);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-2px);
-}
-
-.decade-btn.active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-bg);
-  font-weight: 600;
-  box-shadow: 0 6px 16px rgba(212, 165, 116, 0.3);
-}
-
-.decade-btn:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.decade-btn--globe {
-  background: #1a2535;
-  border-color: #2a4a7f;
-  color: #7aadff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 10px;
-  text-decoration: none;
-}
 /* Active-filter chip. Filters are mutually exclusive, so this names the one
-   live facet and dismisses it. It rides the decade row rather than owning a
-   row of its own — a third row appearing on every filter change pushed the
-   grid down, and on mobile it cost ~28px of the little vertical space there
-   is. Pinned outside .decade-buttons' scroll container so it stays reachable
-   when the decade strip scrolls, which is the only clear affordance for an
-   artist/genre picked in the now-closed drawer. */
+   live facet and dismisses it. It rides the search row rather than owning a
+   row of its own — a row appearing on every filter change pushed the grid
+   down — and it is the only clear affordance for an artist/genre picked in
+   the now-closed drawer. */
 .clear-all-filters {
   display: flex;
   align-items: center;
@@ -494,13 +455,6 @@ body {
 }
 
 .clear-all-filters:hover .clear-all-x { opacity: 1; }
-
-.decade-btn--globe:hover {
-  background: #1e2e45;
-  border-color: #4a8adf;
-  color: #a8ccff;
-  transform: translateY(-2px);
-}
 
 .albums-grid {
   flex: 1;
@@ -1544,32 +1498,13 @@ audio {
     display: none;
   }
 
-  /* Decade buttons: single scrollable row */
-  .decade-btn {
-    padding: 4px 8px;
-    font-size: 0.78rem;
-  }
-
-  .decade-buttons {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    justify-content: flex-start;
-    gap: 4px;
-    padding-top: 5px;
-    min-height: 30px; /* single row here, vs. desktop's ~2-row wrap */
-  }
-
-  .decade-buttons::-webkit-scrollbar {
-    display: none;
-  }
-
   .filters-section {
     padding: var(--spacing-xs) var(--spacing-sm);
     padding-bottom: 6px;
     gap: 0;
   }
+  .playlist-bar { margin-top: 6px; }
+  .decade-select { max-width: 92px; padding-left: 8px; font-size: 0.8rem; }
 
   /* Tracklist toggle button: visible on mobile */
   .mobile-only {
@@ -1825,17 +1760,6 @@ audio {
 
   .album-item-meta {
     font-size: 0.6rem;
-  }
-
-  .decade-buttons {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 4px;
-  }
-
-  .decade-btn {
-    padding: 5px 8px;
-    font-size: 0.78rem;
   }
 
   .grid-skeleton {
@@ -2594,31 +2518,31 @@ audio {
 .continue-close { padding: 0 14px; opacity: 0.7; }
 .continue-go:hover, .continue-close:hover { color: var(--color-accent); opacity: 1; }
 
-/* Shared playlist link: "Playlist compartilhada · N álbuns  [▶ Tocar] [⤮ Aleatório]" in the decade row's place */
-.decade-buttons[hidden], .playlist-bar[hidden] { display: none; }
+/* Shared playlist link: "Playlist compartilhada · N álbuns  [▶ Tocar] [⤮ Aleatório]", one compact row under the search */
+.playlist-bar[hidden], .decade-select[hidden] { display: none; }
+@media (max-width: 480px) { .playlist-bar-extra { display: none; } }
 .playlist-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 6px 8px;
+  gap: 6px;
   width: 100%;
-  min-height: 60px;   /* the decade row's height: no jump when one swaps for the other */
 }
-.playlist-bar-label { font-size: 0.85rem; color: var(--color-text-secondary); margin-right: 4px; }
+.playlist-bar-label { font-size: 0.8rem; color: var(--color-text-secondary); margin-right: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* Same look as the album header's round buttons (.album-share), stretched into a pill to hold a label */
 .playlist-btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 34px;
-  padding: 0 14px 0 12px;
+  flex: none;
+  height: 28px;
+  padding: 0 12px 0 10px;
   color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: 17px;
+  border-radius: 14px;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, transform 0.15s;
@@ -2627,8 +2551,4 @@ audio {
 .playlist-btn:hover, .playlist-btn:focus-visible { color: var(--color-accent); border-color: var(--color-accent); }
 .playlist-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .playlist-btn:active { transform: scale(0.95); }
-@media (max-width: 768px) {
-  .playlist-bar { min-height: 0; padding: 2px 0; }
-  .playlist-bar-label { flex-basis: 100%; text-align: center; margin: 0; }
-}
 

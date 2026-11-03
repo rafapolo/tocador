@@ -2,75 +2,40 @@
 // Classic script: shares ui.js's global scope (state lives at the top of ui.js).
 // Loaded after ui.js; everything here runs at call time, after DOMContentLoaded.
 
-// ── Decade Buttons (rendered once on init) ────────────────────────────────
+// ── Decade select (filled once on init) ───────────────────────────────────
+// "Década" (no filter), "<1940", one per decade the acervo has, "Sem data" when some album has no year.
 
-function renderDecadeButtons() {
-  const decades = getDecades();
-  const container = document.querySelector('#decade-buttons');
-
-  const todosBtn = document.createElement('button');
-  todosBtn.className = 'decade-btn active';
-  todosBtn.textContent = 'Todos';
-  todosBtn.dataset.decade = 'all';
-  todosBtn.addEventListener('click', () => {
+function renderDecadeSelect() {
+  const select = document.getElementById('decade-select');
+  if (!select) return;
+  const opt = (value, text, title) => {
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = text;
+    if (title) o.title = title;
+    return o;
+  };
+  const opts = [opt('all', 'Década'), opt('pre1940', '<1940', '1900–1949')];
+  for (const decade of getDecades()) opts.push(opt(String(decade), String(decade), `${decade}–${decade + 9}`));
+  if (albums.some(a => !a.year)) opts.push(opt('noyear', 'Sem data'));
+  select.replaceChildren(...opts);
+  syncDecadeSelect();
+  if (select.dataset.bound) return;
+  select.dataset.bound = '1';
+  select.addEventListener('change', () => {
+    const v = select.value;
     resetFacets('decade');
-    activeDecade = null;
+    activeDecade = v === 'all' ? null : (v === 'pre1940' || v === 'noyear') ? v : parseInt(v, 10);
     filterAlbums();
-    container.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-    todosBtn.classList.add('active');
+    syncDecadeSelect();
   });
+}
 
-  const frag = document.createDocumentFragment();
-
-  frag.append(todosBtn);
-
-  const pre1940Btn = document.createElement('button');
-  pre1940Btn.className = 'decade-btn';
-  pre1940Btn.textContent = '<1940';
-  pre1940Btn.dataset.decade = 'pre1940';
-  pre1940Btn.title = '1900–1949';
-  pre1940Btn.addEventListener('click', () => {
-    resetFacets('decade');
-    activeDecade = 'pre1940';
-    filterAlbums();
-    container.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-    pre1940Btn.classList.add('active');
-  });
-  frag.append(pre1940Btn);
-
-  decades.forEach(decade => {
-    const btn = document.createElement('button');
-    btn.className = 'decade-btn';
-    btn.textContent = `${decade}`;
-    btn.dataset.decade = decade;
-    btn.title = `${decade}–${decade + 9}`;
-    btn.addEventListener('click', () => {
-      resetFacets('decade');
-      activeDecade = parseInt(btn.dataset.decade);
-      filterAlbums();
-      container.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    });
-    frag.append(btn);
-  });
-
-  if (albums.some(a => !a.year)) {
-    const infBtn = document.createElement('button');
-    infBtn.className = 'decade-btn';
-    infBtn.textContent = '∞';
-    infBtn.dataset.decade = 'noyear';
-    infBtn.title = 'Sem data';
-    infBtn.addEventListener('click', () => {
-      resetFacets('decade');
-      activeDecade = 'noyear';
-      filterAlbums();
-      container.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-      infBtn.classList.add('active');
-    });
-    frag.append(infBtn);
-  }
-
-  container.replaceChildren(frag);
+function syncDecadeSelect() {
+  const select = document.getElementById('decade-select');
+  if (!select) return;
+  select.value = activeDecade === null ? 'all' : String(activeDecade);
+  select.classList.toggle('active', activeDecade !== null);
 }
 
 // ── Track & Album Header Rendering ───────────────────────────────────────

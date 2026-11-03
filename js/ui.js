@@ -250,17 +250,21 @@ function offerContinueListening() {
   document.body.append(bar);
 }
 
-// A shared playlist link (?lista=): its buttons take the decade row's place while the list is on the grid.
+// A shared playlist link (?lista=): a compact row of play buttons under the search while the list is on the grid.
 // Both play the whole list through the saved-albums queue: in link order, or mixed with shuffle on.
 function syncPlaylistBar() {
   const bar = document.getElementById('playlist-bar');
   if (!bar) return;
   const on = !!sharedAlbums;
   bar.hidden = !on;
-  document.getElementById('decade-buttons')?.toggleAttribute('hidden', on);
+  document.getElementById('decade-select')?.toggleAttribute('hidden', on);   // a decade would only drop the list
   if (!on) return;
   const n = filteredAlbums.length;
-  document.getElementById('playlist-bar-label').textContent = `Playlist compartilhada · ${n} ${n === 1 ? 'álbum' : 'álbuns'}`;
+  const label = document.getElementById('playlist-bar-label');
+  const extra = document.createElement('span');
+  extra.className = 'playlist-bar-extra';
+  extra.textContent = ' compartilhada';
+  label.replaceChildren('Playlist', extra, ` · ${n} ${n === 1 ? 'álbum' : 'álbuns'}`);
 }
 
 function playSharedPlaylist(mixed, setShuffle) {
@@ -830,7 +834,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
 
   buildAlbums();
   filteredAlbums = [...albums];
-  renderDecadeButtons();
+  renderDecadeSelect();
   virtualGrid.setItems(filteredAlbums);
   updateLibraryStats();
 

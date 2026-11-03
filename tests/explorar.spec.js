@@ -369,9 +369,9 @@ test('escolher uma década depois limpa os filtros de características', async (
   await abrir(page);
   await ajustar(page, 'Andamento', 'lo', 100);
   await expect(page.locator('.ex-chip').first()).toBeVisible();
-  await page.locator('.decade-btn[data-decade="1970"]').click();
+  await page.selectOption('#decade-select', '1970');
   await expect(page.locator('.ex-chip')).toHaveCount(0);
-  await expect(page.locator('#clear-all-filters')).toBeVisible();
+  await expect(page.locator('#decade-select')).toHaveValue('1970');
 });
 
 test('a busca do painel esconde grupos sem resultado', async ({ page }) => {

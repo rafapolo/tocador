@@ -321,21 +321,16 @@ function refreshBrowseCounts() {
 // searchQuery deliberately returns null: the chip sits right beside the search
 // input, which already shows the query and carries its own ✕. Showing a chip
 // too put two clear buttons side by side saying the same thing. The chip
-// exists for facets whose own control is somewhere else — a decade that has
-// scrolled out of the strip on mobile, or an artist/genre picked in a drawer
-// that is now closed.
+// exists for facets whose own control is somewhere else — an artist/genre
+// picked in a drawer that is now closed. The decade select, right beside it,
+// shows its own value the same way.
 function activeFilterLabel() {
   if (sharedAlbums) return `Playlist (${sharedAlbums.size})`;
   if (activeAlbumSet) return activeAlbumSetLabel || 'Características';
   if (activeArtist) return activeArtist;
   if (activeGenre)  return activeGenre.includes('---') ? activeGenre.split('---')[1] : activeGenre;
   if (activeYear)   return String(activeYear);
-  if (activeDecade !== null) {
-    if (activeDecade === 'pre1940') return 'Antes de 1940';
-    if (activeDecade === 'noyear')  return 'Sem data';
-    return `Anos ${activeDecade}`;
-  }
-  return null;
+  return null;   // a decade shows in #decade-select itself, like the query in the search input
 }
 
 function renderActiveFilterChip() {
@@ -386,8 +381,7 @@ function resetFacets(keep) {
   }
   if (keep !== 'decade' && activeDecade !== null) {
     activeDecade = null;
-    document.querySelectorAll('.decade-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('.decade-btn[data-decade="all"]')?.classList.add('active');
+    syncDecadeSelect();
   }
   if (keep !== 'year' && activeYear) {
     activeYear = 0;

@@ -94,26 +94,28 @@ test('B10: clearing search (✕ button) resets to full list', async ({ page }) =
   await expect(page.locator('#search-input')).toHaveValue('');
 });
 
-test('B11: decade button filters to correct decade and clears search', async ({ page }) => {
+test('B11: the decade select filters to the decade and clears the search', async ({ page }) => {
   await gotoWithFixture(page);
   await page.fill('#search-input', 'Elis');
-  await page.click('.decade-btn[data-decade="1970"]');
+  await page.selectOption('#decade-select', '1970');
   await expect(page.locator('#search-input')).toHaveValue('');
+  await expect(page.locator('#decade-select')).toHaveClass(/active/);
+  await expect(page.locator('#clear-all-filters')).toBeHidden();   // the select shows the decade itself
   const count = await page.locator('.album-item').count();
   // 1971 Construção, 1972 Clube, 1974 Elis & Tom, 1976 Falso Brilhante
   expect(count).toBe(4);
 });
 
-test('B12: <1940 button shows albums with year < 1950', async ({ page }) => {
+test('B12: <1940 shows albums with year < 1950', async ({ page }) => {
   await gotoWithFixture(page);
-  await page.click('.decade-btn[data-decade="pre1940"]');
+  await page.selectOption('#decade-select', 'pre1940');
   await expect(page.locator('.album-item')).toHaveCount(1);
   await expect(page.locator('.album-item').first()).toContainText('Pixinguinha');
 });
 
-test('B13: ∞ button shows albums with no year', async ({ page }) => {
+test('B13: "Sem data" shows albums with no year', async ({ page }) => {
   await gotoWithFixture(page);
-  await page.click('.decade-btn[data-decade="noyear"]');
+  await page.selectOption('#decade-select', 'noyear');
   await expect(page.locator('.album-item')).toHaveCount(1);
   await expect(page.locator('.album-item').first()).toContainText('Sem Data');
 });
@@ -421,13 +423,17 @@ test('J39: search-count pill shows filtered count when searching', async ({ page
   expect(text).toMatch(/álbun/);
 });
 
-test('J40: Todos button resets decade filter and shows all albums', async ({ page }) => {
+test('J40: "Década" resets the decade filter, and another facet resets the select', async ({ page }) => {
   await gotoWithFixture(page);
-  await page.click('.decade-btn[data-decade="1970"]');
+  await page.selectOption('#decade-select', '1970');
   const filtered = await page.locator('.album-item').count();
   expect(filtered).toBeLessThan(13);
-  await page.click('.decade-btn[data-decade="all"]');
+  await page.selectOption('#decade-select', 'all');
   await expect(page.locator('.album-item')).toHaveCount(13);
+  await expect(page.locator('#decade-select')).not.toHaveClass(/active/);
+  await page.selectOption('#decade-select', '1970');
+  await page.fill('#search-input', 'Elis');
+  await expect(page.locator('#decade-select')).toHaveValue('all');
 });
 
 test('J41: year link in album header filters by that year', async ({ page }) => {
@@ -1279,14 +1285,14 @@ test.describe('shared playlist link', () => {
   const tocando = page => page.evaluate(() => ({ album: selectedAlbum?.path, paused: document.getElementById('audio').paused,
     fila: savedQueue?.length ?? 0, shuffle: shuffleOn }));
 
-  test('the playlist bar replaces the decades and plays the list in link order, album after album', async ({ page }) => {
+  test('the playlist bar hides the decade select and plays the list in link order, album after album', async ({ page }) => {
     await gotoWithFixture(page, '/?acervo=uqt');
     await expect(page.locator('#playlist-bar')).toBeHidden();
-    await expect(page.locator('#decade-buttons')).toBeVisible();
+    await expect(page.locator('#decade-select')).toBeVisible();
     await page.goto(await listaUrl(page, ORDEM));
     const bar = page.locator('#playlist-bar');
     await expect(bar).toContainText('Playlist compartilhada · 3 álbuns');
-    await expect(page.locator('#decade-buttons')).toBeHidden();
+    await expect(page.locator('#decade-select')).toBeHidden();
     await expect(page.locator('.continue-listening')).toHaveCount(0);
     await bar.locator('.playlist-play').click();
     let s = await tocando(page);
@@ -1310,7 +1316,7 @@ test.describe('shared playlist link', () => {
     }
   });
 
-  test('the bar shows with an album in the url too, and leaving the list brings the decades back', async ({ page }) => {
+  test('the bar shows with an album in the url too, and leaving the list brings the decade select back', async ({ page }) => {
     await gotoWithFixture(page, '/?acervo=uqt');
     const url = await listaUrl(page, ORDEM);
     const path = await page.evaluate(() => albums.find(a => a.path.includes('Construção')).path);
@@ -1319,7 +1325,7 @@ test.describe('shared playlist link', () => {
     await expect(page.locator('#playlist-bar')).toBeVisible();
     await page.locator('#clear-all-filters').click();
     await expect(page.locator('#playlist-bar')).toBeHidden();
-    await expect(page.locator('#decade-buttons')).toBeVisible();
+    await expect(page.locator('#decade-select')).toBeVisible();
     expect((await tocando(page)).paused).toBe(true);
   });
 });
