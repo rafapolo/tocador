@@ -183,6 +183,17 @@
     });
   }
 
+  // The number each (already de-duplicated) track gets in the player and in `#tN` links: the
+  // catalog's own number, or its position when the source had none. An album whose numbers repeat
+  // (two numbering schemes mixed in one folder: "02 peba" and "02. Artista - Faixa") is numbered by
+  // position instead, so `#tN` names exactly one track.
+  function playerTrackNums(tracks) {
+    var nums = tracks.map(function (t, i) { return t.num != null ? t.num : i + 1; });
+    if (new Set(nums).size === nums.length) return nums;
+    return tracks.map(function (_, i) { return i + 1; });
+  }
+
+  global.playerTrackNums = playerTrackNums;
   global.gunzipText = gunzipText;
   global.decodeAcervo = decodeAcervo;
   global.albumSlugs = albumSlugs;

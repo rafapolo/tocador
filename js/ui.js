@@ -415,13 +415,14 @@ function buildAlbums() {
       }
     }
     const encodedPath = encodeURIComponent(album.path);
+    const nums = playerTrackNums(dedupedTracks);
     const tracks = dedupedTracks.map((track, i) => {
       const file = `${encodedPath}/${encodeURIComponent(track.file)}`;
       if (track.duration) durationCache.set(file, track.duration);
       const rawTrackArtist = track.artists ? track.artists.replace(/\x00/g, '; ') : null;
       const trackArtist = rawTrackArtist || album.artist;
       return {
-        title: track.title, num: track.num ?? (i + 1), file,
+        title: track.title, num: nums[i], file,
         album: album.title, artists: trackArtist, year: album.year,
         titleLower: fold(track.title),
         artistsLower: fold(trackArtist),

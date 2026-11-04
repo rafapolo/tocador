@@ -66,9 +66,10 @@ function playerTracks(album) {
       out[seen.get(key)] = t;
     }
   }
+  const nums = playerTrackNums(out);
   return out.map((t, i) => ({
     title: t.title,
-    num: t.num ?? (i + 1),
+    num: nums[i],
     duration: t.duration || 0,
     artists: t.artists ? t.artists.replace(/\x00/g, '; ') : null,
   }));

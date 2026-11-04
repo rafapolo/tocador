@@ -80,7 +80,7 @@
   }
 
   // Player numbering, as buildAlbums() in ui.js does it: dedup by lowercased title (the copy outside a
-  // subfolder wins), then num ?? position. A track dropped by the dedup links to the one that stayed.
+  // subfolder wins), then playerTrackNums(). A track dropped by the dedup links to the one that stayed.
   const numsCache = new WeakMap();
   function numDaFaixa(album, ti) {
     let nums = numsCache.get(album);
@@ -91,7 +91,7 @@
         if (!pos.has(key)) { pos.set(key, kept.length); kept.push(ci); }
         else if (!tr.file?.includes('/') && album.tracks[kept[pos.get(key)]].file?.includes('/')) kept[pos.get(key)] = ci;
       });
-      const numKept = kept.map((ci, i) => album.tracks[ci].num ?? (i + 1));
+      const numKept = playerTrackNums(kept.map(ci => album.tracks[ci]));
       nums = album.tracks.map(tr => numKept[pos.get((tr.title || '').toLowerCase())]);
       numsCache.set(album, nums);
     }
