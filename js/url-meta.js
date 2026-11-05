@@ -25,8 +25,17 @@ function getYearFromUrl() {
   return parseInt(new URLSearchParams(window.location.search).get('ano') || 0);
 }
 
+// The fragment on album pages: "#t5", "#t5@30", optionally followed by "&play=1" (a hand-written
+// or shared link that wants the track to start on its own).
+const TRACK_HASH_RE = /^#t(\d+)(?:@(\d+))?(?:&(.*))?$/;
+
+function getHashParams() {
+  const m = location.hash.match(TRACK_HASH_RE);
+  return new URLSearchParams(m ? m[3] || '' : location.hash.replace(/^#&?/, ''));
+}
+
 function getTrackNumFromUrl() {
-  const m = location.hash.match(/^#t(\d+)(?:@\d+)?$/);
+  const m = location.hash.match(TRACK_HASH_RE);
   if (m) return parseInt(m[1]);
   return parseInt(new URLSearchParams(window.location.search).get('t') || 0);
 }
@@ -34,13 +43,13 @@ function getTrackNumFromUrl() {
 // ?seg=N or #tT@N: start the URL's track N seconds in (the /atlas preview hands its position
 // over with ?seg=; a shared link "from m:ss" uses the fragment on album pages, ?seg= elsewhere).
 function getSegFromUrl() {
-  const h = location.hash.match(/^#t\d+@(\d+)$/);
-  const n = h ? parseFloat(h[1]) : parseFloat(new URLSearchParams(window.location.search).get('seg'));
+  const h = location.hash.match(TRACK_HASH_RE);
+  const n = h?.[2] ? parseFloat(h[2]) : parseFloat(new URLSearchParams(window.location.search).get('seg'));
   return n > 0 ? n : 0;
 }
 
 function getPlayFromUrl() {
-  return new URLSearchParams(window.location.search).get('play') === '1';
+  return new URLSearchParams(window.location.search).get('play') === '1' || getHashParams().get('play') === '1';
 }
 
 function getListaFromUrl() {

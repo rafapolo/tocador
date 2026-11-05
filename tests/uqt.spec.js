@@ -786,6 +786,14 @@ test('L64b: a shared #tN@S link starts the track S seconds in, without autoplay'
   expect(new URL(page.url()).hash).toBe('#t2');   // the moment is read once, then dropped
 });
 
+test('L64c: #tN&play=1 on an album page starts that track on its own', async ({ page }) => {
+  await gotoAlbumPage(page, '1971-chico-buarque-construcao', '#t2&play=1', { ranges: true });
+  await expect(page.locator('#track-list .track-item.playing .track-num')).toHaveText('2');
+  // Headless browsers refuse play() without a gesture (the button then shows .autoplay-blocked),
+  // so check that the player asked to play, not that the browser let it.
+  await expect.poll(() => page.evaluate(() => _playRequested)).toBe(true);
+});
+
 test('L63b: sharing past 5 s into a track links that moment', async ({ page }) => {
   await stubClipboard(page);
   await gotoWithFixture(page, '/?acervo=uqt', { ranges: true });
