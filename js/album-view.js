@@ -2,11 +2,12 @@
 // Classic script: shares ui.js's global scope (state lives at the top of ui.js).
 // Loaded after ui.js; everything here runs at call time, after DOMContentLoaded.
 
-// ── Decade select (filled once on init) ───────────────────────────────────
-// "Década" (no filter), "<1940", one per decade the acervo has, "Sem data" when some album has no year,
-// each with its album count: "2010 (12)".
+// ── Decade select (refilled by every filterAlbums()) ─────────────────────
+// "Década" (no filter), "<1940", one per decade, "Sem data" when some album has no year, each with its
+// album count: "2010 (12)". The decade refines whatever else filters the grid (artist, genre, search,
+// Pegada), so `base` is what the grid would show without it, and the counts follow that filter.
 
-function renderDecadeSelect() {
+function renderDecadeSelect(base = albums) {
   const select = document.getElementById('decade-select');
   if (!select) return;
   const opt = (value, text, title) => {
@@ -16,17 +17,16 @@ function renderDecadeSelect() {
     if (title) o.title = title;
     return o;
   };
-  // Album counts per option, over the whole acervo (a decade replaces any other facet anyway).
   const count = new Map();
   const bump = k => count.set(k, (count.get(k) || 0) + 1);
-  for (const a of albums) bump(!a.year ? 'noyear' : a.year < 1950 ? 'pre1940' : String(Math.floor(a.year / 10) * 10));
+  for (const a of base) bump(!a.year ? 'noyear' : a.year < 1950 ? 'pre1940' : String(Math.floor(a.year / 10) * 10));
   const n = k => ` (${(count.get(k) || 0).toLocaleString('pt-BR')})`;
   // An option with 0 albums is left out (unless it's the active one, e.g. from the URL);
   // with no decade to pick at all, the select hides itself.
   const has = k => count.get(k) || String(activeDecade) === k;
   const opts = [opt('all', 'Década')];
   if (has('pre1940')) opts.push(opt('pre1940', '<1940' + n('pre1940'), '1900–1949'));
-  for (const decade of getDecades()) opts.push(opt(String(decade), String(decade) + n(String(decade)), `${decade}–${decade + 9}`));
+  for (const decade of getDecades()) if (has(String(decade))) opts.push(opt(String(decade), String(decade) + n(String(decade)), `${decade}–${decade + 9}`));
   if (has('noyear')) opts.push(opt('noyear', 'Sem data' + n('noyear')));
   select.replaceChildren(...opts);
   // Only "Sem data" left means every album lacks a year: picking it would equal "Década".
@@ -36,7 +36,7 @@ function renderDecadeSelect() {
   select.dataset.bound = '1';
   select.addEventListener('change', () => {
     const v = select.value;
-    resetFacets('decade');
+    if (activeYear) { activeYear = 0; updateYearInUrl(0); }   // a year inside or outside the decade: the decade wins
     activeDecade = v === 'all' ? null : (v === 'pre1940' || v === 'noyear') ? v : parseInt(v, 10);
     filterAlbums();
     syncDecadeSelect();

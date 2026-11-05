@@ -353,10 +353,11 @@ function renderActiveFilterChip() {
     share.hidden = !activeArtist;
     if (activeArtist) share.setAttribute('aria-label', `Compartilhar link de ${activeArtist}`);
   }
+  syncArtistQueueButton();
 }
 
-// The seven filter facets (search, decade, year, artist, genre, audio features, shared
-// playlist) are mutually exclusive: choosing one resets the others. Cumulative filtering let a
+// The six filter facets (search, year, artist, genre, audio features, shared playlist) are
+// mutually exclusive: choosing one resets the others; the decade select refines any of them. Cumulative filtering let a
 // stale facet silently empty the grid — picking an artist while a search was
 // still live returned zero albums with no visible reason why.
 //
@@ -379,7 +380,9 @@ function resetFacets(keep) {
     if (_searchInput) _searchInput.value = '';
     updateQueryInUrl('', false);
   }
-  if (keep !== 'decade' && activeDecade !== null) {
+  // The decade is a refinement, not a facet of its own: it narrows whatever else is set, so only
+  // clearing everything, a shared playlist (which hides the select) or a year (inside one decade) drops it.
+  if ((!keep || keep === 'lista' || keep === 'year') && activeDecade !== null) {
     activeDecade = null;
     syncDecadeSelect();
   }

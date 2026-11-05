@@ -94,17 +94,35 @@ test('B10: clearing search (✕ button) resets to full list', async ({ page }) =
   await expect(page.locator('#search-input')).toHaveValue('');
 });
 
-test('B11: the decade select filters to the decade and clears the search', async ({ page }) => {
+test('B11: the decade select counts what the current filter shows and refines it', async ({ page }) => {
   await gotoWithFixture(page);
-  await page.fill('#search-input', 'Elis');
   await expect(page.locator('#decade-select option[value="1970"]')).toHaveText('1970 (4)');
+  await page.fill('#search-input', 'Chico');
+  // Construção (1971) and the 1994 Songbook: only their decades are left, with their counts
+  await expect(page.locator('#decade-select option[value="1970"]')).toHaveText('1970 (1)');
+  await expect(page.locator('#decade-select option[value="1990"]')).toHaveText('1990 (1)');
+  await expect(page.locator('#decade-select option[value="1960"]')).toHaveCount(0);
   await page.selectOption('#decade-select', '1970');
-  await expect(page.locator('#search-input')).toHaveValue('');
+  await expect(page.locator('#search-input')).toHaveValue('Chico');   // the search stays
   await expect(page.locator('#decade-select')).toHaveClass(/active/);
-  await expect(page.locator('#clear-all-filters')).toBeHidden();   // the select shows the decade itself
-  const count = await page.locator('.album-item').count();
-  // 1971 Construção, 1972 Clube, 1974 Elis & Tom, 1976 Falso Brilhante
-  expect(count).toBe(4);
+  await expect(page.locator('.album-item')).toHaveCount(1);
+  await expect(page.locator('.album-item').first()).toContainText('Construção');
+  // the other decade of the search is still there to switch to
+  await expect(page.locator('#decade-select option[value="1990"]')).toHaveText('1990 (1)');
+  await page.selectOption('#decade-select', '1990');
+  await expect(page.locator('.album-item')).toHaveCount(1);
+  await expect(page.locator('.album-item').first()).toContainText('Songbook');
+});
+
+test('B11b: with an artist, the select lists only that artist\'s decades and keeps the artist', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
+  await expect(page.locator('#decade-select option')).toHaveText(['Década', '1970 (2)']);
+  await page.selectOption('#decade-select', '1970');
+  await expect(page.locator('#clear-all-label')).toHaveText('Elis Regina');
+  await expect(page.locator('.album-item')).toHaveCount(2);
+  await page.locator('#clear-all-filters').click();
+  await expect(page.locator('#decade-select')).toHaveValue('all');
+  await expect(page.locator('.album-item')).toHaveCount(13);
 });
 
 test('B12: <1940 shows albums with year < 1950', async ({ page }) => {
@@ -437,7 +455,7 @@ test('J39: search-count pill shows filtered count when searching', async ({ page
   expect(text).toMatch(/álbun/);
 });
 
-test('J40: "Década" resets the decade filter, and another facet resets the select', async ({ page }) => {
+test('J40: "Década" resets the decade filter, and a search keeps it', async ({ page }) => {
   await gotoWithFixture(page);
   await page.selectOption('#decade-select', '1970');
   const filtered = await page.locator('.album-item').count();
@@ -447,7 +465,8 @@ test('J40: "Década" resets the decade filter, and another facet resets the sele
   await expect(page.locator('#decade-select')).not.toHaveClass(/active/);
   await page.selectOption('#decade-select', '1970');
   await page.fill('#search-input', 'Elis');
-  await expect(page.locator('#decade-select')).toHaveValue('all');
+  await expect(page.locator('#decade-select')).toHaveValue('1970');
+  await expect(page.locator('.album-item')).toHaveCount(2);   // Elis & Tom, Falso Brilhante
 });
 
 test('J41: year link in album header filters by that year', async ({ page }) => {
@@ -1004,6 +1023,24 @@ test('L74: the artist filter offers a link to the artist page', async ({ page })
   expect(await page.evaluate(() => window.__copied)).toBe('https://tocador.cc/uqt/artista/elis-regina/');
   await page.locator('#clear-all-filters').click();
   await expect(page.locator('#share-artist')).toBeHidden();
+});
+
+test('L74c: the artist filter has a button that plays the artist\'s albums in a row', async ({ page }) => {
+  await gotoWithFixture(page, '/?acervo=uqt&artista=Elis%20Regina');
+  const btn = page.locator('#play-artist');
+  await expect(btn).toBeVisible();
+  await expect(btn).toHaveAttribute('aria-label', 'Tocar os álbuns de Elis Regina');
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => [savedQueueKind, savedQueue.map(a => a.name)])).toEqual(['artista', await page.evaluate(() => filteredAlbums.map(a => a.name))]);
+  const first = await page.evaluate(() => filteredAlbums[0].name);
+  await expect(page.locator('#album-header h2')).toHaveText(first);
+  await expect(page.locator('#btn-play-saved')).toHaveAttribute('aria-pressed', 'false');
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'false');
+  expect(await page.evaluate(() => savedQueue)).toBeNull();
+  await page.locator('#clear-all-filters').click();
+  await expect(btn).toBeHidden();
 });
 
 test('L74b: clicking the app title clears every filter and keeps the open album', async ({ page }) => {

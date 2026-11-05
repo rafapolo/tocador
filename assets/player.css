@@ -329,22 +329,37 @@ body {
   box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.2);
 }
 
-/* One row: [browse btn (mobile only)] [search input] [decade select] [active-filter chip].
+/* One row: [browse btn (mobile only)] [search input] [decade select] [chip · share · play artist].
    The chip rides here rather than owning a row of its own — a row that appears
-   on every filter change pushed the grid down. This row is fixed-height and never
-   wraps, so the chip costs the input a little width and nothing else moves. */
+   on every filter change pushed the grid down. Only when the search would drop under
+   ~11 rem does .filter-actions wrap, as one block, onto a second line; there the chip
+   takes the whole width and ellipsizes a long name. */
 .search-group {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
 .search-wrapper {
   position: relative;
-  flex: 1;
+  flex: 1 1 11rem;
   min-width: 0;
+  container-type: inline-size;
 }
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+.filter-actions:not(:has(> :not([hidden]))) { display: none; }
+.filter-actions .album-share { flex: none; }
+.filter-actions .album-share.active { color: var(--color-accent); border-color: var(--color-accent); }
 
 
 .search-clear {
@@ -390,6 +405,11 @@ body {
 .search-count.visible {
   display: block;
 }
+/* A narrow search keeps its text room: the count gives way first (the grid shows the albums anyway). */
+@container (max-width: 15rem) {
+  .search-count.visible { display: none; }
+  .search-input { padding-right: 30px; }
+}
 
 /* Decade filter: a compact select beside the search (it replaced a row of buttons on 2026-11-03) */
 .decade-select {
@@ -422,8 +442,9 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
-  max-width: 40%;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 22rem;
   padding: 4px 8px 4px 10px;
   background: var(--color-surface-light);
   border: 1px solid var(--color-accent);
@@ -841,7 +862,7 @@ button.album-genero:focus-visible, a.album-genero:focus-visible { outline: 2px s
 a.album-genero { color: inherit; text-decoration: none; }
 a.album-genero:hover { color: var(--color-text); border-color: var(--color-accent); }
 
-#share-artist[hidden] { display: none; }
+#share-artist[hidden], #play-artist[hidden] { display: none; }
 
 .track-item {
   display: flex;
@@ -2383,7 +2404,7 @@ audio {
   .browse-close:hover { color: var(--color-text); }
 
   .search-group { flex-direction: row; align-items: center; gap: 6px; }
-  .search-wrapper { flex: 1; min-width: 0; }
+  .search-wrapper { flex: 1 1 11rem; min-width: 0; }
 }
 
 /* ── Explorar panel ────────────────────────────────────────────────────── */

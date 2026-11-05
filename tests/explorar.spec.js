@@ -364,13 +364,13 @@ test('escolher voz e limpar tudo', async ({ page }) => {
   await expect(page.locator('#search-count')).not.toHaveClass(/visible/);
 });
 
-test('escolher uma década depois limpa os filtros de características', async ({ page }) => {
+test('escolher uma década refina os filtros de características sem limpá-los', async ({ page }) => {
   await boot(page);
   await abrir(page);
   await ajustar(page, 'Andamento', 'lo', 100);
   await expect(page.locator('.ex-chip').first()).toBeVisible();
   await page.selectOption('#decade-select', '1970');
-  await expect(page.locator('.ex-chip')).toHaveCount(0);
+  await expect(page.locator('.ex-chip').first()).toBeVisible();
   await expect(page.locator('#decade-select')).toHaveValue('1970');
 });
 

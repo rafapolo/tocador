@@ -36,7 +36,8 @@ const trackPlayable = t => !t.indisponivel && trackAllowed(t);
 let searchQuery = '';
 let shuffleOn = false;
 let savedQueue = null;          // albums of the "play saved" mode, or null when it's off
-let savedQueueKind = 'salvos';  // what filled savedQueue: 'salvos' (the heart-play button) or 'lista' (a shared playlist)
+let savedQueueKind = 'salvos';  // what filled savedQueue: 'salvos' (the heart-play button), 'lista' (a shared playlist) or 'artista' (#play-artist)
+let savedQueueArtist = null;    // with 'artista': the artist whose albums are queued
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
 let renderedAlbum = null;
 let _consecutiveErrors = 0;
@@ -477,7 +478,11 @@ function getDecades() {
 function filterAlbums(quiet = false) {
   const q = fold(searchQuery);
   const ak = activeArtist ? fold(activeArtist) : null;
-  filteredAlbums = albums.filter(album => {
+  const inDecade = album => activeDecade === null ||
+    (activeDecade === 'noyear' ? !album.year :
+    activeDecade === 'pre1940' ? (album.year > 0 && album.year < 1950) : Math.floor(album.year / 10) * 10 === activeDecade);
+  // Everything but the decade first: the decade select counts its options over this.
+  const base = albums.filter(album => {
     if (sharedAlbums && !sharedAlbums.has(album)) return false;
     if (activeAlbumSet && !activeAlbumSet.has(album)) return false;
     if (ak && !album.artistKeys.has(ak)) return false;
@@ -485,10 +490,6 @@ function filterAlbums(quiet = false) {
       if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
       else { if (album.genreParent !== activeGenre) return false; }
     }
-    const matchesDecade = activeDecade === null ||
-      (activeDecade === 'noyear' ? !album.year :
-      activeDecade === 'pre1940' ? (album.year > 0 && album.year < 1950) : Math.floor(album.year / 10) * 10 === activeDecade);
-    if (!matchesDecade) return false;
     const matchesYear = !activeYear || album.year === activeYear;
     if (!matchesYear) return false;
     if (!searchQuery) return true;
@@ -497,6 +498,7 @@ function filterAlbums(quiet = false) {
       album.pathLower.includes(q) ||
       album.tracks.some(t => t.titleLower.includes(q) || t.artistsLower.includes(q));
   });
+  filteredAlbums = activeDecade === null ? base : base.filter(inDecade);
   if (sharedAlbums) filteredAlbums.sort((a, b) => sharedAlbums.get(a) - sharedAlbums.get(b));
 
   const inner = virtualGrid?.inner;
@@ -518,6 +520,7 @@ function filterAlbums(quiet = false) {
   if (_emptyState) _emptyState.hidden = filteredAlbums.length > 0;
 
   refreshBrowseCounts();
+  renderDecadeSelect(base);
   renderActiveFilterChip();
   if (typeof syncGenreTrackFilter === 'function') syncGenreTrackFilter();
   updateLibraryStats();
@@ -1244,6 +1247,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
 
   document.getElementById('btn-play-saved')?.addEventListener('click', toggleSavedQueue);
   document.getElementById('share-artist')?.addEventListener('click', () => { if (activeArtist) shareArtist(activeArtist); });
+  document.getElementById('play-artist')?.addEventListener('click', toggleArtistQueue);
   document.getElementById('share-saved')?.addEventListener('click', shareSaved);
   document.querySelectorAll('.album-generos').forEach(d => d.addEventListener('toggle', () => fillAlbumGenres(d)));
   document.querySelectorAll('.album-parecidos').forEach(d => d.addEventListener('toggle', () => fillAlbumParecidos(d)));

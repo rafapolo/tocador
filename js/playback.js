@@ -182,10 +182,41 @@ function syncSavedQueueButton() {
   btn.setAttribute('aria-label', btn.title);
 }
 
-function setSavedQueue(queue, kind = 'salvos') {
+function setSavedQueue(queue, kind = 'salvos', artist = null) {
   savedQueue = queue;
   savedQueueKind = kind;
+  savedQueueArtist = queue && kind === 'artista' ? artist : null;
   syncSavedQueueButton();
+  syncArtistQueueButton();
+}
+
+// ── Tocar o artista ───────────────────────────────────────────────────────
+// #play-artist, ao lado do compartilhar artista: toca os álbuns que a grade mostra do artista filtrado
+// (a década também vale), um depois do outro, na ordem da grade, ou misturados com o aleatório ligado.
+function syncArtistQueueButton() {
+  const btn = document.getElementById('play-artist');
+  if (!btn) return;
+  btn.hidden = !activeArtist;
+  if (!activeArtist) return;
+  const on = !!savedQueue && savedQueueKind === 'artista' && savedQueueArtist === activeArtist;
+  btn.classList.toggle('active', on);
+  btn.setAttribute('aria-pressed', String(on));
+  btn.title = on ? `Parar de tocar ${activeArtist}` : `Tocar os álbuns de ${activeArtist}`;
+  btn.setAttribute('aria-label', btn.title);
+}
+
+function toggleArtistQueue() {
+  if (!activeArtist) return;
+  if (savedQueue && savedQueueKind === 'artista' && savedQueueArtist === activeArtist) { setSavedQueue(null); return; }
+  const queue = filteredAlbums.filter(a => a.tracks.some(trackPlayable));
+  if (!queue.length) { showToast('Nada tocável deste artista'); return; }
+  setSavedQueue(queue, 'artista', activeArtist);
+  showToast(`Tocando ${queue.length} ${queue.length === 1 ? 'álbum' : 'álbuns'} de ${activeArtist}`, undefined, { ok: true });
+  const pick = shuffleOn ? pickShuffleTrack(queue) : [queue[0], queue[0].tracks.find(trackPlayable)];
+  if (!pick) return;
+  switchToAlbum(pick[0]);
+  playTrack(pick[1]);
+  virtualGrid?.scrollToSelected();
 }
 
 function toggleSavedQueue() {

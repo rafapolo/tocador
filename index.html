@@ -223,6 +223,7 @@
                         <select id="decade-select" class="decade-select" aria-label="Filtrar por década" title="Filtrar por década">
                             <option value="all">Década</option>
                         </select>
+                        <div class="filter-actions">
                         <button id="clear-all-filters" class="clear-all-filters" hidden aria-label="Limpar filtro ativo">
                             <span id="clear-all-label" class="clear-all-label"></span>
                             <span class="clear-all-x" aria-hidden="true">✕</span>
@@ -230,6 +231,10 @@
                         <button id="share-artist" class="album-share" type="button" title="Compartilhar artista" aria-label="Compartilhar artista" hidden>
                             <svg viewBox="1 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><line x1="8.2" y1="10.8" x2="15.8" y2="6.2"/><line x1="8.2" y1="13.2" x2="15.8" y2="17.8"/></svg>
                         </button>
+                        <button id="play-artist" class="album-share" type="button" title="Tocar os álbuns do artista" aria-label="Tocar os álbuns do artista" aria-pressed="false" hidden>
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                        </div>
                     </div>
                     <div class="playlist-bar" id="playlist-bar" role="group" aria-label="Playlist compartilhada" hidden>
                         <span class="playlist-bar-label" id="playlist-bar-label"></span>
