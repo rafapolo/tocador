@@ -2405,7 +2405,7 @@ audio {
   .browse-close:hover { color: var(--color-text); }
 
   .search-group { flex-direction: row; align-items: center; gap: 6px; }
-  .search-wrapper { flex: 9999 1 11rem; min-width: 0; }
+  .search-wrapper { flex: 9999 1 7rem; min-width: 0; }   /* phones: search + decade always share line one, only .filter-actions wraps */
 }
 
 /* ── Explorar panel ────────────────────────────────────────────────────── */
