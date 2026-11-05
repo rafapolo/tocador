@@ -333,7 +333,7 @@ body {
    The chip rides here rather than owning a row of its own — a row that appears
    on every filter change pushed the grid down. Only when the search would drop under
    ~11 rem does .filter-actions wrap, as one block, onto a second line; there the chip
-   takes the whole width and ellipsizes a long name. */
+   sits left (ellipsizing a long name) and the share/play buttons right. */
 .search-group {
   display: flex;
   flex-direction: row;
@@ -344,7 +344,7 @@ body {
 
 .search-wrapper {
   position: relative;
-  flex: 1 1 11rem;
+  flex: 9999 1 11rem;   /* on a shared line the search takes all the slack; .filter-actions only grows alone on its own line */
   min-width: 0;
   container-type: inline-size;
 }
@@ -353,10 +353,11 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
 }
+.filter-actions .clear-all-filters { margin-right: auto; }   /* wrapped: chip left, share and play right */
 .filter-actions:not(:has(> :not([hidden]))) { display: none; }
 .filter-actions .album-share { flex: none; }
 .filter-actions .album-share.active { color: var(--color-accent); border-color: var(--color-accent); }
@@ -2404,7 +2405,7 @@ audio {
   .browse-close:hover { color: var(--color-text); }
 
   .search-group { flex-direction: row; align-items: center; gap: 6px; }
-  .search-wrapper { flex: 1 1 11rem; min-width: 0; }
+  .search-wrapper { flex: 9999 1 11rem; min-width: 0; }
 }
 
 /* ── Explorar panel ────────────────────────────────────────────────────── */
