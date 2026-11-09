@@ -1258,6 +1258,30 @@ test.describe('shared playlist link', () => {
     await expect(btn).toBeHidden();
   });
 
+  test('with no saved album here, the button shares the other acervo saved albums', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'share', { value: undefined });
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__copiado = t; return Promise.resolve(); } } });
+    });
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const paths = ['2019 - Banda - Disco', '2020 - Outra Banda - Outro Disco'];
+    await page.evaluate(p => localStorage.setItem('tocador-salvos', JSON.stringify({
+      homi: p.map(path => ({ path, name: 'X', artists: 'Y', year: 2019, em: 1 })),
+    })), paths);
+    await page.reload();
+    await expect(page.locator('.album-item').first()).toBeVisible();
+    await page.locator('.browse-tab[data-tab="saved"]').click();
+    const btn = page.locator('#share-saved');
+    await expect(btn).toBeVisible();
+    await expect(btn).toHaveText('Compartilhar 2 álbuns do Hominis Canidae');
+    await btn.click();
+    await expect(page.locator('#toast')).toHaveText('Link da playlist copiado');
+    const url = new URL(await page.evaluate(() => window.__copiado));
+    expect(url.searchParams.get('acervo')).toBe('homi');
+    expect(url.searchParams.get('lista')).toBe(await page.evaluate(p => p.map(albumShareId).join(''), paths));
+    expect(await page.evaluate(() => activeAcervoId)).toBe('uqt');   // não troca o acervo de quem compartilha
+  });
+
   test('the share button leaves saved albums of another acervo out and says so', async ({ page }) => {
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'share', { value: undefined });

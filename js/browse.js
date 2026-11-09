@@ -171,17 +171,34 @@ function salvosDeFora() {
   return Object.entries(_salvosLer()).reduce((t, [id, l]) => t + (id !== activeAcervoId && Array.isArray(l) ? l.length : 0), 0);
 }
 
-// O link leva só o acervo ativo, então o botão conta só ele, e não muda com o filtro de texto da lista.
+// Um link nomeia um acervo só. Vai o ativo quando ele tem salvos; sem nenhum aqui, vai o acervo conhecido com mais
+// salvos (o id sai do path guardado, não precisa do catálogo dele). Antes o botão sumia, e quem tinha salvos só no
+// outro acervo os via na lista sem ter como compartilhar.
+// { acervo, paths, fora (salvos que ficam de fora), outro (rótulo do acervo, quando não é o ativo) } ou null.
+function salvosParaCompartilhar() {
+  const daqui = salvosNoCatalogo();
+  if (daqui.length) return { acervo: activeAcervoKey ?? activeAcervoId, paths: daqui.map(a => a.path), fora: salvosDeFora(), outro: null };
+  const [id, lista] = Object.entries(_salvosLer())
+    .filter(([id, l]) => id !== activeAcervoId && KNOWN_ACERVOS[id] && Array.isArray(l))
+    .map(([id, l]) => [id, l.filter(s => s && typeof s.path === 'string')])
+    .filter(([, l]) => l.length)
+    .sort((a, b) => b[1].length - a[1].length)[0] || [];
+  if (!id) return null;
+  return { acervo: id, paths: lista.map(s => s.path), fora: salvosDeFora() - lista.length, outro: KNOWN_ACERVOS[id].label || id };
+}
+
+// Não muda com o filtro de texto da lista.
 function syncShareSaved() {
   const btn = document.getElementById('share-saved');
   if (!btn) return;
-  const n = browseTab === 'saved' ? salvosNoCatalogo().length : 0;
-  btn.hidden = !n;
-  if (!n) return;
-  const rotulo = `Compartilhar ${n} ${n === 1 ? 'álbum' : 'álbuns'}`;
-  const fora = salvosDeFora();
+  const alvo = browseTab === 'saved' ? salvosParaCompartilhar() : null;
+  btn.hidden = !alvo;
+  if (!alvo) return;
+  const n = alvo.paths.length;
+  const rotulo = `Compartilhar ${n} ${n === 1 ? 'álbum' : 'álbuns'}${alvo.outro ? ` do ${alvo.outro}` : ''}`;
+  const fora = alvo.fora;
   btn.lastElementChild.textContent = rotulo;
-  btn.title = fora ? `${rotulo} deste acervo: os salvos de outro acervo ficam de fora` : rotulo;
+  btn.title = fora ? `${rotulo}${alvo.outro ? '' : ' deste acervo'}: os salvos de outro acervo ficam de fora` : rotulo;
   btn.setAttribute('aria-label', btn.title);
 }
 

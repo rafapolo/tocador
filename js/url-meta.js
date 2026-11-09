@@ -258,15 +258,17 @@ function shareArtist(name) {
 }
 
 // A static page on tocador.cc gives the link its preview and forwards to the player with ?lista=. Mirrors don't serve
-// it, so the link never uses this origin. Only the active acervo goes in: one link names one acervo.
-function savedShareUrl() {
-  const lista = salvosNoCatalogo().map(a => albumShareId(a.path)).join('');
-  return `${SITE_ORIGIN}/share-playlist?${new URLSearchParams({ acervo: activeAcervoKey ?? activeAcervoId, lista })}`;
+// it, so the link never uses this origin. One link names one acervo: see salvosParaCompartilhar() in browse.js.
+function savedShareUrl(alvo = salvosParaCompartilhar()) {
+  const lista = (alvo?.paths ?? []).map(albumShareId).join('');
+  return `${SITE_ORIGIN}/share-playlist?${new URLSearchParams({ acervo: alvo?.acervo ?? activeAcervoKey ?? activeAcervoId, lista })}`;
 }
 
 function shareSaved() {
-  const fora = salvosDeFora();
-  return shareLink('Uma playlist no Tocador', savedShareUrl(),
+  const alvo = salvosParaCompartilhar();
+  if (!alvo) return;
+  const fora = alvo.fora;
+  return shareLink('Uma playlist no Tocador', savedShareUrl(alvo),
     fora ? `Link copiado, sem ${fora === 1 ? 'o salvo' : `os ${fora} salvos`} de outro acervo` : 'Link da playlist copiado');
 }
 
