@@ -217,6 +217,7 @@ function restorePlaybackPosition(track, audio) {
 
 // A visit with no album in the URL: offer to pick up where the listener stopped (never autoplays).
 const CONTINUE_MAX_AGE = 30 * 24 * 3600 * 1000;
+const CONTINUE_FADE_MS = 5000;
 function offerContinueListening() {
   const saved = readSavedPosition();
   if (!saved || saved.dismissed || !(saved.time > 3) || !(Date.now() - (saved.updatedAt || 0) < CONTINUE_MAX_AGE)) return;
@@ -252,6 +253,21 @@ function offerContinueListening() {
     try { localStorage.setItem(positionKey(), JSON.stringify({ ...saved, dismissed: true })); } catch {}
   });
   document.body.append(bar);
+  // Unanswered, it fades out after 5 s (not dismissed: the next visit offers it again); hover or focus holds it.
+  let timer = 0;
+  const sumir = () => {
+    if (bar.matches(':hover, :focus-within')) return;
+    bar.classList.add('saindo');
+    bar.addEventListener('transitionend', fechar, { once: true });
+    setTimeout(fechar, 600);   // reduced motion has no transition
+  };
+  const agendar = () => { clearTimeout(timer); timer = setTimeout(sumir, CONTINUE_FADE_MS); };
+  const segurar = () => clearTimeout(timer);
+  bar.addEventListener('pointerenter', segurar);
+  bar.addEventListener('focusin', segurar);
+  bar.addEventListener('pointerleave', agendar);
+  bar.addEventListener('focusout', agendar);
+  agendar();
 }
 
 // A shared playlist link (?lista=): a compact row of play buttons under the search while the list is on the grid.

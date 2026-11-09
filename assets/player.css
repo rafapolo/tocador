@@ -2527,7 +2527,8 @@ audio {
   animation: continue-in 0.25s ease both;
 }
 @keyframes continue-in { from { opacity: 0; transform: translate(-50%, 8px); } }
-@media (prefers-reduced-motion: reduce) { .continue-listening { animation: none; } }
+.continue-listening.saindo { opacity: 0; transition: opacity 0.4s ease; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .continue-listening, .continue-listening.saindo { animation: none; transition: none; } }
 .continue-listening button {
   background: none;
   border: 0;

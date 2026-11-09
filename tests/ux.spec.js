@@ -160,6 +160,20 @@ test.describe('continue listening', () => {
     expect(await page.evaluate(() => localStorage.getItem('tocador-position'))).toBeNull();
   });
 
+  test('left alone, it fades out after 5 s and comes back on the next visit', async ({ page }) => {
+    await gotoWithFixture(page, '/?acervo=uqt');
+    const file = await page.evaluate(() => albums[0].tracks[0].file);
+    await seed(page, { file, time: 30 });
+    await page.reload();
+    const bar = page.locator('.continue-listening');
+    await expect(bar).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(bar).toHaveCount(0, { timeout: 8000 });
+    await page.evaluate(() => sessionStorage.removeItem('pw-seeded'));
+    await page.reload();
+    await expect(page.locator('.continue-listening')).toBeVisible();
+  });
+
   test('dismissed, it stays hidden on the next visit; an album URL never shows it', async ({ page }) => {
     await gotoWithFixture(page, '/?acervo=uqt');
     const file = await page.evaluate(() => albums[0].tracks[0].file);
