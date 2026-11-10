@@ -45,10 +45,10 @@ async function staleWhileRevalidate(cacheKey, request, offlineKey = cacheKey) {
       if (resp.ok) cache.put(cacheKey, resp.clone());
       return resp;
     })
-    .catch(async err => {
+    .catch(async () => {
       const copia = cached || await cache.match(offlineKey);
-      if (copia) return copia;
-      throw err;
+      // No copy either: the page gets the same network error, without an uncaught "Failed to fetch" logged from here.
+      return copia || Response.error();
     });
   // Com a cópia do cache servida, a falha da atualização em segundo plano (offline, deploy no meio) não é erro de
   // ninguém: sem este catch ela vira "Uncaught (in promise) TypeError: Failed to fetch" no console.
@@ -62,10 +62,8 @@ async function networkFirst(cacheKey, request) {
     const resp = await fetch(request);
     if (resp.ok) cache.put(cacheKey, resp.clone());
     return resp;
-  } catch (err) {
-    const copia = await cache.match(cacheKey);
-    if (copia) return copia;
-    throw err;
+  } catch {
+    return (await cache.match(cacheKey)) || Response.error();
   }
 }
 

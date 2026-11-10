@@ -527,7 +527,8 @@ body {
   background: rgba(40, 6, 6, 0.96);
   border: 1px solid #c0392b;
   color: #ff7070;
-  padding: 10px 16px;
+  /* Inter keeps more room above the capitals than below the baseline: an even padding leaves the text ~2px low. */
+  padding: 8px 16px 12px;
   border-radius: 20px;
   font-size: 0.82rem;
   font-weight: 600;

@@ -168,6 +168,14 @@ function checkMarquee(el) {
 // APP_ROOT is where index.html lives ('/' on tocador.cc, '/uqt/' on a mirror),
 // taken from this script's own URL so it holds on any album page too.
 const APP_ROOT = new URL('..', document.currentScript?.src || location.href).pathname;
+// index.html's head links are relative (the mirrors serve it from a subdirectory), and a relative href is
+// re-resolved against the address bar: once an album opens and pushState moves it to /<alias>/<slug>/, Chrome
+// re-fetches the manifest from /<alias>/<slug>/manifest.json (404). Pin them to where they resolve now (not the
+// stylesheet, which is loaded already and would be fetched again on an href change).
+for (const l of document.querySelectorAll('link[rel~="manifest"], link[rel~="icon"], link[rel="apple-touch-icon"]')) {
+  const h = l.getAttribute('href');
+  if (!/^(?:[a-z][a-z0-9+.-]*:|\/|#)/i.test(h)) l.setAttribute('href', l.href);
+}
 const ALBUM_PAGES = location.origin === 'https://tocador.cc' ||
   document.documentElement.hasAttribute('data-album-pages');
 
@@ -253,21 +261,13 @@ function offerContinueListening() {
     try { localStorage.setItem(positionKey(), JSON.stringify({ ...saved, dismissed: true })); } catch {}
   });
   document.body.append(bar);
-  // Unanswered, it fades out after 5 s (not dismissed: the next visit offers it again); hover or focus holds it.
-  let timer = 0;
-  const sumir = () => {
-    if (bar.matches(':hover, :focus-within')) return;
+  // Unanswered, it fades out after 5 s, hovered or focused or not (not dismissed: the next visit offers it again).
+  setTimeout(() => {
+    if (!bar.isConnected) return;
     bar.classList.add('saindo');
     bar.addEventListener('transitionend', fechar, { once: true });
     setTimeout(fechar, 600);   // reduced motion has no transition
-  };
-  const agendar = () => { clearTimeout(timer); timer = setTimeout(sumir, CONTINUE_FADE_MS); };
-  const segurar = () => clearTimeout(timer);
-  bar.addEventListener('pointerenter', segurar);
-  bar.addEventListener('focusin', segurar);
-  bar.addEventListener('pointerleave', agendar);
-  bar.addEventListener('focusout', agendar);
-  agendar();
+  }, CONTINUE_FADE_MS);
 }
 
 // A shared playlist link (?lista=): a compact row of play buttons under the search while the list is on the grid.
