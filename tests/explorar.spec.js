@@ -12,7 +12,7 @@ test.use({ serviceWorkers: 'block' });
 // Features em que as faixas de um mesmo álbum divergem (ver fixtures/build-features-mistas.js).
 const mistasFile = fx('albums-features-mistas.json.gz');
 
-async function boot(page, { semFeatures = false, mistas = false, generos = false, url = '/' } = {}) {
+async function boot(page, { semFeatures = false, mistas = false, generos = false, indiceGeneros = null, url = '/' } = {}) {
   // Limpa só na primeira carga da aba: um reload no meio do teste mantém o que o painel guardou.
   await page.addInitScript(() => {
     if (!sessionStorage.getItem('__limpo')) { localStorage.clear(); sessionStorage.setItem('__limpo', '1'); }
@@ -22,7 +22,7 @@ async function boot(page, { semFeatures = false, mistas = false, generos = false
   await page.route('**/*-features.json.gz', r => semFeatures ? r.fulfill({ status: 404 }) : r.fulfill(gz(mistas ? mistasFile : featuresGz)));
   await page.route('**/resumo-acervo.json', r => r.fulfill({ status: 404 }));
   // Índice de gêneros por álbum (o do homi): todos os álbuns de teste são Latin---Samba.
-  const indice = Object.fromEntries(JSON.parse(require('zlib').gunzipSync(albumsGz)).albums.map(a => [a.path.normalize('NFC'), 'Latin---Samba']));
+  const indice = indiceGeneros || Object.fromEntries(JSON.parse(require('zlib').gunzipSync(albumsGz)).albums.map(a => [a.path.normalize('NFC'), 'Latin---Samba']));
   await page.route('**/*-genres.json.gz', r => generos ? r.fulfill(gz(require('zlib').gzipSync(JSON.stringify(indice)))) : r.fulfill({ status: 404 }));
   await page.route('**/*.mp3', r => r.fulfill({ status: 200, body: Buffer.alloc(0) }));
   await page.route('**/capa-m*.jpg', r => r.fulfill({ status: 404 }));
@@ -334,6 +334,23 @@ test.describe('gêneros', () => {
     await expect(page.locator('#track-list .track-item.filtered-out').first()).toHaveAttribute('title', /gênero escolhido/);
     await page.locator('#tracks-panel .track-filter-note button').click();
     await expect(page.locator('#track-list .track-item.filtered-out')).toHaveCount(0);
+  });
+
+  // Índice v2 (<acervo>-album-genres.json.gz): o álbum entra num gênero quando alguma faixa o tem no top 3, mesmo
+  // que outro gênero vença a votação do álbum. Antes o grid só mostrava os álbuns cujo vencedor era o gênero.
+  test('um gênero que não venceu no álbum ainda o põe no grid e conta na aba', async ({ page }) => {
+    const paths = JSON.parse(require('zlib').gunzipSync(albumsGz)).albums.map(a => a.path.normalize('NFC'));
+    const a = Object.fromEntries(paths.map(p => [p, [0]]));
+    a[paths[0]] = [0, 1];                                   // vence Samba, mas uma faixa tem Jazz-Funk
+    const indiceGeneros = { v: 2, g: ['Latin---Samba', 'Jazz---Jazz-Funk'], a };
+    await boot(page, { generos: true, indiceGeneros, url: '/?genero=' + encodeURIComponent('Jazz---Jazz-Funk') });
+    await expect(page.locator('#search-count')).toHaveText('1 álbum');
+    await page.goto('/?genero=Latin');
+    await page.waitForSelector('.album-item');
+    await expect(page.locator('#search-count')).toHaveText(`${paths.length} álbuns`);
+    await page.goto('/?genero=Jazz');
+    await page.waitForSelector('.album-item');
+    await expect(page.locator('#search-count')).toHaveText('1 álbum');
   });
 
   test('sem gênero escolhido nenhuma faixa fica apagada', async ({ page }) => {

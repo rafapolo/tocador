@@ -56,7 +56,24 @@ let _progressFillEl = null, _mainProgressBarEl = null, _overlayProgressFillEl = 
 let _timeCurrentLbl = null, _timeDurationLbl = null, _overlayTimeCurrentLbl = null, _overlayTimeDurationLbl = null;
 
 // Browse panel state
-let genreData = null;
+let genreData = null;   // { "<album path NFC>": ["Latin---Samba", "Jazz---Jazz-Funk", …] }
+
+// <acervo>-album-genres.json.gz is { v: 2, g: [names], a: { path: [index, …] } }: every genre any track of the album
+// has in its top 3, most voted first. The older <acervo>-genres.json.gz (and a third-party index) maps a path to its
+// single winning genre; both become path → [names].
+function normalizarIndiceGeneros(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const out = {};
+  if (raw.v === 2 && Array.isArray(raw.g) && raw.a && typeof raw.a === 'object') {
+    for (const [path, idx] of Object.entries(raw.a)) {
+      const names = Array.isArray(idx) ? idx.map(i => raw.g[i]).filter(g => typeof g === 'string') : [];
+      if (names.length) out[path] = names;
+    }
+  } else {
+    for (const [path, g] of Object.entries(raw)) if (typeof g === 'string' && g) out[path] = [g];
+  }
+  return out;
+}
 let genreLoading = false;
 let activeGenre = null;
 let activeArtist = null;
@@ -78,13 +95,13 @@ const KNOWN_ACERVOS = {
     label: 'UmQueTenha',
     data: 'https://rafapolo.github.io/uqt/data/uqt-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/uqt',
-    genres: 'https://tocador.cc/data/uqt-genres.json.gz',
+    genres: 'https://tocador.cc/data/uqt-album-genres.json.gz',
   },
   homi: {
     label: 'Hominis Canidae',
     data: 'https://rafapolo.github.io/hominiscanidae/data/homi-albums.json.gz',
     base_url: 'https://cdn.tocador.cc/indie',
-    genres: 'https://tocador.cc/data/homi-genres.json.gz',
+    genres: 'https://tocador.cc/data/homi-album-genres.json.gz',
   },
 };
 const DEFAULT_ACERVO = 'homi';
@@ -448,7 +465,8 @@ function buildAlbums() {
         indisponivel: typeof faixaIndisponivel === 'function' ? faixaIndisponivel(BASE_URL, album.path, track.file) : undefined,
       };
     });
-    const genre = genreData?.[album.path.normalize('NFC')] ?? null;
+    // Every genre any of its tracks has in its top 3, most voted first (see normalizarIndiceGeneros()).
+    const genres = genreData?.[album.path.normalize('NFC')] ?? null;
     // Folded keys of every artist on the album (album-level + per-track), so the
     // activeArtist filter is a Set lookup instead of re-running parseArtists()
     // over every album and track on each filter pass.
@@ -464,8 +482,8 @@ function buildAlbums() {
       name: album.title, artists: album.artist, year: album.year, path: album.path,
       cover: album.has_cover !== false ? `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg` : null,
       tracks, nameLower, artistsLower, pathLower, artistKeys,
-      genre,
-      genreParent: genre ? genre.split('---')[0] : null,
+      genres,
+      genreParents: genres ? new Set(genres.map(g => g.split('---')[0])) : null,
     };
   });
   albums.sort((a, b) => b.year - a.year);
@@ -502,9 +520,10 @@ function filterAlbums(quiet = false) {
     if (sharedAlbums && !sharedAlbums.has(album)) return false;
     if (activeAlbumSet && !activeAlbumSet.has(album)) return false;
     if (ak && !album.artistKeys.has(ak)) return false;
+    // An album is in a genre when at least one of its tracks is (the rule syncGenreTrackFilter() applies per track).
     if (activeGenre) {
-      if (activeGenre.includes('---')) { if (album.genre !== activeGenre) return false; }
-      else { if (album.genreParent !== activeGenre) return false; }
+      if (activeGenre.includes('---')) { if (!album.genres?.includes(activeGenre)) return false; }
+      else { if (!album.genreParents?.has(activeGenre)) return false; }
     }
     const matchesYear = !activeYear || album.year === activeYear;
     if (!matchesYear) return false;
@@ -816,7 +835,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       `catálogo não decodificou: ${k} (${err?.code || err?.name || 'erro'})`, `${dataUrl}\n\n${descreverErro(err)}`)));
     return;
   }
-  genreData = genresRaw;
+  genreData = normalizarIndiceGeneros(genresRaw);
   genreLoading = false;
   BASE_URL = db.meta?.base_url || cfg.baseUrl || sessionStorage.getItem('acervo-base') || defaultEntry.base_url || '';
   // Now that db.meta is available, resolve for real — sub-pages and the switcher

@@ -10,6 +10,10 @@ if (!['homi', 'uqt'].includes(ACERVO)) { console.error('--acervo homi|uqt'); pro
 
 const INPUT  = ACERVO === 'homi' ? resolve(import.meta.dir, '../data/genres/genres.json') : null;
 const OUTPUT = resolve(import.meta.dir, `../data/${ACERVO}-genres.json.gz`);
+// Every genre any track of the album has in its top 3, most voted first: what the player filters the grid by,
+// the same rule as its per-track filter. The winner-only file above stays for players that cached the old ui.js
+// (an array where they expect a string would break them).
+const OUTPUT_ALL = resolve(import.meta.dir, `../data/${ACERVO}-album-genres.json.gz`);
 
 const FEATURES = resolve(import.meta.dir, `../data/features/${ACERVO}.jsonl`);
 
@@ -68,8 +72,23 @@ for (const [album, votes] of votesByAlbum) {
   else missing++;
 }
 
+// { v: 2, g: [genre names], a: { "<album path>": [genre index, …] } }, each album's list most voted first.
+const names = [], nameIdx = new Map();
+const all = {};
+for (const [album, votes] of votesByAlbum) {
+  const sorted = Object.entries(votes).sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1));
+  if (!sorted.length) continue;
+  all[album] = sorted.map(([label]) => {
+    if (!nameIdx.has(label)) { nameIdx.set(label, names.length); names.push(label); }
+    return nameIdx.get(label);
+  });
+}
+
 mkdirSync(dirname(OUTPUT), { recursive: true });
 await Bun.write(OUTPUT, gzipSync(Buffer.from(JSON.stringify(index))));
+const allGz = gzipSync(Buffer.from(JSON.stringify({ v: 2, g: names, a: all })));
+await Bun.write(OUTPUT_ALL, allGz);
+console.log(`wrote ${Object.keys(all).length} albums, ${names.length} genres (${(allGz.length / 1024).toFixed(1)} KB gz) → ${OUTPUT_ALL}`);
 
 const size = (JSON.stringify(index).length / 1024).toFixed(1);
 console.log(`wrote ${Object.keys(index).length} albums (${missing} skipped, ~${size} KB raw) → ${OUTPUT}`);

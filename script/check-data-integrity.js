@@ -8,7 +8,7 @@
 // Sai com 1 quando algo está fora do esperado. O que é conferido:
 //   - <acervo>-features.json.gz: decodeFeatures() aceita o catálogo (contagem + impressão digital).
 //     Recusado, o painel Pegada some para todo mundo.
-//   - <acervo>-genres.json.gz: álbuns do catálogo sem gênero (a aba Gêneros não os encontra).
+//   - <acervo>-album-genres.json.gz: álbuns do catálogo sem gênero (a aba Gêneros não os encontra).
 //   - atlas-faixas.json.gz: faixas do catálogo sem ponto no /atlas, e pontos sem faixa.
 //   - atlas-artistas.json.gz: decodifica.
 // As faixas sem ponto conhecidas (75 do uqt, ver tasks/uqt-faixas-vazias.md) ficam abaixo da tolerância.
@@ -76,13 +76,13 @@ for (const [ak, db] of Object.entries(dbs)) {
 
   // gêneros
   try {
-    const g = lerGz(join(ROOT, `data/${ak}-genres.json.gz`));
-    const sem = db.albums.filter(a => !g[a.path.normalize('NFC')]).map(a => a.path);
+    const g = lerGz(join(ROOT, `data/${ak}-album-genres.json.gz`)).a;
+    const sem = db.albums.filter(a => !g[a.path.normalize('NFC')]?.length).map(a => a.path);
     const frac = sem.length / db.albums.length;
     const msg = `**${ak}** gêneros: ${sem.length} de ${db.albums.length} álbuns sem gênero (${(frac * 100).toFixed(1)}%)`;
     if (frac > MAX_ALBUNS_SEM_GENERO) ruim(`${msg}; ex.: ${sem.slice(-3).map(s => `\`${s}\``).join(', ')}`);
     else ok(msg);
-  } catch (e) { ruim(`**${ak}** ${ak}-genres.json.gz ilegível (${e.message})`); }
+  } catch (e) { ruim(`**${ak}** ${ak}-album-genres.json.gz ilegível (${e.message})`); }
 
   // atlas
   if (atlas) {

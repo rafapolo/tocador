@@ -40,7 +40,7 @@ function buildArtistList() {
 function buildGenreList() {
   if (_cachedGenres) return _cachedGenres;
   const map = new Map();
-  for (const a of albums) if (a.genreParent) map.set(a.genreParent, (map.get(a.genreParent) || 0) + 1);
+  for (const a of albums) for (const p of a.genreParents || []) map.set(p, (map.get(p) || 0) + 1);
   _cachedGenres = [...map.entries()]
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
@@ -50,13 +50,17 @@ function buildGenreList() {
 function buildGenreTree() {
   if (_cachedGenreTree) return _cachedGenreTree;
   const tree = new Map();
+  // An album counts once under every genre (and parent) one of its tracks has: the same rule as the grid filter.
   for (const a of albums) {
-    if (!a.genreParent) continue;
-    const sub = a.genre?.includes('---') ? a.genre.split('---')[1] : null;
-    if (!tree.has(a.genreParent)) tree.set(a.genreParent, { count: 0, subs: new Map() });
-    const entry = tree.get(a.genreParent);
-    entry.count++;
-    if (sub) entry.subs.set(sub, (entry.subs.get(sub) || 0) + 1);
+    if (!a.genres) continue;
+    for (const parent of a.genreParents) {
+      if (!tree.has(parent)) tree.set(parent, { count: 0, subs: new Map() });
+      tree.get(parent).count++;
+    }
+    for (const g of a.genres) {
+      const [parent, sub] = g.split('---');
+      if (sub) tree.get(parent).subs.set(sub, (tree.get(parent).subs.get(sub) || 0) + 1);
+    }
   }
   _cachedGenreTree = new Map([...tree.entries()].sort((a, b) => b[1].count - a[1].count));
   return _cachedGenreTree;
