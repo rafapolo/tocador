@@ -1973,6 +1973,7 @@ audio {
   font-size: 0.77rem;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
   gap: 6px;
   transition: background 0.15s, color 0.15s;
   width: 100%;
@@ -1996,6 +1997,9 @@ audio {
 }
 
 .browse-item.zero { opacity: 0.35; }
+/* A genre page's pre-rendered album list and neighbouring genres */
+.track-title a { color: inherit; text-decoration: none; }
+.album-header-info p a { color: var(--color-accent); text-decoration: none; }
 
 .browse-name {
   flex: 1;

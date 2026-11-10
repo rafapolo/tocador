@@ -114,6 +114,10 @@
     });
   }
 
+  // Slug of a genre's page, /<alias>/genero/<slug>/: "Latin---Samba" -> "latin-samba". Genres come from a closed
+  // vocabulary, so there is no numbering to keep in step: build-album-pages.js refuses a collision.
+  function genreSlug(genero) { return slugify(genero, 'genero'); }
+
   // Five base62 characters identifying an album in a shared playlist link (?lista=). Hashes the path, the key the
   // saved albums already use, so a link survives anything that reorders the catalog; an index would not. Fixed width,
   // so ids are concatenated without a separator. FNV-1a over UTF-16 code units, like atlasKeyHash().
@@ -198,5 +202,6 @@
   global.decodeAcervo = decodeAcervo;
   global.albumSlugs = albumSlugs;
   global.artistSlugs = artistSlugs;
+  global.genreSlug = genreSlug;
   global.albumShareId = albumShareId;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

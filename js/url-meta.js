@@ -9,6 +9,13 @@ function albumPageFromPath() {
   return m && KNOWN_ACERVOS[m[1]] ? { alias: m[1], slug: m[2] } : null;
 }
 
+// A genre's page, /<alias>/genero/<slug>/: the player with the genre baked into <html data-genero> (build-album-pages.js).
+function genrePageFromPath() {
+  if (!location.pathname.startsWith(APP_ROOT)) return null;
+  const m = location.pathname.slice(APP_ROOT.length).match(/^([a-z0-9-]+)\/genero\/([a-z0-9-]+)\/$/);
+  return m && KNOWN_ACERVOS[m[1]] ? { alias: m[1], slug: m[2] } : null;
+}
+
 function getAlbumFromUrl() {
   const page = albumPageFromPath();
   // An unknown slug (catalog changed since the page was built) comes back as-is:
@@ -78,6 +85,12 @@ function generateAlbumUrl(album, trackNum) {
 
 // The current path and fragment with a different query string.
 function urlWithParams(params) {
+  // Anything that changes the state leaves a genre page for the plain player URL, which says the rest.
+  if (genrePageFromPath()) {
+    params.set('acervo', activeAcervoKey);
+    if (activeGenre && !params.has('genero')) params.set('genero', activeGenre);
+    return `${APP_ROOT}?${params}${location.hash}`;
+  }
   const qs = params.toString();
   return `${location.pathname}${qs ? `?${qs}` : ''}${location.hash}`;
 }
@@ -121,7 +134,7 @@ function updateYearInUrl(year) {
 }
 
 function getGeneroFromUrl() {
-  return new URLSearchParams(window.location.search).get('genero') || null;
+  return new URLSearchParams(window.location.search).get('genero') || (genrePageFromPath() && document.documentElement.dataset.genero) || null;
 }
 
 function getArtistaFromUrl() {
@@ -239,6 +252,14 @@ function artistShareUrl(name) {
   return `${location.origin}${APP_ROOT}?${new URLSearchParams({ ...(acervo && { acervo }), artista: name })}`;
 }
 
+// A genre's own link: its page where those exist; elsewhere just the acervo and the genre, whatever else is on the
+// current URL. A third-party catalog has no key and keeps its ?acervo=<url>.
+function genreShareUrl(genero) {
+  if (ALBUM_PAGES && activeAcervoKey) return `${location.origin}${APP_ROOT}${activeAcervoKey}/genero/${genreSlug(genero)}/`;
+  const acervo = activeAcervoKey || new URLSearchParams(location.search).get('acervo');
+  return `${location.origin}${APP_ROOT}?${new URLSearchParams({ ...(acervo && { acervo }), genero })}`;
+}
+
 // Share sheet where there is one, else the clipboard, else the URL itself in a toast.
 async function shareLink(title, url, copied) {
   if (navigator.share) {
@@ -251,6 +272,10 @@ async function shareLink(title, url, copied) {
   } catch {
     showToast(url, 6000);
   }
+}
+
+function shareGenre(genero) {
+  return shareLink(`${genero.split('---').pop()} no Tocador`, genreShareUrl(genero), 'Link do gênero copiado');
 }
 
 function shareArtist(name) {

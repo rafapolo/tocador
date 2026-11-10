@@ -765,7 +765,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   virtualGrid = new VirtualGrid(albumsList);
 
   // Async data: ?acervo=<url|alias> selects the archive; defaults to UQT if omitted
-  const acervoParam = albumPageFromPath()?.alias ?? normalizeAcervoParam(new URLSearchParams(location.search).get('acervo'));
+  const acervoParam = albumPageFromPath()?.alias ?? genrePageFromPath()?.alias ?? normalizeAcervoParam(new URLSearchParams(location.search).get('acervo'));
   if (acervoParam) {
     const entry = KNOWN_ACERVOS[acervoParam];
     sessionStorage.setItem('acervo', entry ? entry.data : decodeURIComponent(acervoParam));
@@ -923,7 +923,14 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     // Restore browse filter from URL
     const initialGenero = getGeneroFromUrl();
     const initialArtista = getArtistaFromUrl();
-    if (initialGenero && genreData) { activeGenre = initialGenero; filterAlbums(); }
+    if (initialGenero && genreData) {
+      // A genre link: whoever opens it lands on the Gêneros tab, the row selected and its neighbours around it.
+      activeGenre = initialGenero;
+      expandedGenres.add(initialGenero.split('---')[0]);
+      switchBrowseTab('genres');
+      filterAlbums();
+      virtualBrowseList?.scrollToValue(activeGenre);
+    }
     else if (initialArtista) { activeArtist = initialArtista; filterAlbums(); }
   }
 
@@ -1281,7 +1288,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   setVolume(savedVolume);
 
   document.getElementById('btn-play-saved')?.addEventListener('click', toggleSavedQueue);
-  document.getElementById('share-artist')?.addEventListener('click', () => { if (activeArtist) shareArtist(activeArtist); });
+  document.getElementById('share-artist')?.addEventListener('click', () => { if (activeArtist) shareArtist(activeArtist); else if (activeGenre) shareGenre(activeGenre); });
   document.getElementById('play-artist')?.addEventListener('click', toggleArtistQueue);
   document.getElementById('share-saved')?.addEventListener('click', shareSaved);
   document.querySelectorAll('.album-generos').forEach(d => d.addEventListener('toggle', () => fillAlbumGenres(d)));
@@ -1384,7 +1391,12 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   // Delegated click on list items
   _browseListEl?.addEventListener('click', e => {
     const item = e.target.closest('[data-value]');
-    if (item) selectBrowseItem(item.dataset.value, item.dataset.type);
+    if (!item) return;
+    if (item.href) {   // genre rows are links: a modified click is the browser's (new tab/window), a plain one filters here
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+    }
+    selectBrowseItem(item.dataset.value, item.dataset.type);
   });
 
   // Keyboard nav in browse list (Up/Down arrows, Enter/Space)

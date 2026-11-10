@@ -320,7 +320,7 @@ class VirtualList {
       subEl = node.querySelector('.browse-sub');
       thumbEl = node.querySelector('.browse-thumb');
     } else {
-      node = document.createElement('button');
+      node = document.createElement(item.href ? 'a' : 'button');   // a row with its own URL is a real link: copy, open in a new tab
       node.setAttribute('role', 'option');
       if (item.type === 'parent') {
         const t = document.createElement('span');
@@ -349,6 +349,7 @@ class VirtualList {
     node.dataset.type = item.type || '';
     node.style.cssText = `top:${i * rh}px`;
     node.dataset.value = item.fullName ?? item.name;
+    if (item.href) node.href = item.href;
 
     const toggleEl = node.querySelector('.browse-toggle');
     if (toggleEl) {

@@ -18,7 +18,8 @@
 //   <alias>/index.html                 album index for the acervo
 //   <alias>/<slug>/index.html          one page per album
 //   <alias>/artista/<slug>/index.html  one small page per artist, for link previews
-//   sitemap-albums-<alias>.xml         index + album pages, with cover images
+//   <alias>/genero/<slug>/index.html   one page per genre: the player, filtered, indexable
+//   sitemap-albums-<alias>.xml         index + album and genre pages, with cover images
 //   sitemap.xml                        sitemap index over the per-acervo files
 //
 // Slugs come from albumSlugs() in js/acervo-format.js, which the player also uses
@@ -267,7 +268,84 @@ ${headMeta({ title, desc, canonical, image: cover && coverUrl(meta.base_url, cov
 `;
 }
 
-function indexPage({ alias, meta, entries }) {
+// Every genre of a catalog, parents ("Latin") and subgenres ("Latin---Samba") alike, with the same rule as the grid:
+// an album is under every genre one of its tracks has. albums[] starts with those where the genre ranks highest.
+function catalogGenres(entries, index) {
+  const genres = new Map();
+  const add = (value, entry, rank) => {
+    if (!genres.has(value)) genres.set(value, { value, name: value.split('---').pop(), parent: value.includes('---') ? value.split('---')[0] : null, slug: globalThis.genreSlug(value), albums: new Map() });
+    const albums = genres.get(value).albums;
+    if (!albums.has(entry)) albums.set(entry, rank);
+  };
+  for (const entry of entries) {
+    (index[entry.album.path.normalize('NFC')] || []).forEach((g, rank) => {
+      add(g, entry, rank);
+      add(g.split('---')[0], entry, rank);
+    });
+  }
+  const slugs = new Map();
+  return [...genres.values()].map(g => {
+    if (slugs.has(g.slug)) throw new Error(`genre slug collision: ${slugs.get(g.slug)} / ${g.value}`);
+    slugs.set(g.slug, g.value);
+    const albums = [...g.albums].sort(([a, x], [b, y]) => x - y
+      || (b.album.has_cover !== false) - (a.album.has_cover !== false) || (b.album.year || 0) - (a.album.year || 0)).map(([e]) => e);
+    return { ...g, albums };
+  }).sort((a, b) => b.albums.length - a.albums.length);
+}
+
+const GENERO_MIN_INDEXAVEL = 3;   // fewer albums is a thin page: it still works as a shared link, but stays out of Google
+const GENERO_MAX_ALBUNS = 120;    // albums listed in the HTML; every album is reachable through the index and the sitemap
+const GENERO_VIZINHOS = 12;
+const indexavel = g => g.albums.length >= GENERO_MIN_INDEXAVEL;
+const nAlbuns = n => `${n} álbu${n === 1 ? 'm' : 'ns'}`;
+
+// The player, like an album page: same URL for people, link previews and crawlers. <html data-genero> tells js/url-meta.js
+// which filter to apply; what the catalog replaces on load is pre-rendered so that it reads without JS.
+function genrePage({ template, alias, meta, genre, genres }) {
+  const archive = meta.title || alias;
+  const canonical = `${SITE}/${alias}/genero/${genre.slug}/`;
+  const n = genre.albums.length;
+  const listed = genre.albums.slice(0, GENERO_MAX_ALBUNS);
+  const cover = genre.albums.find(e => e.album.has_cover !== false);
+  const image = cover ? coverUrl(meta.base_url, cover.album) : null;
+  const title = `♪ ${genre.name}${genre.parent ? ` (${genre.parent})` : ''} · ${nAlbuns(n)} para ouvir no ${archive}`;
+  const desc = `♪ ${nAlbuns(n)} de ${genre.name} em ${archive}, para ouvir online: ` +
+    `${genre.albums.slice(0, 4).map(e => [e.album.artist, e.album.title].filter(Boolean).join(' - ')).join(', ')}${n > 4 ? '…' : ''}`;
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${genre.name} no ${archive}`,
+    url: canonical,
+    description: desc,
+    inLanguage: 'pt-BR',
+    ...(image && { image }),
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: n,
+      itemListElement: listed.slice(0, 50).map((e, i) => ({
+        '@type': 'ListItem', position: i + 1, url: `${SITE}/${alias}/${e.slug}/`, name: e.album.title,
+      })),
+    },
+  };
+  const vizinhos = genres.filter(g => g !== genre && indexavel(g) && (genre.parent ? g.value === genre.parent || g.parent === genre.parent : g.parent === genre.value)).slice(0, GENERO_VIZINHOS);
+  const link = g => `<a href="/${alias}/genero/${g.slug}/">${esc(g.name)}</a>`;
+  const header = `${image ? `<img class="album-cover-large" src="${esc(image)}" alt="${esc(genre.name)}" width="200" height="200">` : ''}` +
+    `<div class="album-header-info"><h2>${esc(genre.name)}</h2><p><strong>${esc(archive)}</strong></p><p>${nAlbuns(n)}</p>` +
+    `${vizinhos.length ? `<p>${vizinhos.map(link).join(' · ')}</p>` : ''}</div>`;
+  const rows = listed.map((e, i) => `<li class="track-item"><span class="track-num" aria-hidden="true">${i + 1}</span>` +
+    `<div class="track-details"><div class="track-title"><a href="/${alias}/${e.slug}/">${esc(e.album.title)}</a></div>` +
+    `${e.album.artist ? `<div class="track-artist">${esc(e.album.artist)}</div>` : ''}</div>` +
+    `<span class="track-duration">${e.album.year > 0 ? e.album.year : ''}</span></li>`).join('');
+  const robots = indexavel(genre) ? '' : '<meta name="robots" content="noindex">\n';
+
+  return template
+    .replace('<html data-album-pages', () => `<html data-album-pages data-genero="${esc(genre.value)}"`)
+    .replace('<!--ALBUM_HEAD-->', () => robots + headMeta({ title, desc, canonical, image, ogType: 'website', ld }))
+    .replace(/(id="album-header"[^>]*>)(<\/)/, (_, open, close) => open + header + close)
+    .replace(/(id="track-list"[^>]*>)(<\/)/, (_, open, close) => open + rows + close);
+}
+
+function indexPage({ alias, meta, entries, genres = [] }) {
   const archive = meta.title || alias;
   const canonical = `${SITE}/${alias}/`;
   const byArtist = new Map();
@@ -291,17 +369,25 @@ function indexPage({ alias, meta, entries }) {
 `<nav class="crumbs"><a href="/">♪ Tocador</a> / <a href="/?acervo=${alias}">abrir o player</a></nav>
 <h1>${esc(archive)}</h1>
 <p class="meta">${meta.subtitle ? `${esc(meta.subtitle)} · ` : ''}${entries.length} álbuns · ${artists.length} artistas</p>
+${genres.some(indexavel) ? `<h2>Gêneros</h2><p>${genres.filter(indexavel).map(g => `<a href="/${alias}/genero/${g.slug}/">${esc(g.name)}</a>`).join(' · ')}</p>` : ''}
 ${body}
 ` + FOOT;
 }
 
-function sitemapFor(alias, entries, meta) {
+function sitemapFor(alias, entries, meta, genres = []) {
   const imgNs = ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"';
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${imgNs}>\n`;
   xml += `  <url><loc>${SITE}/${alias}/</loc></url>\n`;
   for (const { album, slug } of entries) {
     xml += `  <url>\n    <loc>${SITE}/${alias}/${pathEnc(slug)}/</loc>\n`;
     const img = coverUrl(meta.base_url, album);
+    if (img) xml += `    <image:image><image:loc>${esc(img)}</image:loc></image:image>\n`;
+    xml += '  </url>\n';
+  }
+  for (const g of genres.filter(indexavel)) {
+    xml += `  <url>\n    <loc>${SITE}/${alias}/genero/${pathEnc(g.slug)}/</loc>\n`;
+    const capa = g.albums.find(e => e.album.has_cover !== false);
+    const img = capa && coverUrl(meta.base_url, capa.album);
     if (img) xml += `    <image:image><image:loc>${esc(img)}</image:loc></image:image>\n`;
     xml += '  </url>\n';
   }
@@ -314,7 +400,14 @@ function loadCatalog(file) {
   return globalThis.decodeAcervo(JSON.parse(raw.toString('utf8')));
 }
 
-function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index.html') }) {
+// The index the player loads (data/<alias>-album-genres.json.gz, committed here): album path (NFC) -> genres, most voted first.
+function loadGenres(file) {
+  if (!fs.existsSync(file)) return {};
+  const { g, a } = JSON.parse(zlib.gunzipSync(fs.readFileSync(file)).toString('utf8'));
+  return Object.fromEntries(Object.entries(a).map(([p, idx]) => [p, idx.map(i => g[i])]));
+}
+
+function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index.html'), genresDir = path.join(__dirname, '..', 'data') }) {
   const template = playerTemplate(fs.readFileSync(templateFile, 'utf8'));
   const sitemaps = [];
   const summary = [];
@@ -334,7 +427,13 @@ function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, 'index.html'), albumPage({ template, alias, meta, album: e.album, slug: e.slug }));
     }
-    fs.writeFileSync(path.join(root, 'index.html'), indexPage({ alias, meta, entries }));
+    const genres = catalogGenres(entries, loadGenres(path.join(genresDir, `${alias}-album-genres.json.gz`)));
+    for (const genre of genres) {
+      const dir = path.join(root, 'genero', genre.slug);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'index.html'), genrePage({ template, alias, meta, genre, genres }));
+    }
+    fs.writeFileSync(path.join(root, 'index.html'), indexPage({ alias, meta, entries, genres }));
     const artists = catalogArtists(albums);
     for (const artist of artists) {
       const dir = path.join(root, 'artista', artist.slug);
@@ -343,9 +442,9 @@ function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index
     }
 
     const smName = `sitemap-albums-${alias}.xml`;
-    fs.writeFileSync(path.join(out, smName), sitemapFor(alias, entries, meta));
+    fs.writeFileSync(path.join(out, smName), sitemapFor(alias, entries, meta, genres));
     sitemaps.push(smName);
-    summary.push(`${alias}: ${entries.length} album pages, ${artists.length} artist pages → ${alias}/, ${smName}`);
+    summary.push(`${alias}: ${entries.length} album pages, ${artists.length} artist pages, ${genres.length} genre pages (${genres.filter(indexavel).length} indexable) → ${alias}/, ${smName}`);
   }
 
   let index = '<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
@@ -355,7 +454,7 @@ function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index
   return summary;
 }
 
-module.exports = { build, playerTracks, playerTemplate, albumPage, artistPage, catalogArtists, indexPage, sitemapFor };
+module.exports = { build, playerTracks, playerTemplate, albumPage, artistPage, catalogArtists, catalogGenres, genrePage, indexPage, sitemapFor };
 
 if (require.main === module) {
   const args = process.argv.slice(2);

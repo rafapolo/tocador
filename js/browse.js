@@ -77,13 +77,13 @@ function getGenreDisplayItems() {
       : [];
     if (q && !parentMatch && matchingSubs.length === 0) continue;
     const expanded = q ? (parentMatch || matchingSubs.length > 0) : expandedGenres.has(parent);
-    items.push({ name: parent, fullName: parent, count: data.count, type: 'parent', expanded });
+    items.push({ name: parent, fullName: parent, count: data.count, type: 'parent', expanded, href: genreShareUrl(parent) });
     if (expanded) {
       const subsToShow = q && !parentMatch
         ? matchingSubs.sort((a, b) => b[1] - a[1])
         : [...data.subs.entries()].sort((a, b) => b[1] - a[1]);
       for (const [sub, count] of subsToShow) {
-        items.push({ name: sub, fullName: `${parent}---${sub}`, count, type: 'child', parentName: parent });
+        items.push({ name: sub, fullName: `${parent}---${sub}`, count, type: 'child', parentName: parent, href: genreShareUrl(`${parent}---${sub}`) });
       }
     }
   }
@@ -371,8 +371,11 @@ function renderActiveFilterChip() {
   }
   const share = document.getElementById('share-artist');
   if (share) {
-    share.hidden = !activeArtist;
-    if (activeArtist) share.setAttribute('aria-label', `Compartilhar link de ${activeArtist}`);
+    share.hidden = !activeArtist && !activeGenre;
+    if (!share.hidden) {
+      share.setAttribute('aria-label', `Compartilhar link de ${label}`);
+      share.title = activeGenre ? 'Compartilhar gênero' : 'Compartilhar artista';
+    }
   }
   syncArtistQueueButton();
 }
@@ -658,6 +661,6 @@ function applyArchiveMeta() {
   const subtitleEl = document.getElementById('app-subtitle');
   if (titleAcervoEl) titleAcervoEl.textContent = title !== 'Tocador' ? ` ♪ ${title}` : '';
   // Tab title: the archive until an album is opened, then artist · album.
-  document.title = `♪ Tocador · ${title}`;
+  if (!genrePageFromPath()) document.title = `♪ Tocador · ${title}`;   // a genre page keeps its own, the one it is indexed by
   if (subtitleEl) subtitleEl.textContent = subtitle;
 }

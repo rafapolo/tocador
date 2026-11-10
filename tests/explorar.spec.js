@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
+const { keepNewTabsLocal } = require('./helpers');
 
 const fx = n => fs.readFileSync(path.join(__dirname, 'fixtures', n));
 const albumsGz = fx('albums.json.gz');
@@ -351,6 +352,136 @@ test.describe('gêneros', () => {
     await page.goto('/?genero=Jazz');
     await page.waitForSelector('.album-item');
     await expect(page.locator('#search-count')).toHaveText('1 álbum');
+  });
+
+  const linha = (page, valor) => page.locator(`#browse-list a.browse-item[data-value="${valor}"]`);
+  test.describe('cada linha é um link', () => {
+    const abrirGeneros = async page => {
+      if (page.viewportSize().width <= 768) await page.click('#btn-browse');
+      await page.locator('.browse-tab[data-tab="genres"]').click();
+    };
+
+    test('pai e filho têm a própria URL, só com acervo e gênero', async ({ page }) => {
+      await boot(page, { generos: true, url: '/?acervo=uqt&q=' });
+      await abrirGeneros(page);
+      await linha(page, 'Latin').locator('.browse-name').click();   // expande
+      for (const valor of ['Latin', 'Latin---Samba']) {
+        const url = new URL(await linha(page, valor).getAttribute('href'));
+        expect(url.pathname).toBe('/');
+        expect([...url.searchParams.entries()]).toEqual([['acervo', 'uqt'], ['genero', valor]]);
+      }
+    });
+
+    test('o clique normal filtra sem recarregar', async ({ page }) => {
+      await boot(page, { generos: true });
+      await abrirGeneros(page);
+      await linha(page, 'Latin').click();
+      await page.evaluate(() => { window.__marca = 1; });
+      await linha(page, 'Latin---Samba').click();
+      await expect(page.locator('#clear-all-label')).toHaveText('Samba');
+      await expect(page).toHaveURL(/genero=Latin---Samba/);
+      expect(await page.evaluate(() => window.__marca)).toBe(1);
+    });
+
+    test('Ctrl/Cmd+clique abre o gênero em outra aba e não mexe nesta', async ({ page, context, isMobile }) => {
+      test.skip(!!isMobile, 'sem Ctrl+clique no toque');
+      await boot(page, { generos: true });
+      await abrirGeneros(page);
+      await keepNewTabsLocal(context);
+      const [aba] = await Promise.all([
+        context.waitForEvent('page'),
+        linha(page, 'Latin').click({ modifiers: [process.platform === 'darwin' ? 'Meta' : 'Control'] }),
+      ]);
+      await aba.waitForURL(u => u.searchParams.get('genero') === 'Latin', { waitUntil: 'commit' });
+      await aba.close();
+      await expect(page.locator('#clear-all-filters')).toBeHidden();
+      await expect(page).not.toHaveURL(/genero=/);
+    });
+
+    test('Enter escolhe o gênero uma vez só', async ({ page }) => {
+      await boot(page, { generos: true });
+      await abrirGeneros(page);
+      await page.evaluate(() => { window.__marca = 1; });
+      await linha(page, 'Latin').focus();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('#clear-all-label')).toHaveText('Latin');
+      await expect(linha(page, 'Latin')).toHaveAttribute('aria-selected', 'true');
+      expect(await page.evaluate(() => window.__marca)).toBe(1);
+    });
+
+    test('o botão ao lado do chip compartilha o gênero', async ({ page, context, browserName }) => {
+      test.skip(browserName !== 'chromium', 'permissão de clipboard só no Chromium');
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+      await boot(page, { generos: true, url: '/?acervo=uqt' });
+      await page.evaluate(() => { delete Navigator.prototype.share; });
+      const botao = page.locator('#share-artist');
+      await expect(botao).toBeHidden();
+      await abrirGeneros(page);
+      await linha(page, 'Latin').click();
+      await linha(page, 'Latin---Samba').click();
+      if (page.viewportSize().width <= 768) await page.locator('#browse-scrim').click({ force: true });
+      await expect(botao).toBeVisible();
+      await expect(botao).toHaveAttribute('aria-label', 'Compartilhar link de Samba');
+      await botao.click();
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('genero=Latin---Samba');
+    });
+
+    test('quem abre o link cai na aba Gêneros com a linha selecionada', async ({ page }) => {
+      await boot(page, { generos: true, url: '/?genero=' + encodeURIComponent('Latin---Samba') });
+      await expect(page.locator('.browse-tab[data-tab="genres"]')).toHaveAttribute('aria-selected', 'true');
+      await expect(linha(page, 'Latin---Samba')).toHaveAttribute('aria-selected', 'true');
+    });
+
+    test('as abas de artistas continuam com botões', async ({ page }) => {
+      await boot(page, { generos: true });
+      if (page.viewportSize().width <= 768) await page.click('#btn-browse');
+      await expect(page.locator('#browse-list button.browse-item').first()).toBeVisible();
+      await expect(page.locator('#browse-list a.browse-item')).toHaveCount(0);
+    });
+  });
+
+  test.describe('página do gênero', () => {
+    const { playerTemplate, genrePage, catalogGenres, sitemapFor, indexPage } = require('../script/build-album-pages.js');
+    require('../js/acervo-format.js');
+    const catalogo = JSON.parse(require('zlib').gunzipSync(albumsGz));
+    const shell = playerTemplate(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'));
+    const entries = catalogo.albums.map((album, i) => ({ album, slug: `disco-${i}` }));
+    const indice = Object.fromEntries(catalogo.albums.map((a, i) => [a.path.normalize('NFC'), i ? ['Latin---Samba'] : ['Latin---Samba', 'Jazz---Jazz-Funk']]));
+    const genres = catalogGenres(entries, indice);
+    const meta = { title: 'UmQueTenha', base_url: 'https://cdn.tocador.cc/uqt' };
+    const pagina = valor => genrePage({ template: shell, alias: 'uqt', meta, genre: genres.find(g => g.value === valor), genres });
+
+    test('o HTML tem título, canonical, JSON-LD e os álbuns, sem depender de JS', () => {
+      const html = pagina('Latin---Samba');
+      expect(html).toMatch(/<title>♪ Samba \(Latin\) · \d+ álbu/);
+      expect(html).toContain('<link rel="canonical" href="https://tocador.cc/uqt/genero/latin-samba/">');
+      expect(html).toContain('data-genero="Latin---Samba"');
+      expect(html).toContain('"@type":"CollectionPage"');
+      expect(html).toContain('href="/uqt/disco-0/"');
+      expect(html).toContain('href="/uqt/genero/latin/"');
+      expect(html).not.toContain('noindex');
+    });
+
+    test('gênero com poucos álbuns funciona como link, mas fica fora do Google', () => {
+      expect(pagina('Jazz---Jazz-Funk')).toContain('<meta name="robots" content="noindex">');
+      const xml = sitemapFor('uqt', entries, meta, genres);
+      expect(xml).toContain('/uqt/genero/latin-samba/');
+      expect(xml).not.toContain('/uqt/genero/jazz-jazz-funk/');
+      const indiceHtml = indexPage({ alias: 'uqt', meta, entries, genres });
+      expect(indiceHtml).toContain('href="/uqt/genero/latin-samba/"');
+      expect(indiceHtml).not.toContain('jazz-jazz-funk');
+    });
+
+    test('a página é o player filtrado, mantém título e URL, e mudar o filtro sai dela', async ({ page }) => {
+      await page.route('**/uqt/genero/latin-samba/', r => r.fulfill({ contentType: 'text/html', body: pagina('Latin---Samba') }));
+      await boot(page, { generos: true, url: '/uqt/genero/latin-samba/' });
+      await expect(page.locator('#clear-all-label')).toHaveText('Samba');
+      await expect(page).toHaveTitle(/^♪ Samba \(Latin\)/);
+      expect(new URL(page.url()).pathname).toBe('/uqt/genero/latin-samba/');
+      await expect(linha(page, 'Latin---Samba')).toHaveAttribute('href', /\/uqt\/genero\/latin-samba\/$/);
+      await page.locator('#clear-all-filters').click();
+      await expect(page).toHaveURL(u => u.pathname === '/' && u.searchParams.get('acervo') === 'uqt' && !u.searchParams.has('genero'));
+    });
   });
 
   test('sem gênero escolhido nenhuma faixa fica apagada', async ({ page }) => {
