@@ -40,6 +40,8 @@ jobs:
         # A catalog that can't be fetched fails the run on purpose: publishing without
         # it would 404 every album page and sitemap entry for that acervo, whereas a
         # failed run leaves the previous deployment live.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "$RUNNER_TEMP/catalogs"
           for pair in uqt=https://rafapolo.github.io/uqt/data/uqt-albums.json.gz \
@@ -47,9 +49,38 @@ jobs:
             curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors "${pair#*=}" \
               -o "$RUNNER_TEMP/catalogs/${pair%%=*}.json.gz"
           done
-          bun script/build-album-pages.js --out . \
+          # <lastmod> of each sitemap = date of the last commit that changed that catalog, never
+          # the build date (a fresh date on every run would tell Google nothing). If the API
+          # call fails the sitemap goes out without lastmod: no date beats a wrong one.
+          lastmod=()
+          for entry in uqt=rafapolo/uqt:data/uqt-albums.json.gz \
+                       homi=rafapolo/hominiscanidae:data/homi-albums.json.gz; do
+            alias="${entry%%=*}"; rest="${entry#*=}"; repo="${rest%%:*}"; file="${rest#*:}"
+            d=$(gh api "repos/$repo/commits?path=$file&per_page=1" --jq '.[0].commit.committer.date[:10]' 2>/dev/null || true)
+            if [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+              lastmod+=(--lastmod "$alias=$d")
+            else
+              echo "::warning::no lastmod for $alias (commit date unavailable)"
+            fi
+          done
+          bun script/build-album-pages.js --out . "${lastmod[@]}" \
             uqt="$RUNNER_TEMP/catalogs/uqt.json.gz" \
             homi="$RUNNER_TEMP/catalogs/homi.json.gz"
+
+      - name: Build home text, JSON-LD and llms.txt
+        # index.html carries empty HOME-SEO markers (so album pages and the uqt/homi
+        # mirrors inherit nothing from the home). This fills them, in the runner's
+        # checkout only, with the citable "O Tocador é…" text and the WebSite /
+        # Organization / DataCatalog JSON-LD, and writes llms.txt. Every number comes
+        # from data/resumo-acervo.json. Runs after build-album-pages.js, which reads
+        # index.html as its template. See script/build-home-seo.js.
+        run: |
+          bun script/build-home-seo.js \
+            --catalog uqt="$RUNNER_TEMP/catalogs/uqt.json.gz" \
+            --catalog homi="$RUNNER_TEMP/catalogs/homi.json.gz"
+          grep -c 'id="sobre-tocador"' index.html
+          grep -c 'application/ld+json' index.html
+          test -s llms.txt
 
       - name: Ensure config.json exists
         # ui.js fetches config.json for optional overrides. It is gitignored here (the
