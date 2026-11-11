@@ -325,19 +325,26 @@ function shareAlbum(album) {
 }
 
 function updateMetaTags(album) {
-  // Same wording as the album pages script/build-album-pages.js writes, which is what
-  // link previews show; Google reads this rendered copy too.
   const n = album.tracks.length;
-  const title = `♪ Tocador - ${album.name}${album.artists ? ` — ${album.artists}` : ''}${album.year > 0 ? ` (${album.year})` : ''}`;
-  const desc = `♪ ${[album.artists, `${album.name}${album.year > 0 ? ` (${album.year})` : ''}`, `${n} faixa${n === 1 ? '' : 's'}`]
-    .filter(Boolean).join(' - ')}`;
   const image = `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg`;
   // og:url and <link rel=canonical> must be absolute — generateAlbumUrl() returns a
   // path-relative URL (right for pushState/anchor hrefs, wrong for these two). The
   // album's static page is the canonical when one exists: it's what gets indexed and
   // what unfurls with the cover, since crawlers don't run this script.
   const url = albumPageUrl(album) || window.location.origin + generateAlbumUrl(album);
+  // The tab title the player has always set; the static page's own <title> is only for crawlers and previews.
   document.title = `♪ ${album.artists} · ${album.name}`;
+  // A static album page (<html data-album-pages>) already carries this album's description, canonical
+  // and JSON-LD from script/build-album-pages.js, richer than what is rebuilt below (genres, duration,
+  // breadcrumb). Rewriting them on load would leave Google's rendered copy with the poorer version,
+  // so leave the rest of the head alone there.
+  if (document.documentElement.hasAttribute('data-album-pages')
+      && document.querySelector('link[rel="canonical"]')?.href === url) return;
+  // Same wording as the album pages script/build-album-pages.js writes, which is what
+  // link previews show; Google reads this rendered copy too.
+  const title = `♪ Tocador - ${album.name}${album.artists ? ` — ${album.artists}` : ''}${album.year > 0 ? ` (${album.year})` : ''}`;
+  const desc = `♪ ${[album.artists, `${album.name}${album.year > 0 ? ` (${album.year})` : ''}`, `${n} faixa${n === 1 ? '' : 's'}`]
+    .filter(Boolean).join(' - ')}`;
   setMeta('property', 'og:title', title);
   setMeta('property', 'og:description', desc);
   setMeta('property', 'og:image', image);
@@ -356,7 +363,7 @@ function updateMetaTags(album) {
     '@context': 'https://schema.org',
     '@type': 'MusicAlbum',
     name: album.name,
-    byArtist: { '@type': 'MusicGroup', name: album.artists },
+    ...(album.artists && { byArtist: { '@type': 'MusicGroup', name: album.artists } }),
     datePublished: String(album.year || ''),
     numTracks: album.tracks.length,
     image,

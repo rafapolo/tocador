@@ -771,7 +771,7 @@ async function gotoAlbumPage(page, slug, hash = '', opts = {}) {
 
 test('L64: an album page opens its album and track from the path and #tN', async ({ page }) => {
   await gotoAlbumPage(page, '1971-chico-buarque-construcao', '#t2');
-  await expect(page.locator('#album-header h2')).toHaveText('Construção');
+  await expect(page.locator('#album-header h1')).toHaveText('Construção');
   await expect(page.locator('#track-list .track-item.playing .track-num')).toHaveText('2');
   expect(new URL(page.url()).pathname + new URL(page.url()).hash).toBe('/uqt/1971-chico-buarque-construcao/#t2');
   await expect(page.locator('link[rel="canonical"]'))
@@ -814,7 +814,7 @@ test('L65: from an album page, other albums and tracks keep path URLs', async ({
   await page.locator('#track-list .track-item').nth(1).click();
   await expect(page).toHaveURL(/\/uqt\/1972-milton-nascimento-clube-da-esquina\/#t2$/);
   await page.goBack();
-  await expect(page.locator('#album-header h2')).toHaveText('Construção');
+  await expect(page.locator('#album-header h1')).toHaveText('Construção');
 });
 
 test('L66: searching on an album page keeps the album path and track', async ({ page }) => {

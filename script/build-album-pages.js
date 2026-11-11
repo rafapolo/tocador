@@ -48,7 +48,10 @@ function fmtDuration(sec) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-const isoDuration = sec => `PT${Math.floor(sec / 60)}M${Math.floor(sec % 60)}S`;
+const isoDuration = sec => {
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), r = Math.floor(sec % 60);
+  return `PT${h ? `${h}H` : ''}${h || m ? `${m}M` : ''}${r}S`;
+};
 
 // Mirrors buildAlbums() in js/ui.js: repeated titles collapse to one entry
 // (preferring the copy that isn't in a subfolder), and un-numbered tracks are
@@ -115,7 +118,7 @@ ${image ? `<meta property="og:image" content="${esc(image)}">
 <meta name="twitter:card" content="summary">`}
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(desc)}">
-${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>` : ''}`;
+${[].concat(ld || []).map(o => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`).join('\n')}`;
 }
 
 function head(page) {
@@ -172,30 +175,43 @@ function playerTemplate(html) {
   for (const id of ['album-header', 'track-list']) {
     if (!new RegExp(`id="${id}"[^>]*></`).test(html)) throw new Error(`index.html template: no empty #${id}`);
   }
+  // The page's one <h1> is the album's (or genre's) own title, pre-rendered in #album-header: the app's name
+  // becomes a <div> with the same class, so the look is the same (tests use #app-title-text, not the tag).
+  const h1 = /<h1 class="app-title" id="app-title">([\s\S]*?)<\/h1>/;
+  if (!h1.test(html)) throw new Error('index.html template: no <h1 class="app-title" id="app-title">');
+  html = html.replace(h1, (_, inner) => `<div class="app-title" id="app-title">${inner}</div>`);
   return html;
 }
 
-function albumPage({ template, alias, meta, album, slug }) {
+// The player's own header rules are for <h2>; the pre-rendered title is the page's <h1> and has to look the same.
+const PLAYER_CSS_EXTRA = `<style>.album-header-info h1{font-family:var(--font-display);font-size:1.4rem;margin-bottom:var(--spacing-xs);color:var(--color-text);line-height:1.3}` +
+  `@media (max-width:768px){.album-header-info h1{font-size:1.3rem}}</style>`;
+
+function albumPage({ template, alias, meta, album, slug, genres = [] }) {
   const tracks = playerTracks(album);
   const archive = meta.title || alias;
-  const artist = album.artist || ''; // compilations often have none; say nothing rather than "desconhecido"
+  const artist = album.artist || ''; // compilations often have none (6 in uqt, 113 in homi); say nothing rather than "desconhecido"
   const year = album.year > 0 ? album.year : null;
   const canonical = `${SITE}/${alias}/${slug}/`;
   const image = coverUrl(meta.base_url, album);
+  const total = tracks.reduce((n, t) => n + (t.duration || 0), 0);
   const title = `♪ Tocador - ${album.title}${artist ? ` — ${artist}` : ''}${year ? ` (${year})` : ''}`;
-  // What link previews show under the title: "♪ Banda - Álbum (2016) - 17 faixas".
-  const desc = `♪ ${[artist, `${album.title}${year ? ` (${year})` : ''}`, `${tracks.length} faixa${tracks.length === 1 ? '' : 's'}`]
-    .filter(Boolean).join(' - ')}`;
+  const acervo = /^acervo\b/i.test(archive) ? `no ${archive}` : `no acervo ${archive}`;
+  const desc = `Ouça ${album.title}${artist ? `, de ${artist}` : ''}${year ? ` (${year})` : ''}: ` +
+    `${tracks.length} faixa${tracks.length === 1 ? '' : 's'}, ${acervo}.`;
 
-  const ld = {
+  const ld = [{
     '@context': 'https://schema.org',
     '@type': 'MusicAlbum',
     name: album.title,
     url: canonical,
+    inLanguage: 'pt-BR',
     ...(artist && { byArtist: { '@type': 'MusicGroup', name: artist } }),
     ...(year && { datePublished: String(year) }),
     ...(image && { image }),
+    ...(genres.length && { genre: genres.slice(0, 3).map(g => g.name) }),
     numTracks: tracks.length,
+    ...(total > 0 && { duration: isoDuration(total) }),
     track: tracks.map(t => ({
       '@type': 'MusicRecording',
       name: t.title,
@@ -204,12 +220,21 @@ function albumPage({ template, alias, meta, album, slug }) {
       ...(t.duration > 0 && { duration: isoDuration(t.duration) }),
       ...(t.artists && t.artists !== artist && { byArtist: { '@type': 'Person', name: t.artists } }),
     })),
-  };
+  }, {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Tocador', item: `${SITE}/` },
+      { '@type': 'ListItem', position: 2, name: archive, item: `${SITE}/${alias}/` },
+      { '@type': 'ListItem', position: 3, name: album.title, item: canonical },
+    ],
+  }];
 
   // Same markup js/ui.js renders (renderAlbumHeader, buildTrackItemsFragment), so
   // the page reads right before the catalog arrives and the player replaces it.
+  // The title is an <h1> here (the player's JS swaps it for its own <h2> once the catalog loads).
   const header = `${image ? `<img class="album-cover-large" src="${esc(image)}" alt="${esc(album.title)}" width="200" height="200">` : ''}` +
-    `<div class="album-header-info"><h2>${esc(album.title)}</h2><p><strong>${esc(artist)}</strong></p>` +
+    `<div class="album-header-info"><h1>${esc(album.title)}</h1><p><strong>${esc(artist)}</strong></p>` +
     `<p>${year ?? ''}${year ? ' • ' : ''}${tracks.length} canções</p></div>`;
   const rows = tracks.map(t => {
     const other = t.artists && t.artists !== artist ? `<div class="track-artist">${esc(t.artists)}</div>` : '';
@@ -219,7 +244,7 @@ function albumPage({ template, alias, meta, album, slug }) {
   }).join('');
 
   return template
-    .replace('<!--ALBUM_HEAD-->', () => headMeta({ title, desc, canonical, image, ogType: 'music.album', ld }))
+    .replace('<!--ALBUM_HEAD-->', () => headMeta({ title, desc, canonical, image, ogType: 'music.album', ld }) + '\n' + PLAYER_CSS_EXTRA)
     .replace(/(id="album-header"[^>]*>)(<\/)/, (_, open, close) => open + header + close)
     .replace(/(id="track-list"[^>]*>)(<\/)/, (_, open, close) => open + rows + close);
 }
@@ -330,7 +355,7 @@ function genrePage({ template, alias, meta, genre, genres }) {
   const vizinhos = genres.filter(g => g !== genre && indexavel(g) && (genre.parent ? g.value === genre.parent || g.parent === genre.parent : g.parent === genre.value)).slice(0, GENERO_VIZINHOS);
   const link = g => `<a href="/${alias}/genero/${g.slug}/">${esc(g.name)}</a>`;
   const header = `${image ? `<img class="album-cover-large" src="${esc(image)}" alt="${esc(genre.name)}" width="200" height="200">` : ''}` +
-    `<div class="album-header-info"><h2>${esc(genre.name)}</h2><p><strong>${esc(archive)}</strong></p><p>${nAlbuns(n)}</p>` +
+    `<div class="album-header-info"><h1>${esc(genre.name)}</h1><p><strong>${esc(archive)}</strong></p><p>${nAlbuns(n)}</p>` +
     `${vizinhos.length ? `<p>${vizinhos.map(link).join(' · ')}</p>` : ''}</div>`;
   const rows = listed.map((e, i) => `<li class="track-item"><span class="track-num" aria-hidden="true">${i + 1}</span>` +
     `<div class="track-details"><div class="track-title"><a href="/${alias}/${e.slug}/">${esc(e.album.title)}</a></div>` +
@@ -340,7 +365,7 @@ function genrePage({ template, alias, meta, genre, genres }) {
 
   return template
     .replace('<html data-album-pages', () => `<html data-album-pages data-genero="${esc(genre.value)}"`)
-    .replace('<!--ALBUM_HEAD-->', () => robots + headMeta({ title, desc, canonical, image, ogType: 'website', ld }))
+    .replace('<!--ALBUM_HEAD-->', () => robots + headMeta({ title, desc, canonical, image, ogType: 'website', ld }) + '\n' + PLAYER_CSS_EXTRA)
     .replace(/(id="album-header"[^>]*>)(<\/)/, (_, open, close) => open + header + close)
     .replace(/(id="track-list"[^>]*>)(<\/)/, (_, open, close) => open + rows + close);
 }
@@ -374,18 +399,20 @@ ${body}
 ` + FOOT;
 }
 
-function sitemapFor(alias, entries, meta, genres = []) {
+// lastmod: the catalog's own modification date (YYYY-MM-DD), never the build date; without one, no <lastmod> is written.
+function sitemapFor(alias, entries, meta, genres = [], lastmod = null) {
   const imgNs = ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"';
+  const lm = lastmod ? `    <lastmod>${esc(lastmod)}</lastmod>\n` : '';
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${imgNs}>\n`;
-  xml += `  <url><loc>${SITE}/${alias}/</loc></url>\n`;
+  xml += `  <url>\n    <loc>${SITE}/${alias}/</loc>\n${lm}  </url>\n`;
   for (const { album, slug } of entries) {
-    xml += `  <url>\n    <loc>${SITE}/${alias}/${pathEnc(slug)}/</loc>\n`;
+    xml += `  <url>\n    <loc>${SITE}/${alias}/${pathEnc(slug)}/</loc>\n${lm}`;
     const img = coverUrl(meta.base_url, album);
     if (img) xml += `    <image:image><image:loc>${esc(img)}</image:loc></image:image>\n`;
     xml += '  </url>\n';
   }
   for (const g of genres.filter(indexavel)) {
-    xml += `  <url>\n    <loc>${SITE}/${alias}/genero/${pathEnc(g.slug)}/</loc>\n`;
+    xml += `  <url>\n    <loc>${SITE}/${alias}/genero/${pathEnc(g.slug)}/</loc>\n${lm}`;
     const capa = g.albums.find(e => e.album.has_cover !== false);
     const img = capa && coverUrl(meta.base_url, capa.album);
     if (img) xml += `    <image:image><image:loc>${esc(img)}</image:loc></image:image>\n`;
@@ -393,6 +420,16 @@ function sitemapFor(alias, entries, meta, genres = []) {
   }
   return xml + '</urlset>\n';
 }
+
+// The fixed pages (home, the three other apps). No <lastmod>: nothing here has a date that is true other than the build's.
+// The /<alias>/ indexes are in each acervo's own sitemap.
+const PAGINAS_FIXAS = ['/', '/atlas', '/3d', '/radio'];
+function sitemapPaginas() {
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    PAGINAS_FIXAS.map(p => `  <url><loc>${SITE}${p}</loc></url>\n`).join('') + '</urlset>\n';
+}
+
+const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d));
 
 function loadCatalog(file) {
   let raw = fs.readFileSync(file);
@@ -407,9 +444,9 @@ function loadGenres(file) {
   return Object.fromEntries(Object.entries(a).map(([p, idx]) => [p, idx.map(i => g[i])]));
 }
 
-function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index.html'), genresDir = path.join(__dirname, '..', 'data') }) {
+function build({ out, catalogs, lastmod = {}, templateFile = path.join(__dirname, '..', 'index.html'), genresDir = path.join(__dirname, '..', 'data') }) {
   const template = playerTemplate(fs.readFileSync(templateFile, 'utf8'));
-  const sitemaps = [];
+  const sitemaps = [], sitemapDatas = [];
   const summary = [];
   for (const [alias, file] of catalogs) {
     if (!/^[a-z0-9-]+$/.test(alias)) throw new Error(`bad acervo alias: ${alias}`);
@@ -422,12 +459,16 @@ function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index
 
     const root = path.join(out, alias);
     fs.rmSync(root, { recursive: true, force: true });
+    // Genres first: the album pages list and link their own.
+    const genres = catalogGenres(entries, loadGenres(path.join(genresDir, `${alias}-album-genres.json.gz`)));
+    const indiceGeneros = loadGenres(path.join(genresDir, `${alias}-album-genres.json.gz`));
+    const porValor = new Map(genres.map(g => [g.value, g]));
     for (const e of entries) {
       const dir = path.join(root, e.slug);
       fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, 'index.html'), albumPage({ template, alias, meta, album: e.album, slug: e.slug }));
+      const generosAlbum = (indiceGeneros[e.album.path.normalize('NFC')] || []).map(v => porValor.get(v)).filter(Boolean);
+      fs.writeFileSync(path.join(dir, 'index.html'), albumPage({ template, alias, meta, album: e.album, slug: e.slug, genres: generosAlbum }));
     }
-    const genres = catalogGenres(entries, loadGenres(path.join(genresDir, `${alias}-album-genres.json.gz`)));
     for (const genre of genres) {
       const dir = path.join(root, 'genero', genre.slug);
       fs.mkdirSync(dir, { recursive: true });
@@ -442,26 +483,36 @@ function build({ out, catalogs, templateFile = path.join(__dirname, '..', 'index
     }
 
     const smName = `sitemap-albums-${alias}.xml`;
-    fs.writeFileSync(path.join(out, smName), sitemapFor(alias, entries, meta, genres));
+    fs.writeFileSync(path.join(out, smName), sitemapFor(alias, entries, meta, genres, lastmod[alias] || null));
+    sitemapDatas.push(lastmod[alias] || null);
     sitemaps.push(smName);
-    summary.push(`${alias}: ${entries.length} album pages, ${artists.length} artist pages, ${genres.length} genre pages (${genres.filter(indexavel).length} indexable) → ${alias}/, ${smName}`);
+    summary.push(`${alias}: ${entries.length} album pages, ${artists.length} artist pages, ${genres.length} genre pages (${genres.filter(indexavel).length} indexable), lastmod ${lastmod[alias] || 'none'} → ${alias}/, ${smName}`);
   }
 
   let index = '<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
-  for (const s of sitemaps) index += `  <sitemap><loc>${SITE}/${s}</loc></sitemap>\n`;
+  sitemaps.forEach((s, i) => { index += `  <sitemap><loc>${SITE}/${s}</loc>${sitemapDatas[i] ? `<lastmod>${sitemapDatas[i]}</lastmod>` : ''}</sitemap>\n`; });
+  fs.writeFileSync(path.join(out, 'sitemap-paginas.xml'), sitemapPaginas());
+  index += `  <sitemap><loc>${SITE}/sitemap-paginas.xml</loc></sitemap>\n`;
   index += '</sitemapindex>\n';
   fs.writeFileSync(path.join(out, 'sitemap.xml'), index);
   return summary;
 }
 
-module.exports = { build, playerTracks, playerTemplate, albumPage, artistPage, catalogArtists, catalogGenres, genrePage, indexPage, sitemapFor };
+module.exports = { build, playerTracks, playerTemplate, albumPage, artistPage, catalogArtists, catalogGenres, genrePage, indexPage, sitemapFor, sitemapPaginas };
 
 if (require.main === module) {
   const args = process.argv.slice(2);
   let out = '.';
+  const lastmod = {};
+  let mtime = false;
   const catalogs = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--out') out = args[++i];
+    else if (args[i] === '--lastmod') {   // --lastmod uqt=2026-11-03: the catalog's modification date, never the build's
+      const [al, d] = args[++i].split('=');
+      if (!al || !validDate(d)) { console.error(`--lastmod wants <alias>=YYYY-MM-DD, got ${args[i]}`); process.exit(2); }
+      lastmod[al] = d;
+    } else if (args[i] === '--lastmod-mtime') mtime = true;   // read it from each catalog file's mtime (use with curl -R)
     else if (args[i].includes('=')) {
       const at = args[i].indexOf('=');
       catalogs.push([args[i].slice(0, at), args[i].slice(at + 1)]);
@@ -471,8 +522,9 @@ if (require.main === module) {
     }
   }
   if (!catalogs.length) {
-    console.error('usage: bun script/build-album-pages.js [--out dir] <alias>=<catalog.json.gz> ...');
+    console.error('usage: bun script/build-album-pages.js [--out dir] [--lastmod alias=YYYY-MM-DD | --lastmod-mtime] <alias>=<catalog.json.gz> ...');
     process.exit(2);
   }
-  for (const line of build({ out, catalogs })) console.log(line);
+  if (mtime) for (const [al, file] of catalogs) lastmod[al] ??= fs.statSync(file).mtime.toISOString().slice(0, 10);
+  for (const line of build({ out, catalogs, lastmod })) console.log(line);
 }

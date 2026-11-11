@@ -62,10 +62,14 @@ function renderAlbumHeader() {
   cover.loading = 'lazy';
   loadCoverImage(cover, selectedAlbum.cover);
 
+  // On the static album pages (<html data-album-pages>) the album title is the page's one <h1>
+  // (script/build-album-pages.js turns the app title into a <div> there); keep it one after the
+  // re-render. Elsewhere the app title is still the <h1>, so the album stays an <h2>.
+  const albumHeadingTag = document.documentElement.hasAttribute('data-album-pages') ? 'h1' : 'h2';
   const info = document.createElement('div');
   info.className = 'album-header-info';
   info.innerHTML = `
-    <h2>${escapeHtml(selectedAlbum.name)}</h2>
+    <${albumHeadingTag}>${escapeHtml(selectedAlbum.name)}</${albumHeadingTag}>
     <p><strong>${artistLinksHTML(selectedAlbum.artists)}</strong></p>
     <p><span class="year-link" role="button" tabindex="0" aria-label="Filtrar álbuns de ${escapeHtml(selectedAlbum.year)}">${escapeHtml(selectedAlbum.year)}</span> • ${selectedAlbum.tracks.length} canções</p>
   `;
