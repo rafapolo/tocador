@@ -29,7 +29,7 @@ async function boot(page, url = '/atlas') {
   await page.evaluate(() => { window.__atlas.ouvirBanda = () => true; });
 }
 const sim = page => page.evaluate(() => window.__atlasSim.estado());
-const nota = (page, e) => page.evaluate(e => window.__atlasSim.nota({ ...e, t: window.__atlas.agoraSom() }), e);
+const nota = (page, e, adiante = 0) => page.evaluate(([e, a]) => window.__atlasSim.nota({ ...e, t: window.__atlas.ouvidoSom() + a }), [e, adiante]);
 
 test('?sim=1 pede o clique, sai do endereço e abre o palco; Esc fecha', async ({ page }) => {
   await boot(page, '/atlas?sim=1');
@@ -170,4 +170,29 @@ test('no grafo o cartão da banda fica por cima e fecha pelo ✕ ou pelo própri
   await banda.click();                                      // o botão desliga também
   await expect(page.locator('#sim')).toBeHidden();
   expect(await sim(page)).toBeNull();
+});
+
+test('a nota aparece quando sai no alto-falante, e o braço sobe antes dela', async ({ page }) => {
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  await nota(page, { papel: 'surdo', familia: 'samba', vel: 0.6 });
+  await expect.poll(async () => (await sim(page)).musicos.length).toBe(1);
+  // uma voz nova daqui a 1,2 s: ainda não está no palco
+  await nota(page, { papel: 'mel', familia: 'samba', vel: 0.5, timbre: 'cavaco' }, 1.2);
+  await page.waitForTimeout(300);
+  expect((await sim(page)).musicos.map(m => m.chave)).toEqual(['samba|perc']);
+  await expect.poll(async () => (await sim(page)).musicos.length, { timeout: 4000 }).toBe(2);
+  // o percussionista prepara o golpe antes da próxima batida dele
+  await nota(page, { papel: 'surdo', familia: 'samba', vel: 0.6 }, 0.6);
+  await expect.poll(async () => (await sim(page)).musicos.find(m => m.chave === 'samba|perc').preparo, { timeout: 3000, intervals: [20] }).toBeGreaterThan(0.3);
+});
+
+test('a Simulação tem o seu grupo nos controles, com ícone, fora do grupo do Tour', async ({ page }) => {
+  await boot(page);
+  const grupo = page.locator('#controles > .seg[aria-label="Simulação"]');
+  await expect(grupo.locator('#btn-sim svg use')).toHaveAttribute('href', '#i-banda');
+  await expect(page.locator('.seg[aria-label="Tour"] #btn-sim')).toHaveCount(0);
+  const ordem = await page.evaluate(() => [...document.querySelectorAll('#controles > .seg')].map(g => g.getAttribute('aria-label')));
+  expect(ordem.indexOf('Simulação')).toBe(ordem.indexOf('Som') + 1);
 });

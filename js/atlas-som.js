@@ -875,6 +875,8 @@
     return {
       saida, volume, avancar, definir, tap, swell, medidor,
       ouvir(fn) { ouvinte = fn || null; },
+      // em que tempo (em seminímas, desde o início) a banda está no instante T do contexto: o pulso de quem dança
+      batidaEm: T => (tick + (T - tProx) * bpm / 60 * POR_SEMINIMA) / POR_SEMINIMA,
       estado() {
         return {
           bpm: Math.round(bpm), tonica, modo, regente: regente?.nome ?? null, melodista: melodista?.nome ?? null,
@@ -1042,7 +1044,16 @@
       analisador: () => m?.medidor ?? null,
       // js/atlas-sim.js: every note the band plays ({ papel, familia, t, vel, timbre }), and the clock it is timed on
       ouvir(fn) { ouvinteSim = fn || null; m?.ouvir(ouvinteSim); },
-      agora: () => ac?.currentTime ?? 0,   // the output's AnalyserNode, for js/atlas-visor.js
+      agora: () => ac?.currentTime ?? 0,
+      // o instante do contexto que está saindo no alto-falante agora: currentTime menos a latência de saída
+      // (Bluetooth passa de 150 ms). É por ele que a banda mostra cada nota, e não pelo currentTime.
+      ouvido() {
+        if (!ac) return 0;
+        const ts = ac.getOutputTimestamp?.();
+        if (ts && ts.contextTime > 0 && ts.performanceTime > 0) return ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+        return ac.currentTime - (ac.outputLatency || ac.baseLatency || 0);
+      },
+      batida() { return m && ac ? m.batidaEm(this.ouvido()) : null; },   // the output's AnalyserNode, for js/atlas-visor.js
       tap(graus, vel) { if (audivel() && m) m.tap(graus, vel); },
       momento(graus, vel) { if (audivel() && m) m.swell(graus, vel); },
       estado() {

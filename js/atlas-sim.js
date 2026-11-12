@@ -8,8 +8,9 @@
 //
 // Cada músico é uma voz de verdade do motor (js/atlas-som.js, `ouvir()`): a percussão, o baixo, a harmonia ou a
 // melodia de uma família de gêneros. Ele entra no palco quando a voz começa a tocar e some quando ela se cala por
-// alguns segundos. Cada nota agendada chega com o horário do AudioContext em que soa, e o golpe, o dedilhado ou o
-// sopro acontece nesse instante, não quando o evento chega. Entre as notas os músicos balançam no andamento da banda.
+// alguns segundos. Cada nota agendada chega com o horário do AudioContext em que soa; a banda a mostra quando ela
+// sai no alto-falante (`ouvido()`: o currentTime menos a latência de saída), com o braço subindo 140 ms antes e
+// descendo na nota. Os corpos dançam no pulso do próprio motor (`batida()`), não num relógio à parte. Entre as notas os músicos balançam no andamento da banda.
 // A câmera dirige como num clipe: corta na batida entre close, médio, contra-plongée, dois músicos, travelling e
 // plano aberto, sempre em quem tocou mais forte. Luz de filme (tone mapping ACES, contraluz, fachos aditivos sobre cada
 // músico, clarão nos golpes fortes, poeira na névoa), sombra falsa sob os pés, vinheta e grão por CSS. Por trás do
@@ -27,7 +28,8 @@
   const reduz = matchMedia('(prefers-reduced-motion: reduce)');
   const $ = id => document.getElementById(id);
   const SOME_S = 5;            // calado por tanto tempo, o músico sai
-  const MAX_MUSICOS = 8;       // no palco ao mesmo tempo; os que saem não contam
+  const MAX_MUSICOS = 8;
+  const PREPARO_S = 0.14;      // o braço começa a subir tanto antes da nota       // no palco ao mesmo tempo; os que saem não contam
   const MAPA_CADA_S = 20;      // a câmera do mapa troca de rótulo, e com ela a banda…
   const MAPA_PARADO_S = 25;    // …quando ninguém mexe no mapa há tanto tempo
 
@@ -208,7 +210,7 @@
     cor.setHSL((hsl.h + (hash(familia) - 0.5) * 0.22 + 1) % 1, hsl.s, Math.min(0.7, hsl.l * (0.8 + hash(familia + 'l') * 0.45)));
     const fig = criarCorpo(chave, cor);
     const m = { chave, familia, grupo, timbre, fig, nomeFamilia: f.nome, pose: 'corda', pecas: new Set(),
-      vis: 0, energia: 0, foco: 0, golpe: [0, 0], lado: 0, ultimo: performance.now() / 1000, cabecaY: 0,
+      vis: 0, energia: 0, foco: 0, golpe: [0, 0], lado: 0, preparo: 0, prox: Infinity, ultimo: performance.now() / 1000, cabecaY: 0,
       alvo: new THREE.Vector3(), fase: hash(chave) * Math.PI * 2 };
     criarInstrumento(m, timbre);
     run.cena.add(fig.g);
@@ -488,11 +490,12 @@
     if (f.length && e.t < f[f.length - 1].t) run.desordem = true;     // quase sempre chegam em ordem: ordenar só quando não
     f.push(e);
   }
+  // Um músico por família, grupo e instrumento: quando a voz troca de instrumento (cavaquinho → flauta), quem
+  // tocava o antigo sai e entra quem toca o novo.
+  const chaveDe = e => { const g = grupoDe(e.papel), tb = g === 'perc' ? '' : e.timbre || ''; return `${e.familia}|${g}${tb ? '|' + tb : ''}`; };
   function tocarNota(e, agora) {
-    // Um músico por família, grupo e instrumento: quando a voz troca de instrumento (cavaquinho → flauta), quem
-    // tocava o antigo sai e entra quem toca o novo.
     const grupo = grupoDe(e.papel), timbre = grupo === 'perc' ? '' : e.timbre || '';
-    const chave = `${e.familia}|${grupo}${timbre ? '|' + timbre : ''}`;
+    const chave = chaveDe(e);
     let m = run.musicos.get(chave);
     if (!m || m.saindo) {
       const ativos = [...run.musicos.values()].filter(x => !x.saindo && x !== m);
@@ -547,12 +550,25 @@
     const t = ms / 1000, dt = Math.min(0.05, t - (run.tq || t)), parado = reduz.matches;
     run.tq = t;
     if (dt > 0) ajustarResolucao(dt);
-    const agoraAudio = at.agoraSom(), fila = run.fila;
+    // Cada nota aparece quando ela sai no alto-falante (o tempo ouvido, já com a latência de saída), e o braço sobe
+    // antes dela: a descida cai em cima do som, como num golpe de verdade.
+    const agoraAudio = at.ouvidoSom ? at.ouvidoSom() : at.agoraSom(), fila = run.fila;
     if (run.desordem) { fila.sort((a, b) => a.t - b.t); run.desordem = false; }
     let k = 0;
     while (k < fila.length && fila[k].t <= agoraAudio) tocarNota(fila[k++], t);
     if (k) fila.splice(0, k);
     if (fila.length > 2000) fila.splice(0, fila.length - 2000);
+    for (const m of run.musicos.values()) m.prox = Infinity;
+    for (const e of fila) {
+      if (e.t - agoraAudio > PREPARO_S) break;
+      const m = run.musicos.get(chaveDe(e));
+      if (m && e.t < m.prox) m.prox = e.t;
+    }
+    for (const m of run.musicos.values()) {
+      const falta = m.prox - agoraAudio;
+      const alvo = falta < PREPARO_S ? 1 - falta / PREPARO_S : 0;
+      m.preparo = alvo > m.preparo ? alvo : m.preparo * Math.exp(-dt * 18);     // sobe junto com a nota; desce rápido
+    }
 
     // o andamento: lido do motor duas vezes por segundo, a fase do tempo corre entre uma leitura e outra
     if (t - (run.tBpm || 0) > 0.5) {
@@ -561,8 +577,11 @@
       if (s?.bpm) run.bpm = s.bpm;
       legenda(s);
     }
-    const antes = run.batida;
-    run.batida += dt * (run.bpm || 100) / 60;
+    // O pulso vem do próprio motor (o tempo da banda no instante ouvido), não de um relógio à parte que derivaria.
+    // Sem ele, um relógio no andamento lido.
+    const antes = run.batida, doMotor = at.batidaSom?.();
+    if (doMotor != null && Number.isFinite(doMotor) && Math.abs(doMotor - antes) < 8) run.batida = Math.max(antes, doMotor);
+    else run.batida += dt * (run.bpm || 100) / 60;
     const b = run.batida * Math.PI * 2;
 
     let saiu = false;
@@ -626,17 +645,24 @@
     posar(m, bracos, b, parado);
   }
 
-  // Braços por instrumento: o golpe é o que acabou de soar, o resto é a pose de quem segura aquilo.
+  // Braços por instrumento. `preparo` (0 → 1 nos 140 ms antes da próxima nota) levanta o braço que vai tocar;
+  // `golpe` (1 na nota, caindo rápido) o leva abaixo do repouso. A batida cai no som, como num golpe de verdade.
   function posar(m, [esq, dir], b, parado) {
-    const [ge, gd] = m.golpe, osc = parado ? 0 : Math.sin(b * 2) * 0.05;
+    const [ge, gd] = m.golpe, pr = parado ? 0 : m.preparo * m.preparo, osc = parado ? 0 : Math.sin(b * 2) * 0.04;
+    const vez = m.lado ^ 1;                  // na percussão as mãos se alternam: sobe a que bate em seguida
     switch (m.pose) {
-      case 'perc': esq.rotation.set(-0.9 - ge * 0.9 + osc, 0, 0.1); dir.rotation.set(-0.9 - gd * 0.9 - osc, 0, -0.1); break;
-      case 'tecla': esq.rotation.set(-0.75 - ge * 0.3, 0, 0.15); dir.rotation.set(-0.75 - gd * 0.3, 0, -0.15); break;
-      case 'sanfona': esq.rotation.set(-1.1, 0, -0.3 - gd * 0.4); dir.rotation.set(-1.1, 0, 0.3 + gd * 0.4); break;
-      case 'voz': esq.rotation.set(-0.2 + osc - gd * 0.5, 0, 0.2 + gd * 0.3); dir.rotation.set(-1.6 - gd * 0.2, 0, -0.2); break;
-      case 'sopro': esq.rotation.set(-1.7, 0, 0.3); dir.rotation.set(-1.5 - gd * 0.15, 0, -0.3); break;
-      case 'contrabaixo': esq.rotation.set(-1.6, 0, -0.4); dir.rotation.set(-0.6 - gd * 0.5, 0, 0); break;
-      default: esq.rotation.set(-1.2, 0, 0.7); dir.rotation.set(-0.7 - gd * 0.6, 0, -0.25);     // dedilhado
+      case 'perc': {
+        const sobeE = vez === 0 ? pr : 0, sobeD = vez === 1 ? pr : 0;
+        esq.rotation.set(-0.75 - sobeE * 1.1 + ge * 0.35 + osc, 0, 0.1);
+        dir.rotation.set(-0.75 - sobeD * 1.1 + gd * 0.35 - osc, 0, -0.1);
+        break;
+      }
+      case 'tecla': esq.rotation.set(-0.8 - pr * 0.25 + ge * 0.15, 0, 0.15); dir.rotation.set(-0.8 - pr * 0.25 + gd * 0.15, 0, -0.15); break;
+      case 'sanfona': esq.rotation.set(-1.1, 0, -0.3 - pr * 0.15 - gd * 0.4); dir.rotation.set(-1.1, 0, 0.3 + pr * 0.15 + gd * 0.4); break;
+      case 'voz': esq.rotation.set(-0.2 + osc - pr * 0.3 - gd * 0.4, 0, 0.2 + gd * 0.3); dir.rotation.set(-1.6 - gd * 0.15, 0, -0.2); break;
+      case 'sopro': esq.rotation.set(-1.7, 0, 0.3); dir.rotation.set(-1.5 - pr * 0.08 + gd * 0.12, 0, -0.3); break;
+      case 'contrabaixo': esq.rotation.set(-1.6, 0, -0.4); dir.rotation.set(-0.6 - pr * 0.45 + gd * 0.35, 0, 0); break;
+      default: esq.rotation.set(-1.2, 0, 0.7); dir.rotation.set(-0.85 - pr * 0.5 + gd * 0.45, 0, -0.25);     // palhetada: sobe e desce na nota
     }
   }
 
@@ -872,7 +898,7 @@
 
   window.__atlasSim = {
     iniciar, parar,
-    estado: () => run && { musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], vis: +m.vis.toFixed(2) })), foco: run.focoEm, plano: run.plano.tipo, fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
+    estado: () => run && { musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2) })), batida: +run.batida.toFixed(2), foco: run.focoEm, plano: run.plano.tipo, fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
       cenarios: Object.fromEntries(Object.entries(run.cenarios).filter(([, c]) => c.peso > 0.02).map(([n, c]) => [n, +c.peso.toFixed(2)])) },
     // testes: notas sem depender do áudio
     nota: e => aoTocar(e),

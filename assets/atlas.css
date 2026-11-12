@@ -93,7 +93,7 @@ button { font: inherit; color: inherit; }
    take a line of their own; between that and 1280 px the labels that repeat themselves make room first. */
 #controles { display: flex; gap: 8px; flex: none; flex-wrap: wrap; margin-left: auto; }
 @media (max-width: 1279px) {
-  [data-acervo] .ic, [data-mapa] .ic, #btn-musica span, #btn-sobre span { display: none; }
+  [data-acervo] .ic, [data-mapa] .ic, #btn-musica span, #btn-sim span, #btn-sobre span { display: none; }
 }
 @media (max-width: 1039px) {
   [data-acervo] .ic, [data-mapa] .ic { display: inline-block; }
@@ -145,6 +145,7 @@ button { font: inherit; color: inherit; }
 #zoom-girar[aria-pressed="true"]:hover { background: var(--text); }
 #btn-musica.espera { color: var(--accent); }
 #btn-musica:disabled { opacity: 0.45; cursor: not-allowed; }
+#btn-sim[aria-pressed="true"] { color: var(--accent); }
 
 /* ── cartão da faixa ── */
 #cartao {
@@ -219,7 +220,7 @@ button { font: inherit; color: inherit; }
   #busca-wrap { order: 3; flex: 1 1 100%; max-width: none; }
   #controles { order: 4; }
   .seg button, .seg a { padding: 6px 11px; }
-  #btn-musica span, #btn-sobre span { display: none; }
+  #btn-musica span, #btn-sim span, #btn-sobre span { display: none; }
   /* A linha dos filtros já está cheia: o ? usa a sobra ao lado de Som/Gêneros. */
   #controles > .seg:first-child { order: -2; }
   #controles > .seg-sobre, #controles > .seg:has(#btn-tour) { order: -1; }

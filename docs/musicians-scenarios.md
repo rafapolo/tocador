@@ -1,7 +1,7 @@
 # A banda do Atlas: músicos e cenários
 
 A banda é a sonificação do `/atlas` tocada por músicos em 3D, num cartão à esquerda do mapa. Ela abre de três jeitos:
-o botão **Banda**, `?sim=1` ou `/atlas/sim`.
+o botão **Simulação** (grupo próprio nos controles, depois do Sonificar), `?sim=1` ou `/atlas/sim`.
 
 - **Código:** `js/atlas-sim.js`. O motor de som que ela escuta é `js/atlas-som.js`, e as famílias de gênero vêm de
   `js/atlas-receitas.js`.
@@ -16,9 +16,17 @@ Nada é inventado: cada músico é uma voz real do motor de som.
 
 - **Evento de nota:** `criarMotorSom()` emite `{ papel, familia, t, vel, timbre }` para cada golpe ou nota que agenda.
   Sem ninguém ouvindo, a emissão não faz nada, e ouvir não muda o som.
-- **Sincronia:** o motor agenda ~0,1 s à frente, então a banda guarda os eventos numa fila e só toca cada um quando o
-  relógio do `AudioContext` chega em `t`. O golpe acontece no instante exato em que a nota soa.
-- **Ganchos:** `__atlas.ouvirBanda(fn)`, `__atlas.agoraSom()` e `__atlas.familia(f)` (`{ cor, nome }`).
+- **Sincronia:**
+  - O motor agenda ~0,1 s à frente, então a banda guarda os eventos numa fila.
+  - Cada nota só aparece quando sai no alto-falante (`ouvido()`). Esse instante vem do `getOutputTimestamp()` do
+    `AudioContext`, ou do `currentTime` menos a `outputLatency`, e não do `currentTime` puro. Medido no Mac, nas caixas:
+    77 ms de diferença. No Bluetooth passa de 150 ms.
+  - Golpe: nos 140 ms antes da próxima nota de um músico, o braço que vai tocar sobe (`preparo`); na nota, desce
+    abaixo do repouso (`golpe`). A batida cai em cima do som, e na percussão as mãos se alternam.
+  - O pulso da dança vem do próprio motor (`batidaEm(T)`: o tick agendado e o andamento atual), lido no instante
+    ouvido. Assim os corpos não derivam do ritmo, como derivava um relógio à parte.
+- **Ganchos:** `__atlas.ouvirBanda(fn)`, `__atlas.agoraSom()`, `__atlas.ouvidoSom()`, `__atlas.batidaSom()` e
+  `__atlas.familia(f)` (`{ cor, nome }`).
 
 ### Um músico por família × grupo × instrumento
 

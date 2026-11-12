@@ -1436,6 +1436,8 @@
     // For the band of /atlas?sim=1 (js/atlas-sim.js): every note the sonification plays, its clock and its families.
     ouvirBanda(fn) { som?.ouvir(fn); return !!som; },
     agoraSom: () => som?.agora() ?? 0,
+    ouvidoSom: () => som?.ouvido() ?? 0,     // o que está saindo no alto-falante agora (com a latência de saída)
+    batidaSom: () => som?.batida() ?? null,   // o pulso da banda nesse instante, em seminímas
     familia: f => ({ cor: corFam.get(f) || '#d4a574', nome: nomeFam.get(f) || f }),
     aplicarUrl,
   };
