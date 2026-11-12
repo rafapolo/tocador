@@ -39,7 +39,7 @@ export function encodeFeatures({ acervo, keys, rows }) {
   const n = keys.length;
   const bpm = new Uint16Array(n), bpmConf = new Uint8Array(n), tom = new Uint8Array(n), loud = new Uint8Array(n);
   const probs = Object.fromEntries(F.FEATURE_PROBS.map(k => [k, new Uint8Array(n)]));
-  const g = new Uint16Array(3 * n), gw = new Uint8Array(3 * n), inst = new Uint8Array(3 * n);
+  const g = new Uint16Array(3 * n), gw = new Uint8Array(3 * n), inst = new Uint8Array(3 * n), iw = new Uint8Array(3 * n);
   const genres = [], insts = [];
   const idx = (table, name) => { let i = table.indexOf(name); if (i < 0) { i = table.length; table.push(name); } return i + 1; };
   const stats = { sem_analise: 0, bpm_fora: 0 };
@@ -57,10 +57,10 @@ export function encodeFeatures({ acervo, keys, rows }) {
     loud[i] = Math.max(0, Math.min(255, Math.round(-(r.loud_db ?? 0))));
     for (const name of F.FEATURE_PROBS) probs[name][i] = q255(r[name]);
     (r.genre || []).slice(0, 3).forEach(([name, p], j) => { g[3 * i + j] = idx(genres, name); gw[3 * i + j] = q255(p); });
-    (r.inst || []).slice(0, 3).forEach(([name], j) => { inst[3 * i + j] = idx(insts, name); });
+    (r.inst || []).slice(0, 3).forEach(([name, p], j) => { inst[3 * i + j] = idx(insts, name); iw[3 * i + j] = q255(p); });
   });
 
-  const c = { bpm: b64(new Uint8Array(bpm.buffer)), bpmConf: b64(bpmConf), tom: b64(tom), loud: b64(loud), g: b64(new Uint8Array(g.buffer)), gw: b64(gw), inst: b64(inst) };
+  const c = { bpm: b64(new Uint8Array(bpm.buffer)), bpmConf: b64(bpmConf), tom: b64(tom), loud: b64(loud), g: b64(new Uint8Array(g.buffer)), gw: b64(gw), inst: b64(inst), iw: b64(iw) };
   for (const name of F.FEATURE_PROBS) c[name] = b64(probs[name]);
   // Uint16Array -> bytes is little-endian on every platform Bun/Node run on (x86, arm64).
   return {

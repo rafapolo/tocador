@@ -198,9 +198,41 @@
     grafo.atualizarPainel();
     semHistorico(() => {
       const q = new URLSearchParams(location.search);
-      selecaoDaUrl(q);
+      const i = q.get('faixa') ? faixaDaUrl(q.get('faixa')) : -1;
+      // A shared search with its track: frame every hit, the track among them, instead of zooming onto the track.
+      if (i >= 0 && filtro.busca?.[i] && nAtivo > 1 && !grafo.aberto) enquadrarBuscaCom(i);
+      else selecaoDaUrl(q);
+      if (sel >= 0 && sel === i) armarPrevia(i);
       if (!grafo.aberto) cameraDaUrl(q);    // a shared spot wins over the selection's own framing
     });
+  }
+  function enquadrarBuscaCom(i) {
+    selecionar(i);
+    const b = caixa(mapa, ativo, nAtivo > 50 ? 0.02 : 0, nAtivo > 50 ? 0.98 : 1, true);
+    if (!b) return;
+    const x = px(i, mapa), y = py(i, mapa);   // trimmed outliers may leave the track out of the box
+    enquadrar([Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)], false, 0.015);
+  }
+  // A shared track's preview plays on its own. The browser refuses sound before a gesture, so unless the page
+  // already has one, the first tap or key starts it, the way Sonificar waits. A gesture on a control or on the
+  // card means the visitor took over: the offer is dropped.
+  function armarPrevia(i) {
+    const tocar = () => { if (sel === i && audio.paused) $('cartao-previa').click(); };
+    if (navigator.userActivation?.isActive) { tocar(); return; }
+    const gesto = e => {
+      if (e.type === 'pointerup' && e.button > 0) return;
+      desarmar();
+      const t = e.target?.closest ? e.target : document.body;
+      if (e.type === 'keydown') {
+        if (/^(Escape|[gGmMtT/])$/.test(e.key)) return;     // close, graph, Sonificar, tour, search
+        if (t.closest('input, select, textarea')) return;      // typing
+        if ((e.key === 'Enter' || e.key === ' ') && t.closest('button, a')) return;   // pressing a control
+      } else if (t.closest('button, a, input, select, textarea, #cartao, #grafo-painel')) return;
+      setTimeout(tocar, 0);     // after the map's own click: a tap on another dot selects it and nothing plays
+    };
+    const desarmar = () => { removeEventListener('pointerup', gesto, true); removeEventListener('keydown', gesto, true); };
+    addEventListener('pointerup', gesto, true);
+    addEventListener('keydown', gesto, true);
   }
 
   // ── WebGL ──
@@ -616,6 +648,8 @@
   // Per-track audio features, fetched only once the music starts. Rows are the catalog's tracks in order, and
   // a catalog that changed after the features were built is refused: the music then plays the plain recipes.
   const feats = [];
+  let featsP = null;     // one fetch, shared by the music and the card's instruments
+  const garantirFeatures = () => featsP ??= carregarFeaturesSom();
   async function carregarFeaturesSom() {
     await prontoP;
     await Promise.allSettled(A.acervos.map(async (ak, ai) => {
@@ -788,6 +822,7 @@
       $('cartao-ouvir').href = urlPlayer(i);
       $('cartao-ouvir').removeAttribute('aria-disabled');
       $('cartao-previa').hidden = false;
+      mostrarInstrumentos(i);
       mostrarParecidos(i, parseArtists(info.artista));
       const base = info.db.meta?.base_url;
       if (info.album.has_cover && base) {
@@ -801,10 +836,47 @@
       $('cartao-ouvir').setAttribute('aria-disabled', 'true');
       $('cartao-previa').hidden = true;
       $('cartao-parecidos').hidden = true;
+      $('cartao-instrumentos').hidden = true;
       capa.hidden = true;
     }
     cartao.hidden = false;
     pedir();
+  }
+  // The Jamendo instrument model (js/acervo-features.js): its 40 names in pt-BR, merged where two mean the same to a
+  // listener. Below 0.2 a guess is noise (on uqt tracks before 1970, "synthesizer" & co. drop from 5% to 0.9%).
+  const INSTRUMENTOS = {
+    accordion: 'sanfona', acousticbassguitar: 'baixolão', acousticguitar: 'violão', bass: 'baixo', beat: 'batida eletrônica',
+    bell: 'sino', bongo: 'bongô', brass: 'metais', cello: 'violoncelo', clarinet: 'clarinete', classicalguitar: 'violão',
+    computer: 'eletrônicos', doublebass: 'contrabaixo', drummachine: 'bateria eletrônica', drums: 'bateria',
+    electricguitar: 'guitarra', electricpiano: 'piano elétrico', flute: 'flauta', guitar: 'violão ou guitarra',
+    harmonica: 'gaita', harp: 'harpa', horn: 'trompa', keyboard: 'teclado', oboe: 'oboé', orchestra: 'orquestra',
+    organ: 'órgão', pad: 'sintetizador', percussion: 'percussão', piano: 'piano', pipeorgan: 'órgão de tubos',
+    rhodes: 'piano Rhodes', sampler: 'sampler', saxophone: 'saxofone', strings: 'cordas', synthesizer: 'sintetizador',
+    trombone: 'trombone', trumpet: 'trompete', viola: 'viola de arco', violin: 'violino', voice: 'voz',
+  };
+  const INSTRUMENTO_MIN = 0.2;
+  function instrumentosDe(i) {
+    const f = feats[A.acervo[i]], r = ptFila?.[i] ?? -1;
+    if (!f || r < 0 || !f.has(r)) return [];
+    const nomes = [];
+    for (const { name, p } of f.instrumentsP(r)) {
+      if (p !== null && p < INSTRUMENTO_MIN) continue;
+      const n = INSTRUMENTOS[name] || name;
+      if (!nomes.includes(n)) nomes.push(n);
+    }
+    return nomes;
+  }
+  async function mostrarInstrumentos(i) {
+    $('cartao-instrumentos').hidden = true;
+    await garantirFeatures().catch(() => {});
+    const nomes = sel === i ? instrumentosDe(i) : [];
+    if (!nomes.length) return;
+    $('cartao-instrumentos-lista').replaceChildren(...nomes.map(n => {
+      const li = document.createElement('li');
+      li.textContent = n;
+      return li;
+    }));
+    $('cartao-instrumentos').hidden = false;
   }
   async function mostrarParecidos(i, artistas) {
     $('cartao-parecidos').hidden = true;
@@ -1258,13 +1330,14 @@
 
   // ── music ──
   let som = null;
+  const corFam = new Map(), nomeFam = new Map();     // music family -> macro colour and display name
   function iniciarSom() {
     som = criarSomAtlas({
       generos: A.generos, regiao: regiaoSom, previa: audio, pararPrevia, botao: $('btn-musica'),
-      aoPrimeiroSom: () => { carregarFeaturesSom().catch(err => console.warn('[atlas] sem features para a música', err)); },
+      aoPrimeiroSom: () => { garantirFeatures().catch(err => console.warn('[atlas] sem features para a música', err)); },
     });
     // The visor colours each family like the map colours its genres: the macro of the first label it plays.
-    const corFam = new Map(), nomeFam = new Map(), R = window.RECEITAS_ATLAS;
+    const R = window.RECEITAS_ATLAS;
     for (const g of A.generos) {
       const f = R?.familiaDe(g);
       if (!f || corFam.has(f)) continue;
@@ -1360,6 +1433,10 @@
     fecharGrafo(z) { const n = grafo.centro; grafo.fechar(false); if (n) irParaArtista(n, k0 * z); },
     prenderUrl(on) { urlPresa = on; if (on) clearTimeout(tUrl); },
     querSom(on) { som?.querer(on); },
+    // For the band of /atlas?sim=1 (js/atlas-sim.js): every note the sonification plays, its clock and its families.
+    ouvirBanda(fn) { som?.ouvir(fn); return !!som; },
+    agoraSom: () => som?.agora() ?? 0,
+    familia: f => ({ cor: corFam.get(f) || '#d4a574', nome: nomeFam.get(f) || f }),
     aplicarUrl,
   };
 

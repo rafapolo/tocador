@@ -56,6 +56,7 @@ function decodeFeatures(p, catalogKeys) {
     loud: col('loud'),                               // dB = -value
     genreNames: p.genres, instNames: p.insts,
     g, gw: col('gw'), inst: col('inst'),             // stride 3; genre/inst index + 1 (0 none), weights /255
+    iw: p.c.iw ? col('iw') : null,                   // instrument weights /255, absent in payloads built before 2026-11-12
   };
   for (const name of FEATURE_PROBS) f[name] = col(name);
 
@@ -75,6 +76,15 @@ function decodeFeatures(p, catalogKeys) {
   f.instruments = i => {
     const out = [];
     for (let j = 0; j < 3; j++) { const idx = f.inst[3 * i + j]; if (idx) out.push(f.instNames[idx - 1]); }
+    return out;
+  };
+  // [{ name: 'piano', p: 0.41 }, ...]; p is null when the payload has no weights.
+  f.instrumentsP = i => {
+    const out = [];
+    for (let j = 0; j < 3; j++) {
+      const idx = f.inst[3 * i + j];
+      if (idx) out.push({ name: f.instNames[idx - 1], p: f.iw ? f.iw[3 * i + j] / 255 : null });
+    }
     return out;
   };
   return f;

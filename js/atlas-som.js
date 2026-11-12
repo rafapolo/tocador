@@ -414,6 +414,10 @@
     // ── the transport ──
     const vozes = new Map();      // family -> { r, alvo, peso, g, gp, d, pan, panP, subs, mult }
     let bpm = 100, bpmAlvo = 100, tick = 0, barra = -1, tProx = ac.currentTime + 0.06;
+    // Who plays what, for /atlas?sim=1 (js/atlas-sim.js): every scheduled hit or note, at the context time it sounds.
+    // Nobody listening, nothing happens; listening changes nothing in what is played.
+    let ouvinte = null;
+    const emitir = (papel, v, t, vel, timbre) => { if (ouvinte) ouvinte({ papel, familia: v.nome, t, vel, timbre }); };
     let regente = null, acorde = null, seguinte = null, modo = 'maior', tonica = 0;
     let camadas = { cama: 1, perc: 0, baixo: 0, acorde: 0, mel: 0 };
     let tempero = null, semente = 1, cama = { fim: 0, raiz: -1 };
@@ -709,6 +713,7 @@
       for (const v of can) {
         const base = v.r.mel.oit || 0, lig = liga === null ? null : liga + base;
         nota(v.r.mel.t, m + base, t, dur, (N.forte || N.fim ? 0.5 : 0.4) * camadas.mel * v.r.mix.mel, sub(v, 'mel'), 1, lig);
+        emitir('mel', v, t, (N.forte || N.fim ? 0.5 : 0.4) * camadas.mel * v.r.mix.mel, v.r.mel.t);
       }
       ultimaMel = { m, fim: t + dur };
     }
@@ -734,7 +739,7 @@
       const inicio = lider && r.virada.length ? [1, 0.75, 0.5][forma.virada] : 1, emVirada = pos >= inicio;
       const dens = tempero?.densidade ?? 0.7, onda8 = 0.93 + 0.07 * (barra % 8) / 7;
       if (camadas.perc > 0.02) {
-        if (lider && forma.entrada && pos === 0 && r.bateria) PERC.prato(t0, 1.2 * camadas.perc, sub(v, 'prato', true));
+        if (lider && forma.entrada && pos === 0 && r.bateria) { PERC.prato(t0, 1.2 * camadas.perc, sub(v, 'prato', true)); emitir('prato', v, t0, 1.2 * camadas.perc); }
         for (const inst in r.perc) {
           const p = r.perc[inst], c = p[s % p.length];
           if (c === '.') continue;
@@ -749,7 +754,9 @@
           if (c === 'o' && hash(s, ID[inst]) > dens + 0.2) continue;
           if (r.acaso && hash(barra, s, ID[inst]) < r.acaso) continue;
           const t = t0 + desvio(v, s, dt, inst);
-          PERC[inst](t, fora * NIVEL[c] * camadas.perc * r.mix.perc * onda8 * (0.88 + 0.2 * hash(barra, s, ID[inst])), sub(v, inst, true));
+          const velP = fora * NIVEL[c] * camadas.perc * r.mix.perc * onda8 * (0.88 + 0.2 * hash(barra, s, ID[inst]));
+          PERC[inst](t, velP, sub(v, inst, true));
+          emitir(inst, v, t, velP);
           if (inst === 'bumbo' && r.bomba) {       // the kick pushes everything else down: the pump of a dance track
             v.d.gain.cancelScheduledValues(t);
             v.d.gain.setValueAtTime(1 - r.bomba, t);
@@ -760,7 +767,9 @@
           const f = (pos - inicio) / (1 - inicio);
           if (hash(barra, s, 21) < 0.55 + 0.4 * f) {
             const inst = r.virada[Math.floor(hash(barra, s, 22) * r.virada.length)];
-            PERC[inst](t0 + desvio(v, s, dt, inst), (0.5 + 0.5 * f) * camadas.perc * r.mix.perc, sub(v, inst, true));
+            const tv = t0 + desvio(v, s, dt, inst), velV = (0.5 + 0.5 * f) * camadas.perc * r.mix.perc;
+            PERC[inst](tv, velV, sub(v, inst, true));
+            emitir(inst, v, tv, velV);
           }
         }
       }
@@ -784,6 +793,7 @@
           v.hits++;
           const dur = dt * ateProxima(B.p, s) * (B.longo ? 1 : 0.85);
           nota(B.t, m, t, dur, NIVEL[c] * camadas.baixo * r.mix.baixo, sub(v, 'baixo'), tempero?.brilho ?? 1, hash(barra, s, 8) < 0.3 ? v.notaB ?? null : null);
+          emitir('baixo', v, t, NIVEL[c] * camadas.baixo * r.mix.baixo, B.t);
           v.notaB = m;
         }
       }
@@ -795,6 +805,7 @@
           const t = t0 + desvio(v, s, dt, 'acorde');
           const vel = NIVEL[c] * camadas.acorde * (C.suave ? 0.62 : 1) * onda8 * r.mix.acorde;
           const dur = dt * ateProxima(C.p, s) * (C.longo ? 1 : 0.8), d = sub(v, 'acorde');
+          emitir('acorde', v, t, vel, C.t);
           if (C.arpejo) {
             const a = C.arpejo[s % C.arpejo.length], ns = vozear(v, C);
             nota(C.t, ns[a % ns.length] + (a >= ns.length ? 12 : 0), t, dur * 2, vel, d, tempero?.brilho ?? 1);
@@ -863,6 +874,7 @@
 
     return {
       saida, volume, avancar, definir, tap, swell, medidor,
+      ouvir(fn) { ouvinte = fn || null; },
       estado() {
         return {
           bpm: Math.round(bpm), tonica, modo, regente: regente?.nome ?? null, melodista: melodista?.nome ?? null,
@@ -892,7 +904,7 @@
     let ativado = false, previaTocando = false, outroSom = false, ignorarOutro = false, dormindo = false;
     let destravado = false;                  // the context has really run: until then the button can't promise sound
     const Ctx = global.AudioContext || global.webkitAudioContext;
-    let ac = null, m = null, relogio = 0, tDesliga = 0, ultimaAnalise = 0, ultimoGesto = performance.now();
+    let ac = null, m = null, relogio = 0, tDesliga = 0, ultimaAnalise = 0, ultimoGesto = performance.now(), ouvinteSim = null;
 
     const emEspera = () => vontade && outroSom && !ignorarOutro;
     const audivel = () => ativado && vontade && !previaTocando && !emEspera() && !document.hidden && !dormindo;
@@ -915,6 +927,7 @@
       ac = new Ctx({ latencyHint: 'playback' });
       ac.onstatechange = () => { if (ac.state === 'running') { destravado = true; rotular(); } };
       m = criarMotor(ac);
+      m.ouvir(ouvinteSim);
       m.volume.gain.value = volumeDe(o.regiao()?.z ?? 1);   // the first note already at the zoom's level
       o.aoPrimeiroSom?.();
     }
@@ -1026,7 +1039,10 @@
         ultimoGesto = performance.now();
         if (dormindo) { dormindo = false; atualizar(); }
       },
-      analisador: () => m?.medidor ?? null,   // the output's AnalyserNode, for js/atlas-visor.js
+      analisador: () => m?.medidor ?? null,
+      // js/atlas-sim.js: every note the band plays ({ papel, familia, t, vel, timbre }), and the clock it is timed on
+      ouvir(fn) { ouvinteSim = fn || null; m?.ouvir(ouvinteSim); },
+      agora: () => ac?.currentTime ?? 0,   // the output's AnalyserNode, for js/atlas-visor.js
       tap(graus, vel) { if (audivel() && m) m.tap(graus, vel); },
       momento(graus, vel) { if (audivel() && m) m.swell(graus, vel); },
       estado() {

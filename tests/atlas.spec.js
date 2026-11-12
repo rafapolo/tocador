@@ -36,7 +36,27 @@ const POS = [-20000, -20000, 0, 20000, -20000, 5000, 20000, 20000, -5000, -20000
 const artistasLayoutGz = zlib.gzipSync(JSON.stringify({
   ...JSON.parse(zlib.gunzipSync(artistasGz)), pos: { som: i16b64(POS), rotulos: i16b64(POS) },
 }));
+// Features mínimas: só a primeira faixa do primeiro álbum do uqt tem análise, com piano 0,6, bateria 0,3 e
+// sintetizador 0,1 (abaixo do limiar, não aparece). O homi fica sem features (404).
+const FX = new Function(fs.readFileSync(path.join(__dirname, '..', 'js', 'acervo-features.js'), 'utf8')
+  + '\nreturn { FEATURES_FORMAT, FEATURE_PROBS, featuresFingerprint };')();
+function featuresGz(db) {
+  const keys = [];
+  for (const a of db.albums) for (const t of a.tracks) keys.push(`${a.path}/${t.file}`.normalize('NFC'));
+  const n = keys.length, b = len => Buffer.alloc(len);
+  const bpm = b(2 * n), inst = b(3 * n), iw = b(3 * n);
+  bpm.writeUInt16LE(120, 0);
+  [[1, 0.6], [2, 0.3], [3, 0.1]].forEach(([idx, p], j) => { inst[j] = idx; iw[j] = Math.round(p * 255); });
+  const c = { bpm, bpmConf: b(n), tom: b(n), loud: b(n), g: b(6 * n), gw: b(3 * n), inst, iw };
+  for (const k of FX.FEATURE_PROBS) c[k] = b(n);
+  for (const k in c) c[k] = c[k].toString('base64');
+  return zlib.gzipSync(JSON.stringify({ v: FX.FEATURES_FORMAT, acervo: 'uqt', cat: { n, id: FX.featuresFingerprint(keys) },
+    genres: [], insts: ['piano', 'drums', 'synthesizer'], c }));
+}
+const uqtFeaturesGz = featuresGz(uqt);
 async function rotear(page, { faixas = faixasGz, artistas = artistasGz } = {}) {
+  await page.route('**/data/uqt-features.json.gz', r => r.fulfill(gz(uqtFeaturesGz)));
+  await page.route('**/data/homi-features.json.gz', r => r.fulfill({ status: 404 }));
   await page.route('**/data/atlas-faixas.json.gz', r => r.fulfill(gz(faixas)));
   await page.route('**/data/atlas-artistas.json.gz', r => artistas ? r.fulfill(gz(artistas)) : r.fulfill({ status: 404 }));
   await page.route('**/uqt/data/uqt-albums.json.gz', r => r.fulfill(gz(uqtGz)));
@@ -282,6 +302,7 @@ test('prévia: no celular o painel fica acima do cartão e nenhum nó some', asy
   await page.setViewportSize({ width: 390, height: 780 });
   await boot(page);
   await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  await expect(page.locator('#cartao-instrumentos')).toBeVisible();   // o cartão já na altura final
   await simularPrevia(page);
   await page.keyboard.press('g');
   await expect(page.locator('#grafo')).toBeVisible();
@@ -386,7 +407,7 @@ test('? Sobre leva ao ATLAS.md em nova aba', async ({ page }) => {
   await boot(page);
   const sobre = page.getByRole('link', { name: 'Sobre o Atlas' });
   await expect(sobre).toBeVisible();
-  await expect(sobre).toHaveAttribute('href', 'https://github.com/rafapolo/tocador/blob/main/ATLAS.md');
+  await expect(sobre).toHaveAttribute('href', 'https://github.com/rafapolo/tocador/blob/main/docs/ATLAS.md');
   await expect(sobre).toHaveAttribute('target', '_blank');
 });
 
@@ -1126,4 +1147,74 @@ test('a câmera vai para o endereço (x, y, z) quando a vista assenta, e um link
   expect(depois.cx).toBeCloseTo(antes.cx, 4);
   expect(depois.cy).toBeCloseTo(antes.cy, 4);
   expect(depois.k / depois.k0).toBeCloseTo(antes.k / antes.k0, 2);
+});
+
+// Link compartilhado com busca e faixa (?q=&faixa=): enquadra todos os achados, seleciona a faixa e arma a prévia,
+// que começa no primeiro gesto (o navegador recusa som antes dele). O link abre numa aba nova, sem gesto ainda:
+// na mesma aba o clique anterior ainda vale como gesto e a prévia tocaria de cara.
+async function linkDeBusca(page) {
+  await boot(page);
+  const achados = await Promise.all(primeiro.tracks.map(t => ponto(page, primeiro, t)));
+  const i = await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  await page.waitForFunction(() => location.search.includes('faixa='));
+  const faixa = new URL(page.url()).searchParams.get('faixa');
+  const aba = await page.context().newPage();
+  await rotear(aba);
+  await aba.addInitScript(() => {
+    window.__tocou = null;
+    // o WebKit do Playwright já abre a aba nova com ativação de usuário
+    Object.defineProperty(navigator, 'userActivation', { value: { isActive: false }, configurable: true });
+    HTMLMediaElement.prototype.play = function () { window.__tocou = this.getAttribute('src'); return Promise.resolve(); };
+  });
+  await aba.goto(`/atlas?q=joaozinho&faixa=${faixa}`);
+  await aba.evaluate(() => window.__atlas.pronto);
+  await expect(aba.locator('#cartao')).toBeVisible();
+  return { aba, i, achados: achados.filter(x => x >= 0) };
+}
+
+test('link com busca e faixa: enquadra os achados, seleciona a faixa e toca a prévia no primeiro gesto', async ({ page }) => {
+  const { aba, i, achados } = await linkDeBusca(page);
+  expect(achados.length).toBeGreaterThan(1);
+  expect((await estado(aba)).sel).toBe(i);
+  const vp = aba.viewportSize();
+  for (const j of achados) {
+    const { x, y } = await aba.evaluate(n => window.__atlas.tela(n), j);
+    expect(x).toBeGreaterThan(0); expect(x).toBeLessThan(vp.width);
+    expect(y).toBeGreaterThan(0); expect(y).toBeLessThan(vp.height);
+  }
+  expect(await aba.evaluate(() => window.__tocou)).toBeNull();
+  await aba.keyboard.press('ArrowLeft');
+  await expect.poll(() => aba.evaluate(() => window.__tocou)).toContain(encodeURIComponent(primeiro.tracks[0].file));
+  await expect(aba.locator('#cartao-previa')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('link com busca e faixa: Esc desarma a prévia', async ({ page }) => {
+  const { aba } = await linkDeBusca(page);
+  await aba.keyboard.press('Escape');
+  await aba.keyboard.press('ArrowLeft');
+  await aba.waitForTimeout(200);
+  expect(await aba.evaluate(() => window.__tocou)).toBeNull();
+});
+
+test('link com busca e faixa: o primeiro toque em outro ponto seleciona ele e não toca nada', async ({ page }) => {
+  const { aba, i } = await linkDeBusca(page);
+  const outro = await ponto(aba, primeiro, primeiro.tracks[3]);
+  expect(outro).not.toBe(i);
+  const { x, y } = await aba.evaluate(n => window.__atlas.tela(n), outro);
+  await aba.mouse.click(x, y);
+  await expect.poll(async () => (await estado(aba)).sel).toBe(outro);
+  await aba.waitForTimeout(200);
+  expect(await aba.evaluate(() => window.__tocou)).toBeNull();
+});
+
+test('cartão: instrumentos estimados acima dos parecidos, em português e sem os palpites fracos', async ({ page }) => {
+  await boot(page);
+  await clicarNoPonto(page, primeiro, primeiro.tracks[0]);
+  const bloco = page.locator('#cartao-instrumentos');
+  await expect(bloco).toBeVisible();
+  await expect(page.locator('#cartao-instrumentos-lista li')).toHaveText(['piano', 'bateria']);
+  const ordem = await page.evaluate(() => document.getElementById('cartao-instrumentos').compareDocumentPosition(document.getElementById('cartao-parecidos')));
+  expect(ordem & 4).toBeTruthy();   // Node.DOCUMENT_POSITION_FOLLOWING
+  await clicarNoPonto(page, primeiro, primeiro.tracks[3]);
+  await expect(bloco).toBeHidden();      // faixa sem análise: nada a mostrar
 });

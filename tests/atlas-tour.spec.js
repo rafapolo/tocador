@@ -1,4 +1,4 @@
-// O tour do /atlas (js/atlas-tour.js, roteiro em TOUR.md): começa pelo botão ou por ?tour=1, pula com &t=, não escreve
+// O tour do /atlas (js/atlas-tour.js, roteiro em docs/TOUR.md): começa pelo botão ou por ?tour=1, pula com &t=, não escreve
 // no endereço e devolve tudo como estava com Esc. Mesmos fixtures de tests/atlas.spec.js, sem rede.
 const { test, expect } = require('@playwright/test');
 const path = require('path');
