@@ -1435,9 +1435,20 @@
     querSom(on) { som?.querer(on); },
     // For the band of /atlas?sim=1 (js/atlas-sim.js): every note the sonification plays, its clock and its families.
     ouvirBanda(fn) { som?.ouvir(fn); return !!som; },
+    // A prévia que está tocando, para a banda (js/atlas-sim.js) tocá-la: o <audio>, e da análise da faixa os
+    // instrumentos (top-3 do modelo, com o peso), a família de gênero e o bpm. null sem prévia tocando.
+    previaAtual() {
+      if (audio.paused || previaDe < 0 || !audio.getAttribute('src')) return null;
+      const i = previaDe, f = feats[A.acervo[i]], r = ptFila?.[i] ?? -1, tem = !!f && r >= 0 && f.has(r);
+      const g = A.generos[A.genero[i]];
+      return { el: audio, i, titulo: infoDe(i)?.track.title || '', genero: g, familia: window.RECEITAS_ATLAS?.familiaDe(g) || null,
+        instrumentos: tem ? f.instrumentsP(r) : [], bpm: tem ? f.bpm[r] : 0, analisada: tem };
+    },
     agoraSom: () => som?.agora() ?? 0,
     ouvidoSom: () => som?.ouvido() ?? 0,     // o que está saindo no alto-falante agora (com a latência de saída)
     batidaSom: () => som?.batida() ?? null,   // o pulso da banda nesse instante, em seminímas
+    folgaSom: s => som?.folga(s),            // quanto à frente o som agenda (a banda 3D pede mais, para não engasgar)
+    acordarSom: () => som?.mexeu(),          // alguém está assistindo: a música não adormece
     familia: f => ({ cor: corFam.get(f) || '#d4a574', nome: nomeFam.get(f) || f }),
     aplicarUrl,
   };

@@ -510,6 +510,7 @@ button { font: inherit; color: inherit; }
 #sim-legenda span { display: inline-flex; align-items: center; gap: 5px; }
 #sim-legenda i { width: 8px; height: 8px; border-radius: 50%; }
 #sim-legenda b { font-weight: 500; color: var(--text); }
+#sim-legenda .sim-previa { flex-basis: 100%; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #sim-sair {
   flex: none; width: 30px; height: 30px; display: grid; place-items: center; padding: 0; cursor: pointer;
   color: var(--text); background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border); border-radius: 50%;
@@ -528,11 +529,15 @@ button { font: inherit; color: inherit; }
 /* o painel dos instrumentos, no alto do cartão: recolhido por padrão, e só calcula aberto */
 #sim-instrumentos { border-bottom: 1px solid var(--border); }
 #sim-instrumentos summary {
-  display: flex; align-items: center; gap: 6px; padding: 8px 12px; cursor: pointer; list-style: none;
-  font-size: 12px; color: var(--text-2); user-select: none;
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 13px; cursor: pointer; list-style: none;
+  color: var(--text-2); user-select: none;
 }
 #sim-instrumentos summary::-webkit-details-marker { display: none; }
-#sim-instrumentos summary::before { content: '▸'; font-size: 10px; transition: transform 0.2s; }
+#sim-instrumentos summary::before {
+  content: ''; flex: none; width: 0; height: 0; margin: 0 4px 0 2px;
+  border-style: solid; border-width: 7px 0 7px 11px; border-color: transparent transparent transparent currentColor;
+  transition: transform 0.2s;
+}
 #sim-instrumentos[open] summary::before { transform: rotate(90deg); }
 #sim-instrumentos summary:hover, #sim-instrumentos summary:focus-visible { color: var(--text); outline: none; }
 #sim-instrumentos summary span { cursor: help; }

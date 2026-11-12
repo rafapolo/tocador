@@ -906,6 +906,10 @@
     let ativado = false, previaTocando = false, outroSom = false, ignorarOutro = false, dormindo = false;
     let destravado = false;                  // the context has really run: until then the button can't promise sound
     const Ctx = global.AudioContext || global.webkitAudioContext;
+    // Quanto à frente as notas são agendadas. 140 ms bastam com o mapa sozinho; com a banda 3D aberta (que divide a
+    // thread com este agendador) a folga sobe, para um quadro pesado não abrir buraco no som. As notas caem no mesmo
+    // lugar do tempo: só são calculadas mais cedo.
+    let adiante = 0.14;
     let ac = null, m = null, relogio = 0, tDesliga = 0, ultimaAnalise = 0, ultimoGesto = performance.now(), ouvinteSim = null;
 
     const emEspera = () => vontade && outroSom && !ignorarOutro;
@@ -943,7 +947,7 @@
     function pulso() {
       const agora = performance.now();
       if (agora - ultimoGesto > DORME_MS) { dormindo = true; atualizar(); return; }
-      m.avancar(ac.currentTime + 0.14);
+      m.avancar(ac.currentTime + adiante);
       if (agora - ultimaAnalise >= 200) { ultimaAnalise = agora; analisar(); }
     }
 
@@ -1045,6 +1049,7 @@
       // js/atlas-sim.js: every note the band plays ({ papel, familia, t, vel, timbre }), and the clock it is timed on
       ouvir(fn) { ouvinteSim = fn || null; m?.ouvir(ouvinteSim); },
       agora: () => ac?.currentTime ?? 0,
+      folga(s) { adiante = Math.max(0.1, Math.min(0.6, s)); },
       // o instante do contexto que está saindo no alto-falante agora: currentTime menos a latência de saída
       // (Bluetooth passa de 150 ms). É por ele que a banda mostra cada nota, e não pelo currentTime.
       ouvido() {

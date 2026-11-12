@@ -271,3 +271,63 @@ test('no desktop o cartão se move pela faixa de cima, se redimensiona pelo cant
   await page.mouse.dblclick(topo.x + 230, topo.y + topo.height + 92);
   await expect.poll(async () => Math.round((await caixa()).width)).toBe(Math.round(a.width));
 });
+
+test('a banda só escuta: abrir e deixar aberta não move o mapa nem muda o que a música toca', async ({ page }) => {
+  test.slow();
+  await boot(page);
+  const cam = () => page.evaluate(() => { const c = window.__atlas.camera(); return [c.cx, c.cy, c.k].map(v => +v.toFixed(6)); });
+  const antes = await cam();
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  await page.waitForTimeout(3000);
+  expect(await cam()).toEqual(antes);
+  await page.locator('#sim-sair').click();
+  expect(await cam()).toEqual(antes);
+});
+
+test('a câmera não corta nem para: desliza e vai até o instrumento que acabou de entrar', async ({ page }) => {
+  test.slow();
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  await nota(page, { papel: 'surdo', familia: 'samba', vel: 0.7 });
+  await expect.poll(async () => (await sim(page)).musicos.length).toBe(1);
+  await page.waitForTimeout(800);
+  // um instrumento novo: a câmera vai até ele
+  await nota(page, { papel: 'mel', familia: 'samba', vel: 0.5, timbre: 'flauta' });
+  await expect.poll(async () => (await sim(page)).foco, { timeout: 4000 }).toBe('samba|mel|flauta');
+  // amostras seguidas da posição: sempre mexendo, e nunca um salto (corte)
+  const pos = await page.evaluate(async () => {
+    const out = [];
+    for (let k = 0; k < 40; k++) { out.push(window.__atlasSim.estado().cam); await new Promise(r => requestAnimationFrame(r)); }
+    return out;
+  });
+  const passos = pos.slice(1).map((p, i) => Math.hypot(p[0] - pos[i][0], p[1] - pos[i][1], p[2] - pos[i][2]));
+  expect(Math.max(...passos)).toBeLessThan(0.5);
+  expect(passos.reduce((a, b) => a + b, 0)).toBeGreaterThan(0.01);
+});
+
+test('com uma prévia tocando, a banda toca a faixa: os instrumentos da análise dela, no ritmo do mp3', async ({ page }) => {
+  test.slow();
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  // uma prévia simulada: um <audio> que avança no tempo, com a análise da faixa (sem captureStream: o ritmo vem do bpm)
+  await page.evaluate(() => {
+    const t0 = performance.now();
+    const el = { paused: false, readyState: 4, get currentTime() { return (performance.now() - t0) / 1000; } };
+    window.__atlas.previaAtual = () => ({ el, i: 7, titulo: 'Faixa de teste', familia: 'samba', bpm: 120, analisada: true,
+      instrumentos: [{ name: 'drums', p: 0.5 }, { name: 'acousticguitar', p: 0.3 }, { name: 'voice', p: 0.2 }] });
+  });
+  await expect.poll(async () => (await sim(page)).musicos.map(m => m.chave).sort()).toEqual(['samba|acorde|violao', 'samba|mel|voz', 'samba|perc']);
+  await expect(page.locator('#sim-legenda')).toContainText('Prévia: Faixa de teste');
+  await expect(page.locator('#sim-legenda')).toContainText('120 bpm');
+  // os golpes seguem o tempo: o percussionista prepara e bate
+  await expect.poll(async () => (await sim(page)).previa?.vozes.length).toBe(3);
+  const b0 = (await sim(page)).batida;
+  await page.waitForTimeout(1000);
+  expect((await sim(page)).batida - b0).toBeGreaterThan(1.5);       // 120 bpm: ~2 tempos por segundo
+  // a prévia parou: a banda volta a ouvir a sonificação
+  await page.evaluate(() => { window.__atlas.previaAtual = () => null; });
+  await expect.poll(async () => (await sim(page)).previa).toBeNull();
+});

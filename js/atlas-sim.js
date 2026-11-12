@@ -11,15 +11,17 @@
 // alguns segundos. Cada nota agendada chega com o horário do AudioContext em que soa; a banda a mostra quando ela
 // sai no alto-falante (`ouvido()`: o currentTime menos a latência de saída), com o braço subindo 140 ms antes e
 // descendo na nota. Os corpos dançam no pulso do próprio motor (`batida()`), não num relógio à parte. Entre as notas os músicos balançam no andamento da banda.
-// A câmera dirige como num clipe: corta na batida entre close, médio, contra-plongée, dois músicos, travelling e
-// plano aberto, sempre em quem tocou mais forte. Luz de filme (tone mapping ACES, contraluz, fachos aditivos sobre cada
+// A câmera nunca para e nunca corta: orbita num arco pela frente da banda e desliza de músico em músico, e quem
+// entra com um instrumento novo ganha a câmera de perto por alguns segundos. Luz de filme (tone mapping ACES, contraluz, fachos aditivos sobre cada
 // músico, clarão nos golpes fortes, poeira na névoa), sombra falsa sob os pés, vinheta e grão por CSS. Por trás do
-// palco o mapa continua sendo a partitura. Quem mexe no mapa conduz; parado por 25 s, o mapa voa sozinho para outro
-// rótulo a cada ~20 s, e a banda muda com ele.
+// palco o mapa continua sendo a partitura: a música manda no vídeo, nunca o contrário. A banda não move o mapa nem
+// muda o que toca; enquanto ela está aberta, o som agenda com mais folga (350 ms em vez de 140) e o 3D desenha a no
+// máximo 60 quadros por segundo, para um quadro pesado não engasgar o áudio.
 //
 // three.js vem do jsdelivr só quando a simulação abre (import dinâmico; o resto do atlas é script clássico).
 // Com movimento reduzido: câmera parada no plano aberto, ninguém dança, só as luzes respondem às notas.
-// Ganchos: window.__atlas (ouvirBanda, agoraSom, familia, som, querSom, dados, camera, voar); expõe window.__atlasSim.
+// Ganchos: window.__atlas (ouvirBanda, agoraSom, ouvidoSom, batidaSom, folgaSom, acordarSom, familia, som, querSom,
+// camera); expõe window.__atlasSim.
 (() => {
   'use strict';
   const at = window.__atlas;
@@ -30,8 +32,6 @@
   const SOME_S = 5;            // calado por tanto tempo, o músico sai
   const MAX_MUSICOS = 8;
   const PREPARO_S = 0.14;      // o braço começa a subir tanto antes da nota       // no palco ao mesmo tempo; os que saem não contam
-  const MAPA_CADA_S = 20;      // a câmera do mapa troca de rótulo, e com ela a banda…
-  const MAPA_PARADO_S = 25;    // …quando ninguém mexe no mapa há tanto tempo
 
   // Cenário por família de gênero (as 57 de js/atlas-receitas.js). céu: [alto, horizonte]; chão; luz.
   const CENARIOS = {
@@ -217,16 +217,123 @@
     m.pose = pose;
   }
 
+  // ── figurinos ──
+  // Cada cenário veste os seus músicos: linho branco e chapéu panamá na praia da bossa, camisa listrada e chapéu de
+  // malandro na roda de samba, chapéu de couro e lenço no sertão, jaqueta de couro e óculos escuros na garagem, boné
+  // virado na rua, terno e boina no jazz, smoking e gravata-borboleta no teatro… A cor da família aparece num detalhe
+  // (fita do chapéu, lenço, gravata), que liga o músico à legenda e ao facho de luz dele. E alguns (~1 em 5), sorteados
+  // de forma fixa por músico, sobem ao palco montados: roupa de paetê furta-cor, boá de plumas, capa, coroa, cabelo
+  // neon, óculos de estrela, plataforma.
+  const FIGURINOS = {
+    praia: { roupa: [0xf2ede0, 0xe8dcc0, 0x9ac8d8], listra: null, calca: 0xd8cdb0, chapeu: 'panama', extras: [] },
+    roda: { roupa: [0xffffff, 0xf2f2f2], listra: [0xffffff, 0x1a1a1a], calca: 0xf0ece0, chapeu: 'malandro', extras: ['lenco'] },
+    sertao: { roupa: [0x8a5a3a, 0xc8a070, 0x6a4a2a], listra: null, calca: 0x4a3a2a, chapeu: 'couro', extras: ['lenco'] },
+    campo: { roupa: [0x8a2a2a, 0x2a5a8a, 0x5a7a3a], listra: [null, 0x1a1a1a], calca: 0x3a4a6a, chapeu: null, extras: ['lenco'] },
+    taverna: { roupa: [0x141414, 0x2a0a0a], listra: null, calca: 0x101010, chapeu: 'malandroEscuro', extras: ['gravata', 'camisa'] },
+    garagem: { roupa: [0x151515, 0x1e1e1e], listra: null, calca: 0x2a3550, chapeu: null, extras: ['oculos', 'camisa'] },
+    rua: { roupa: [0xd23a3a, 0x2a2a2a, 0xe8e8e8, 0x3a6ad2], listra: null, calca: 0x2a3550, chapeu: 'bone', extras: ['corrente'] },
+    clube: { roupa: [0x101018, 0x2a1050], listra: null, calca: 0x101018, chapeu: null, extras: ['oculos', 'neon'] },
+    espaco: { roupa: [0xc8ccd8, 0xe0e4f0], listra: null, calca: 0xa8acb8, chapeu: null, extras: ['brilho'] },
+    jazz: { roupa: [0x2a2a3a, 0x3a2a24, 0x1a1a2a], listra: null, calca: 0x1a1a24, chapeu: 'boina', extras: ['gravata', 'camisa'] },
+    teatro: { roupa: [0x0e0e10], listra: null, calca: 0x0e0e10, chapeu: null, extras: ['gravata', 'camisa'] },
+  };
+  const EXOTICOS = ['plumas', 'capa', 'coroa', 'cabeloNeon', 'oculosEstrela', 'plataforma'];
+  const NEON = [0xff3ad8, 0x3af0ff, 0xb4ff3a, 0xffb43a, 0x9a5aff, 0xff4a6a];
+  const TEX_LISTRA = new Map();
+  function texturaListras(a, b) {
+    const k = a + ':' + b;
+    if (TEX_LISTRA.has(k)) return TEX_LISTRA.get(k);
+    const c = document.createElement('canvas');
+    c.width = 8; c.height = 64;
+    const x = c.getContext('2d'), cor = v => '#' + v.toString(16).padStart(6, '0');
+    for (let i = 0; i < 8; i++) { x.fillStyle = cor(i % 2 ? b : a); x.fillRect(0, i * 8, 8, 8); }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    TEX_LISTRA.set(k, t);
+    return t;
+  }
+  // escolhe o figurino: o do cenário da família, e às vezes um montado. Fixo por músico (hash da chave).
+  function figurinoDe(chave, familia, corFam) {
+    const cen = CENARIO_DE[familia] || 'teatro', F = FIGURINOS[cen];
+    const pick = (lista, sal) => lista[Math.floor(hash(chave + sal) * lista.length) % lista.length];
+    const exotico = hash(chave + 'queer') < 0.2;
+    if (exotico) {
+      const neon = pick(NEON, 'n'), outros = [...EXOTICOS].sort((a, b) => hash(chave + a) - hash(chave + b)).slice(0, 2 + (hash(chave + 'q') < 0.5 ? 1 : 0));
+      return { exotico: true, roupa: neon, brilho: true, calca: pick([0x101010, 0xf2f2f2, neon], 'c'), chapeu: outros.includes('coroa') ? 'coroa' : null, extras: outros, acento: pick(NEON, 'a') };
+    }
+    const listra = F.listra && hash(chave + 'l') < 0.6 ? F.listra : null;
+    return { roupa: pick(F.roupa, 'r'), listra: listra && [listra[0] ?? pick(F.roupa, 'r'), listra[1]], calca: F.calca,
+      chapeu: F.chapeu && hash(chave + 'h') < 0.85 ? F.chapeu : null, extras: F.extras, brilho: F.extras.includes('brilho'), acento: corFam };
+  }
+  // os acessórios, montados na cabeça, no tronco e nas pernas do boneco
+  function vestir(fig, f) {
+    const { CylinderGeometry: Cil, SphereGeometry: Esf, BoxGeometry: Caixa, ConeGeometry: Cone, TorusGeometry: Toro, PlaneGeometry: Plano } = THREE;
+    const { cabeca, tronco, mats } = fig, add = (pai, o) => { pai.add(o); return o; };
+    const novo = (k, cor, extra) => (mats[k] = material(cor, extra));
+    const acento = novo('acento', f.acento, { roughness: 0.6 });
+    if (f.listra) { mats.roupa.map = texturaListras(f.listra[0], f.listra[1]); mats.roupa.color.set(0xffffff); mats.roupa.needsUpdate = true; }
+    if (f.brilho) { mats.roupa.metalness = 0.85; mats.roupa.roughness = 0.22; }
+    // chapéus
+    const aba = (r, cor, k) => add(cabeca, malha(geo('aba' + r, () => new Cil(r, r, 0.018, 24)), novo(k, cor, { roughness: 0.8 }), 0, 0.1, 0));
+    switch (f.chapeu) {
+      case 'panama': aba(0.27, 0xe6d3a0, 'palha'); add(cabeca, malha(geo('copa', () => new Cil(0.13, 0.15, 0.12, 16)), mats.palha, 0, 0.17, 0)); add(cabeca, malha(geo('fita', () => new Cil(0.152, 0.152, 0.03, 16)), acento, 0, 0.125, 0)); break;
+      case 'malandro': aba(0.25, 0xf4f0e6, 'feltro'); add(cabeca, malha(geo('copaM', () => new Cil(0.12, 0.15, 0.14, 16)), mats.feltro, 0, 0.18, 0)); add(cabeca, malha(geo('fita', () => new Cil(0.152, 0.152, 0.03, 16)), acento, 0, 0.125, 0)); break;
+      case 'malandroEscuro': aba(0.25, 0x141414, 'feltro'); add(cabeca, malha(geo('copaM', () => new Cil(0.12, 0.15, 0.14, 16)), mats.feltro, 0, 0.18, 0)); add(cabeca, malha(geo('fita', () => new Cil(0.152, 0.152, 0.03, 16)), acento, 0, 0.125, 0)); break;
+      case 'couro': {
+        const couro = novo('couro', 0x7a4a24, { roughness: 0.7 });
+        add(cabeca, malha(geo('copaC', () => new Esf(0.17, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), couro, 0, 0.06, 0));
+        const meiaLua = add(cabeca, malha(geo('meiaLua', () => new Cil(0.26, 0.26, 0.02, 24, 1, false, 0, Math.PI)), couro, 0, 0.13, 0.02));
+        meiaLua.rotation.set(-1.35, 0, 0);
+        for (const x of [-0.08, 0, 0.08]) add(cabeca, malha(geo('estrela', () => new Esf(0.018, 6, 4)), acento, x, 0.2, 0.12));
+        break;
+      }
+      case 'bone': {
+        add(cabeca, malha(geo('copaB', () => new Esf(0.168, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), acento, 0, 0.03, 0));
+        add(cabeca, malha(geo('pala', () => new Caixa(0.2, 0.015, 0.16)), acento, 0, 0.05, -0.2));      // virado para trás
+        break;
+      }
+      case 'boina': { const b = add(cabeca, malha(geo('boina', () => new Esf(0.19, 16, 10)), novo('boina', 0x1a1a1a, { roughness: 0.95 }), 0.03, 0.13, -0.01)); b.scale.y = 0.35; b.rotation.z = -0.25; break; }
+      case 'coroa': {
+        const ouro = novo('ouro', 0xffcf4a, { metalness: 1, roughness: 0.2, emissive: 0x4a3000 });
+        add(cabeca, malha(geo('aro', () => new Cil(0.15, 0.15, 0.05, 16, 1, true)), ouro, 0, 0.15, 0));
+        for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; add(cabeca, malha(geo('ponta', () => new Cone(0.025, 0.08, 6)), ouro, Math.sin(a) * 0.15, 0.21, Math.cos(a) * 0.15)); }
+        break;
+      }
+    }
+    for (const x of f.extras) {
+      switch (x) {
+        case 'lenco': add(tronco, malha(geo('lenco', () => new Toro(0.13, 0.035, 8, 16)), acento, 0, 0.66, 0.02)).rotation.x = Math.PI / 2; break;
+        case 'gravata': for (const l of [-1, 1]) { const c = add(tronco, malha(geo('laco', () => new Cone(0.035, 0.07, 4)), acento, l * 0.035, 0.62, 0.19)); c.rotation.z = l * Math.PI / 2; } break;
+        case 'camisa': add(tronco, malha(geo('camisa', () => new Caixa(0.12, 0.42, 0.02)), novo('camisa', 0xf2efe8, { roughness: 0.7 }), 0, 0.38, 0.195)); break;
+        case 'corrente': add(tronco, malha(geo('corrente', () => new Toro(0.14, 0.012, 6, 20)), novo('ouroC', 0xffcf4a, { metalness: 1, roughness: 0.25 }), 0, 0.6, 0.06)).rotation.x = 1.25; break;
+        case 'oculos': case 'oculosEstrela': {
+          const estrela = x === 'oculosEstrela', m2 = estrela ? novo('lente', 0xff4ab8, { emissive: 0x5a0a3a, metalness: 0.5, roughness: 0.3 }) : novo('lente', 0x050505, { metalness: 0.6, roughness: 0.15 });
+          for (const l of [-1, 1]) add(cabeca, malha(estrela ? geo('estrelaO', () => new Cone(0.06, 0.02, 5)) : geo('lenteO', () => new Caixa(0.08, 0.045, 0.02)), m2, l * 0.058, 0.02, 0.16)).rotation.x = estrela ? Math.PI / 2 : 0;
+          add(cabeca, malha(geo('ponte', () => new Caixa(0.04, 0.01, 0.01)), m2, 0, 0.03, 0.165));
+          break;
+        }
+        case 'neon': add(tronco, malha(geo('faixaNeon', () => new Caixa(0.42, 0.04, 0.42)), novo('neonF', 0x3af0ff, { emissive: 0x3af0ff, emissiveIntensity: 1.5 }), 0, 0.3, 0)); break;
+        case 'plumas': for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; add(tronco, malha(geo('pluma', () => new Esf(0.045, 6, 5)), mats.acento, Math.sin(a) * 0.17, 0.66 + Math.sin(a * 3) * 0.02, Math.cos(a) * 0.15)); } break;
+        case 'capa': { const c = add(tronco, malha(geo('capa', () => new Plano(0.55, 0.95)), novo('capa', f.acento, { side: THREE.DoubleSide, metalness: 0.6, roughness: 0.3 }), 0, 0.2, -0.22)); c.rotation.x = 0.12; break; }
+        case 'cabeloNeon': mats.cabelo.color.set(f.acento); mats.cabelo.emissive.set(f.acento); mats.cabelo.emissiveIntensity = 0.35; break;
+        case 'plataforma': for (const p of fig.pernas) add(p, malha(geo('plataforma', () => new Caixa(0.13, 0.12, 0.24)), novo('plataforma', f.acento, { metalness: 0.7, roughness: 0.25 }), 0, -0.76, 0.05)); break;
+      }
+    }
+    mats.calca.color.set(f.calca);
+  }
+
   function criarMusico(chave, familia, grupo, timbre) {
     const f = at.familia(familia);
     // a cor do macro-gênero, com um desvio de matiz por família: samba, MPB e forró são todos "Latin"
     const cor = new THREE.Color(f.cor), hsl = {};
     cor.getHSL(hsl);
     cor.setHSL((hsl.h + (hash(familia) - 0.5) * 0.22 + 1) % 1, hsl.s, Math.min(0.7, hsl.l * (0.8 + hash(familia + 'l') * 0.45)));
-    const fig = criarCorpo(chave, cor);
+    const figurino = figurinoDe(chave, familia, cor.getHex());
+    const fig = criarCorpo(chave, new THREE.Color(figurino.roupa));
+    vestir(fig, figurino);
     const m = { chave, familia, grupo, timbre, fig, nomeFamilia: f.nome, pose: 'corda', pecas: new Set(),
       vis: 0, energia: 0, foco: 0, golpe: [0, 0], lado: 0, preparo: 0, prox: Infinity, ultimo: performance.now() / 1000, cabecaY: 0,
-      alvo: new THREE.Vector3(), fase: hash(chave) * Math.PI * 2 };
+      alvo: new THREE.Vector3(), fase: hash(chave) * Math.PI * 2, exotico: !!figurino.exotico, chapeu: figurino.chapeu };
     criarInstrumento(m, timbre);
     run.cena.add(fig.g);
     return m;
@@ -583,6 +690,7 @@
       if (m) removerMusico(m);
       m = criarMusico(chave, e.familia, grupo, timbre);
       run.musicos.set(chave, m);
+      run.novo = m;                    // um instrumento novo: a câmera vai até ele
       const n = [...run.musicos.values()].filter(x => !x.saindo).length;
       m.fig.g.position.set(0, 0, 3 + 3 + n * 0.12 + 2);       // entra pela frente do palco
       rearranjar();
@@ -603,6 +711,94 @@
     run.musicos.delete(m.chave);
   }
 
+  // ── a prévia: a banda toca a faixa de verdade ──
+  // Com uma prévia tocando, a sonificação cala, e a banda passa a tocar a faixa. Quem sobe ao palco são os
+  // instrumentos que a análise de áudio viu nela (o top-3 do modelo Jamendo, em js/acervo-features.js), na família
+  // de gênero dela. O ritmo vem do próprio mp3: com captureStream (Chrome, Firefox) um analisador de espectro ouve o
+  // <audio> sem desviar o som dele, e cada ataque no grave, no médio ou no agudo vira um golpe de quem toca naquela
+  // faixa; sem captureStream (Safari), as batidas seguem o bpm da faixa e o tempo do <audio>.
+  const DE_JAMENDO = {
+    drums: ['perc', 'bumbo'], drummachine: ['perc', 'bumbo'], beat: ['perc', 'bumbo'], percussion: ['perc', 'pandeiro'], bongo: ['perc', 'bongo'],
+    bass: ['baixo', 'baixo'], doublebass: ['baixo', 'contrabaixo'], acousticbassguitar: ['baixo', 'baixo'],
+    guitar: ['acorde', 'violao'], acousticguitar: ['acorde', 'violao'], classicalguitar: ['acorde', 'violao'], electricguitar: ['acorde', 'guitarra'], harp: ['acorde', 'violao'],
+    piano: ['acorde', 'piano'], electricpiano: ['acorde', 'rhodes'], rhodes: ['acorde', 'rhodes'], keyboard: ['acorde', 'piano'], organ: ['acorde', 'orgao'],
+    pipeorgan: ['acorde', 'orgao'], synthesizer: ['acorde', 'lead'], pad: ['acorde', 'pad'], sampler: ['acorde', 'pad'], computer: ['acorde', 'pad'], accordion: ['acorde', 'sanfona'],
+    voice: ['mel', 'voz'], flute: ['mel', 'flauta'], saxophone: ['mel', 'sopro'], trumpet: ['mel', 'sopro'], trombone: ['mel', 'sopro'], horn: ['mel', 'sopro'],
+    brass: ['mel', 'sopro'], clarinet: ['mel', 'sopro'], oboe: ['mel', 'sopro'], harmonica: ['mel', 'sopro'],
+    violin: ['mel', 'cordas'], viola: ['mel', 'cordas'], cello: ['mel', 'cordas'], strings: ['mel', 'cordas'], orchestra: ['mel', 'cordas'], bell: ['mel', 'sino'],
+  };
+  const PECAS_GRAVE = ['surdo', 'bumbo'], PECAS_AGUDO = ['caixa', 'chimbal', 'pandeiro', 'tamborim'];
+  function vozesDaPrevia(pv) {
+    const familia = pv.familia || 'mpb', vistas = new Map();
+    for (const { name, p } of pv.instrumentos) {
+      const d = DE_JAMENDO[name];
+      if (!d || (p != null && p < 0.08)) continue;
+      const [papel, timbre] = d, e = { papel: papel === 'perc' ? timbre : papel, familia, timbre: papel === 'perc' ? '' : timbre, peso: p ?? 0.5 };
+      const k = chaveDe(e);
+      if (!vistas.has(k)) vistas.set(k, e);
+    }
+    return [...vistas.values()];
+  }
+  function ouvirPrevia(pv) {
+    const P = run.pv;
+    if (P.an !== undefined) return;
+    P.an = null;
+    try {
+      const st = pv.el.captureStream?.() || pv.el.mozCaptureStream?.();
+      if (!st || !st.getAudioTracks().length) return;
+      run.actx ||= new (window.AudioContext || window.webkitAudioContext)();
+      const an = run.actx.createAnalyser();
+      an.fftSize = 1024;
+      an.smoothingTimeConstant = 0.2;
+      run.actx.createMediaStreamSource(st).connect(an);      // só o analisador: o som continua saindo pelo <audio>
+      P.an = an;
+      P.esp = new Uint8Array(an.frequencyBinCount);
+      P.media = [0, 0, 0];
+      P.ultimo = [0, 0, 0];
+      run.actx.resume?.();
+    } catch { P.an = null; }
+  }
+  function tocarPrevia(pv, t) {
+    let P = run.pv;
+    if (!P || P.i !== pv.i) {
+      P = run.pv = { i: pv.i, vozes: vozesDaPrevia(pv), bpm: pv.bpm || 100, batidaAnt: 0, oitavaAnt: -1, titulo: pv.titulo };
+      for (const e of P.vozes) tocarNota({ ...e, vel: 0.35 }, t);      // sobem ao palco já
+      if (P.an !== undefined) delete P.an;
+    }
+    if (!pv.el.paused && pv.el.readyState >= 2) ouvirPrevia(pv);
+    // o pulso da dança: o tempo do <audio> no bpm da faixa
+    const batida = pv.el.currentTime * P.bpm / 60;
+    run.batida = Math.max(run.batida, batida);
+    const perc = P.vozes.filter(e => grupoDe(e.papel) === 'perc'), baixo = P.vozes.filter(e => e.papel === 'baixo'), resto = P.vozes.filter(e => e.papel === 'acorde' || e.papel === 'mel');
+    const bate = (lista, vel, peca) => { for (const e of lista) tocarNota({ ...e, papel: peca && grupoDe(e.papel) === 'perc' ? peca : e.papel, vel: vel * (0.6 + 0.6 * e.peso) }, t); };
+    if (P.an) {
+      // ataques por banda: o grave (40–160 Hz), o médio (200–2000 Hz) e o agudo (4–10 kHz) acima da média recente
+      P.an.getByteFrequencyData(P.esp);
+      const hz = run.actx.sampleRate / 2 / P.esp.length, faixa = (a, b) => { let x = 0, n = 0; for (let k = Math.floor(a / hz); k <= Math.ceil(b / hz) && k < P.esp.length; k++) { x += P.esp[k]; n++; } return n ? x / n / 255 : 0; };
+      const e3 = [faixa(40, 160), faixa(200, 2000), faixa(4000, 10000)];
+      e3.forEach((e, j) => {
+        const ataque = e - P.media[j] > 0.07 + 0.25 * P.media[j] * 0.3 && t - P.ultimo[j] > 0.09;
+        P.media[j] += (e - P.media[j]) * 0.12;
+        if (!ataque) return;
+        P.ultimo[j] = t;
+        const forca = Math.min(1, (e - P.media[j]) * 4 + 0.3);
+        if (j === 0) { bate(perc, forca, PECAS_GRAVE[Math.floor(t * 7) % 2]); bate(baixo, forca * 0.8); }
+        else if (j === 1) bate(resto, forca * 0.7);
+        else bate(perc, forca * 0.6, PECAS_AGUDO[Math.floor(t * 13) % PECAS_AGUDO.length]);
+      });
+    } else {
+      // sem analisador: as batidas no bpm da faixa — grave no tempo, agudo nos contratempos, harmonia e melodia nas colcheias
+      const oitava = Math.floor(batida * 2);
+      if (oitava !== P.oitavaAnt) {
+        P.oitavaAnt = oitava;
+        if (oitava % 2 === 0) { bate(perc, 0.8, PECAS_GRAVE[(oitava / 2) % 2]); bate(baixo, 0.7); }
+        else bate(perc, 0.5, PECAS_AGUDO[oitava % PECAS_AGUDO.length]);
+        if (hash('pv' + pv.i + oitava) < 0.7) bate(resto, 0.5);
+      }
+    }
+    return P;
+  }
+
   // ── quadro a quadro ──
   // Nada é alocado por quadro: listas, cores e vetores são reaproveitados. A resolução se ajusta ao que o aparelho
   // aguenta (média do tempo de quadro: abaixo de ~40 fps desce um degrau, folgado acima de ~55 fps sobe de novo).
@@ -621,8 +817,12 @@
   function quadro(ms) {
     if (!run) return;
     run.raf = requestAnimationFrame(quadro);
+    // até 60 quadros por segundo: numa tela de 120 Hz, desenhar o dobro só tiraria tempo do agendador do som
+    if (run.tq && ms / 1000 - run.tq < 1 / 62) return;
     const t = ms / 1000, dt = Math.min(0.05, t - (run.tq || t)), parado = reduz.matches;
     run.tq = t;
+    // com a banda na tela, alguém está assistindo: a música não adormece (só isso; o que ela toca segue o mapa)
+    if (t - (run.tAcordar || 0) > 5 && document.visibilityState === 'visible') { run.tAcordar = t; at.acordarSom?.(); }
     if (dt > 0) ajustarResolucao(dt);
     // Cada nota aparece quando ela sai no alto-falante (o tempo ouvido, já com a latência de saída), e o braço sobe
     // antes dela: a descida cai em cima do som, como num golpe de verdade.
@@ -653,9 +853,14 @@
     }
     // O pulso vem do próprio motor (o tempo da banda no instante ouvido), não de um relógio à parte que derivaria.
     // Sem ele, um relógio no andamento lido.
-    const antes = run.batida, doMotor = at.batidaSom?.();
-    if (doMotor != null && Number.isFinite(doMotor) && Math.abs(doMotor - antes) < 8) run.batida = Math.max(antes, doMotor);
-    else run.batida += dt * (run.bpm || 100) / 60;
+    const antes = run.batida, pv = at.previaAtual?.();
+    if (pv) { tocarPrevia(pv, t); run.bpm = run.pv.bpm; }
+    else {
+      if (run.pv) run.pv = null;
+      const doMotor = at.batidaSom?.();
+      if (doMotor != null && Number.isFinite(doMotor) && Math.abs(doMotor - antes) < 8) run.batida = Math.max(antes, doMotor);
+      else run.batida += dt * (run.bpm || 100) / 60;
+    }
     const b = run.batida * Math.PI * 2;
 
     let saiu = false;
@@ -683,7 +888,9 @@
     desenharInstrumentos(dt);
     run.r.render(run.cena, run.cam);
     const vazio = run.musicos.size === 0;
-    if (vazio !== run.vazio) { run.vazio = vazio; $('sim-vazio').hidden = !vazio; }
+    const semAnalise = !!pv && !run.pv.vozes.length;
+    if (semAnalise !== run.semAnalise) { run.semAnalise = semAnalise; $('sim-vazio').textContent = semAnalise ? 'A análise de áudio desta faixa não viu instrumentos que a banda saiba tocar.' : 'A banda entra quando o som começa. Nenhum som? Ligue o Sonificar (M).'; }
+    if (vazio !== run.vazio || semAnalise) { run.vazio = vazio; $('sim-vazio').hidden = !vazio; }
   }
 
   function animarMusico(m, t, dt, b, parado) {
@@ -766,98 +973,78 @@
     }
   }
 
-  // ── direção de clipe ──
-  // Um plano por vez, com corte seco na batida: a cada 8 tempos (4 quando a banda está quente) a câmera troca de
-  // plano e de músico, sempre o que tocou mais forte há pouco, sem repetir o tipo de plano. Dentro do plano ela anda
-  // devagar (aproxima, gira, desliza). Planos: close nas mãos e no rosto, médio, contra-plongée (de baixo), dois
-  // músicos, travelling lateral pela banda e o plano aberto. Movimento reduzido: só o aberto, parado.
-  const PLANOS = ['close', 'medio', 'baixo', 'dois', 'travelling', 'aberto'];
-  const NOME_PLANO = { close: 'close', medio: 'plano médio', baixo: 'contra-plongée', dois: 'dois músicos', travelling: 'travelling', aberto: 'plano aberto' };
-  const PESO_PLANO = { close: 3, medio: 3, baixo: 2, dois: 2, travelling: 1.5, aberto: 1.5 };
+  // ── direção: uma câmera na mão que nunca para ──
+  // Sem cortes: a câmera orbita sempre, num arco pela frente da banda (vai e volta, sem passar para as costas dos
+  // músicos), e desliza de um músico para outro. Quem acabou de entrar com um instrumento novo ganha a câmera por
+  // alguns segundos, de perto; fora isso, a cada 8 tempos ela vai até quem tocou mais forte. O enquadramento (perto,
+  // médio, a banda inteira) também muda devagar, no mesmo movimento. Movimento reduzido: o plano aberto, parado.
+  const ENQUADRAMENTOS = {
+    perto: { raio: 1.75, alto: 1.45, olhar: 1.25, nome: 'de perto' },
+    medio: { raio: 2.9, alto: 1.6, olhar: 1.05, nome: 'plano médio' },
+    dois: { raio: 3.8, alto: 1.75, olhar: 1.05, nome: 'dois músicos' },
+    aberto: { raio: 9.5, alto: 3.4, olhar: 1, nome: 'a banda inteira' },
+  };
+  const NOVO_S = 4.5;          // tanto tempo de câmera para quem acabou de entrar
   const v3 = () => new THREE.Vector3();
-  function escolherPlano(t) {
-    const ativos = run.ativos, p = run.plano;
-    let tipo = 'aberto';
-    if (ativos.length) {
-      let tot = 0;
-      for (const x of PLANOS) if (x !== p.tipo && (x !== 'dois' || ativos.length > 1)) tot += PESO_PLANO[x];
-      let r = Math.random() * tot;
-      for (const x of PLANOS) {
-        if (x === p.tipo || (x === 'dois' && ativos.length < 2)) continue;
-        r -= PESO_PLANO[x];
-        if (r <= 0) { tipo = x; break; }
-      }
-    }
-    // os dois que mais tocaram
-    let a = null, bb = null;
-    for (const m of ativos) { if (!a || m.foco > a.foco) { bb = a; a = m; } else if (!bb || m.foco > bb.foco) bb = m; }
-    p.tipo = tipo; p.a = a; p.b = bb; p.t0 = t; p.lado = Math.random() < 0.5 ? -1 : 1;
-    p.corte = true;
+  function escolherFoco(t, novo) {
+    const p = run.plano, ativos = run.ativos;
+    let a = null, b = null;
+    for (const m of ativos) { if (!a || m.foco > a.foco) { b = a; a = m; } else if (!b || m.foco > b.foco) b = m; }
+    if (novo) { p.a = novo; p.b = null; p.tipo = 'perto'; p.ateNovo = t + NOVO_S; return; }
+    if (!a) { p.a = p.b = null; p.tipo = 'aberto'; return; }
+    // perto e médio mais vezes; dois músicos quando há dois; a banda inteira de vez em quando
+    const r = Math.random(), anterior = p.tipo;
+    let tipo = r < 0.38 ? 'perto' : r < 0.72 ? 'medio' : r < 0.88 && b ? 'dois' : 'aberto';
+    if (tipo === anterior && tipo === 'aberto') tipo = 'medio';
+    p.tipo = tipo; p.a = a; p.b = tipo === 'dois' ? b : null;
   }
   function dirigir(t, dt, batidaAntes, parado) {
     const { cam, foco } = run, p = run.plano, ativos = run.ativos;
-    const quente = ativos.some(m => m.energia > 0.8);
-    const cada = quente ? 4 : 8;
-    const perdeu = (p.a && (p.a.saindo || !run.musicos.has(p.a.chave))) || (p.tipo !== 'aberto' && !ativos.length);
-    if (parado) { if (p.tipo !== 'aberto') { p.tipo = 'aberto'; p.a = p.b = null; p.corte = true; } }
-    else if (perdeu || Math.floor(run.batida / cada) !== Math.floor(batidaAntes / cada) || (p.tipo === 'aberto' && ativos.length && t - p.t0 > 3)) escolherPlano(t);
-    const u = Math.min(1, (t - p.t0) / 8), alvo = run.alvoCam, pos = run.posCam, aspecto = Math.max(1, 1.1 / cam.aspect);
-    const a = p.a, ap = a ? a.fig.g.position : null;
-    switch (p.tipo) {
-      case 'close': {        // rosto e mãos, chegando perto
-        alvo.set(ap.x, 1.3, ap.z);
-        const d = (1.7 - 0.5 * u) * aspecto;
-        pos.set(ap.x + p.lado * 0.55, 1.45, ap.z + d);
-        break;
-      }
-      case 'medio': {        // corpo inteiro, girando em volta
-        const ang = p.lado * (0.45 - 0.35 * u);
-        alvo.set(ap.x, 1.05, ap.z);
-        pos.set(ap.x + Math.sin(ang) * 2.8 * aspecto, 1.5, ap.z + Math.cos(ang) * 2.8 * aspecto);
-        break;
-      }
-      case 'baixo': {        // de baixo para cima, herói
-        alvo.set(ap.x, 1.4, ap.z);
-        pos.set(ap.x + p.lado * (0.7 - 0.3 * u), 0.3, ap.z + 2 * aspecto);
-        break;
-      }
-      case 'dois': {
-        const bp = p.b.fig.g.position;
-        alvo.set((ap.x + bp.x) / 2, 1.1, (ap.z + bp.z) / 2);
-        const d = (2.6 + ap.distanceTo(bp) * 0.9) * aspecto;
-        pos.set(alvo.x + p.lado * 0.8 * (1 - u), 1.55, alvo.z + d);
-        break;
-      }
-      case 'travelling': {   // desliza pela frente da banda
-        const x = p.lado * (-4 + 8 * u);
-        alvo.set(x * 0.6, 1.15, 2.4);
-        pos.set(x, 1.35, 7.2 * aspecto * 0.85);
-        break;
-      }
-      default: {             // aberto: a banda inteira, com uma grua lenta
-        alvo.set(0, 1, 2.2);
-        const sobe = parado ? 0 : Math.sin(t * 0.12) * 0.8;
-        pos.set(parado ? 0 : Math.sin(t * 0.05) * 2, 3.4 + sobe + 1.5 * Math.max(0, 1 / cam.aspect - 1), 10.5 * Math.max(1, 1.2 / cam.aspect));
-      }
+    const vivo = m => m && !m.saindo && run.musicos.has(m.chave);
+    if (parado) { p.tipo = 'aberto'; p.a = p.b = null; }
+    else {
+      // um instrumento novo chegou: a câmera vai até ele
+      if (run.novo && vivo(run.novo) && run.novo !== p.a && run.novo.vis > 0.2) { escolherFoco(t, run.novo); run.novo = null; }
+      const cada = 8, virou = Math.floor(run.batida / cada) !== Math.floor(batidaAntes / cada);
+      if ((p.tipo !== 'aberto' && !vivo(p.a)) || (p.tipo === 'aberto' && ativos.length && !p.a)
+        || (virou && t > (p.ateNovo || 0)) || (p.b && !vivo(p.b))) escolherFoco(t, null);
     }
-    // nos planos de perto a câmera fica dentro do palco: fora dele estão os objetos do cenário, que tampariam a vista
-    if (p.tipo !== 'aberto') {
+    // o arco: a fase anda sempre (mais rápida quando a banda está quente) e o ângulo vai e volta pela frente
+    const quente = ativos.reduce((x, m) => Math.max(x, m.energia), 0);
+    if (!parado) p.fase += dt * (0.22 + 0.18 * Math.min(1, quente));
+    const ang = parado ? 0 : Math.sin(p.fase) * 1.05 + Math.sin(p.fase * 0.37) * 0.25;
+    // o alvo: o músico em foco, o meio de dois, ou o meio da banda
+    const alvo = run.alvoCam, E = ENQUADRAMENTOS[p.tipo] || ENQUADRAMENTOS.aberto;
+    if (p.a && p.tipo !== 'aberto') {
+      const ap = p.a.fig.g.position;
+      if (p.b) { const bp = p.b.fig.g.position; alvo.set((ap.x + bp.x) / 2, E.olhar, (ap.z + bp.z) / 2); }
+      else alvo.set(ap.x, E.olhar, ap.z);
+    } else alvo.set(0, 1, 2.2);
+    // raio, altura e alvo andam suaves (como numa grua), então trocar de músico ou de enquadramento é um deslize
+    const aspecto = Math.max(1, 1.1 / cam.aspect), sm = parado ? 1 : Math.min(1, dt * 0.9);
+    p.raio += (E.raio * aspecto * (p.b ? 1 + p.a.fig.g.position.distanceTo(p.b.fig.g.position) * 0.25 : 1) - p.raio) * sm;
+    p.alto += (E.alto + (p.tipo === 'aberto' ? 1.5 * Math.max(0, 1 / cam.aspect - 1) + Math.sin(t * 0.12) * 0.6 : Math.sin(p.fase * 1.3) * 0.25) - p.alto) * sm;
+    run.olhar.lerp(alvo, parado ? 1 : Math.min(1, dt * 1.6));
+    const pos = run.posCam;
+    pos.set(run.olhar.x + Math.sin(ang) * p.raio, p.alto, run.olhar.z + Math.cos(ang) * p.raio);
+    // perto dos músicos a câmera fica dentro do palco: fora dele estão os objetos do cenário, que tampariam a vista
+    if (p.raio < 6) {
       const dx = pos.x, dz = pos.z - 2.5, r = Math.hypot(dx, dz), max = 6.6;
       if (r > max) { pos.x = dx * max / r; pos.z = 2.5 + dz * max / r; }
     }
-    if (p.corte) { cam.position.copy(pos); run.olhar.copy(alvo); p.corte = false; }     // corte seco
-    else { const s = Math.min(1, dt * 2.5); run.olhar.lerp(alvo, s); cam.position.lerp(pos, s); }
+    cam.position.lerp(pos, parado ? 1 : Math.min(1, dt * 2.2));
     cam.lookAt(run.olhar);
     run.cena.fog.far = cam.position.distanceTo(run.olhar) + 45;     // a névoa recua com a câmera e deixa o cenário à vista
     run.cena.fog.near = run.cena.fog.far - 35;
-    foco.target.position.copy(ap || alvo);
-    foco.intensity += ((ap ? 55 : 0) - foco.intensity) * Math.min(1, dt * 3);
+    const a = p.tipo !== 'aberto' ? p.a : null;
+    foco.target.position.copy(a ? a.fig.g.position : alvo);
+    foco.intensity += ((a ? 55 : 0) - foco.intensity) * Math.min(1, dt * 3);
     const txt = a ? rotulo(a) + '|' + p.tipo : '';
     if (txt !== run.focoTxt) {
       run.focoTxt = txt;
       const el = $('sim-foco');
       el.hidden = !a;
-      if (a) { el.firstChild.textContent = instDe(a); el.lastChild.textContent = `${a.nomeFamilia} · ${NOME_PLANO[p.tipo] || ''}`; }
+      if (a) { el.firstChild.textContent = instDe(a); el.lastChild.textContent = `${a.nomeFamilia} · ${E.nome}`; }
     }
     run.focoEm = a?.chave ?? null;
   }
@@ -871,33 +1058,14 @@
       span.append(p, info.nome);
       return span;
     }));
-    if (s?.bpm) el.append(Object.assign(document.createElement('b'), { textContent: `${s.bpm} bpm` }));
+    if (run.pv) el.prepend(Object.assign(document.createElement('b'), { textContent: `Prévia: ${run.pv.titulo}`, className: 'sim-previa' }));
+    const bpm = run.pv ? Math.round(run.pv.bpm) : s?.bpm;
+    if (bpm) el.append(Object.assign(document.createElement('b'), { textContent: `${bpm} bpm` }));
   }
 
   // ── o mapa por trás ──
-  // Quem mexe no mapa conduz a banda. Parado por MAPA_PARADO_S, o mapa voa sozinho até um rótulo sorteado (os maiores
-  // mais vezes), perto o bastante para a banda inteira tocar (8× o enquadramento), e de novo a cada MAPA_CADA_S.
-  let ultimoMexer = 0, ultimoVoo = 0;
-  const mexeu = e => { if (!e.target?.closest?.('#sim')) ultimoMexer = performance.now(); };
-  for (const ev of ['pointerdown', 'wheel', 'keydown']) addEventListener(ev, mexeu, { capture: true, passive: true });
-  function voarParaRotulo() {
-    const D = at.dados(), c = at.camera(), marcos = D.A.marcos[c.mapa] || [];
-    if (!marcos.length) return;
-    let tot = 0;
-    for (const mk of marcos) tot += Math.sqrt(mk[3]);
-    let r = Math.random() * tot, esc = marcos[0];
-    for (const mk of marcos) { r -= Math.sqrt(mk[3]); if (r <= 0) { esc = mk; break; } }
-    at.voar(esc[1] / 65535, esc[2] / 65535, c.k0 * 8, reduz.matches ? 0 : 6000);
-    ultimoVoo = performance.now();
-  }
-  function passearMapa() {
-    if (!run) return;
-    const agora = performance.now();
-    // com busca ou gêneros desligados o passeio fica parado: um rótulo sorteado cairia fora do que está aceso
-    const e = at.estado(), filtrado = e.nAtivo < e.n;
-    if (!filtrado && agora - ultimoMexer > MAPA_PARADO_S * 1000 && agora - ultimoVoo > MAPA_CADA_S * 1000) voarParaRotulo();
-    run.tMapa = setTimeout(passearMapa, 2000);
-  }
+  // A banda só escuta: quem decide a música é o mapa, e só quem mexe no mapa o move. A banda nunca voa, aproxima ou
+  // passeia pelo mapa, nem muda o que a sonificação toca.
 
   function medir() {
     if (!run) return;
@@ -922,12 +1090,14 @@
     // a ficar desligado ao fechar (a escolha fica salva no localStorage).
     somAntes = at.som()?.vontade ?? null;
     at.querSom(true);
+    at.folgaSom?.(0.35);
     at.ouvirBanda(aoTocar);
     $('sim-status').textContent = 'Montando o palco…';
     try { THREE = THREE || await import(THREE_URL); }
     catch (err) {
       $('sim-status').textContent = 'Não foi possível carregar o 3D.';
       at.ouvirBanda(null);
+      at.folgaSom?.(0.14);
       window.reportar?.('atlas', 'simulação 3D: three.js não carregou', window.descreverErro?.(err) || String(err));
       abrindo = false;
       marcarBotao(false);
@@ -937,16 +1107,15 @@
     abrindo = false;
     $('sim-status').textContent = '';
     run = { musicos: new Map(), inst: new Map(), tInst: 0, fila: [], ativos: [], desordem: false, batida: 0, bpm: 100, focoEm: null, focoTxt: '', vazio: null, flash: 0,
-      plano: { tipo: 'aberto', a: null, b: null, t0: 0, lado: 1, corte: true },
+      plano: { tipo: 'aberto', a: null, b: null, fase: 0, raio: 9.5, alto: 3.4, ateNovo: 0 }, novo: null,
       dtMedio: 1 / 60, tRes: 0, iRes: 0, iResMax: 0,
       alvoCam: new THREE.Vector3(), posCam: new THREE.Vector3(), olhar: new THREE.Vector3(0, 1, 2), ...montarCena() };
     run.ro = new ResizeObserver(medir);
     run.ro.observe($('sim-canvas'));
     medir();
-    // longe demais a banda é só a base: na primeira vez o mapa se aproxima ali mesmo, onde a pessoa estava
-    const c = at.camera();
-    if (c.k < c.k0 * 6) { at.voar(c.cx, c.cy, c.k0 * 8, reduz.matches ? 0 : 1500); ultimoVoo = performance.now(); }
-    passearMapa();
+    // os programas de shader compilam antes do primeiro quadro, sem travar a thread em que o som é agendado
+    if (run.r.compileAsync) await run.r.compileAsync(run.cena, run.cam).catch(() => {});
+    if (!run) return;
     run.raf = requestAnimationFrame(quadro);
     $('sim-sair').focus();
   }
@@ -954,6 +1123,7 @@
     if (abrindo) {                 // ainda carregando o three.js
       abrindo = false;
       at.ouvirBanda(null);
+      at.folgaSom?.(0.14);
       $('sim').hidden = true;
       marcarBotao(false);
       if (somAntes === false) at.querSom(false);
@@ -961,14 +1131,15 @@
     }
     if (!run) return;
     at.ouvirBanda(null);
+    at.folgaSom?.(0.14);
     cancelAnimationFrame(run.raf);
-    clearTimeout(run.tMapa);
     run.ro.disconnect();
     for (const m of [...run.musicos.values()]) removerMusico(m);
     $('sim-instrumentos-lista').replaceChildren();
     $('sim-foco').hidden = true;
     for (const c of Object.values(run.cenarios)) { c.g.traverse(o => o.geometry?.dispose()); for (const m of c.mats) m.dispose(); }
     run.r.dispose();
+    run.actx?.close?.();
     run = null;
     $('sim').hidden = true;
     marcarBotao(false);
@@ -1066,7 +1237,7 @@
 
   window.__atlasSim = {
     iniciar, parar,
-    estado: () => run && { musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2) })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
+    estado: () => run && { musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
       cenarios: Object.fromEntries(Object.entries(run.cenarios).filter(([, c]) => c.peso > 0.02).map(([n, c]) => [n, +c.peso.toFixed(2)])) },
     // testes: notas sem depender do áudio
     nota: e => aoTocar(e),

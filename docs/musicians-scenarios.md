@@ -184,14 +184,17 @@ pouco. Dentro do plano a câmera anda devagar (`dirigir()`).
 - **Medido no Mac:** 120 fps a 2×, com 8 músicos e quatro cenários misturados. `__atlasSim.estado()` mostra `fps`,
   `resolucao` e `plano`.
 
-## O mapa por trás
+## A música manda no vídeo, nunca o contrário
 
-- **Ao abrir:** se o mapa está longe (menos de 6× o enquadramento), ele aproxima ali mesmo a 8×. De longe, a
-  sonificação só toca a base, e a banda precisa das camadas de zoom.
-- **Passeio automático:** depois de 25 s sem ninguém mexer no mapa, ele voa para um rótulo sorteado (os maiores
-  saem mais vezes), e de novo a cada 20 s.
-  - O passeio nunca acontece com busca ou gêneros desligados, porque um rótulo sorteado poderia cair fora do que
-    está aceso.
+- **O mapa é a partitura:** a banda não voa, não aproxima e não passeia pelo mapa. Só quem mexe no mapa muda a música,
+  e a banda mostra o que ela toca.
+- **Folga no agendamento:** com a banda aberta, o som agenda as notas 350 ms à frente, em vez de 140 ms (`folga()`
+  em `js/atlas-som.js`). O agendador divide a thread com o 3D, e assim um quadro pesado não abre buraco no áudio. As
+  notas caem no mesmo lugar do tempo; só são calculadas mais cedo.
+- **Sem travas na abertura:** os shaders compilam antes do primeiro quadro (`compileAsync`), sem travar a thread.
+- **Até 60 quadros por segundo:** numa tela de 120 Hz, desenhar o dobro só tiraria tempo do som.
+- **A música não adormece:** com a banda visível, a sonificação não dorme depois de 60 s sem gesto, porque alguém
+  está assistindo. Isso não muda o que ela toca.
 
 ## Teclas e som
 
