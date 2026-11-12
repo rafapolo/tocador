@@ -79,7 +79,7 @@ describe('albumPage', () => {
     expect(html).toContain('href="/assets/player.css"');
     expect(html).toContain('href="/radio.html"');
     expect(html).not.toMatch(/(?:href|src)="(?:\.\/)?(?:js|assets)\//);
-    expect(html).toMatch(/id="album-header"[^>]*><img class="album-cover-large"[^>]*><div class="album-header-info"><h2>Fé &amp; &quot;Festa&quot;<\/h2>/);
+    expect(html).toMatch(/id="album-header"[^>]*><img class="album-cover-large"[^>]*><div class="album-header-info"><h1>Fé &amp; &quot;Festa&quot;<\/h1>/);
     expect(html).toContain('<div class="track-title">Um&lt;/script&gt;&lt;script&gt;x()</div>');
     expect(html).toContain('2:05');
   });
@@ -101,10 +101,12 @@ describe('albumPage', () => {
     expect(html).toContain('<title>♪ Tocador - Fé &amp; &quot;Festa&quot; — Zé &lt;b&gt; (1975)</title>');
   });
 
-  test('describes the album as "♪ banda - álbum (ano) - N faixas"', () => {
-    expect(html).toContain('<meta property="og:description" content="♪ Zé &lt;b&gt; - Fé &amp; &quot;Festa&quot; (1975) - 1 faixa">');
+  test('describes the album as "Ouça álbum, de banda (ano): N faixas, no acervo."', () => {
+    const desc = 'Ouça Fé &amp; &quot;Festa&quot;, de Zé &lt;b&gt; (1975): 1 faixa, no Acervo &lt;Teste&gt;.';
+    expect(html).toContain(`<meta property="og:description" content="${desc}">`);
+    expect(html).toContain(`<meta name="description" content="${desc}">`);
     const bare = albumPage({ template, alias: 'uqt', meta, album: { ...album, artist: '', year: 0, tracks: [...album.tracks, { title: 'Dois', num: 2, file: '02.mp3' }] }, slug: 'y' });
-    expect(bare).toContain('<meta property="og:description" content="♪ Fé &amp; &quot;Festa&quot; - 2 faixas">');
+    expect(bare).toContain('<meta property="og:description" content="Ouça Fé &amp; &quot;Festa&quot;: 2 faixas, no Acervo &lt;Teste&gt;.">');
   });
 
   test('omits og:image cover when the album has none', () => {
