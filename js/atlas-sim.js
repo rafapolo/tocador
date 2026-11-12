@@ -189,9 +189,9 @@
       braco.scale.x = 0.5 * s + 0.12;
       const corpo = new THREE.Group();
       corpo.add(caixa, braco);
-      corpo.position.set(0.05, 1.05, 0.24);
+      corpo.position.set(0.05, 0.25, 0.24);       // preso ao tronco: balança junto com quem toca
       corpo.rotation.z = 0.45;
-      g.add(corpo);
+      m.fig.tronco.add(corpo);
     } else if (timbre === 'sanfona') {
       pose = 'sanfona';
       g.add(malha(geo('sanfona', () => new Caixa(0.46, 0.34, 0.2)), mats.roupa, 0, 1.05, 0.28), malha(geo('fole', () => new Caixa(0.48, 0.3, 0.12)), mats.escuro, 0, 1.05, 0.28));
@@ -205,13 +205,30 @@
       pose = 'voz';
       g.add(malha(geo('pedestal', () => new Cil(0.015, 0.015, 1.5, 6)), mats.metal, 0, 0.75, 0.32), malha(geo('microfone', () => new Esf(0.045, 10, 8)), mats.escuro, 0, 1.52, 0.3));
     } else {
-      pose = 'sopro';     // sopro, flauta, apito, violino: um tubo à boca
-      const tubo = malha(geo('tubo-' + timbre, () => new Cil(0.025, timbre === 'sopro' ? 0.09 : 0.025, timbre === 'flauta' ? 0.6 : 0.5, 10)), timbre === 'cordas' ? mats.madeira : mats.metal, 0, 0, 0);
+      // presos à cabeça, na boca (ou no queixo, o violino): acompanham cada aceno, e os braços vão até eles
       const s = new THREE.Group();
-      s.add(tubo);
-      s.position.set(timbre === 'flauta' ? 0.25 : 0, 1.4, 0.3);
-      s.rotation.set(timbre === 'flauta' ? 0 : 1.2, 0, timbre === 'flauta' ? Math.PI / 2 : 0);
-      g.add(s);
+      if (timbre === 'flauta' || timbre === 'apito') {
+        pose = 'flauta';      // transversal: sai da boca para a direita, as duas mãos no tubo
+        s.add(malha(geo('flauta', () => new Cil(0.022, 0.022, 0.62, 10)), mats.metal, 0, 0, 0));
+        s.position.set(0.24, -0.06, 0.15);
+        s.rotation.set(0, 0.25, Math.PI / 2);
+      } else if (timbre === 'cordas') {
+        pose = 'violino';     // no queixo, para a esquerda e para a frente; o arco na mão direita
+        const corpoV = malha(geo('violino', () => new Cap(0.07, 0.12, 4, 10)), mats.madeira, 0, 0, 0);
+        corpoV.scale.z = 0.4;
+        s.add(corpoV, malha(geo('braco-violino', () => new Caixa(0.025, 0.22, 0.02)), mats.escuro, 0, 0.2, 0));
+        s.position.set(-0.14, -0.2, 0.16);
+        s.rotation.set(Math.PI / 2 - 0.3, 0, -0.9);
+        const arco = malha(geo('arco', () => new Cil(0.006, 0.006, 0.55, 4)), mats.madeira, 0, 0, 0.1);
+        arco.rotation.z = Math.PI / 2;
+        m.fig.bracos[1].punho.add(arco);
+      } else {
+        pose = 'sopro';       // sax, trompete: da boca para a frente e para baixo, as duas mãos na frente do peito
+        s.add(malha(geo('sopro', () => new Cil(0.025, 0.085, 0.5, 12)), mats.metal, 0, -0.25, 0));
+        s.position.set(0, -0.06, 0.17);
+        s.rotation.set(-0.6, 0, 0);
+      }
+      m.fig.cabeca.add(s);
     }
     m.fig.g.add(g);
     m.pose = pose;
@@ -320,6 +337,40 @@
       }
     }
     mats.calca.color.set(f.calca);
+  }
+
+  // A percussão começa com um surdo; quando a voz toca peças de bateria, o percussionista ganha o kit (caixa na
+  // frente, chimbal à esquerda, prato à direita, bumbo atrás do surdo, que vira o surdo de chão), e quem toca
+  // pandeiro sem bateria segura um na mão esquerda.
+  const KIT = new Set(['caixa', 'aro', 'bumbo', 'chimbal', 'aberto', 'prato']);
+  function montarKit(m) {
+    const { mats, g } = m.fig, { CylinderGeometry: Cil } = THREE, k = new THREE.Group();
+    if (!mats.casco) mats.casco = material(0x7a1a1a, { metalness: 0.3, roughness: 0.35 });
+    if (!mats.prato) mats.prato = material(0xd8b44a, { metalness: 0.95, roughness: 0.25 });
+    k.add(malha(geo('caixa-kit', () => new Cil(0.17, 0.17, 0.13, 18)), mats.casco, 0.05, 0.72, 0.42));
+    k.add(malha(geo('pele-caixa', () => new Cil(0.172, 0.172, 0.01, 18)), mats.metal, 0.05, 0.79, 0.42));
+    const bumbo = malha(geo('bumbo-kit', () => new Cil(0.3, 0.3, 0.3, 20)), mats.casco, 0, 0.32, 0.9);
+    bumbo.rotation.x = Math.PI / 2;
+    k.add(bumbo);
+    for (const [x, y, z] of [[-0.38, 0.95, 0.42], [0.42, 1.2, 0.62]]) {
+      k.add(malha(geo('pedestal-kit', () => new Cil(0.012, 0.012, 1, 6)), mats.metal, x, y / 2, z)).scale.y = y;
+      const p = malha(geo('prato-kit', () => new Cil(0.22, 0.012, 0.015, 18)), mats.prato, x, y, z);
+      p.rotation.x = 0.12;
+      k.add(p);
+      (m.pratos ||= []).push(p);
+    }
+    g.add(k);
+    m.kit = k;
+  }
+  function montarPandeiro(m) {
+    const { mats, bracos } = m.fig, { CylinderGeometry: Cil } = THREE;
+    const p = new THREE.Group();
+    p.add(malha(geo('pandeiro-aro', () => new Cil(0.13, 0.13, 0.05, 18, 1, true)), mats.madeira, 0, 0, 0));
+    p.add(malha(geo('pandeiro-pele', () => new Cil(0.13, 0.13, 0.005, 18)), mats.metal, 0, 0.02, 0));
+    p.position.set(0, -0.08, 0.08);
+    p.rotation.x = Math.PI / 2 - 0.4;
+    bracos[0].punho.add(p);
+    m.pandeiro = p;
   }
 
   function criarMusico(chave, familia, grupo, timbre) {
@@ -771,7 +822,11 @@
       m.fig.g.position.set(0, 0, 3 + 3 + n * 0.12 + 2);       // entra pela frente do palco
       rearranjar();
     }
-    if (grupo === 'perc') m.pecas.add(e.papel);
+    if (grupo === 'perc') {
+      m.pecas.add(e.papel);
+      if (!m.kit && KIT.has(e.papel)) montarKit(m);
+      if (!m.pandeiro && e.papel === 'pandeiro' && !m.kit) montarPandeiro(m);
+    }
     m.ultimo = agora;
     const v = Math.min(1.2, e.vel * 2.2 + 0.15);
     somarInstrumento(e, v);
@@ -1001,13 +1056,16 @@
       cabeca.rotation.z = -corpo.rotation.z * 0.6;
     }
     posar(m, bracos, b, parado);
+    if (m.pratos && !parado) for (const [k, p] of m.pratos.entries()) p.rotation.x = 0.12 + Math.sin(t * 28 + k) * 0.08 * (k ? m.golpe[1] : m.golpe[0]);
   }
 
   // Braços por instrumento, em três juntas. `preparo` (0 → 1 nos 140 ms antes da próxima nota) arma o golpe e `golpe`
   // (1 na nota, caindo rápido) o descarrega. Na percussão o movimento é o de quem toca de verdade: o ombro quase não
   // mexe, o cotovelo sobe e dobra na preparação, e o punho chicoteia a baqueta para cima e estala para baixo na
   // nota, com um rebote. As mãos se alternam: arma a que bate em seguida.
-  function junta(j, ox, oz, cx, px) { j.ombro.rotation.set(ox, 0, oz); j.cotovelo.rotation.x = cx; j.punho.rotation.x = px; }
+  // ox/oy/oz: o ombro (para a frente, torcido, para o lado); cx: o cotovelo; px: o punho. As poses de flauta, sopro,
+  // violino e voz saíram de cinemática inversa: as mãos caem no instrumento, que vai preso à cabeça (erro < 5 mm).
+  function junta(j, ox, oz, cx, px, oy = 0) { j.ombro.rotation.set(ox, oy, oz); j.cotovelo.rotation.x = cx; j.punho.rotation.x = px; }
   function posar(m, [esq, dir], b, parado) {
     const [ge, gd] = m.golpe, pr = parado ? 0 : m.preparo * m.preparo, osc = parado ? 0 : Math.sin(b * 2) * 0.04;
     switch (m.pose) {
@@ -1031,13 +1089,21 @@
         junta(esq, -0.55, -0.35 - pr * 0.12 - gd * 0.35, -1.2, 0);
         junta(dir, -0.55, 0.35 + pr * 0.12 + gd * 0.35, -1.2, 0);
         break;
-      case 'voz':
+      case 'voz':             // a direita no microfone; a esquerda canta junto, abrindo na nota
         junta(esq, -0.1 + osc - pr * 0.25 - gd * 0.3, 0.25 + gd * 0.25, -0.3 - pr * 0.4 - gd * 0.5, -0.2);
-        junta(dir, -0.75, -0.15, -1.55 - gd * 0.1, 0);
+        junta(dir, -1.28, -0.02, -1.86, 0, -0.92);
         break;
-      case 'sopro':
-        junta(esq, -0.9, 0.35, -1.5, -0.2);
-        junta(dir, -0.75 - pr * 0.05, -0.3, -1.25 + gd * 0.08, 0.1 - gd * 0.2);
+      case 'flauta':          // as duas mãos no tubo, à direita da boca; os dedos (punhos) batem na nota
+        junta(esq, -2.4, 0.75, -1.55, 0.3 - gd * 0.25, 1.06);
+        junta(dir, -1.24, 0.01, -2.45, 0.2 - gd * 0.25, 0.45);
+        break;
+      case 'violino':         // a esquerda segura o braço do violino; a direita passa o arco, indo e voltando na nota
+        junta(esq, -0.95, 0, -1.91, 0, -0.3);
+        junta(dir, -0.81, 0.22, -1.9, 0.2, -0.82 + (m.lado ? 1 : -1) * gd * 0.3);
+        break;
+      case 'sopro':           // as duas mãos no instrumento, na frente do peito; os dedos batem na nota
+        junta(esq, -0.68, 0, -1.6, -gd * 0.3, 0.85);
+        junta(dir, -0.92, 0.05, -1.96, -gd * 0.3, -0.92);
         break;
       case 'contrabaixo':
         junta(esq, -1.0, -0.45, -1.15, 0);
@@ -1066,13 +1132,28 @@
     const p = run.plano, ativos = run.ativos;
     let a = null, b = null;
     for (const m of ativos) { if (!a || m.foco > a.foco) { b = a; a = m; } else if (!b || m.foco > b.foco) b = m; }
-    if (novo) { p.a = novo; p.b = null; p.tipo = 'perto'; p.ateNovo = t + NOVO_S; return; }
-    if (!a) { p.a = p.b = null; p.tipo = 'aberto'; return; }
+    if (novo) { p.a = novo; p.b = null; p.tipo = 'perto'; p.ateNovo = t + NOVO_S; p.estrela = false; return; }
+    if (!a) { p.a = p.b = null; p.tipo = 'aberto'; p.estrela = false; return; }
+    // quem canta é a estrela: quando há voz, a câmera volta a ela muitas vezes e, nelas, dá a volta inteira em torno
+    const cantor = ativos.find(m => m.pose === 'voz');
+    if (cantor && p.a !== cantor && Math.random() < 0.5) {
+      p.a = cantor; p.b = null; p.tipo = Math.random() < 0.6 ? 'perto' : 'medio'; p.estrela = true;
+      return;
+    }
+    p.estrela = false;
     // perto e médio mais vezes; dois músicos quando há dois; a banda inteira de vez em quando
     const r = Math.random(), anterior = p.tipo;
     let tipo = r < 0.38 ? 'perto' : r < 0.72 ? 'medio' : r < 0.88 && b ? 'dois' : 'aberto';
     if (tipo === anterior && tipo === 'aberto') tipo = 'medio';
     p.tipo = tipo; p.a = a; p.b = tipo === 'dois' ? b : null;
+  }
+  // aproxima `v` de `alvo` como uma mola amortecida (k por segundo), sem passar de `max` unidades por segundo
+  function segue(v, alvo, dt, k, max, parado) {
+    if (parado) { v.copy(alvo); return; }
+    const dx = (alvo.x - v.x) * Math.min(1, dt * k), dy = (alvo.y - v.y) * Math.min(1, dt * k), dz = (alvo.z - v.z) * Math.min(1, dt * k);
+    const d = Math.hypot(dx, dy, dz), lim = max * dt;
+    const f = d > lim ? lim / d : 1;
+    v.x += dx * f; v.y += dy * f; v.z += dz * f;
   }
   function dirigir(t, dt, batidaAntes, parado) {
     const { cam, foco } = run, p = run.plano, ativos = run.ativos;
@@ -1080,15 +1161,28 @@
     if (parado) { p.tipo = 'aberto'; p.a = p.b = null; }
     else {
       // um instrumento novo chegou: a câmera vai até ele
-      if (run.novo && vivo(run.novo) && run.novo !== p.a && run.novo.vis > 0.2) { escolherFoco(t, run.novo); run.novo = null; }
-      const cada = 8, virou = Math.floor(run.batida / cada) !== Math.floor(batidaAntes / cada);
-      if ((p.tipo !== 'aberto' && !vivo(p.a)) || (p.tipo === 'aberto' && ativos.length && !p.a)
-        || (virou && t > (p.ateNovo || 0)) || (p.b && !vivo(p.b))) escolherFoco(t, null);
+      // trocas de foco espaçadas (no mínimo 6 s entre uma e outra), para a câmera nunca correr de um lado ao outro
+      const pode = t - (p.tTroca || -99) > 6;
+      if (t - (p.tTroca || -99) > 3 && run.novo && vivo(run.novo) && run.novo !== p.a && run.novo.vis > 0.2) { escolherFoco(t, run.novo); run.novo = null; p.tTroca = t; }
+      const cada = 16, virou = Math.floor(run.batida / cada) !== Math.floor(batidaAntes / cada);
+      const perdeu = (p.tipo !== 'aberto' && !vivo(p.a)) || (p.b && !vivo(p.b)) || (p.tipo === 'aberto' && ativos.length && !p.a);
+      if (perdeu || (pode && virou && t > (p.ateNovo || 0))) { escolherFoco(t, null); p.tTroca = t; }
     }
     // o arco: a fase anda sempre (mais rápida quando a banda está quente) e o ângulo vai e volta pela frente
     const quente = ativos.reduce((x, m) => Math.max(x, m.energia), 0);
-    if (!parado) p.fase += dt * (0.22 + 0.18 * Math.min(1, quente));
-    const ang = parado ? 0 : Math.sin(p.fase) * 1.05 + Math.sin(p.fase * 0.37) * 0.25;
+    // a órbita: velocidade que muda devagar (a "quentura" da banda é suavizada), nunca aos trancos
+    p.velo = (p.velo ?? 0.18) + ((0.16 + 0.1 * Math.min(1, quente)) - (p.velo ?? 0.18)) * Math.min(1, dt * 0.3);
+    if (!parado) p.fase += dt * p.velo;
+    // o ângulo anda suave: no vai-e-vem pela frente da banda, ou dando a volta inteira em torno da estrela
+    if (parado) p.ang = 0;
+    else if (p.estrela && p.a === run.musicos.get(p.a?.chave)) p.ang = (p.ang ?? 0) + dt * 0.3;
+    else {
+      const alvoAng = Math.sin(p.fase) * 1.0 + Math.sin(p.fase * 0.37) * 0.22;
+      let d = alvoAng - (p.ang ?? 0);
+      d = Math.atan2(Math.sin(d), Math.cos(d));          // pelo caminho mais curto, depois de uma volta inteira
+      p.ang = (p.ang ?? 0) + d * Math.min(1, dt * 0.5);
+    }
+    const ang = p.ang;
     // o alvo: o músico em foco, o meio de dois, ou o meio da banda
     const alvo = run.alvoCam, E = ENQUADRAMENTOS[p.tipo] || ENQUADRAMENTOS.aberto;
     if (p.a && p.tipo !== 'aberto') {
@@ -1097,18 +1191,18 @@
       else alvo.set(ap.x, E.olhar, ap.z);
     } else alvo.set(0, 1, 2.2);
     // raio, altura e alvo andam suaves (como numa grua), então trocar de músico ou de enquadramento é um deslize
-    const aspecto = Math.max(1, 1.1 / cam.aspect), sm = parado ? 1 : Math.min(1, dt * 0.9);
+    const aspecto = Math.max(1, 1.1 / cam.aspect), sm = parado ? 1 : Math.min(1, dt * 0.35);
     p.raio += (E.raio * aspecto * (p.b ? 1 + p.a.fig.g.position.distanceTo(p.b.fig.g.position) * 0.25 : 1) - p.raio) * sm;
     p.alto += (E.alto + (p.tipo === 'aberto' ? 1.5 * Math.max(0, 1 / cam.aspect - 1) + Math.sin(t * 0.12) * 0.6 : Math.sin(p.fase * 1.3) * 0.25) - p.alto) * sm;
-    run.olhar.lerp(alvo, parado ? 1 : Math.min(1, dt * 1.6));
+    // o olhar e a câmera andam com velocidade limitada e suave, como numa grua: nada de chicote
+    segue(run.olhar, alvo, dt, 0.7, 1.2, parado);
     const pos = run.posCam;
     pos.set(run.olhar.x + Math.sin(ang) * p.raio, p.alto, run.olhar.z + Math.cos(ang) * p.raio);
-    // perto dos músicos a câmera fica dentro do palco: fora dele estão os objetos do cenário, que tampariam a vista
-    if (p.raio < 6) {
-      const dx = pos.x, dz = pos.z - 2.5, r = Math.hypot(dx, dz), max = 6.6;
-      if (r > max) { pos.x = dx * max / r; pos.z = 2.5 + dz * max / r; }
-    }
-    cam.position.lerp(pos, parado ? 1 : Math.min(1, dt * 2.2));
+    // perto dos músicos a câmera fica dentro do palco (fora dele estão os objetos do cenário, que tampariam a vista),
+    // com uma borda macia: o limite cresce junto com o raio, sem degrau
+    const dx = pos.x, dz = pos.z - 2.5, r = Math.hypot(dx, dz), max = 6.6 + Math.max(0, p.raio - 4) * 1.4;
+    if (r > max) { pos.x = dx * max / r; pos.z = 2.5 + dz * max / r; }
+    segue(cam.position, pos, dt, 0.9, 2.2, parado);
     cam.lookAt(run.olhar);
     run.cena.fog.far = cam.position.distanceTo(run.olhar) + 45;     // a névoa recua com a câmera e deixa o cenário à vista
     run.cena.fog.near = run.cena.fog.far - 35;
@@ -1313,9 +1407,18 @@
 
   window.__atlasSim = {
     iniciar, parar,
-    estado: () => run && { musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
+    estado: () => run && { estrela: !!run.plano.estrela, musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], kit: !!m.kit, pandeiro: !!m.pandeiro, pose: m.pose, vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
       cenarios: Object.fromEntries(Object.entries(run.cenarios).filter(([, c]) => c.peso > 0.02).map(([n, c]) => [n, +c.peso.toFixed(2)])) },
     // testes: notas sem depender do áudio
     nota: e => aoTocar(e),
+    // testes e capturas: põe a câmera em um músico, de perto, já (sem a transição)
+    focar(chave) {
+      const m = run?.musicos.get(chave);
+      if (!m) return false;
+      const p = run.plano;
+      Object.assign(p, { a: m, b: null, tipo: 'perto', estrela: false, tTroca: performance.now() / 1000 + 30, raio: 1.75, alto: 1.45 });
+      run.olhar.set(m.fig.g.position.x, 1.25, m.fig.g.position.z);
+      return true;
+    },
   };
 })();

@@ -223,8 +223,10 @@ test('instrumentos num painel recolhível no alto do cartão: fechado não calcu
   const soma = partes.reduce((a, b) => a + b, 0);
   expect(soma).toBeGreaterThanOrEqual(98);
   expect(soma).toBeLessThanOrEqual(102);
-  // a dica de quem está em foco fica embaixo do palco
+  // a dica de quem está em foco fica dentro do painel, acima da lista
   await expect(page.locator('#sim-foco')).toBeVisible();
+  const [dica, lis] = await Promise.all([page.locator('#sim-foco').boundingBox(), page.locator('#sim-instrumentos-lista').boundingBox()]);
+  expect(dica.y + dica.height).toBeLessThanOrEqual(lis.y + 1);
   // fechar para de calcular e lembra a escolha ao reabrir a banda
   await painel.locator('summary').click();
   await expect.poll(async () => (await sim(page)).instCalculados).toBe(0);
@@ -292,7 +294,7 @@ test('a câmera não corta nem para: desliza e vai até o instrumento que acabou
   await expect.poll(() => sim(page)).not.toBeNull();
   await nota(page, { papel: 'surdo', familia: 'samba', vel: 0.7 });
   await expect.poll(async () => (await sim(page)).musicos.length).toBe(1);
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(3300);         // a câmera não troca de foco antes de 3 s: nada de correria
   // um instrumento novo: a câmera vai até ele
   await nota(page, { papel: 'mel', familia: 'samba', vel: 0.5, timbre: 'flauta' });
   await expect.poll(async () => (await sim(page)).foco, { timeout: 4000 }).toBe('samba|mel|flauta');
@@ -330,4 +332,34 @@ test('com uma prévia tocando, a banda toca a faixa: os instrumentos da análise
   // a prévia parou: a banda volta a ouvir a sonificação
   await page.evaluate(() => { window.__atlas.previaAtual = () => null; });
   await expect.poll(async () => (await sim(page)).previa).toBeNull();
+});
+
+test('caixa e chimbal trazem a bateria, pandeiro vai na mão, e a flauta fica presa na boca', async ({ page }) => {
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  await nota(page, { papel: 'pandeiro', familia: 'samba', vel: 0.6 });
+  await nota(page, { papel: 'caixa', familia: 'rock', vel: 0.8 });
+  await nota(page, { papel: 'mel', familia: 'jazz', vel: 0.5, timbre: 'flauta' });
+  await expect.poll(async () => (await sim(page)).musicos.length).toBe(3);
+  const por = Object.fromEntries((await sim(page)).musicos.map(m => [m.chave, m]));
+  expect(por['rock|perc'].kit).toBe(true);
+  expect(por['samba|perc'].kit).toBe(false);
+  expect(por['samba|perc'].pandeiro).toBe(true);
+  expect(por['jazz|mel|flauta'].pose).toBe('flauta');
+});
+
+test('com um cantor no palco, a câmera faz dele a estrela de vez em quando', async ({ page }) => {
+  test.slow();
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  await page.evaluate(() => { Math.random = () => 0.1; });     // o sorteio sempre favorece o cantor
+  await nota(page, { papel: 'mel', familia: 'mpb', vel: 0.5, timbre: 'voz' });
+  await nota(page, { papel: 'acorde', familia: 'mpb', vel: 0.5, timbre: 'violao' });
+  // mantém a banda tocando enquanto a câmera escolhe
+  const tocar = setInterval(() => { nota(page, { papel: 'acorde', familia: 'mpb', vel: 0.6, timbre: 'violao' }).catch(() => {}); nota(page, { papel: 'mel', familia: 'mpb', vel: 0.4, timbre: 'voz' }).catch(() => {}); }, 400);
+  try {
+    await expect.poll(async () => { const e = await sim(page); return e.foco === 'mpb|mel|voz' && e.estrela; }, { timeout: 25000 }).toBe(true);
+  } finally { clearInterval(tocar); }
 });

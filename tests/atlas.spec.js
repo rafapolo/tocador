@@ -1218,3 +1218,33 @@ test('cartão: instrumentos estimados acima dos parecidos, em português e sem o
   await clicarNoPonto(page, primeiro, primeiro.tracks[3]);
   await expect(bloco).toBeHidden();      // faixa sem análise: nada a mostrar
 });
+
+test('zigue-zague: só aparece no grafo, pula para outro artista de outro gênero e não volta a quem já passou', async ({ page }) => {
+  await boot(page, { url: '/atlas?grafo=1&artista=Beta' });
+  const btn = page.locator('#btn-zigue');
+  await expect(btn).toBeVisible();
+  await expect(page.locator('#grafo-titulo')).toHaveText('Beta');
+  await page.evaluate(() => localStorage.removeItem('tocador-atlas-zigue-vistos'));
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  // Beta é samba: o primeiro pulo vai para um artista do outro gênero (punk)
+  await expect.poll(async () => (await grafo(page)).centro).not.toBe('Beta');
+  const primeiro = (await grafo(page)).centro;
+  expect(['<img src=x onerror=alert(1)>', 'Delta']).toContain(primeiro);
+  await expect(page.locator('#zigue-tempo')).toHaveText(/^[12]:\d\d$/);
+  // os próximos pulos passam pelos que faltam, sem repetir
+  const vistos = new Set(['Beta', primeiro]);
+  for (let k = 0; k < 2; k++) {
+    const antes = (await grafo(page)).centro;
+    await page.evaluate(() => window.__atlas.zigueAgora());
+    await expect.poll(async () => (await grafo(page)).centro).not.toBe(antes);
+    const c = (await grafo(page)).centro;
+    expect(vistos.has(c)).toBe(false);
+    vistos.add(c);
+  }
+  expect(vistos.size).toBe(4);
+  // sair do grafo desliga e esconde
+  await page.locator('#btn-grafo').click();
+  await expect(btn).toBeHidden();
+  expect((await page.evaluate(() => window.__atlas.zigue())).on).toBe(false);
+});

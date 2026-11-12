@@ -916,14 +916,22 @@
     const audivel = () => ativado && vontade && !previaTocando && !emEspera() && !document.hidden && !dormindo;
 
     const aceso = () => vontade && !emEspera() && destravado;
+    // Ligada mas calada agora: adormeceu (um minuto sem gesto), uma prévia toca, ou o sistema suspendeu o áudio
+    // (troca de fone, ligação, iOS). O botão não pode prometer som nesses casos: fica âmbar, diz por quê, e um
+    // clique retoma em vez de desligar.
+    const suspenso = () => !!ac && ac.state !== 'running' && ac.state !== 'closed' && !document.hidden;
+    const pausadoPor = () => (!aceso() ? null : previaTocando ? 'previa' : dormindo ? 'dormindo' : suspenso() ? 'sistema' : null);
 
     function rotular() {
-      const b = o.botao, espera = emEspera(), faltaGesto = vontade && !espera && !destravado;
-      b.setAttribute('aria-pressed', String(aceso()));
-      b.classList.toggle('espera', espera || faltaGesto);
+      const b = o.botao, espera = emEspera(), faltaGesto = vontade && !espera && !destravado, pausa = pausadoPor();
+      b.setAttribute('aria-pressed', String(aceso() && !pausa));
+      b.classList.toggle('espera', espera || faltaGesto || !!pausa);
       b.title = !Ctx ? 'Este navegador não consegue sonificar o mapa'
         : espera ? 'Em espera: o Tocador está tocando em outra aba. Clique para pausá-lo e sonificar o mapa'
           : faltaGesto ? 'A sonificação do mapa começa no primeiro clique ou tecla: o navegador não deixa soar antes disso (M)'
+          : pausa === 'previa' ? 'Pausada enquanto a prévia toca. Clique para parar a prévia e voltar a sonificar (M)'
+          : pausa === 'dormindo' ? 'Pausada: o mapa ficou um minuto sem ninguém mexer. Clique ou mexa no mapa para voltar (M)'
+          : pausa === 'sistema' ? 'Pausada pelo sistema (fone trocado, outra app tocando). Clique para retomar (M)'
             : vontade ? 'Sonificação ligada: som sintetizado na hora a partir dos gêneros à vista. Clique para silenciar (M)'
               : 'Sonificação desligada. Clique para ligar (M)';
     }
@@ -931,7 +939,7 @@
     function montar() {
       if (ac || !Ctx) return;
       ac = new Ctx({ latencyHint: 'playback' });
-      ac.onstatechange = () => { if (ac.state === 'running') { destravado = true; rotular(); } };
+      ac.onstatechange = () => { if (ac.state === 'running') destravado = true; rotular(); };
       m = criarMotor(ac);
       m.ouvir(ouvinteSim);
       m.volume.gain.value = volumeDe(o.regiao()?.z ?? 1);   // the first note already at the zoom's level
@@ -1023,6 +1031,18 @@
     // ♪ also stops a preview: one button that means "no more sound from this page", or "this one, not that one".
     function alternar() {
       if (!Ctx) return;
+      // pausada (adormeceu, prévia, sistema): o clique retoma, não desliga
+      const pausa = pausadoPor();
+      if (pausa) {
+        ativado = true;
+        dormindo = false;
+        ultimoGesto = performance.now();
+        if (pausa === 'previa') o.pararPrevia();
+        ac?.resume?.();
+        atualizar();
+        if (m) m.tap([0, 7], 0.6);
+        return;
+      }
       const estava = aceso();
       ativado = true;
       if (!pv.paused) o.pararPrevia();
@@ -1068,7 +1088,7 @@
           m.medidor.getFloatTimeDomainData(b);
           rms = Math.sqrt(b.reduce((a, x) => a + x * x, 0) / b.length);
         }
-        return { vontade, espera: emEspera(), ativado, audivel: audivel(), previa: previaTocando, outroSom, dormindo, contexto: ac?.state ?? null, rms, ...(m ? m.estado() : {}) };
+        return { vontade, espera: emEspera(), ativado, audivel: audivel(), pausa: pausadoPor(), previa: previaTocando, outroSom, dormindo, contexto: ac?.state ?? null, rms, ...(m ? m.estado() : {}) };
       },
     };
   }

@@ -63,6 +63,17 @@ Nada é inventado: cada músico é uma voz real do motor de som.
 - **Silêncio:** quem fica calado por 5 s sai do palco. Os músicos entram pela frente e somem diminuindo e ficando
   transparentes.
 
+### Bateria, pandeiro e a estrela
+
+- **Bateria:** o percussionista começa com um surdo. Quando a voz dele toca peças de bateria (caixa, bumbo, chimbal,
+  prato), ele ganha o kit: caixa na frente, chimbal e prato nos pedestais, bumbo atrás. Os pratos tremem nos golpes.
+- **Pandeiro:** quem toca pandeiro sem bateria segura um na mão esquerda.
+- **Instrumentos presos ao corpo:** flauta, sopro e violino vão presos à cabeça, junto da boca ou do queixo; os de
+  corda, ao tronco. Acompanham cada aceno. As poses das mãos (flauta, sopro, violino, microfone) saíram de
+  cinemática inversa, com o ombro torcendo, e as mãos caem no instrumento.
+- **A estrela:** com um cantor no palco, a câmera o escolhe cerca de metade das vezes, e nessas dá a volta inteira
+  em torno dele.
+
 ### Braços
 
 Cada braço tem três juntas: ombro, cotovelo e punho (`junta()`).
@@ -131,26 +142,14 @@ Cada família de gênero leva a um cenário (`CENARIOS`):
 Exemplo, na região da Bossa Nova no mapa: a praia domina, o morro do samba aparece atrás e as bandeirinhas do forró
 cruzam o céu.
 
-## Direção de clipe
+## Câmera
 
-### Planos
+- **Sem cortes e sem parar:** orbita num arco pela frente da banda e desliza de um músico para outro. Olhar e
+  posição andam como molas com velocidade máxima (`segue()`), sem trancos.
+- **Trocas de foco:** no mínimo 6 s entre uma e outra; um instrumento que acabou de entrar ganha a câmera de perto
+  depois de 3 s. O enquadramento (de perto, médio, dois músicos, a banda inteira) muda devagar.
 
-A câmera trabalha por planos, com **corte seco na batida**: a cada 8 tempos, ou 4 quando algum músico está "quente"
-(energia > 0,8). O tipo de plano é sorteado com pesos, sem repetir o anterior, e enquadra quem tocou mais forte há
-pouco. Dentro do plano a câmera anda devagar (`dirigir()`).
-
-| Plano | Peso | Enquadra | Movimento |
-|---|---|---|---|
-| close | 3 | rosto e mãos | aproxima |
-| médio | 3 | corpo inteiro | gira em volta |
-| contra-plongée | 2 | de baixo para cima, "herói" | desliza de lado |
-| dois | 2 | os dois que mais tocam | fecha o enquadramento |
-| travelling | 1,5 | desliza pela frente da banda | de um lado ao outro |
-| aberto | 1,5 | a banda inteira | grua subindo e descendo |
-
-- O nome de quem está no plano aparece embaixo, por exemplo "pandeiro, cuíca · Samba".
-- **Movimento reduzido:** só o plano aberto, parado, sem dança e sem animar os objetos. As luzes continuam
-  respondendo às notas.
+## Imagem
 
 ### Luz e imagem de filme
 

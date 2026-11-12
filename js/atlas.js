@@ -1316,6 +1316,73 @@
     grafo.abrir(nome);
     som?.momento();
   }
+  // ── zigue-zague ──
+  // No grafo, o botão Zigue-zague pula a cada 2 minutos para outro artista: sempre um que ainda não passou (a lista
+  // dos já vistos fica neste navegador, para não voltar a eles depois), da família de gênero menos visitada até
+  // agora, e de outro macrogênero que o atual sempre que der. Assim, com o tempo, a caminhada atravessa muitos
+  // gêneros, e a música e a banda mudam com ela. Desliga ao sair do grafo.
+  const ZIGUE_MS = 120000, CHAVE_ZIGUE = 'tocador-atlas-zigue-vistos';
+  const zigue = { on: false, t: 0, prox: 0, vistos: new Set(), familias: new Map() };
+  try { for (const n of JSON.parse(localStorage.getItem(CHAVE_ZIGUE) || '[]')) zigue.vistos.add(n); } catch {}
+  function familiaDeGenero(g) { return window.RECEITAS_ATLAS?.familiaDe(g) || macroDe(g); }
+  function proximoZigue() {
+    const todos = grafo.artistas();
+    if (!todos.length) return null;
+    let cand = todos.filter(a => !zigue.vistos.has(a.nome) && a.nome !== grafo.centro);
+    if (!cand.length) { zigue.vistos.clear(); cand = todos.filter(a => a.nome !== grafo.centro); }      // passou por todos: recomeça
+    const atual = grafo.estado().genero, macroAtual = atual ? macroDe(atual) : null;
+    const outroMacro = cand.filter(a => macroDe(a.genero) !== macroAtual);
+    if (outroMacro.length) cand = outroMacro;
+    // a família menos visitada entre as que sobraram; empate sorteado
+    const porFam = new Map();
+    for (const a of cand) { const f = familiaDeGenero(a.genero); (porFam.get(f) || porFam.set(f, []).get(f)).push(a); }
+    let menor = Infinity, fams = [];
+    for (const f of porFam.keys()) { const n = zigue.familias.get(f) || 0; if (n < menor) { menor = n; fams = [f]; } else if (n === menor) fams.push(f); }
+    const lista = porFam.get(fams[Math.floor(Math.random() * fams.length)]);
+    // dentro da família, os artistas com mais faixas saem mais (raiz das faixas como peso)
+    let tot = 0;
+    for (const a of lista) tot += Math.sqrt(a.faixas);
+    let r = Math.random() * tot;
+    for (const a of lista) { r -= Math.sqrt(a.faixas); if (r <= 0) return a; }
+    return lista[lista.length - 1];
+  }
+  function pularZigue() {
+    const a = proximoZigue();
+    zigue.prox = performance.now() + ZIGUE_MS;
+    if (!a) return;
+    zigue.vistos.add(a.nome);
+    const f = familiaDeGenero(a.genero);
+    zigue.familias.set(f, (zigue.familias.get(f) || 0) + 1);
+    try { localStorage.setItem(CHAVE_ZIGUE, JSON.stringify([...zigue.vistos].slice(-2000))); } catch {}
+    abrirGrafo(a.nome);
+  }
+  function relogioZigue() {
+    if (!zigue.on) return;
+    const falta = zigue.prox - performance.now();
+    if (falta <= 0) pularZigue();
+    const s2 = Math.max(0, Math.ceil((zigue.prox - performance.now()) / 1000));
+    $('zigue-tempo').textContent = `${Math.floor(s2 / 60)}:${String(s2 % 60).padStart(2, '0')}`;
+    som?.mexeu();                    // alguém está assistindo a caminhada: a música não adormece
+  }
+  function alternarZigue(on = !zigue.on) {
+    zigue.on = on && grafo.aberto;
+    $('btn-zigue').setAttribute('aria-pressed', String(zigue.on));
+    clearInterval(zigue.t);
+    $('zigue-tempo').textContent = '';
+    if (!zigue.on) return;
+    if (grafo.centro) zigue.vistos.add(grafo.centro);
+    pularZigue();                    // o primeiro pulo é já, para o clique ter resposta
+    zigue.t = setInterval(relogioZigue, 1000);
+    relogioZigue();
+  }
+  $('btn-zigue').addEventListener('click', () => alternarZigue());
+  // o botão aparece só com o grafo aberto; sair do grafo desliga o zigue-zague
+  new MutationObserver(() => {
+    const noGrafo = document.body.classList.contains('em-grafo');
+    $('btn-zigue').hidden = !noGrafo;
+    if (!noGrafo && zigue.on) alternarZigue(false);
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
   function alternarGrafo() {
     if (grafo.aberto) {             // the toggle goes back to the whole map; Esc goes to the artist's dot
       grafo.fechar(false);
@@ -1351,6 +1418,7 @@
   function medir() {
     const r = canvas.getBoundingClientRect();
     topoBaixo = $('topo').getBoundingClientRect().bottom + 8;
+    document.documentElement.style.setProperty('--topo-baixo', `${Math.round(topoBaixo)}px`);   // o #zoom fica logo abaixo da barra
     const novoW = Math.max(1, r.width), novoH = Math.max(1, r.height);
     dpr = Math.min(2, window.devicePixelRatio || 1);
     const primeiro = W === 1 && H === 1;
@@ -1447,6 +1515,8 @@
     agoraSom: () => som?.agora() ?? 0,
     ouvidoSom: () => som?.ouvido() ?? 0,     // o que está saindo no alto-falante agora (com a latência de saída)
     batidaSom: () => som?.batida() ?? null,   // o pulso da banda nesse instante, em seminímas
+    zigue: () => ({ on: zigue.on, faltaMs: zigue.on ? Math.max(0, zigue.prox - performance.now()) : 0, vistos: zigue.vistos.size, familias: Object.fromEntries(zigue.familias) }),
+    zigueAgora: () => zigue.on && pularZigue(),
     folgaSom: s => som?.folga(s),            // quanto à frente o som agenda (a banda 3D pede mais, para não engasgar)
     acordarSom: () => som?.mexeu(),          // alguém está assistindo: a música não adormece
     familia: f => ({ cor: corFam.get(f) || '#d4a574', nome: nomeFam.get(f) || f }),

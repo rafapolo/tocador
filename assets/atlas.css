@@ -93,7 +93,7 @@ button { font: inherit; color: inherit; }
    take a line of their own; between that and 1280 px the labels that repeat themselves make room first. */
 #controles { display: flex; gap: 8px; flex: none; flex-wrap: wrap; margin-left: auto; }
 @media (max-width: 1279px) {
-  [data-acervo] .ic, [data-mapa] .ic, #btn-musica span, #btn-sim span, #btn-sobre span { display: none; }
+  [data-acervo] .ic, [data-mapa] .ic, #btn-musica span, #btn-sim span, #btn-zigue span, #btn-sobre span { display: none; }
 }
 @media (max-width: 1039px) {
   [data-acervo] .ic, [data-mapa] .ic { display: inline-block; }
@@ -141,6 +141,10 @@ button { font: inherit; color: inherit; }
   display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
   background: var(--glass);
 }
+/* no desktop o zoom fica no alto à direita, logo abaixo da barra do menu; no celular segue embaixo, ao alcance do polegar */
+@media (min-width: 721px) {
+  #zoom { top: calc(var(--topo-baixo, 64px) + 4px); bottom: auto; }
+}
 #zoom button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 18px; cursor: pointer; color: var(--text); }
 #zoom button + button { border-top: 1px solid var(--border); }
 #zoom button:hover { background: var(--surface-light); }
@@ -150,6 +154,12 @@ button { font: inherit; color: inherit; }
 #btn-musica.espera { color: var(--accent); }
 #btn-musica:disabled { opacity: 0.45; cursor: not-allowed; }
 #btn-sim[aria-pressed="true"] { color: var(--accent); }
+/* o zigue-zague só existe no grafo */
+#btn-zigue[hidden] { display: none; }
+body.em-grafo #btn-zigue:not([hidden]) { display: inline-flex; }
+#btn-zigue[aria-pressed="true"] { color: var(--accent); }
+#zigue-tempo { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-2); }
+#zigue-tempo:empty { display: none; }
 
 /* ── cartão da faixa ── */
 #cartao {
@@ -224,7 +234,7 @@ button { font: inherit; color: inherit; }
   #busca-wrap { order: 3; flex: 1 1 100%; max-width: none; }
   #controles { order: 4; }
   .seg button, .seg a { padding: 6px 11px; }
-  #btn-musica span, #btn-sim span, #btn-sobre span { display: none; }
+  #btn-musica span, #btn-sim span, #btn-zigue span, #btn-sobre span { display: none; }
   /* A linha dos filtros já está cheia: o ? usa a sobra ao lado de Som/Gêneros. */
   #controles > .seg:first-child { order: -2; }
   #controles > .seg-sobre, #controles > .seg:has(#btn-tour) { order: -1; }
@@ -521,7 +531,7 @@ button { font: inherit; color: inherit; }
 }
 #sim-sair:hover, #sim-sair:focus-visible { background: var(--surface-light); outline: none; border-color: var(--accent); }
 /* embaixo do palco: a dica de quem está em foco (como o #dica do mapa) e os instrumentos com a parte de cada um */
-#sim-info { display: grid; gap: 8px; padding: 10px 12px 12px; }
+#sim-info { display: grid; gap: 8px; padding: 0 12px 8px; }
 #sim-info:has(#sim-foco[hidden]) { display: none; }
 .sim-dica {
   margin: 0; padding: 6px 10px; border-radius: 8px; font-size: 12.5px;
@@ -580,3 +590,6 @@ button { font: inherit; color: inherit; }
   background: transparent; border: 1px solid var(--accent); border-radius: 22px;
 }
 #sim-convite button:hover, #sim-convite button:focus-visible { background: var(--accent); color: var(--bg); outline: none; }
+
+/* com o zoom no alto, o cartão da faixa encosta na margem direita (antes deixava a coluna do zoom livre) */
+@media (min-width: 721px) { #cartao { right: 16px; } }

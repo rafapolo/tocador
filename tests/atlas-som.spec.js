@@ -355,3 +355,27 @@ test('o visor aparece embaixo enquanto a sonificação soa, com os gêneros e o 
   await page.locator('#btn-musica').click();
   await expect(visor).not.toHaveClass(/ativo/, { timeout: 6000 });
 });
+
+test('♪ calado não aparece ligado: com uma prévia tocando fica âmbar e diz por quê, e o clique volta a sonificar', async ({ page }) => {
+  await boot(page);
+  await page.keyboard.press('+');
+  await soando(page);
+  const b = page.locator('#btn-musica');
+  await expect(b).toHaveAttribute('aria-pressed', 'true');
+  // uma prévia começou: a sonificação cala, e o botão também deixa de prometer som
+  await page.evaluate(() => {
+    const a = document.getElementById('previa');
+    window.pausou = false;
+    a.pause = () => { window.pausou = true; a.dispatchEvent(new Event('pause')); };
+    a.dispatchEvent(new Event('play'));
+  });
+  await expect(b).toHaveAttribute('aria-pressed', 'false');
+  await expect(b).toHaveClass(/espera/);
+  await expect(b).toHaveAttribute('title', /prévia/);
+  expect((await page.evaluate(() => window.__atlas.som())).pausa).toBe('previa');
+  // o clique para a prévia e volta a sonificar, em vez de desligar
+  await b.click();
+  expect(await page.evaluate(() => window.pausou)).toBe(true);
+  await expect(b).toHaveAttribute('aria-pressed', 'true');
+  expect((await page.evaluate(() => window.__atlas.som())).vontade).toBe(true);
+});
