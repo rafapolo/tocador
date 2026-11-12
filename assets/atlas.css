@@ -116,10 +116,14 @@ button { font: inherit; color: inherit; }
   background: var(--glass); border: 1px solid var(--border); border-radius: 12px;
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); max-width: 240px;
 }
-#legenda summary { cursor: pointer; padding: 8px 12px; color: var(--text-2); font-size: 12.5px; list-style: none; user-select: none; }
+#legenda summary {
+  display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 8px 12px;
+  color: var(--text-2); font-size: 12.5px; list-style: none; user-select: none;
+}
 #legenda summary::-webkit-details-marker { display: none; }
-#legenda summary::after { content: ' ▴'; }
-#legenda:not([open]) summary::after { content: ' ▾'; }
+/* a seta maior e encostada à direita */
+#legenda summary::after { content: '▴'; margin-left: auto; font-size: 20px; line-height: 1; }
+#legenda:not([open]) summary::after { content: '▾'; }
 #legenda-lista { list-style: none; margin: 0; padding: 0 6px 8px; }
 #legenda-lista button {
   display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: transparent;

@@ -104,11 +104,11 @@ Cada família de gênero leva a um cenário (`CENARIOS`):
 | Cenário | Famílias | Céu (alto → horizonte), chão | Objetos |
 |---|---|---|---|
 | **praia** (Rio) | bossa, mpb, reggae, ska, dub, salsa | azul → laranja, areia | mar com linha de onda, Pão de Açúcar e Urca, sol no horizonte, coqueiros |
-| **roda** (samba no morro) | samba, batucada, fanfarra, infantil | noite azul → roxo, terracota | dois morros com casinhas coloridas, varal de lâmpadas sobre o palco, mesa de bar com copo |
+| **roda** (samba no morro) | samba, batucada, fanfarra, infantil | noite azul → roxo, terracota | dois morros com casinhas coloridas, escadaria do morro com corrimão, varal de lâmpadas sobre o palco, mesa de bar com copo e cavaquinho, tantã ao lado, e uma plateia de 11 pessoas em volta batendo palma no tempo da banda |
 | **sertão** (festa) | forro, country | noite → laranja, terra | cactos, bandeirinhas, fogueira tremendo, lua |
 | **campo** | folk, neofolk, africa, afrobeat | azul-claro, grama | árvores, colinas |
 | **taverna** | tango, bolero, flamenco, fado, laiko, manouche | escuro quente, madeira | parede de tijolos, barris, lâmpadas penduradas piscando de leve |
-| **garagem** | rock, alternativo, punk, hardcore, metal, black, doom, psicodelico, postrock | preto → vermelho, concreto | pilhas de amplificador, treliça, refletores vermelhos pulsando |
+| **garagem** | rock, alternativo, punk, hardcore, metal, black, doom, psicodelico, postrock | preto → vermelho, concreto | parede de blocos com porta de enrolar meio aberta e pôsteres, bateria completa (bumbo, caixa, tons, pratos que tremem nos golpes fortes), pilhas de amplificador, treliça, refletores vermelhos pulsando, fumaça se arrastando pelo chão |
 | **rua** | boombap, trap, nuvem, reggaeton, fala | roxo de fim de tarde, asfalto | prédios, muro com grafite, postes |
 | **clube** | house, techno, electro, dnb, synthpop, pop | preto → violeta, piso escuro | barras de neon, lasers varrendo, globo espelhado girando |
 | **espaço** | ambient, experimental, ruido, dream, downtempo, cinema | índigo, quase preto | 300 estrelas, planeta com anel, esferas flutuando |

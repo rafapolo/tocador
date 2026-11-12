@@ -520,10 +520,39 @@
             add(new Caixa(1, 0.8, 0.8), mat([0xe8b04a, 0xd2553a, 0x5ab0c8, 0xf0e6d0, 0x8fc05a][k % 5]), x + Math.sin(a) * rr, rx * 0.75 * h * 0.75 - rx * 0.35 + rx * 0.4, z + rx * 0.5 + Math.cos(a) * 0.5 * rr * 0.3);
           }
         }
+        // a escadaria do morro, subindo atrás da roda até as casinhas
+        const degrau = mat(0xb8a890), corrimao = mat(0x5a5a5a, { metalness: 0.5 });
+        for (let k = 0; k < 16; k++) add(new Caixa(2.2, 0.28, 0.7), degrau, -5.5 - k * 0.32, 0.14 + k * 0.28, -9 - k * 0.6);
+        add(new Cil(0.03, 0.03, 11, 6), corrimao, -4.3 - 2.4, 3.3, -13.8, 1.08, 0, 0.27);
         fio(-5, 5, -2.5, 4.2, 14, [0xffd27a, 0xffe7b0], 'lampada');
+        // a mesa do bar, com o cavaquinho deitado em cima e o tantã ao lado
         const [x, z] = lugar(nome, 1, 8.5, 9.5);
         add(new Cil(0.7, 0.7, 0.08, 16), mat(0x7a4a2a), x, 0.9, z); add(new Cil(0.08, 0.08, 0.9, 6), mat(0x3a2a1c), x, 0.45, z);
         add(new Cil(0.12, 0.12, 0.3, 8), mat(0xf0c060), x + 0.2, 1.08, z);
+        const cavaco = add(new Esf(0.16, 12, 8), mat(0x9a5a2a, { roughness: 0.4 }), x - 0.15, 0.97, z + 0.1); cavaco.scale.set(1, 0.3, 0.75);
+        add(new Caixa(0.38, 0.03, 0.05), mat(0x2a1a10), x - 0.45, 0.97, z + 0.1);
+        add(new Cil(0.3, 0.28, 0.75, 16), mat(0x2a2a2a, { metalness: 0.4, roughness: 0.4 }), x + 1.1, 0.38, z + 0.2, 0, 0, 0);
+        add(new Cil(0.3, 0.3, 0.02, 16), mat(0xe8dcc0), x + 1.1, 0.76, z + 0.2);
+        // a plateia em volta, batendo palma no tempo da banda
+        const corpoGente = new Cil(0.17, 0.2, 0.75, 8), cabecaGente = new Esf(0.13, 10, 8), bracoGente = new Cil(0.035, 0.03, 0.45, 6);
+        for (let k = 0; k < 11; k++) {
+          const a = -1.75 + 3.5 * k / 10 + (hash('pl' + k) - 0.5) * 0.18, raio = 7.4 + hash('pr' + k) * 0.9;
+          const p = new THREE.Group();
+          p.position.set(Math.sin(a) * raio, 0, 2.5 - Math.cos(a) * raio);
+          p.rotation.y = Math.atan2(-p.position.x, 2.5 - p.position.z);
+          const pele = mat(new THREE.Color().setHSL(0.06 + hash('pp' + k) * 0.04, 0.4, 0.25 + hash('pq' + k) * 0.4));
+          const roupa = mat([0xf2f2f2, 0xd2553a, 0x2a6ad2, 0xf2c230, 0x1a1a1a, 0x4fbf5a][k % 6]);
+          p.add(malha(new Cil(0.06, 0.05, 0.85, 6), mat(0x2a2a30), 0, 0.42, 0));
+          p.add(malha(corpoGente, roupa, 0, 1.2, 0), malha(cabecaGente, pele, 0, 1.72, 0));
+          const bracos = [-1, 1].map(l => { const o = new THREE.Group(); o.position.set(0.2 * l, 1.5, 0); o.add(malha(bracoGente, pele, 0, -0.22, 0)); p.add(o); return o; });
+          g.add(p);
+          const fase = hash('pf' + k) * 0.3, alto = hash('pa' + k) < 0.35;     // alguns batem palma acima da cabeça
+          anim.push(() => {
+            const bt = (run?.batida ?? 0) + fase, junta = Math.pow(Math.max(0, Math.cos(bt * Math.PI * 2)), 6);   // as mãos se encontram na batida
+            for (const [j, o] of bracos.entries()) { const l = j ? -1 : 1; o.rotation.x = alto ? -2.6 : -1.3; o.rotation.z = l * (0.55 - 0.45 * junta); }
+            p.position.y = Math.max(0, Math.sin(bt * Math.PI * 2)) * 0.04;
+          });
+        }
         break;
       }
       case 'sertao': {
@@ -554,10 +583,57 @@
         break;
       }
       case 'garagem': {
+        // a parede do fundo, de blocos, com a porta de enrolar meio aberta e pôsteres
+        add(new Caixa(18, 7, 0.4), mat(0x3a3836, { roughness: 0.95 }), 0, 3.5, -8.5);
+        for (let k = 0; k < 9; k++) add(new Caixa(17.9, 0.03, 0.42), mat(0x2a2826), 0, 0.4 + k * 0.75, -8.48);
+        add(new Caixa(5.2, 4.2, 0.1), mat(0x0a0a0a), -4.5, 2.1, -8.25);                       // o vão escuro da porta
+        for (let k = 0; k < 7; k++) add(new Caixa(5.2, 0.3, 0.08), mat(0x8a8e92, { metalness: 0.6, roughness: 0.4 }), -4.5, 2.6 + k * 0.3, -8.18);   // as lâminas, meio enroladas
+        const posteres = ['AO VIVO', 'SOM NA GARAGEM', 'TOCADOR', 'SÁBADO 22H'];
+        posteres.forEach((txt, k) => {
+          const c = document.createElement('canvas'); c.width = 128; c.height = 180;
+          const x2 = c.getContext('2d'), cores = [['#d2283a', '#f2e6d0'], ['#111', '#f2c230'], ['#f2e6d0', '#d2283a'], ['#2a3a8a', '#f2f2f2']][k];
+          x2.fillStyle = cores[0]; x2.fillRect(0, 0, 128, 180);
+          x2.fillStyle = cores[1]; x2.beginPath(); x2.arc(64, 70, 38 - k * 4, 0, Math.PI * 2); x2.fill();
+          x2.font = 'bold 18px sans-serif'; x2.textAlign = 'center';
+          txt.split(' ').forEach((w, i) => x2.fillText(w, 64, 140 + i * 20));
+          const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+          const m2 = mat(0xffffff, { map: tex, roughness: 0.9 });
+          add(new Plano(1.1, 1.55), m2, 1.2 + k * 1.6, 3.6 + (k % 2) * 0.35, -8.28, 0, 0, (hash('po' + k) - 0.5) * 0.12);
+        });
+        // a bateria no fundo do palco: bumbo deitado, caixa, tons e pratos nos pedestais
+        const bx = 3.2, bz = -0.6, casco = mat(0x7a1a1a, { metalness: 0.3, roughness: 0.35 }), pele = mat(0xe8e2d6), cromo = mat(0xd8d8d8, { metalness: 0.9, roughness: 0.2 });
+        add(new Cil(0.45, 0.45, 0.4, 20), casco, bx, 0.45, bz, Math.PI / 2);
+        add(new Cil(0.43, 0.43, 0.02, 20), pele, bx, 0.45, bz + 0.21, Math.PI / 2);
+        for (const [dx, y, r] of [[-0.55, 0.62, 0.2], [-0.25, 1.0, 0.16], [0.25, 1.0, 0.17], [0.65, 0.55, 0.24]]) {
+          add(new Cil(r, r, 0.2, 16), casco, bx + dx, y, bz + 0.25); add(new Cil(r, r, 0.015, 16), pele, bx + dx, y + 0.1, bz + 0.25);
+        }
+        const pratos = [];
+        for (const [dx, y, dz] of [[-0.95, 1.5, 0.1], [0.95, 1.65, 0], [-0.75, 1.05, 0.5]]) {
+          add(new Cil(0.015, 0.015, y, 6), cromo, bx + dx, y / 2, bz + dz);
+          pratos.push(add(new Cil(0.36, 0.02, 0.025, 20), mat(0xd8b44a, { metalness: 0.95, roughness: 0.25 }), bx + dx, y, bz + dz, 0.15, 0, 0));
+        }
+        // os pratos tremem quando a banda bate forte
+        anim.push(t => { const f = run?.flash ?? 0; pratos.forEach((p, k) => { p.rotation.x = 0.15 + Math.sin(t * 30 + k) * 0.06 * f; }); });
         for (let j = 0; j < 4; j++) { const [x, z] = lugar(nome, j, 7.5, 9); const zz = Math.max(z, -7); add(new Caixa(1.4, 1.6, 0.8), mat(0x141414), x, 0.8, zz); add(new Caixa(1.2, 1.2, 0.05), mat(0x5a5a5a), x, 0.85, zz + 0.42); add(new Caixa(1.4, 1.2, 0.8), mat(0x141414), x, 2.2, zz); }
         for (const x of [-6, 6]) add(new Caixa(0.2, 6, 0.2), mat(0x8a8a8a, { metalness: 0.6 }), x, 3, -3);
         add(new Caixa(12.2, 0.2, 0.2), mat(0x8a8a8a, { metalness: 0.6 }), 0, 6, -3);
         for (const x of [-3, 0, 3]) { const r2 = add(new Cone(0.3, 0.6, 10), brilho(0xff3a2a), x, 5.6, -3, Math.PI); anim.push(t => { r2.material.emissiveIntensity = 0.6 + 0.8 * Math.max(0, Math.sin(t * 4 + x)); }); }
+        // fumaça no chão: lençóis translúcidos que se arrastam devagar
+        const fumacaTex = (() => {
+          const c = document.createElement('canvas'); c.width = c.height = 64;
+          const x2 = c.getContext('2d'), gr = x2.createRadialGradient(32, 32, 0, 32, 32, 32);
+          gr.addColorStop(0, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+          x2.fillStyle = gr; x2.fillRect(0, 0, 64, 64);
+          return new THREE.CanvasTexture(c);
+        })();
+        for (let k = 0; k < 9; k++) {
+          const m2 = new THREE.MeshBasicMaterial({ map: fumacaTex, transparent: true, depthWrite: false, opacity: 0.5, color: 0xd8d0d8, fog: false });
+          m2.userData.base = 0.5;
+          mats.push(m2);
+          const f = add(new Plano(4.5, 4.5), m2, (hash('fx' + k) - 0.5) * 12, 0.12 + k * 0.015, 2.5 + (hash('fz' + k) - 0.5) * 8, -Math.PI / 2);
+          const x0 = f.position.x, v = 0.15 + hash('fv' + k) * 0.2;
+          anim.push(t => { f.position.x = x0 + Math.sin(t * v + k) * 1.5; f.rotation.z = t * v * 0.3 + k; });
+        }
         break;
       }
       case 'rua': {
@@ -638,7 +714,7 @@
       if (!c.g.visible) continue;
       c.g.scale.set(1, Math.max(0.02, Math.min(1, p * 1.4)), 1);     // os objetos sobem do chão com o peso
       const op = Math.min(1, p * 1.6);
-      if (op !== c.op) { c.op = op; for (const m of c.mats) opacidade(m, op); }
+      if (op !== c.op) { c.op = op; for (const m of c.mats) opacidade(m, op * (m.userData.base ?? 1)); }     // a fumaça nunca passa da sua transparência
       if (!reduz.matches) for (const f of c.anim) f(t);
       tot += p;
       alto.add(tmp.setHex(c.def.ceu[0]).multiplyScalar(p));
