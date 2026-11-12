@@ -185,3 +185,24 @@ test('o fim gira de volta à vista de frente com que o tour começou', async ({ 
   expect((await estado(page)).yaw).toBeCloseTo(0.9, 2);
   await expect.poll(async () => { const e = await estado(page); return Math.abs(e.yaw) + Math.abs(e.pitch); }, { timeout: 6000 }).toBeLessThan(1e-6);
 });
+test('?tour=en: convite e legendas em inglês, com números no formato en-US', async ({ page }) => {
+  await boot(page, '/atlas?tour=en');
+  if (await page.evaluate(() => !!window.__atlas.som())) await expect(page.locator('#tour-convite button')).toHaveText('▶ Start with sound');
+  await comecarDoConvite(page);
+  const linha = page.locator('#tour-linha');
+  await expect(linha).toContainText('tracks. Each dot is a track');
+  expect(await page.locator('#tour-legenda').getAttribute('lang')).toBe('en');
+  expect(new URL(page.url()).searchParams.has('tour')).toBe(false);
+  // pulando para o Grafo/Som: as frases seguintes também em inglês
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { window.__atlasTour.iniciar(87); });
+  await expect.poll(async () => (await tour(page)).cena).toBe('som-generos');
+  await expect(linha).toContainText(/map, |Sound map|Genres map/);
+  await expect(page.locator('#tour-kicker')).not.toHaveText(/gêneros|^som$/);
+});
+test('/atlas/tour/?tour=en segue em inglês', async ({ page }) => {
+  await boot(page, '/atlas/tour/?tour=en');
+  await comecarDoConvite(page);
+  await expect(page.locator('#tour-linha')).toContainText('tracks.');
+});

@@ -1,7 +1,7 @@
 // atlas-tour.js — o tour de 2 minutos do /atlas (roteiro em TOUR.md). Um ponteiro desenhado clica nos controles de
 // verdade, a câmera voa pelos lugares que os dados apontam (nenhum nome ou número fixo aqui: tudo é contado no
 // navegador) e a trilha é a própria sonificação, que reage ao que a câmera vê. ▶ Tour ou ?tour=1 (&t=<s> pula);
-// Esc ou ✕ esc encerram e devolvem mapa, filtros, grafo, seleção e câmera. Carregado depois de js/atlas.js, cujo
+// ?tour=en faz o mesmo com a legenda e o convite em inglês. Esc ou ✕ esc encerram e devolvem mapa, filtros, grafo, seleção e câmera. Carregado depois de js/atlas.js, cujo
 // window.__atlas é a única porta para o mapa.
 (function () {
   'use strict';
@@ -9,7 +9,12 @@
   const at = window.__atlas;
   if (!at) return;
   const $ = id => document.getElementById(id);
-  const fmt = n => Math.round(n).toLocaleString('pt-BR');
+  // ?tour=en: a legenda em inglês vale para a visita inteira (o tour=en sai do endereço, mas ▶ Tour segue em inglês).
+  const EN = new URLSearchParams(location.search).get('tour') === 'en';
+  const L = (pt, en) => (EN ? en : pt);
+  // Os macro-gêneros têm nome em inglês na chave do payload; só o de Folk é encurtado, como no mapa.
+  const nomeEn = m => (m === 'Folk, World, & Country' ? 'Folk / World' : m);
+  const fmt = n => Math.round(n).toLocaleString(EN ? 'en-US' : 'pt-BR');
   const pct = x => Math.round(x * 100);
   const reduzMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const comPonteiro = () => matchMedia('(min-width: 981px)').matches;
@@ -17,7 +22,8 @@
   // ── dados: o que o tour mostra, contado a partir do payload ──
   // Cada marco é [gênero, x, y, n, z]: a mediana de um subgênero que forma um lugar no mapa e quantas faixas tem.
   function calcular() {
-    const { A, cor, macros, nomeMacro, subDe, macroDe } = at.dados();
+    const { A, cor, macros, nomeMacro: nomePt, subDe, macroDe } = at.dados();
+    const nomeMacro = EN ? nomeEn : nomePt;
     const N = A.n, OUTROS = macros.length;
     const porAcervo = A.acervos.map((_, j) => { let c = 0; for (let i = 0; i < N; i++) if (A.acervo[i] === j) c++; return c; });
     const porMacro = new Array(OUTROS + 1).fill(0);
@@ -145,8 +151,9 @@
     capa.id = 'tour';
     capa.innerHTML = '<div class="tour-barra tour-baixo"><div id="tour-progresso"><span></span></div></div>'
       + '<div id="tour-legenda" role="status" aria-live="polite"><p id="tour-kicker"></p><p id="tour-linha"></p></div>'
-      + '<button id="tour-sair" type="button" aria-label="Encerrar o tour (Esc)">✕ esc</button>'
+      + '<button id="tour-sair" type="button" aria-label="' + L('Encerrar o tour (Esc)', 'End the tour (Esc)') + '">✕ esc</button>'
       + '<div id="tour-ponteiro" aria-hidden="true" hidden><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6.5 1.5L9.5 19z"/></svg></div>';
+    if (EN) capa.querySelector('#tour-legenda').lang = 'en';
     document.body.append(capa);
     capa.querySelector('#tour-sair').addEventListener('click', () => parar());
     ui = { capa, kicker: $('tour-kicker'), linha: $('tour-linha'), legenda: $('tour-legenda'), barra: $('tour-progresso').firstElementChild, ponteiro: $('tour-ponteiro') };
@@ -193,7 +200,7 @@
       { id: 'abertura', dur: 5, async fn() {
         at.fecharCartao();
         at.enquadrarTudo(!run.rapido);
-        legenda('atlas', `${fmt(D.N)} faixas. Cada ponto é uma faixa; o que soa parecido fica perto.`);
+        legenda('atlas', L(`${fmt(D.N)} faixas. Cada ponto é uma faixa; o que soa parecido fica perto.`, `${fmt(D.N)} tracks. Each dot is a track; what sounds alike sits close together.`));
         await espera(1200);
         // De longe a banda é só a cama, quase muda: o tour desce logo até a primeira parada e não sobe mais.
         const m = D.trav?.[0] || D.m1;
@@ -202,12 +209,12 @@
       { id: 'sonificar', dur: 5, async fn() {
         const s = at.som(), btn = $('btn-musica');
         if (!s || btn.disabled) {
-          legenda('sonificar', 'Este navegador não toca a sonificação; o tour segue em silêncio.');
+          legenda(L('sonificar', 'sonify'), L('Este navegador não toca a sonificação; o tour segue em silêncio.', 'This browser can’t play the sonification; the tour goes on in silence.'));
           await clicar(btn, { clica: false });
           return;
         }
         await clicar(btn, { clica: false });      // ligada em iniciar(), ainda dentro do clique em ▶ Tour
-        legenda('sonificar', 'Nenhum som aqui é gravado: o que a câmera vê vira a partitura, e cada gênero na tela toca uma parte da banda.');
+        legenda(L('sonificar', 'sonify'), L('Nenhum som aqui é gravado: o que a câmera vê vira a partitura, e cada gênero na tela toca uma parte da banda.', 'No sound here is recorded: what the camera sees becomes the score, and each genre on screen plays a part in the band.'));
         await espera(1200);
         esconderPonteiro();
         focar(null);
@@ -216,16 +223,16 @@
         const T = D.trav, { m1 } = D;
         if (!T) {
           const zoom = m => Math.max(8, zoomDoRotulo(m.n));
-          if (!m1) { legenda('mainstream', 'Os lugares mais povoados do mapa.'); return; }
+          if (!m1) { legenda('mainstream', L('Os lugares mais povoados do mapa.', 'The most crowded places on the map.')); return; }
           await irPara(m1.x, alvoY(m1, zoom(m1)), zoom(m1));
-          legenda(`mainstream · ${m1.sub}`, `${fmt(m1.n)} faixas de ${m1.sub}: o lugar mais povoado do mapa.`);
+          legenda(`mainstream · ${m1.sub}`, L(`${fmt(m1.n)} faixas de ${m1.sub}: o lugar mais povoado do mapa.`, `${fmt(m1.n)} ${m1.sub} tracks: the most crowded place on the map.`));
           return;
         }
         // De uma ponta à outra do mapa, uma parada por lugar grande no caminho. A câmera fica a 8× o tempo todo (com
         // baixo, ritmo, acordes e melodia; camadasSom() em js/atlas-som.js) e só desliza de um lugar ao outro, para a
         // música nunca cair: a banda é a fusão do que está à vista, então no caminho os dois lugares tocam juntos.
         const PERTO = 8;
-        const ini = T[0], fim = T[T.length - 1], kicker = `de ${ini.sub} a ${fim.sub}`, trilha = [];
+        const ini = T[0], fim = T[T.length - 1], kicker = L(`de ${ini.sub} a ${fim.sub}`, `from ${ini.sub} to ${fim.sub}`), trilha = [];
         const chegar = async (m, ms) => {
           const c = at.camera(), y = alvoY(m, PERTO);
           if (run.rapido || reduzMovimento) { at.voar(m.x, y, c.k0 * PERTO, 0); return; }
@@ -234,36 +241,40 @@
         };
         for (const [j, m] of T.entries()) {
           const antes = T[j - 1];
-          if (antes && !run.rapido) legenda(kicker, `A caminho de ${m.sub}: ${antes.sub} e ${m.sub} tocam juntos.`);
+          if (antes && !run.rapido) legenda(kicker, L(`A caminho de ${m.sub}: ${antes.sub} e ${m.sub} tocam juntos.`, `On the way to ${m.sub}: ${antes.sub} and ${m.sub} play together.`));
           await chegar(m, j ? 6500 : 4500);                                         // desliza, sem recuar
           trilha.push(m.sub);
           legenda(kicker,
-            j === 0 ? `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}. De perto entram baixo, ritmo, acordes e melodia; daqui até ${fim.sub}, ouça a banda mudar.`
-              : m === fim ? `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}: o outro lado. ${trilha.join(' → ')}.`
-                : m === m1 ? `${m.sub}: ${fmt(m.n)} faixas, o lugar mais povoado do mapa. ${pct(D.porMacro[m.macro] / D.N)}% de todas as faixas são ${m.nomeMacro}.`
-                  : antes && antes.macro !== m.macro ? `${m.sub}, ${fmt(m.n)} faixas: aqui ${antes.nomeMacro} vira ${m.nomeMacro}.`
-                    : `${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}, no caminho.`);
+            j === 0 ? L(`${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}. De perto entram baixo, ritmo, acordes e melodia; daqui até ${fim.sub}, ouça a banda mudar.`,
+                `${m.sub}, ${fmt(m.n)} ${m.nomeMacro} tracks. Up close, bass, rhythm, chords and melody come in; from here to ${fim.sub}, hear the band change.`)
+              : m === fim ? L(`${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}: o outro lado. ${trilha.join(' → ')}.`,
+                `${m.sub}, ${fmt(m.n)} ${m.nomeMacro} tracks: the other side. ${trilha.join(' → ')}.`)
+                : m === m1 ? L(`${m.sub}: ${fmt(m.n)} faixas, o lugar mais povoado do mapa. ${pct(D.porMacro[m.macro] / D.N)}% de todas as faixas são ${m.nomeMacro}.`,
+                  `${m.sub}: ${fmt(m.n)} tracks, the most crowded place on the map. ${pct(D.porMacro[m.macro] / D.N)}% of all tracks are ${m.nomeMacro}.`)
+                  : antes && antes.macro !== m.macro ? L(`${m.sub}, ${fmt(m.n)} faixas: aqui ${antes.nomeMacro} vira ${m.nomeMacro}.`,
+                    `${m.sub}, ${fmt(m.n)} tracks: here ${antes.nomeMacro} turns into ${m.nomeMacro}.`)
+                    : L(`${m.sub}, ${fmt(m.n)} faixas de ${m.nomeMacro}, no caminho.`, `${m.sub}, ${fmt(m.n)} ${m.nomeMacro} tracks along the way.`));
           if (m !== fim) await espera(j === 0 ? 4500 : 3000);
         }
       } },
       { id: 'raridades', dur: 8, async fn() {
         const [r1, r2] = D.raros;
-        if (!r1) { legenda('raridades', `${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`); return; }
+        if (!r1) { legenda(L('raridades', 'rarities'), L(`${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`, `${fmt(D.quaseSos)} of the ${fmt(D.generosUsados)} styles have fewer than 10 tracks in the whole collection.`)); return; }
         const z1 = Math.max(8, zoomDoRotulo(r1.n));
         await irPara(r1.x, alvoY(r1, z1), z1);
-        legenda(`raridade · ${r1.sub}`, `Só ${fmt(r1.n)} faixas de ${r1.sub}, mas juntas: um lugar próprio no mapa.`);
+        legenda(`${L('raridade', 'rarity')} · ${r1.sub}`, L(`Só ${fmt(r1.n)} faixas de ${r1.sub}, mas juntas: um lugar próprio no mapa.`, `Only ${fmt(r1.n)} ${r1.sub} tracks, but together: a place of their own on the map.`));
         await espera(2200);
         if (!r2) return;
         const z2 = Math.max(8, zoomDoRotulo(r2.n));
         await irPara(r2.x, alvoY(r2, z2), z2);
-        legenda(`raridade · ${r2.sub}`, `${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`);
+        legenda(`${L('raridade', 'rarity')} · ${r2.sub}`, L(`${fmt(D.quaseSos)} dos ${fmt(D.generosUsados)} estilos têm menos de 10 faixas no acervo inteiro.`, `${fmt(D.quaseSos)} of the ${fmt(D.generosUsados)} styles have fewer than 10 tracks in the whole collection.`));
       } },
       { id: 'fusoes', dur: 8, async fn() {
-        if (!D.fus.length) { legenda('fusões', 'Entre as regiões ficam as pontes, onde um gênero encosta no outro.'); return; }
+        if (!D.fus.length) { legenda(L('fusões', 'fusions'), L('Entre as regiões ficam as pontes, onde um gênero encosta no outro.', 'Between the regions lie the bridges, where one genre touches another.')); return; }
         for (const [j, f] of D.fus.entries()) {
           const z = Math.max(8, zoomDoRotulo(f.n));   // nunca menos de 8×: abaixo disso a melodia sai
           await irPara(f.x, alvoY(f, z), z);
-          legenda(`fusão · ${f.sub}`, `${f.sub} fica entre ${f.nomeMacro} e ${f.outro}: na vizinhança, ${pct(f.pa)}% ${f.nomeMacro} e ${pct(f.pb)}% ${f.outro}.`);
+          legenda(`${L('fusão', 'fusion')} · ${f.sub}`, L(`${f.sub} fica entre ${f.nomeMacro} e ${f.outro}: na vizinhança, ${pct(f.pa)}% ${f.nomeMacro} e ${pct(f.pb)}% ${f.outro}.`, `${f.sub} sits between ${f.nomeMacro} and ${f.outro}: around it, ${pct(f.pa)}% ${f.nomeMacro} and ${pct(f.pb)}% ${f.outro}.`));
           if (j === 0) await espera(2200);
         }
       } },
@@ -279,21 +290,21 @@
         };
         await clicar(document.querySelector('[data-mapa="rotulos"]'));
         await perto('rotulos');
-        legenda('gêneros', 'No mapa Gêneros, a posição vem só dos rótulos que o modelo deu: os grupos ficam limpos, mas repetem o rótulo.');
+        legenda(L('gêneros', 'genres'), L('No mapa Gêneros, a posição vem só dos rótulos que o modelo deu: os grupos ficam limpos, mas repetem o rótulo.', 'In the Genres map, position comes only from the labels the model gave: the groups are tidy, but they just repeat the label.'));
         await espera(2000);
         await clicar(document.querySelector('[data-mapa="som"]'));
         await perto('som');
-        legenda('som', 'No mapa Som, vem do áudio: o que soa parecido fica junto, tenha o rótulo que tiver.');
+        legenda(L('som', 'sound'), L('No mapa Som, vem do áudio: o que soa parecido fica junto, tenha o rótulo que tiver.', 'In the Sound map, it comes from the audio: what sounds alike stays together, whatever its label.'));
         esconderPonteiro(); focar(null);
         await espera(1000);
         if (!run.rapido && !reduzMovimento && at.girarVista(0.9, -0.35, 2600)) {
-          legenda('3D', 'O mapa também tem profundidade: arraste com o botão direito, ou ligue o ⟳, para girar.');
+          legenda('3D', L('O mapa também tem profundidade: arraste com o botão direito, ou ligue o ⟳, para girar.', 'The map has depth too: drag with the right button, or turn on ⟳, to rotate it.'));
         }
       } },
       { id: 'grafo', dur: 20, async fn() {
         at.fecharCartao();
         await clicar($('btn-grafo'));
-        legenda('grafo', 'No Grafo, cada nome é um artista, perto dos que soam como ele.');
+        legenda(L('grafo', 'graph'), L('No Grafo, cada nome é um artista, perto dos que soam como ele.', 'In the Graph, each name is an artist, close to those who sound like them.'));
         await espera(1500);
         // Entre os artistas frequentes perto do mainstream, o de caminhada mais variada: o samba, por exemplo, é uma
         // bacia funda, e a partir do mais frequente a banda tocaria samba os três passos.
@@ -307,12 +318,12 @@
         if (no && !run.rapido && comPonteiro()) await moverPonteiro({ left: no.x, top: no.y, width: 0, height: 0 });
         await at.abrirGrafo(nome);
         focar($('grafo-painel'));
-        legenda(`grafo · ${nome}`, `No centro, ${nome}; em volta, os artistas que mais soam parecido. Os mais longe ficam mais apagados.`);
+        legenda(`${L('grafo', 'graph')} · ${nome}`, L(`No centro, ${nome}; em volta, os artistas que mais soam parecido. Os mais longe ficam mais apagados.`, `In the center, ${nome}; around them, the artists who sound most alike. The farther ones fade out.`));
         await espera(2300);
         // Anda pelo grafo para a banda (que toca os artistas à vista, grafo.pontosVisiveis()) mudar com ele: segue o
         // plano; sem ele (ou se o botão não estiver lá), vai a um vizinho ainda não visitado, de outro gênero quando
         // houver, senão o mais longe da lista (a ordem é do mais perto), que tende a sair do aglomerado.
-        const { subDe, nomeMacro } = at.dados(), rotulo = g => (g ? (g.includes('---') ? subDe(g) : nomeMacro(g)) : '');
+        const { subDe, nomeMacro: nomePt } = at.dados(), nomeMacro = EN ? nomeEn : nomePt, rotulo = g => (g ? (g.includes('---') ? subDe(g) : nomeMacro(g)) : '');
         const vistos = new Set([nome.toLowerCase()]);
         for (let passo = 0; passo < PASSOS_GRAFO; passo++) {
           const bts = [...($('grafo-parecidos-lista')?.querySelectorAll('button') || [])]
@@ -325,12 +336,14 @@
           vistos.add(vizinho.toLowerCase());
           await clicar(viz);
           const g1 = at.grafo().genero, de = rotulo(g0), para = rotulo(g1), fam = g => window.RECEITAS_ATLAS?.familiaDe(g) ?? g;
-          legenda(`grafo · ${vizinho}`,
+          legenda(`${L('grafo', 'graph')} · ${vizinho}`,
             de && para && fam(g0) !== fam(g1)
-              ? (passo === 0 ? `De ${de} para ${para} num clique: a banda toca os artistas à vista, então troca de parte com o grafo.`
-                : `De ${de} para ${para}: a banda troca de parte com o grafo.`)
-              : passo === 0 ? 'Clique num vizinho e o grafo anda até ele. A banda toca os artistas à vista, então anda junto.'
-                : `${vizinho}, ainda perto de ${para || de}: a banda muda aos poucos.`);
+              ? (passo === 0 ? L(`De ${de} para ${para} num clique: a banda toca os artistas à vista, então troca de parte com o grafo.`,
+                `From ${de} to ${para} in one click: the band plays the artists in view, so it changes parts with the graph.`)
+                : L(`De ${de} para ${para}: a banda troca de parte com o grafo.`, `From ${de} to ${para}: the band changes parts with the graph.`))
+              : passo === 0 ? L('Clique num vizinho e o grafo anda até ele. A banda toca os artistas à vista, então anda junto.',
+                'Click a neighbor and the graph moves to it. The band plays the artists in view, so it moves along.')
+                : L(`${vizinho}, ainda perto de ${para || de}: a banda muda aos poucos.`, `${vizinho}, still close to ${para || de}: the band changes little by little.`));
           if (passo < PASSOS_GRAFO - 1) await espera(3400);
         }
       } },
@@ -338,7 +351,7 @@
         // Sai do grafo como o Esc: no ponto do artista, de perto, para a banda não cair no fim.
         if (at.grafo().aberto) at.fecharGrafo(8);
         esconderPonteiro(); focar(null);
-        legenda('tocador.cc/atlas', 'Arraste, aproxime e clique numa faixa para ouvir.');
+        legenda('tocador.cc/atlas', L('Arraste, aproxime e clique numa faixa para ouvir.', 'Drag, zoom in and click a track to listen.'));
         // O tour começou de frente: gira de volta à mesma vista, em torno do ponto do artista, depois de pousar nele.
         await espera(700);
         const c = at.camera();
@@ -483,7 +496,7 @@
     if (e.key === 'Escape') { e.preventDefault(); parar(); }
   }, true);
 
-  // ?tour=1 é lido já, ao carregar: até o mapa ficar pronto, o js/atlas.js reescreve o endereço (um ?acervo= vira
+  // ?tour=1 (ou =en) é lido já, ao carregar: até o mapa ficar pronto, o js/atlas.js reescreve o endereço (um ?acervo= vira
   // uma entrada do histórico) e levaria o pedido junto.
   const pedido = new URLSearchParams(location.search);
   const pedeTour = pedido.has('tour'), pular = parseFloat(pedido.get('t')) || 0;
@@ -503,8 +516,11 @@
   function convidar(pularPara) {
     const el = document.createElement('div');
     el.id = 'tour-convite';
-    el.innerHTML = '<div><p>Tour do Atlas</p><p>A trilha é a própria sonificação do mapa: clique para ligar o som e começar.</p>'
-      + '<button type="button">▶ Começar com som</button></div>';
+    el.innerHTML = L('<div><p>Tour do Atlas</p><p>A trilha é a própria sonificação do mapa: clique para ligar o som e começar.</p>'
+      + '<button type="button">▶ Começar com som</button></div>',
+    '<div><p>Atlas tour</p><p>The soundtrack is the map’s own sonification: click to turn the sound on and start.</p>'
+      + '<button type="button">▶ Start with sound</button></div>');
+    if (EN) el.lang = 'en';
     document.body.append(el);
     const b = el.querySelector('button');
     const fora = e => { if (e.key === 'Escape') fechar(); };

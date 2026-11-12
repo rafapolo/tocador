@@ -21,7 +21,7 @@
 <meta name="twitter:image" content="https://tocador.cc/assets/atlas-og.jpg">
 <meta name="theme-color" content="#0f0e0c">
 <!-- /atlas/tour abre o mapa já no tour (?tour=1, js/atlas-tour.js); um &t= ou outro parâmetro daqui segue junto. -->
-<script>location.replace('/atlas?tour=1' + (location.search ? '&' + location.search.slice(1) : ''))</script>
+<script>var q = new URLSearchParams(location.search); if (q.get('tour') !== 'en') q.set('tour', '1'); location.replace('/atlas?' + q)</script>
 <noscript><meta http-equiv="refresh" content="0; url=/atlas?tour=1"></noscript>
 </head>
 <body style="background:#0f0e0c;color:#f5f1ed;font-family:system-ui"><p><a href="/atlas?tour=1" style="color:#d4a574">Abrir o tour do Atlas</a></p></body>

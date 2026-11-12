@@ -15,7 +15,7 @@ ficam em `cenas()`, em `js/atlas-tour.js`. A música é a sonificação do mapa,
 
 - **Moldura.** Uma barra preta embaixo, com uma linha dourada de progresso na borda (em cima, o degradê da barra do mapa já faz o papel). A
   interface some, menos o controle que a cena está ensinando, que ganha um contorno dourado.
-- **Texto.** Em português. A legenda tem duas partes: um rótulo pequeno em cima (o *kicker*, em geral "tema ·
+- **Texto.** Em português; com `?tour=en` (ou `/atlas/tour/?tour=en`) o convite e a legenda saem em inglês, com os macro-gêneros pelo nome em inglês do payload e números no formato en-US. A legenda tem duas partes: um rótulo pequeno em cima (o *kicker*, em geral "tema ·
   lugar") e a frase. Fica no meio da tela, logo acima da barra de baixo.
 - **Números e lugares.** Contados no navegador a partir do payload do mapa (`data/atlas-faixas.json.gz`); nenhum
   nome de gênero, artista ou número está escrito no código. Se o mapa for regenerado, o tour escolhe outros lugares
