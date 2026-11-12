@@ -8,7 +8,11 @@ Para uma visita guiada, o botão **▶ Tour** (tecla `T`, ou [tocador.cc/atlas?t
 faz em quase 2 minutos o caminho pelo mainstream, pelas raridades, pelas fusões, pelos mapas Som e Gêneros e pelo grafo,
 com a sonificação tocando o que a câmera vê. O roteiro, cena a cena, está em [TOUR.md](TOUR.md).
 
-![prévia](assets/atlas-og.jpg)
+O botão **Banda** (ou [tocador.cc/atlas/sim](https://tocador.cc/atlas/sim)) abre, ao lado do mapa, a sonificação
+tocada por músicos em 3D, num cenário que segue os gêneros na tela. Como cada voz vira um músico e como os cenários se
+misturam: [musicians-scenarios.md](musicians-scenarios.md).
+
+![prévia](../assets/atlas-og.jpg)
 
 ## Como ler o mapa
 

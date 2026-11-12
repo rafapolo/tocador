@@ -63,7 +63,7 @@ Avança sozinho (também em caso de erro), volta à faixa anterior, mostra capa,
 
 ## 🗺️ Atlas
 
-[`tocador.cc/atlas`](https://tocador.cc/atlas) põe as ~79 mil faixas dos dois acervos num mapa: cada ponto é uma faixa, e o que soa parecido fica perto (UMAP do embedding de áudio). Aproxime para ver os nomes, gire em 3D, filtre por gênero ou acervo, busque um artista, abra o grafo de artistas parecidos (`G`) e clique numa faixa para ouvir. O botão **Sonificar** gera música na hora a partir dos gêneros que estão na tela, e o [**Tour**](https://tocador.cc/atlas/tour) atravessa o mapa em 105 segundos. Como foi feito e como ler o mapa: [ATLAS.md](ATLAS.md).
+[`tocador.cc/atlas`](https://tocador.cc/atlas) põe as ~79 mil faixas dos dois acervos num mapa: cada ponto é uma faixa, e o que soa parecido fica perto (UMAP do embedding de áudio). Aproxime para ver os nomes, gire em 3D, filtre por gênero ou acervo, busque um artista, abra o grafo de artistas parecidos (`G`) e clique numa faixa para ouvir. O botão **Sonificar** gera música na hora a partir dos gêneros que estão na tela, e o [**Tour**](https://tocador.cc/atlas/tour) atravessa o mapa em 105 segundos. Como foi feito e como ler o mapa: [docs/ATLAS.md](docs/ATLAS.md).
 
 <p align="center">
   <a href="https://tocador.cc/atlas"><img src="docs/atlas-demo.jpg" alt="Atlas — o mapa de frente, colorido por gênero" width="680"></a>  
