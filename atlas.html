@@ -160,14 +160,23 @@
   <p id="ajuda">arraste para navegar · role para zoom · botão direito (ou o botão girar) gira em 3D · clique numa faixa · M liga ou desliga a música · T faz o tour</p>
 
   <section id="sim" aria-label="Banda em 3D" hidden>
-    <canvas id="sim-canvas" aria-hidden="true"></canvas>
-    <div id="sim-topo">
-      <p id="sim-legenda" aria-live="polite"></p>
-      <button id="sim-sair" type="button" aria-label="Fechar a banda (Esc)"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <details id="sim-instrumentos">
+      <summary>Instrumentos <span title="Quanto cada instrumento soou nos últimos segundos, entre todos os da banda. Só é calculado com o painel aberto.">· ao vivo</span></summary>
+      <ul id="sim-instrumentos-lista" aria-label="Instrumentos tocando agora, com a parte de cada um"></ul>
+    </details>
+    <div id="sim-palco">
+      <canvas id="sim-canvas" aria-hidden="true"></canvas>
+      <div id="sim-topo">
+        <p id="sim-legenda" aria-live="polite"></p>
+        <button id="sim-sair" type="button" aria-label="Fechar a banda (Esc)"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+      </div>
+      <p id="sim-vazio">A banda entra quando o som começa. Nenhum som? Ligue o Sonificar (M).</p>
+      <p id="sim-status" role="status"></p>
     </div>
-    <p id="sim-foco"></p>
-    <p id="sim-vazio">A banda entra quando o som começa. Nenhum som? Ligue o Sonificar (M).</p>
-    <p id="sim-status" role="status"></p>
+    <div id="sim-info">
+      <p id="sim-foco" class="sim-dica" hidden><b></b><span></span></p>
+    </div>
+    <div id="sim-redim" aria-hidden="true" title="Arraste para redimensionar"></div>
   </section>
   <div id="sim-convite" hidden>
     <div>

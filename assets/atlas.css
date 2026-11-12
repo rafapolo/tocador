@@ -471,14 +471,28 @@ button { font: inherit; color: inherit; }
 
 /* ── banda em 3D (js/atlas-sim.js): cartão à esquerda, da largura do #grafo-painel, com o mapa navegável atrás ── */
 #sim {
-  position: absolute; z-index: 19; left: 16px; top: var(--sim-topo, 76px); width: 340px; height: min(320px, 46vh);
-  overflow: hidden; background: #0f0e0c; border: 1px solid var(--border); border-radius: 14px;
+  position: absolute; z-index: 19; left: var(--sim-x, 16px); top: var(--sim-y, var(--sim-topo, 76px));
+  overflow: hidden; background: var(--glass); border: 1px solid var(--border); border-radius: 14px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
 }
 #sim[hidden] { display: none; }
+#sim-palco { position: relative; height: var(--sim-alto, min(300px, 42vh)); overflow: hidden; background: #0f0e0c; }
+#sim { width: var(--sim-largo, 340px); }
+/* no desktop o cartão se arrasta pela faixa de cima e se redimensiona pelo canto (js/atlas-sim.js, moverCartao) */
+#sim-redim { display: none; }
+@media (min-width: 721px) and (pointer: fine) {
+  #sim-topo { cursor: grab; }
+  #sim.arrastando #sim-topo { cursor: grabbing; }
+  #sim.arrastando, #sim.redimensionando { user-select: none; transition: none; }
+  #sim-redim {
+    display: block; position: absolute; right: 0; bottom: 0; z-index: 3; width: 18px; height: 18px; cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--border) 50%, var(--border) 58%, transparent 58%, transparent 70%, var(--border) 70%, var(--border) 78%, transparent 78%);
+  }
+  #sim-redim:hover { filter: brightness(1.8); }
+}
 #sim-canvas { display: block; width: 100%; height: 100%; }
 /* vinheta e grão de filme por cima do 3D: CSS, nenhum custo na GPU do WebGL */
-#sim::after {
+#sim-palco::after {
   content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
     radial-gradient(ellipse at 50% 55%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
@@ -486,8 +500,8 @@ button { font: inherit; color: inherit; }
   mix-blend-mode: overlay; opacity: 0.55; animation: sim-grao 0.5s steps(4) infinite;
 }
 @keyframes sim-grao { 0% { background-position: 0 0, 0 0; } 25% { background-position: 0 0, -37px 21px; } 50% { background-position: 0 0, 53px -12px; } 75% { background-position: 0 0, -18px -44px; } }
-@media (prefers-reduced-motion: reduce) { #sim::after { animation: none; } }
-#sim-topo, #sim-foco, #sim-vazio, #sim-status { z-index: 2; }
+@media (prefers-reduced-motion: reduce) { #sim-palco::after { animation: none; } }
+#sim-topo, #sim-vazio, #sim-status { z-index: 2; }
 #sim-topo {
   position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: flex-start; gap: 8px; padding: 8px 8px 8px 12px;
   background: linear-gradient(rgba(15, 14, 12, 0.75), rgba(15, 14, 12, 0));
@@ -501,15 +515,48 @@ button { font: inherit; color: inherit; }
   color: var(--text); background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border); border-radius: 50%;
 }
 #sim-sair:hover, #sim-sair:focus-visible { background: var(--surface-light); outline: none; border-color: var(--accent); }
-#sim-foco {
-  position: absolute; left: 8px; right: 8px; bottom: 8px; margin: 0; text-align: center;
-  font: 500 14px/1.3 var(--serif); color: var(--text); text-shadow: 0 1px 6px #000;
+/* embaixo do palco: a dica de quem está em foco (como o #dica do mapa) e os instrumentos com a parte de cada um */
+#sim-info { display: grid; gap: 8px; padding: 10px 12px 12px; }
+#sim-info:has(#sim-foco[hidden]) { display: none; }
+.sim-dica {
+  margin: 0; padding: 6px 10px; border-radius: 8px; font-size: 12.5px;
+  background: var(--glass); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
+.sim-dica b { display: block; font-weight: 600; color: var(--text); }
+.sim-dica span { color: var(--text-2); }
+#sim-foco[hidden] { display: none; }
+/* o painel dos instrumentos, no alto do cartão: recolhido por padrão, e só calcula aberto */
+#sim-instrumentos { border-bottom: 1px solid var(--border); }
+#sim-instrumentos summary {
+  display: flex; align-items: center; gap: 6px; padding: 8px 12px; cursor: pointer; list-style: none;
+  font-size: 12px; color: var(--text-2); user-select: none;
+}
+#sim-instrumentos summary::-webkit-details-marker { display: none; }
+#sim-instrumentos summary::before { content: '▸'; font-size: 10px; transition: transform 0.2s; }
+#sim-instrumentos[open] summary::before { transform: rotate(90deg); }
+#sim-instrumentos summary:hover, #sim-instrumentos summary:focus-visible { color: var(--text); outline: none; }
+#sim-instrumentos summary span { cursor: help; }
+#sim-instrumentos-lista { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0 12px 10px; list-style: none; }
+#sim-instrumentos-lista .ouvindo { background: none; padding-left: 0; font-style: italic; }
+#sim-instrumentos-lista li {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; font-size: 12px; color: var(--text-2); border-radius: 10px;
+  /* o fundo enche da esquerda até a parte do instrumento */
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cor, var(--accent)) 38%, transparent) var(--p, 0%), var(--surface-light) var(--p, 0%));
+  transition: background 0.3s linear, opacity 0.4s;
+}
+#sim-instrumentos-lista li i { width: 7px; height: 7px; border-radius: 50%; background: var(--cor, var(--accent)); }
+#sim-instrumentos-lista li b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+#sim-instrumentos-lista li.some { opacity: 0.35; }
+@media (prefers-reduced-motion: reduce) { #sim-instrumentos-lista li { transition: none; } }
 #sim-vazio, #sim-status { position: absolute; left: 16px; right: 16px; top: 42%; margin: 0; text-align: center; font-size: 13px; color: var(--text-2); }
 #sim-vazio[hidden] { display: none; }
 #sim-status:empty { display: none; }
 @media (max-width: 720px) {
-  #sim { left: 12px; right: 12px; width: auto; height: 36vh; }
+  #sim { left: 12px; right: 12px; width: auto; }
+  #sim-palco { height: 30vh; }
+  #sim-instrumentos-lista { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  #sim-instrumentos summary { padding: 6px 12px; }
+  #sim-instrumentos-lista li { flex: none; }
 }
 #sim-convite { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(0, 0, 0, 0.55); }
 #sim-convite[hidden] { display: none; }

@@ -63,6 +63,26 @@ Nada é inventado: cada músico é uma voz real do motor de som.
 - **Silêncio:** quem fica calado por 5 s sai do palco. Os músicos entram pela frente e somem diminuindo e ficando
   transparentes.
 
+### Braços
+
+Cada braço tem três juntas: ombro, cotovelo e punho (`junta()`).
+
+- **Percussão:** o percussionista segura baquetas. Na preparação, o cotovelo sobe e dobra e o punho leva a baqueta
+  para cima. Na nota, o punho estala para baixo, com um pequeno rebote. As mãos se alternam.
+- **Cordas:** a mão esquerda fica no braço do instrumento e a direita palheta, subindo antes da nota e descendo nela.
+- **Teclado, sanfona, voz, sopro e contrabaixo:** cada um tem a sua pose, com preparação e golpe próprios.
+
+### O cartão
+
+- **Instrumentos · ao vivo:** painel recolhível no alto do cartão, acima do palco. Começa fechado, e só aberto as
+  notas são somadas. Mostra a parte de cada instrumento nos últimos segundos (meia-vida de 2 s) e lembra se estava
+  aberto (`localStorage`).
+- **Dica:** embaixo do palco, no estilo do `#dica` do mapa: o instrumento de quem está em foco, a família e o tipo
+  de plano.
+- **No desktop:** arrastar a faixa de cima move o cartão, e o canto de baixo à direita redimensiona a largura e a
+  altura do palco. O cartão fica dentro da janela e lembra o lugar; um duplo clique na faixa de cima volta ao
+  padrão.
+
 ### Corpo e dança
 
 - **Corpo:** boneco de madeira em primitivas: pernas, tronco, cabeça com olhos voltados para a plateia, e braços que

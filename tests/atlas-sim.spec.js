@@ -196,3 +196,78 @@ test('a Simulação tem o seu grupo nos controles, com ícone, fora do grupo do 
   const ordem = await page.evaluate(() => [...document.querySelectorAll('#controles > .seg')].map(g => g.getAttribute('aria-label')));
   expect(ordem.indexOf('Simulação')).toBe(ordem.indexOf('Som') + 1);
 });
+
+test('instrumentos num painel recolhível no alto do cartão: fechado não calcula nada; aberto mostra a parte de cada um', async ({ page }) => {
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  const painel = page.locator('#sim-instrumentos');
+  await expect(painel).not.toHaveAttribute('open', '');
+  // fechado: as notas não são somadas
+  for (let k = 0; k < 3; k++) await nota(page, { papel: 'pandeiro', familia: 'samba', vel: 0.8 });
+  await expect.poll(async () => (await sim(page)).musicos.length).toBe(1);
+  expect((await sim(page)).instCalculados).toBe(0);
+  // o painel fica acima do palco
+  const [p0, palco] = await Promise.all([painel.boundingBox(), page.locator('#sim-palco').boundingBox()]);
+  expect(p0.y + p0.height).toBeLessThanOrEqual(palco.y + 1);
+  // aberto: começa ouvindo e calcula a parte de cada um
+  await painel.locator('summary').click();
+  await expect(page.locator('#sim-instrumentos-lista .ouvindo')).toBeVisible();
+  for (let k = 0; k < 6; k++) await nota(page, { papel: 'pandeiro', familia: 'samba', vel: 0.8 });
+  await nota(page, { papel: 'mel', familia: 'samba', vel: 0.2, timbre: 'cavaco' });
+  const lista = page.locator('#sim-instrumentos-lista li:not(.ouvindo)');
+  await expect(lista.first()).toContainText('pandeiro');
+  await expect(page.locator('#sim-instrumentos-lista')).toContainText('cavaquinho');
+  const partes = await lista.evaluateAll(lis => lis.map(li => +li.querySelector('b').textContent.replace('%', '')));
+  expect(partes[0]).toBeGreaterThan(partes[1]);
+  const soma = partes.reduce((a, b) => a + b, 0);
+  expect(soma).toBeGreaterThanOrEqual(98);
+  expect(soma).toBeLessThanOrEqual(102);
+  // a dica de quem está em foco fica embaixo do palco
+  await expect(page.locator('#sim-foco')).toBeVisible();
+  // fechar para de calcular e lembra a escolha ao reabrir a banda
+  await painel.locator('summary').click();
+  await expect.poll(async () => (await sim(page)).instCalculados).toBe(0);
+  await painel.locator('summary').click();
+  await page.locator('#sim-sair').click();
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  await expect(painel).toHaveAttribute('open', '');
+});
+
+test('no desktop o cartão se move pela faixa de cima, se redimensiona pelo canto e lembra o lugar', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  const caixa = () => page.locator('#sim').boundingBox();
+  const a = await caixa();
+  // mover: arrasta a faixa de cima (numa parte sem botão)
+  const topo = await page.locator('#sim-topo').boundingBox();
+  await page.mouse.move(topo.x + 30, topo.y + topo.height - 4);
+  await page.mouse.down();
+  await page.mouse.move(topo.x + 230, topo.y + topo.height + 96, { steps: 6 });
+  await page.mouse.up();
+  const b = await caixa();
+  expect(b.x - a.x).toBeGreaterThan(180);
+  expect(b.y - a.y).toBeGreaterThan(80);
+  // redimensionar: o canto de baixo à direita
+  const canto = await page.locator('#sim-redim').boundingBox();
+  await page.mouse.move(canto.x + 9, canto.y + 9);
+  await page.mouse.down();
+  await page.mouse.move(canto.x + 129, canto.y + 89, { steps: 6 });
+  await page.mouse.up();
+  const c = await caixa();
+  expect(c.width - b.width).toBeGreaterThan(100);
+  expect(c.height - b.height).toBeGreaterThan(60);
+  // fecha e reabre: volta onde estava, do tamanho que estava
+  await page.locator('#sim-sair').click();
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  const d = await caixa();
+  expect(Math.abs(d.x - c.x)).toBeLessThan(3);
+  expect(Math.abs(d.width - c.width)).toBeLessThan(3);
+  // duplo clique na faixa de cima: lugar e tamanho padrão
+  await page.mouse.dblclick(topo.x + 230, topo.y + topo.height + 92);
+  await expect.poll(async () => Math.round((await caixa()).width)).toBe(Math.round(a.width));
+});

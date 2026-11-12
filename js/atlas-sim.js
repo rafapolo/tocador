@@ -122,13 +122,22 @@
     topo.rotation.x = -0.25;
     cabeca.add(topo);
     for (const x of [-0.055, 0.055]) cabeca.add(malha(geo('olho', () => new Esf(0.022, 8, 6)), mats.escuro, x, 0.02, 0.148));
+    // braço articulado: ombro → braço → cotovelo → antebraço → punho → mão. Cada junta é um grupo que gira
     const bracos = [-1, 1].map(lado => {
       const ombro = new THREE.Group();
       ombro.position.set(0.27 * lado, 0.55, 0);
-      ombro.add(malha(geo('braco', () => new Cil(0.055, 0.045, 0.6, 10)), mats.roupa, 0, -0.3, 0));
-      ombro.add(malha(geo('mao', () => new Esf(0.055, 10, 8)), mats.pele, 0, -0.62, 0));
+      ombro.add(malha(geo('braco-sup', () => new Cil(0.056, 0.05, 0.32, 10)), mats.roupa, 0, -0.16, 0));
+      const cotovelo = new THREE.Group();
+      cotovelo.position.y = -0.32;
+      ombro.add(cotovelo);
+      cotovelo.add(malha(geo('cotovelo', () => new Esf(0.05, 10, 8)), mats.roupa, 0, 0, 0));
+      cotovelo.add(malha(geo('antebraco', () => new Cil(0.048, 0.04, 0.28, 10)), mats.pele, 0, -0.14, 0));
+      const punho = new THREE.Group();
+      punho.position.y = -0.29;
+      cotovelo.add(punho);
+      punho.add(malha(geo('mao', () => new Esf(0.052, 10, 8)), mats.pele, 0, -0.03, 0));
       tronco.add(ombro);
-      return ombro;
+      return { ombro, cotovelo, punho };
     });
     const sombra = new THREE.Mesh(geo('sombra', () => new THREE.PlaneGeometry(1.1, 1.1)), new THREE.MeshBasicMaterial({ map: texturaSombra(), transparent: true, depthWrite: false, opacity: 0.6 }));
     sombra.rotation.x = -Math.PI / 2;
@@ -160,6 +169,12 @@
     let pose = 'corda';
     if (m.grupo === 'perc') {
       pose = 'perc';
+      // baquetas na mão, apontando para a frente: o punho dá o estalo no fim do golpe
+      for (const { punho } of m.fig.bracos) {
+        const baqueta = malha(geo('baqueta', () => new Cil(0.011, 0.014, 0.42, 6)), mats.madeira, 0, -0.04, 0.17);
+        baqueta.rotation.x = Math.PI / 2;
+        punho.add(baqueta);
+      }
       g.add(malha(geo('surdo', () => new Cil(0.26, 0.26, 0.42, 24)), mats.madeira, 0, 0.72, 0.36));
       g.add(malha(geo('pele-surdo', () => new Cil(0.265, 0.265, 0.02, 24)), mats.metal, 0, 0.94, 0.36));
     } else if (timbre === 'contrabaixo') {
@@ -217,10 +232,68 @@
     return m;
   }
 
-  function rotulo(m) {
-    const inst = m.grupo === 'perc' ? [...m.pecas].slice(-3).map(p => NOME_PERC[p] || p).join(', ') || NOME_GRUPO.perc : NOME_TIMBRE[m.timbre] || NOME_GRUPO[m.grupo];
-    return `${inst} · ${m.nomeFamilia}`;
+  const instDe = m => (m.grupo === 'perc' ? [...m.pecas].slice(-3).map(p => NOME_PERC[p] || p).join(', ') || NOME_GRUPO.perc : NOME_TIMBRE[m.timbre] || NOME_GRUPO[m.grupo]);
+  function rotulo(m) { return `${instDe(m)} · ${m.nomeFamilia}`; }
+
+  // ── instrumentos ao vivo ──
+  // Cada nota soma a sua força ao instrumento que a tocou (a peça, na percussão; o timbre, no resto), e tudo esquece
+  // devagar (meia-vida de ~2 s). A parte de cada um é a fatia desse total: o que a banda está tocando agora.
+  const MEIA_VIDA_S = 2;
+  // Recolhido, o painel não custa nada: as notas nem são somadas. Abrir começa a ouvir do zero.
+  const CHAVE_INST = 'tocador-atlas-sim-instrumentos';
+  const instAberto = () => !!run && $('sim-instrumentos').open;
+  function somarInstrumento(e, v) {
+    if (!instAberto()) return;
+    const g = grupoDe(e.papel), nome = g === 'perc' ? NOME_PERC[e.papel] || e.papel : NOME_TIMBRE[e.timbre] || NOME_GRUPO[g];
+    let x = run.inst.get(nome);
+    if (!x) { x = { nome, peso: 0, cor: '', li: null }; run.inst.set(nome, x); }
+    x.peso += v;
+    x.cor = at.familia(e.familia).cor;
   }
+  function desenharInstrumentos(dt) {
+    if (!instAberto()) return;
+    const caiu = Math.pow(0.5, dt / MEIA_VIDA_S);
+    let tot = 0;
+    for (const x of run.inst.values()) { x.peso *= caiu; tot += x.peso; }
+    run.tInst += dt;
+    if (run.tInst < 0.25) return;            // quatro vezes por segundo basta para o número
+    run.tInst = 0;
+    const lista = $('sim-instrumentos-lista');
+    const vivos = [...run.inst.values()].filter(x => tot > 0 && x.peso / tot >= 0.01).sort((a, b) => b.peso - a.peso).slice(0, 10);
+    for (const x of run.inst.values()) {
+      if (vivos.includes(x)) continue;
+      if (x.li) { x.li.remove(); x.li = null; }
+      if (x.peso < 1e-4) run.inst.delete(x.nome);
+    }
+    vivos.forEach((x, j) => {
+      if (!x.li) {
+        x.li = document.createElement('li');
+        x.li.append(document.createElement('i'), document.createTextNode(x.nome + ' '), document.createElement('b'));
+      }
+      const pct = Math.round(100 * x.peso / tot);
+      x.li.lastChild.textContent = `${pct}%`;
+      x.li.style.setProperty('--p', `${pct}%`);
+      x.li.style.setProperty('--cor', x.cor);
+      x.li.classList.toggle('some', pct < 3);
+      if (lista.children[j] !== x.li) lista.insertBefore(x.li, lista.children[j] || null);
+    });
+    let ouvindo = lista.querySelector('.ouvindo');
+    if (!vivos.length && !ouvindo) {
+      ouvindo = document.createElement('li');
+      ouvindo.className = 'ouvindo';
+      ouvindo.textContent = 'ouvindo…';
+      lista.append(ouvindo);
+    } else if (vivos.length && ouvindo) ouvindo.remove();
+  }
+  $('sim-instrumentos')?.addEventListener('toggle', () => {
+    const aberto = $('sim-instrumentos').open;
+    try { localStorage.setItem(CHAVE_INST, aberto ? '1' : '0'); } catch {}
+    if (!run) return;
+    for (const x of run.inst.values()) x.li?.remove();
+    run.inst.clear();
+    run.tInst = 1;           // desenha já: "ouvindo…" na hora em que abre
+    if (!aberto) $('sim-instrumentos-lista').replaceChildren();
+  });
 
   // ── palco ──
   // Em arco, agrupados por família na ordem em que entraram; dentro da família, percussão atrás e melodia na frente.
@@ -517,6 +590,7 @@
     if (grupo === 'perc') m.pecas.add(e.papel);
     m.ultimo = agora;
     const v = Math.min(1.2, e.vel * 2.2 + 0.15);
+    somarInstrumento(e, v);
     m.energia = Math.min(2, m.energia + v * 0.6);
     m.foco = m.foco * 0.98 + v;
     m.lado ^= 1;
@@ -606,6 +680,7 @@
     run.flash *= Math.exp(-dt * 6);
     run.r.toneMappingExposure = 0.95 + (parado ? 0 : run.flash * 0.3);
     dirigir(t, dt, antes, parado);
+    desenharInstrumentos(dt);
     run.r.render(run.cena, run.cam);
     const vazio = run.musicos.size === 0;
     if (vazio !== run.vazio) { run.vazio = vazio; $('sim-vazio').hidden = !vazio; }
@@ -645,24 +720,49 @@
     posar(m, bracos, b, parado);
   }
 
-  // Braços por instrumento. `preparo` (0 → 1 nos 140 ms antes da próxima nota) levanta o braço que vai tocar;
-  // `golpe` (1 na nota, caindo rápido) o leva abaixo do repouso. A batida cai no som, como num golpe de verdade.
+  // Braços por instrumento, em três juntas. `preparo` (0 → 1 nos 140 ms antes da próxima nota) arma o golpe e `golpe`
+  // (1 na nota, caindo rápido) o descarrega. Na percussão o movimento é o de quem toca de verdade: o ombro quase não
+  // mexe, o cotovelo sobe e dobra na preparação, e o punho chicoteia a baqueta para cima e estala para baixo na
+  // nota, com um rebote. As mãos se alternam: arma a que bate em seguida.
+  function junta(j, ox, oz, cx, px) { j.ombro.rotation.set(ox, 0, oz); j.cotovelo.rotation.x = cx; j.punho.rotation.x = px; }
   function posar(m, [esq, dir], b, parado) {
     const [ge, gd] = m.golpe, pr = parado ? 0 : m.preparo * m.preparo, osc = parado ? 0 : Math.sin(b * 2) * 0.04;
-    const vez = m.lado ^ 1;                  // na percussão as mãos se alternam: sobe a que bate em seguida
     switch (m.pose) {
       case 'perc': {
-        const sobeE = vez === 0 ? pr : 0, sobeD = vez === 1 ? pr : 0;
-        esq.rotation.set(-0.75 - sobeE * 1.1 + ge * 0.35 + osc, 0, 0.1);
-        dir.rotation.set(-0.75 - sobeD * 1.1 + gd * 0.35 - osc, 0, -0.1);
+        const vez = m.lado ^ 1;
+        [esq, dir].forEach((j, lado) => {
+          const arma = vez === lado ? pr : 0, bate = lado === 0 ? ge : gd, l = lado ? -1 : 1;
+          // repouso: braço junto ao corpo, antebraço para a frente, baqueta sobre a pele do surdo
+          const ombro = -0.35 - arma * 0.25 + bate * 0.08 + osc * l;
+          const cotov = -1.05 - arma * 0.55 + bate * 0.3;
+          const punho = 0.15 - arma * 0.9 + bate * 0.55 - (bate > 0.6 ? (bate - 0.6) * 0.6 : 0);     // estalo e rebote
+          junta(j, ombro, 0.12 * l, cotov, punho);
+        });
         break;
       }
-      case 'tecla': esq.rotation.set(-0.8 - pr * 0.25 + ge * 0.15, 0, 0.15); dir.rotation.set(-0.8 - pr * 0.25 + gd * 0.15, 0, -0.15); break;
-      case 'sanfona': esq.rotation.set(-1.1, 0, -0.3 - pr * 0.15 - gd * 0.4); dir.rotation.set(-1.1, 0, 0.3 + pr * 0.15 + gd * 0.4); break;
-      case 'voz': esq.rotation.set(-0.2 + osc - pr * 0.3 - gd * 0.4, 0, 0.2 + gd * 0.3); dir.rotation.set(-1.6 - gd * 0.15, 0, -0.2); break;
-      case 'sopro': esq.rotation.set(-1.7, 0, 0.3); dir.rotation.set(-1.5 - pr * 0.08 + gd * 0.12, 0, -0.3); break;
-      case 'contrabaixo': esq.rotation.set(-1.6, 0, -0.4); dir.rotation.set(-0.6 - pr * 0.45 + gd * 0.35, 0, 0); break;
-      default: esq.rotation.set(-1.2, 0, 0.7); dir.rotation.set(-0.85 - pr * 0.5 + gd * 0.45, 0, -0.25);     // palhetada: sobe e desce na nota
+      case 'tecla':
+        junta(esq, -0.45 - pr * 0.1, 0.18, -0.95 - pr * 0.25 + ge * 0.2, 0.3 - pr * 0.4 + ge * 0.35);
+        junta(dir, -0.45 - pr * 0.1, -0.18, -0.95 - pr * 0.25 + gd * 0.2, 0.3 - pr * 0.4 + gd * 0.35);
+        break;
+      case 'sanfona':
+        junta(esq, -0.55, -0.35 - pr * 0.12 - gd * 0.35, -1.2, 0);
+        junta(dir, -0.55, 0.35 + pr * 0.12 + gd * 0.35, -1.2, 0);
+        break;
+      case 'voz':
+        junta(esq, -0.1 + osc - pr * 0.25 - gd * 0.3, 0.25 + gd * 0.25, -0.3 - pr * 0.4 - gd * 0.5, -0.2);
+        junta(dir, -0.75, -0.15, -1.55 - gd * 0.1, 0);
+        break;
+      case 'sopro':
+        junta(esq, -0.9, 0.35, -1.5, -0.2);
+        junta(dir, -0.75 - pr * 0.05, -0.3, -1.25 + gd * 0.08, 0.1 - gd * 0.2);
+        break;
+      case 'contrabaixo':
+        junta(esq, -1.0, -0.45, -1.15, 0);
+        junta(dir, -0.25 - pr * 0.2, 0.05, -0.75 - pr * 0.45 + gd * 0.4, -0.2 - pr * 0.4 + gd * 0.5);
+        break;
+      default:       // corda: a mão esquerda no braço do instrumento, a direita palheta para cima e para baixo na nota
+        junta(esq, -0.75, 0.55, -1.3, 0.2);
+        junta(dir, -0.35, -0.2, -1.05 - pr * 0.3 + gd * 0.35, 0.2 - pr * 0.6 + gd * 0.7);
     }
   }
 
@@ -672,6 +772,7 @@
   // devagar (aproxima, gira, desliza). Planos: close nas mãos e no rosto, médio, contra-plongée (de baixo), dois
   // músicos, travelling lateral pela banda e o plano aberto. Movimento reduzido: só o aberto, parado.
   const PLANOS = ['close', 'medio', 'baixo', 'dois', 'travelling', 'aberto'];
+  const NOME_PLANO = { close: 'close', medio: 'plano médio', baixo: 'contra-plongée', dois: 'dois músicos', travelling: 'travelling', aberto: 'plano aberto' };
   const PESO_PLANO = { close: 3, medio: 3, baixo: 2, dois: 2, travelling: 1.5, aberto: 1.5 };
   const v3 = () => new THREE.Vector3();
   function escolherPlano(t) {
@@ -739,6 +840,11 @@
         pos.set(parado ? 0 : Math.sin(t * 0.05) * 2, 3.4 + sobe + 1.5 * Math.max(0, 1 / cam.aspect - 1), 10.5 * Math.max(1, 1.2 / cam.aspect));
       }
     }
+    // nos planos de perto a câmera fica dentro do palco: fora dele estão os objetos do cenário, que tampariam a vista
+    if (p.tipo !== 'aberto') {
+      const dx = pos.x, dz = pos.z - 2.5, r = Math.hypot(dx, dz), max = 6.6;
+      if (r > max) { pos.x = dx * max / r; pos.z = 2.5 + dz * max / r; }
+    }
     if (p.corte) { cam.position.copy(pos); run.olhar.copy(alvo); p.corte = false; }     // corte seco
     else { const s = Math.min(1, dt * 2.5); run.olhar.lerp(alvo, s); cam.position.lerp(pos, s); }
     cam.lookAt(run.olhar);
@@ -746,8 +852,13 @@
     run.cena.fog.near = run.cena.fog.far - 35;
     foco.target.position.copy(ap || alvo);
     foco.intensity += ((ap ? 55 : 0) - foco.intensity) * Math.min(1, dt * 3);
-    const txt = a ? rotulo(a) : '';
-    if (txt !== run.focoTxt) { run.focoTxt = txt; $('sim-foco').textContent = txt; }
+    const txt = a ? rotulo(a) + '|' + p.tipo : '';
+    if (txt !== run.focoTxt) {
+      run.focoTxt = txt;
+      const el = $('sim-foco');
+      el.hidden = !a;
+      if (a) { el.firstChild.textContent = instDe(a); el.lastChild.textContent = `${a.nomeFamilia} · ${NOME_PLANO[p.tipo] || ''}`; }
+    }
     run.focoEm = a?.chave ?? null;
   }
 
@@ -804,6 +915,8 @@
     const el = $('sim');
     el.style.setProperty('--sim-topo', `${at.camera().topo + 12}px`);
     el.hidden = false;
+    aplicarCartao(lerCartao());
+    try { $('sim-instrumentos').open = localStorage.getItem(CHAVE_INST) === '1'; } catch {}
     $('sim-sair').focus();
     // O som liga aqui, ainda dentro do clique: depois do import o Safari já não aceita. O Sonificar desligado volta
     // a ficar desligado ao fechar (a escolha fica salva no localStorage).
@@ -823,7 +936,7 @@
     if (!abrindo) return;          // Esc ou ✕ enquanto o three.js carregava: parar() já desfez tudo
     abrindo = false;
     $('sim-status').textContent = '';
-    run = { musicos: new Map(), fila: [], ativos: [], desordem: false, batida: 0, bpm: 100, focoEm: null, focoTxt: '', vazio: null, flash: 0,
+    run = { musicos: new Map(), inst: new Map(), tInst: 0, fila: [], ativos: [], desordem: false, batida: 0, bpm: 100, focoEm: null, focoTxt: '', vazio: null, flash: 0,
       plano: { tipo: 'aberto', a: null, b: null, t0: 0, lado: 1, corte: true },
       dtMedio: 1 / 60, tRes: 0, iRes: 0, iResMax: 0,
       alvoCam: new THREE.Vector3(), posCam: new THREE.Vector3(), olhar: new THREE.Vector3(0, 1, 2), ...montarCena() };
@@ -852,6 +965,8 @@
     clearTimeout(run.tMapa);
     run.ro.disconnect();
     for (const m of [...run.musicos.values()]) removerMusico(m);
+    $('sim-instrumentos-lista').replaceChildren();
+    $('sim-foco').hidden = true;
     for (const c of Object.values(run.cenarios)) { c.g.traverse(o => o.geometry?.dispose()); for (const m of c.mats) m.dispose(); }
     run.r.dispose();
     run = null;
@@ -874,6 +989,59 @@
   }
 
   $('sim-sair')?.addEventListener('click', parar);
+
+  // ── mover e redimensionar (desktop) ──
+  // Arrastar pela faixa de cima move o cartão; o canto de baixo à direita muda largura e altura do palco. Fica dentro
+  // da janela e é lembrado neste navegador (localStorage, só conveniência: sem ele o cartão volta ao lugar padrão).
+  const CHAVE_CARTAO = 'tocador-atlas-sim-cartao';
+  const desktop = () => matchMedia('(min-width: 721px) and (pointer: fine)').matches;
+  function aplicarCartao(c) {
+    const el = $('sim');
+    if (!c || !desktop()) { for (const v of ['--sim-x', '--sim-y', '--sim-largo', '--sim-alto']) el.style.removeProperty(v); return; }
+    const largo = Math.max(260, Math.min(c.largo, innerWidth - 24)), alto = Math.max(160, Math.min(c.alto, innerHeight - 220));
+    el.style.setProperty('--sim-largo', `${largo}px`);
+    el.style.setProperty('--sim-alto', `${alto}px`);
+    const w = el.offsetWidth || largo, h = el.offsetHeight || alto + 120;
+    el.style.setProperty('--sim-x', `${Math.max(8, Math.min(c.x, innerWidth - w - 8))}px`);
+    el.style.setProperty('--sim-y', `${Math.max(8, Math.min(c.y, innerHeight - Math.min(h, 120)))}px`);
+  }
+  function lerCartao() { try { return JSON.parse(localStorage.getItem(CHAVE_CARTAO) || 'null'); } catch { return null; } }
+  function salvarCartao(c) { try { localStorage.setItem(CHAVE_CARTAO, JSON.stringify(c)); } catch {} }
+  function cartaoAtual() {
+    const el = $('sim'), r = el.getBoundingClientRect(), palco = $('sim-palco').getBoundingClientRect();
+    return { x: Math.round(r.left), y: Math.round(r.top), largo: Math.round(r.width), alto: Math.round(palco.height) };
+  }
+  function arrastar(e, modo) {
+    if (!desktop() || e.button !== 0) return;
+    if (modo === 'mover' && e.target.closest('button')) return;
+    e.preventDefault();
+    const el = $('sim'), c0 = cartaoAtual(), x0 = e.clientX, y0 = e.clientY;
+    el.classList.add(modo === 'mover' ? 'arrastando' : 'redimensionando');
+    const mover = ev => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      aplicarCartao(modo === 'mover' ? { ...c0, x: c0.x + dx, y: c0.y + dy } : { ...c0, largo: c0.largo + dx, alto: c0.alto + dy });
+    };
+    const soltar = () => {
+      removeEventListener('pointermove', mover);
+      removeEventListener('pointerup', soltar);
+      removeEventListener('pointercancel', soltar);
+      el.classList.remove('arrastando', 'redimensionando');
+      salvarCartao(cartaoAtual());
+    };
+    addEventListener('pointermove', mover);
+    addEventListener('pointerup', soltar);
+    addEventListener('pointercancel', soltar);
+  }
+  $('sim-topo')?.addEventListener('pointerdown', e => arrastar(e, 'mover'));
+  $('sim-redim')?.addEventListener('pointerdown', e => arrastar(e, 'redimensionar'));
+  // a janela encolheu: o cartão volta para dentro dela
+  addEventListener('resize', () => { if (!$('sim').hidden) aplicarCartao(lerCartao()); });
+  // duplo clique na faixa de cima: volta ao lugar e ao tamanho padrão
+  $('sim-topo')?.addEventListener('dblclick', e => {
+    if (e.target.closest('button') || !desktop()) return;
+    try { localStorage.removeItem(CHAVE_CARTAO); } catch {}
+    aplicarCartao(null);
+  });
   // o botão Banda liga e desliga, como o Grafo e o Sonificar
   $('btn-sim')?.addEventListener('click', () => (run || abrindo ? parar() : iniciar()));
   // em window: a captura aí corre antes da do document, onde o tour escuta o T
@@ -898,7 +1066,7 @@
 
   window.__atlasSim = {
     iniciar, parar,
-    estado: () => run && { musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2) })), batida: +run.batida.toFixed(2), foco: run.focoEm, plano: run.plano.tipo, fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
+    estado: () => run && { musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2) })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
       cenarios: Object.fromEntries(Object.entries(run.cenarios).filter(([, c]) => c.peso > 0.02).map(([n, c]) => [n, +c.peso.toFixed(2)])) },
     // testes: notas sem depender do áudio
     nota: e => aoTocar(e),
