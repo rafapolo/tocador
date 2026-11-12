@@ -527,8 +527,11 @@ body {
   background: rgba(40, 6, 6, 0.96);
   border: 1px solid #c0392b;
   color: #ff7070;
-  /* Inter keeps more room above the capitals than below the baseline: an even padding leaves the text ~2px low. */
-  padding: 8px 16px 12px;
+  /* line-height 1 keeps the body's 1.6 from padding the pill; flex centers the line box. */
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  padding: 7px 14px;
   border-radius: 20px;
   font-size: 0.82rem;
   font-weight: 600;
