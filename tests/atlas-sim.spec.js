@@ -431,3 +431,21 @@ test('palco vazio: a câmera fica parada onde estava, sem passear pelo cenário'
     await page.waitForTimeout(500);
   }
 });
+
+test('o nível de acabamento é medido na abertura: rápido ganha sombra e reflexo, lento fica sem os dois', async ({ page }) => {
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  await nota(page, { papel: 'mel', familia: 'samba', vel: 0.5, timbre: 'cavaco' });
+  await expect.poll(async () => (await sim(page)).musicos.length).toBe(1);
+  const e = await sim(page);
+  // o GL em software do headless costuma cair no nível baixo; numa GPU de verdade, no alto
+  expect(['alto', 'baixo']).toContain(e.nivel);
+  expect(e.medidaAbertura).toBeGreaterThan(0);
+  expect(e.sombra).toBe(e.nivel === 'alto');
+  const m = await page.evaluate(() => window.__atlasSim.medir(4));
+  expect(m.ms).toBeGreaterThan(0);
+  const cam = (await sim(page)).cam;
+  await page.waitForTimeout(400);
+  expect((await sim(page)).cam).not.toEqual(cam);   // o quadro a quadro voltou depois da medição
+});

@@ -80,13 +80,106 @@
   // ── figuras ──
   // Materiais opacos por padrão: só viram transparentes enquanto somem ou aparecem (transparência custa ordenação e
   // sobreposição de pixels, e um palco cheio de objetos semitransparentes pesa no celular).
-  function material(cor, extra = {}) { return new THREE.MeshStandardMaterial({ color: cor, roughness: 0.65, metalness: 0.05, ...extra }); }
+  // Plástico de verdade: a rugosidade varia em manchas (umas partes mais foscas, outras mais brilhantes) e a superfície
+  // tem um relevo mínimo, os dois de uma textura de ruído só, 128², compartilhada por todos os materiais. Quem dá o
+  // brilho é o mapa de ambiente (ambienteNeutro()): sem reflexo, rugosidade nenhuma parece plástico.
+  function material(cor, extra = {}) {
+    const m = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.65, metalness: 0.05, roughnessMap: texturaPlastico(), bumpMap: texturaPlastico(), bumpScale: 0.08, ...extra });
+    m.onBeforeCompile = oclusaoPelaAltura;
+    m.customProgramCacheKey = () => 'ao-altura';
+    return m;
+  }
+  // Oclusão de ambiente falsa: perto do chão a luz indireta (céu, ambiente) chega menos, como no canto entre o pé e o
+  // palco. Escurece só a luz indireta, pela altura do ponto no mundo; a direta já tem a sombra do sol. Sem passe de tela.
+  function oclusaoPelaAltura(s) {
+    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying float vAltura;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAltura = (modelMatrix * vec4(transformed, 1.0)).y;');
+    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAltura;')
+      .replace('#include <aomap_fragment>', '#include <aomap_fragment>\n{ float aoA = mix(0.45, 1.0, smoothstep(0.0, 0.5, vAltura)); reflectedLight.indirectDiffuse *= aoA; reflectedLight.indirectSpecular *= aoA; }');
+  }
+  // ruído de valor em duas oitavas, que repete sem emenda (as bordas se repetem no módulo da grade)
+  function ruido(n, celulas, semente) {
+    const v = (i, j) => hash(semente + (i % celulas) + ',' + (j % celulas)), out = new Float32Array(n * n);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const fx = x / n * celulas, fy = y / n * celulas, i = Math.floor(fx), j = Math.floor(fy), u = fx - i, w = fy - j;
+      const a = v(i, j), b = v(i + 1, j), c = v(i, j + 1), d = v(i + 1, j + 1), su = u * u * (3 - 2 * u), sw = w * w * (3 - 2 * w);
+      out[y * n + x] = a + (b - a) * su + (c - a) * sw + (a - b - c + d) * su * sw;
+    }
+    return out;
+  }
+  let TEX_PLASTICO = null;
+  function texturaPlastico() {
+    if (TEX_PLASTICO) return TEX_PLASTICO;
+    const n = 128, a = ruido(n, 8, 'pl'), b = ruido(n, 32, 'pf'), px = new Uint8Array(n * n * 4);
+    for (let i = 0; i < n * n; i++) {
+      const r = 0.78 + 0.22 * a[i] + 0.06 * (b[i] - 0.5);          // multiplica a rugosidade do material: 0,8–1,0
+      const g = Math.round(Math.min(1, r) * 255), h = Math.round((0.35 * a[i] + 0.65 * b[i]) * 255);
+      px.set([h, g, h, 255], i * 4);                               // G = rugosidade, R = relevo (bumpMap lê o R)
+    }
+    TEX_PLASTICO = new THREE.DataTexture(px, n, n);
+    TEX_PLASTICO.wrapS = TEX_PLASTICO.wrapT = THREE.RepeatWrapping;
+    TEX_PLASTICO.repeat.set(3, 3);
+    TEX_PLASTICO.magFilter = THREE.LinearFilter;
+    TEX_PLASTICO.minFilter = THREE.LinearMipmapLinearFilter;
+    TEX_PLASTICO.generateMipmaps = true;
+    TEX_PLASTICO.needsUpdate = true;
+    return TEX_PLASTICO;
+  }
+  // O chão gasto: manchas de sujeira, um caminho mais claro e liso no meio (onde se pisa), riscos e grão. A cor do
+  // cenário continua vindo de aplicarCenarios(); a textura só multiplica. Gerada uma vez, num canvas de 512².
+  function texturaChao() {
+    const n = 512, c = document.createElement('canvas');
+    c.width = c.height = n;
+    const x = c.getContext('2d'), img = x.createImageData(n, n), liso = new Float32Array(n * n), m1 = ruido(n, 6, 'sj'), m2 = ruido(n, 24, 'sg'), m3 = ruido(n, 96, 'sf');
+    for (let i = 0; i < n * n; i++) {
+      const px = (i % n) / n - 0.5, py = Math.floor(i / n) / n - 0.5, gasto = Math.max(0, 1 - Math.hypot(px, py) * 3.2);
+      const sujo = Math.max(0, m1[i] - 0.45) * 1.3 + Math.max(0, m2[i] - 0.6) * 0.6;
+      const v = Math.min(1, 0.86 - sujo * 0.55 + gasto * 0.1 + (m3[i] - 0.5) * 0.12);
+      const lisura = Math.min(1, 0.9 - gasto * 0.35 + sujo * 0.25);    // o meio gasto é mais liso (reflete mais)
+      img.data.set([v * 255, v * 247, v * 238, 255], i * 4);
+      liso[i] = lisura;
+    }
+    x.putImageData(img, 0, 0);
+    // riscos: traços finos e claros, de arrastar caixas e pés
+    x.globalCompositeOperation = 'lighter';
+    x.strokeStyle = 'rgba(40,36,30,0.35)';
+    x.lineWidth = 1;
+    for (let k = 0; k < 70; k++) {
+      const ax = hash('rx' + k) * n, ay = hash('ry' + k) * n, ang = hash('ra' + k) * Math.PI, l = 10 + hash('rl' + k) * 60;
+      x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + Math.cos(ang) * l, ay + Math.sin(ang) * l); x.stroke();
+    }
+    const cor = new THREE.CanvasTexture(c);
+    cor.colorSpace = THREE.SRGBColorSpace;
+    cor.anisotropy = 4;
+    // a rugosidade num segundo canvas, cinza (o three lê o canal verde)
+    const c2 = document.createElement('canvas');
+    c2.width = c2.height = n;
+    const y = c2.getContext('2d'), img2 = y.createImageData(n, n);
+    for (let i = 0; i < n * n; i++) { const a = liso[i] * 255; img2.data.set([a, a, a, 255], i * 4); }
+    y.putImageData(img2, 0, 0);
+    const rug = new THREE.CanvasTexture(c2);
+    rug.anisotropy = 4;
+    return { cor, rug };
+  }
   function opacidade(m, o) {
     const tr = o < 0.995;
     m.opacity = o;
     if (m.transparent !== tr) { m.transparent = tr; m.depthWrite = !tr; }
   }
-  function malha(geo, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; }
+  // toda peça sólida projeta e recebe a sombra do sol (só ele tem shadow map, e a câmera dele cobre só o palco: o que
+  // fica fora dela, como os objetos do cenário no anel, nem entra na passada de sombra). Material básico (fumaça,
+  // luzes) não tem sombra: projetaria um quadrado. Peça miúda (olho, dedo, baqueta, botão) não projeta: a sombra dela
+  // não aparece e cada malha na passada de sombra é uma chamada de desenho a mais, o custo que pesa aqui (CPU).
+  function malha(geo, mat, x = 0, y = 0, z = 0) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    if (!mat.isMeshBasicMaterial) {
+      if (!geo.boundingSphere) geo.computeBoundingSphere();
+      m.receiveShadow = true;
+      m.castShadow = geo.boundingSphere.radius > 0.09;
+    }
+    return m;
+  }
   // Geometrias dos músicos: uma de cada, compartilhada por todos (sair do palco descarta só os materiais).
   const GEO = new Map();
   const geo = (chave, fazer) => { let g = GEO.get(chave); if (!g) { g = fazer(); GEO.set(chave, g); } return g; };
@@ -139,7 +232,7 @@
       tronco.add(ombro);
       return { ombro, cotovelo, punho };
     });
-    const sombra = new THREE.Mesh(geo('sombra', () => new THREE.PlaneGeometry(1.1, 1.1)), new THREE.MeshBasicMaterial({ map: texturaSombra(), transparent: true, depthWrite: false, opacity: 0.6 }));
+    const sombra = new THREE.Mesh(geo('sombra', () => new THREE.PlaneGeometry(1.1, 1.1)), new THREE.MeshBasicMaterial({ map: texturaSombra(), transparent: true, depthWrite: false, opacity: 0.4 }));
     sombra.rotation.x = -Math.PI / 2;
     sombra.position.y = 0.02;
     g.add(sombra);
@@ -591,6 +684,9 @@
     r.setPixelRatio(Math.min(2, devicePixelRatio || 1));
     r.toneMapping = THREE.ACESFilmicToneMapping;      // a curva de filme: brilhos que estouram com suavidade
     r.toneMappingExposure = 0.95;
+    r.shadowMap.enabled = true;
+    r.shadowMap.type = THREE.PCFShadowMap;
+    r.shadowMap.autoUpdate = false;      // a sombra é redesenhada a cada dois quadros (quadro()): ~30 Hz, não se nota
     // céu: uma esfera por dentro, do horizonte ao alto, sem névoa
     const ceu = new Mesh(new SphereGeometry(60, 24, 12), new ShaderMaterial({
       side: BackSide, depthWrite: false, fog: false,
@@ -599,11 +695,20 @@
       fragmentShader: 'uniform vec3 alto; uniform vec3 baixo; varying float h; void main() { gl_FragColor = vec4(mix(baixo, alto, smoothstep(-0.05, 0.6, h)), 1.0); }',
     }));
     cena.add(ceu);
-    const hemi = new HemisphereLight(0xfff1dc, 0x1a140d, 0.7);
+    // o mapa de ambiente (ambienteNeutro()) já traz a luz do céu; o hemisfério fica mais fraco para não somar duas vezes
+    const hemi = new HemisphereLight(0xfff1dc, 0x1a140d, 0.35);
     cena.add(hemi);
-    const sol = new DirectionalLight(0xffe0b0, 1.1);
-    sol.position.set(3, 8, 6);
-    cena.add(sol);
+    // o sol, de lado e alto, é a única luz com sombra de verdade (cai em diagonal, à vista da câmera): mapa de 1024, câmera ortográfica justa no palco (raio ~6,5 em z = 3)
+    const sol = new DirectionalLight(0xffe0b0, 2.0);
+    sol.position.set(8, 7, 4.5);
+    sol.target.position.set(0, 0, 3);
+    sol.castShadow = true;
+    sol.shadow.mapSize.set(1024, 1024);
+    Object.assign(sol.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 22 });
+    sol.shadow.bias = -0.0004;
+    sol.shadow.normalBias = 0.02;
+    sol.shadow.radius = 3;
+    cena.add(sol, sol.target);
     // contraluz: desenha a silhueta dos músicos contra o fundo, na cor do cenário
     const contra = new DirectionalLight(0xffc890, 1.6);
     contra.position.set(-2, 5, -8);
@@ -621,22 +726,50 @@
       fragmentShader: 'uniform vec3 cor; varying float a; void main() { float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(cor, a * smoothstep(0.5, 0.0, d) * 0.5); }',
     }));
     cena.add(poeira);
-    const terra = new Mesh(new CircleGeometry(45, 48), new MeshStandardMaterial({ color: 0x2a221a, roughness: 0.95 }));
+    const tex = texturaChao();
+    const terra = new Mesh(new CircleGeometry(45, 48), new MeshStandardMaterial({ color: 0x2a221a, roughness: 0.95, map: tex.cor.clone(), roughnessMap: tex.rug.clone() }));
+    for (const t of [terra.material.map, terra.material.roughnessMap]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(9, 9); }
+    terra.receiveShadow = true;
     terra.rotation.x = -Math.PI / 2;
     terra.position.set(0, -0.01, 0);
     cena.add(terra);
-    const chao = new Mesh(new CircleGeometry(6.5, 64), new MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.8 }));
+    const chao = new Mesh(new CircleGeometry(6.5, 64), new MeshStandardMaterial({ color: 0x8a6444, roughness: 0.9, map: tex.cor, roughnessMap: tex.rug }));
+    chao.receiveShadow = true;     // madeira clara: num piso quase preto a luz direta (e a sombra dela) some sob o reflexo do céu
     chao.rotation.x = -Math.PI / 2;
     chao.position.set(0, 0.01, 3);
     cena.add(chao);
-    const borda = new Mesh(new RingGeometry(6.45, 6.6, 64), new MeshStandardMaterial({ color: 0xd4a574, emissive: 0x3a2a14 }));
+    const borda = new Mesh(new RingGeometry(6.45, 6.6, 64), new MeshStandardMaterial({ color: 0xd4a574, emissive: 0x3a2a14, roughness: 0.35, metalness: 0.6 }));
     borda.rotation.x = -Math.PI / 2;
     borda.position.set(0, 0.015, 3);
     cena.add(borda);
     const foco = new SpotLight(0xfff0d0, 0, 14, 0.35, 0.6, 1);
     foco.position.set(0, 7, 5);
     cena.add(foco, foco.target);
-    return { cena, cam, r, foco, ceu, hemi, sol, contra, terra, poeira, cenarios: {} };
+    cena.environmentIntensity = 0.7;
+    return { cena, cam, r, foco, ceu, hemi, sol, contra, terra, chao, poeira, cenarios: {}, pmrem: new THREE.PMREMGenerator(r) };
+  }
+
+  // O mapa de ambiente: o que as superfícies refletem. Uma cena mínima de estúdio (um degradê neutro e quente, o chão
+  // escuro, uma janela de luz no alto à frente e uma faixa de contraluz atrás) vira um cubemap filtrado (PMREM) de
+  // 64 px, uma vez só, na abertura, antes de compilar os shaders: gerar um custa 5–15 ms de GPU num M4 (bem mais em
+  // GL de software), e trocar de mapa no meio da música travaria um quadro. A cor de cada cenário vem das luzes.
+  function ambienteNeutro() {
+    const { Scene, Mesh, SphereGeometry, PlaneGeometry, ShaderMaterial, MeshBasicMaterial, Color, BackSide, DoubleSide } = THREE;
+    const c = new Scene();
+    const ceu = new Mesh(new SphereGeometry(10, 32, 16), new ShaderMaterial({
+      side: BackSide, depthWrite: false,
+      uniforms: { alto: { value: new Color(0x2a2622) }, baixo: { value: new Color(0x5a4a3c) }, chao: { value: new Color(0x1e1813) } },
+      vertexShader: 'varying float h; void main() { h = normalize(position).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform vec3 alto; uniform vec3 baixo; uniform vec3 chao; varying float h; void main() { vec3 c = h < 0.0 ? mix(baixo, chao, smoothstep(0.0, -0.15, h)) : mix(baixo, alto, smoothstep(0.0, 0.6, h)); gl_FragColor = vec4(c, 1.0); }',
+    }));
+    const janela = new Mesh(new PlaneGeometry(6, 3), new MeshBasicMaterial({ color: new Color(0xfff1dc).multiplyScalar(3.2), side: DoubleSide }));
+    janela.position.set(1.5, 6, 6); janela.lookAt(0, 0, 0);
+    const faixa = new Mesh(new PlaneGeometry(9, 1.2), new MeshBasicMaterial({ color: new Color(0xffc890).multiplyScalar(2.2), side: DoubleSide }));
+    faixa.position.set(-1, 3, -7.5); faixa.lookAt(0, 1, 0);
+    c.add(ceu, janela, faixa);
+    const rt = run.pmrem.fromScene(c, 0, 0.1, 30, { size: 64 });
+    c.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });
+    return rt;
   }
 
   // ── cenários ──
@@ -1055,13 +1188,24 @@
 
   // ── quadro a quadro ──
   // Nada é alocado por quadro: listas, cores e vetores são reaproveitados. A resolução se ajusta ao que o aparelho
-  // aguenta (média do tempo de quadro: abaixo de ~40 fps desce um degrau, folgado acima de ~55 fps sobe de novo).
+  // aguenta (média do tempo de quadro: abaixo de ~40 fps desce um degrau, folgado acima de ~55 fps sobe de novo);
+  // entre 1,5× e 1,25× há um degrau a mais, sem volta: a sombra do sol desliga.
   const RESOLUCOES = [2, 1.5, 1.25, 1];
-  function ajustarResolucao(dt) {
-    run.dtMedio += (dt - run.dtMedio) * 0.05;
+  function ajustarResolucao(dt) {      // dt sem o teto de 50 ms do quadro: a 150 ms por quadro a conta tem de andar em segundos de verdade
+    run.dtMedio += (Math.min(dt, 0.25) - run.dtMedio) * 0.05;
     run.tRes += dt;
     if (run.tRes < 2) return;
     let i = run.iRes;
+    // a sombra do sol custa um tanto fixo (não cai com a resolução, e numa tela de densidade 1 a escada de resolução
+    // nem tem degrau): lento, ela é a primeira a sair, e não volta. Sem recompilar nada (desligar a luz de sombra recompila todos os shaders: 200–350 ms
+    // parados no GL em software): ninguém mais projeta, o mapa é limpo numa última passada e não é mais redesenhado
+    if (run.dtMedio > 1 / 40 && run.sombraViva) {
+      run.sombraViva = false;
+      run.limparSombra = true;
+      run.cena.traverse(o => { o.castShadow = false; });
+      run.tRes = 0;
+      return;
+    }
     if (run.dtMedio > 1 / 40 && i < RESOLUCOES.length - 1) i++;
     else if (run.dtMedio < 1 / 55 && i > run.iResMax) i--;
     if (i !== run.iRes) { run.iRes = i; run.r.setPixelRatio(Math.min(RESOLUCOES[i], devicePixelRatio || 1)); medir(); }
@@ -1077,7 +1221,8 @@
     run.tq = t;
     // com a banda na tela, alguém está assistindo: a música não adormece (só isso; o que ela toca segue o mapa)
     if (t - (run.tAcordar || 0) > 5 && document.visibilityState === 'visible') { run.tAcordar = t; at.acordarSom?.(); }
-    if (dt > 0) ajustarResolucao(dt);
+    if (dt > 0) ajustarResolucao(t - (run.tqAntes ?? t));
+    run.tqAntes = t;
     // Cada nota aparece quando ela sai no alto-falante (o tempo ouvido, já com a latência de saída), e o braço sobe
     // antes dela: a descida cai em cima do som, como num golpe de verdade.
     const agoraAudio = at.ouvidoSom ? at.ouvidoSom() : at.agoraSom(), fila = run.fila;
@@ -1140,6 +1285,9 @@
     run.r.toneMappingExposure = 0.95 + (parado ? 0 : run.flash * 0.12);
     dirigir(t, dt, antes, parado);
     desenharInstrumentos(dt);
+    run.nQuadro = (run.nQuadro || 0) + 1;
+    run.r.shadowMap.needsUpdate = run.limparSombra || (run.sombraViva && run.nQuadro % 2 === 0);
+    run.limparSombra = false;
     run.r.render(run.cena, run.cam);
     const vazio = run.musicos.size === 0;
     const semAnalise = !!pv && !run.pv.vozes.length;
@@ -1410,6 +1558,16 @@
   }
 
   // ── abrir e fechar ──
+  const NIVEL_LENTO_MS = 9;      // por quadro, com o palco vazio: um M4 fica em ~1–2 ms, o GL em software do headless em ~20
+  function medirAbertura() {
+    const gl = run.r.getContext(), px = new Uint8Array(4), sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    for (let i = 0; i < 2; i++) run.r.render(run.cena, run.cam);       // texturas sobem e o que faltar compila aqui, fora da conta
+    sync();
+    const t0 = performance.now();
+    for (let i = 0; i < 4; i++) { run.r.shadowMap.needsUpdate = i % 2 === 0; run.r.render(run.cena, run.cam); }
+    sync();
+    return (run.medidaAbertura = (performance.now() - t0) / 4);
+  }
   async function iniciar() {
     if (run || abrindo) return;
     abrindo = true;
@@ -1442,14 +1600,30 @@
     $('sim-status').textContent = '';
     run = { musicos: new Map(), inst: new Map(), tInst: 0, fila: [], ativos: [], desordem: false, batida: 0, bpm: 100, focoEm: null, famPeso: new Map(), tFam: 0, vazio: null, flash: 0,
       plano: { tipo: 'aberto', estilo: 'aberto', a: null, b: null, raio: 9.5, alto: 3.4, ang: 0, ateNovo: 0 }, novo: null,
-      dtMedio: 1 / 60, tRes: 0, iRes: 0, iResMax: 0,
+      dtMedio: 1 / 60, tRes: 0, iRes: 0, iResMax: 0, sombraViva: true, limparSombra: false,
       alvoCam: new THREE.Vector3(), posCam: new THREE.Vector3(), olhar: new THREE.Vector3(0, 1, 2), ...montarCena() };
     run.ro = new ResizeObserver(medir);
     run.ro.observe($('sim-canvas'));
     medir();
+    run.amb = ambienteNeutro();
+    run.cena.environment = run.amb.texture;
     // os programas de shader compilam antes do primeiro quadro, sem travar a thread em que o som é agendado
     if (run.r.compileAsync) await run.r.compileAsync(run.cena, run.cam).catch(() => {});
     if (!run) return;
+    // Nível de acabamento, decidido uma vez, medindo: alguns quadros do palco ainda vazio, cronometrados até a GPU
+    // terminar. Lento (aparelho fraco, GL em software), o palco fica sem reflexo de ambiente e sem sombra do sol, o que
+    // custa mais por pixel (o ambiente pesa ~60% do acréscimo em software). Tirar isso depois, no meio da música,
+    // recompilaria todos os shaders (200–350 ms parados); aqui ainda não toca nada na tela.
+    run.nivel = medirAbertura() > NIVEL_LENTO_MS ? 'baixo' : 'alto';
+    if (run.nivel === 'baixo') {
+      run.cena.environment = null;
+      run.hemi.intensity = 0.7;
+      run.sol.castShadow = false;
+      run.r.shadowMap.enabled = false;
+      run.sombraViva = false;
+      if (run.r.compileAsync) await run.r.compileAsync(run.cena, run.cam).catch(() => {});
+      if (!run) return;
+    }
     run.raf = requestAnimationFrame(quadro);
     $('sim-sair').focus();
   }
@@ -1472,6 +1646,9 @@
     for (const m of [...run.musicos.values()]) removerMusico(m);
     $('sim-instrumentos-lista').replaceChildren();
     for (const c of Object.values(run.cenarios)) { c.g.traverse(o => o.geometry?.dispose()); for (const m of c.mats) m.dispose(); }
+    run.amb?.dispose();
+    run.pmrem.dispose();
+    for (const m of [run.terra.material, run.chao.material]) { m.map?.dispose(); m.roughnessMap?.dispose(); }
     run.r.dispose();
     run.actx?.close?.();
     run = null;
@@ -1591,10 +1768,41 @@
 
   window.__atlasSim = {
     iniciar, parar,
-    estado: () => run && { ampliado: $('sim').classList.contains('ampliado'), estrela: !!run.plano.estrela, musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], kit: !!m.kit, mao: m.maoPeca || null, pandeiro: m.maoPeca === 'pandeiro', pose: m.pose, vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu, penteado: m.penteado })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
+    estado: () => run && { ampliado: $('sim').classList.contains('ampliado'), estrela: !!run.plano.estrela, musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], kit: !!m.kit, mao: m.maoPeca || null, pandeiro: m.maoPeca === 'pandeiro', pose: m.pose, vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu, penteado: m.penteado })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], sombra: run.sombraViva, nivel: run.nivel, medidaAbertura: +(run.medidaAbertura ?? 0).toFixed(1), fila: run.fila.length, bpm: run.bpm,
       cenarios: Object.fromEntries(Object.entries(run.cenarios).filter(([, c]) => c.peso > 0.02).map(([n, c]) => [n, +c.peso.toFixed(2)])) },
     // testes: notas sem depender do áudio
     nota: e => aoTocar(e),
+    // medição (script/bench-atlas-sim.js): n quadros desenhados em seguida e uma espera pela GPU no fim (ler um pixel
+    // força a espera; esperar a cada quadro mediria a ida e volta ao processo da GPU); devolve ms por quadro (CPU e,
+    // se o navegador tiver o relógio da GPU, gpuMs) e o que o three.js contou do último
+    async medir(n = 120) {
+      if (!run) return null;
+      const gl = run.r.getContext(), px = new Uint8Array(4);
+      cancelAnimationFrame(run.raf);
+      // sempre do mesmo lugar (o plano aberto de frente), para comparar medições: cada plano enquadra outra coisa
+      const pos = run.cam.position.clone(), rot = run.cam.quaternion.clone();
+      run.cam.position.set(0, 3.2, 9.5); run.cam.lookAt(0, 1, 2); run.cam.updateMatrixWorld();
+      for (let i = 0; i < 5; i++) run.r.render(run.cena, run.cam);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const tq = gl.getExtension('EXT_disjoint_timer_query_webgl2'), q = tq && gl.createQuery();     // o relógio da própria GPU
+      if (q) gl.beginQuery(tq.TIME_ELAPSED_EXT, q);
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) { run.r.shadowMap.needsUpdate = run.sombraViva && i % 2 === 0; run.r.render(run.cena, run.cam); }
+      if (q) gl.endQuery(tq.TIME_ELAPSED_EXT);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const ms = (performance.now() - t0) / n;
+      run.cam.position.copy(pos); run.cam.quaternion.copy(rot);
+      run.raf = requestAnimationFrame(quadro);
+      let gpuMs = null;
+      if (q) {
+        for (let k = 0; k < 200 && !gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE); k++) await new Promise(r => setTimeout(r, 10));
+        if (gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE) && !gl.getParameter(tq.GPU_DISJOINT_EXT)) gpuMs = +(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6 / n).toFixed(2);
+        gl.deleteQuery(q);
+      }
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      return { ms: +ms.toFixed(2), gpuMs, chamadas: run.r.info.render.calls, triangulos: run.r.info.render.triangles, texturas: run.r.info.memory.textures,
+        largura: gl.drawingBufferWidth, altura: gl.drawingBufferHeight, gpu: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : '' };
+    },
     // testes e capturas: põe a câmera em um músico, de perto, já (sem a transição)
     focar(chave) {
       const m = run?.musicos.get(chave);
