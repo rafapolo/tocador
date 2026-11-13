@@ -7,7 +7,7 @@ test.use({ serviceWorkers: 'block' });
 
 const card = (page, title) => page.locator('.album-item', { hasText: title });
 
-test('o visor fica entre os acordeões, um aberto por vez, e com a faixa tocando desenha o som', async ({ page, browserName }) => {
+test('o visor é o primeiro acordeão, um aberto por vez, e com a faixa tocando desenha o som', async ({ page, browserName }) => {
   await gotoWithFixture(page);
   // o cdn.tocador.cc responde com CORS; o mp3 do teste também precisa
   await page.route('**/*.mp3', r => r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Access-Control-Allow-Origin': '*' }, body: fixtureMp3 }));
@@ -23,8 +23,9 @@ test('o visor fica entre os acordeões, um aberto por vez, e com a faixa tocando
     return;
   }
   await expect(visor).toBeVisible();
-  // logo acima de "Soa parecido com"
-  expect(await visor.evaluate(d => d.nextElementSibling?.classList.contains('album-parecidos'))).toBe(true);
+  // o primeiro acordeão, antes de "Gêneros detectados" e "Soa parecido com", e sem legenda (a faixa já está no player)
+  expect(await visor.evaluate(d => [d.nextElementSibling?.className, d.nextElementSibling?.nextElementSibling?.className])).toEqual(['album-generos', 'album-parecidos']);
+  await expect(visor.locator('p')).toHaveCount(0);
   const generos = page.locator('#tracks-panel .album-generos');
   await generos.locator('summary').click();
   await expect(generos).toHaveAttribute('open', '');
@@ -33,7 +34,6 @@ test('o visor fica entre os acordeões, um aberto por vez, e com a faixa tocando
   await expect(generos).not.toHaveAttribute('open', '');          // só um aberto
   await expect.poll(() => page.evaluate(() => window.__visorPlayer.estado().cors)).toBe('anonymous');
   await expect.poll(() => page.evaluate(() => window.__visorPlayer.estado().desenhando)).toBe(true);
-  await expect(visor.locator('p')).not.toBeEmpty();
   // a faixa segue tocando depois de recarregar em modo CORS
   await expect.poll(() => page.evaluate(() => !document.getElementById('audio').paused)).toBe(true);
   // fechado, para de desenhar

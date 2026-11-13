@@ -855,7 +855,6 @@ body.is-playing .album-item.playing-album .card-play::before {
 /* o visor do som (js/player-visor.js): espectro e forma de onda da faixa tocando, como o do /atlas */
 .album-visor-tela { padding: 10px 16px 12px; }
 .album-visor canvas { display: block; width: 100%; height: 56px; }
-.album-visor p { margin: 6px 0 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .album-genero {
   padding: 2px 8px;

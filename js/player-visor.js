@@ -1,6 +1,6 @@
 // player-visor.js — "Visor do som": o acordeão sob as faixas que desenha a música que está tocando, como o visor do
-// /atlas (js/atlas-visor.js): 40 barras do espectro em escala log e a forma de onda por cima. Faz parte do grupo de
-// acordeões do painel (name="album-extra"), então só um deles fica aberto por vez, e só desenha enquanto está aberto
+// /atlas (js/atlas-visor.js): 40 barras do espectro em escala log e a forma de onda por cima, sem legenda (a faixa
+// já está no player). É o primeiro do grupo de acordeões do painel (name="album-extra"), então só um deles fica aberto por vez, e só desenha enquanto está aberto
 // e visível. Classic script, loaded after playback.js; uses the ui.js globals (BASE_URL, currentTrack, safePlay).
 //
 // O som é lido sem desviar o <audio>: captureStream() (Chrome, Firefox) dá uma cópia do que ele toca a um
@@ -99,7 +99,7 @@
     } catch { return false; }
   }
 
-  function desenhar(cv, legenda) {
+  function desenhar(cv) {
     const ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
     const w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
     if (!w || !h) return;
@@ -125,8 +125,6 @@
       }
       ctx.stroke();
     }
-    const txt = currentTrack ? `${currentTrack.title || ''}${currentTrack.artists ? ' — ' + currentTrack.artists : ''}` : 'Nada tocando agora';
-    if (legenda.textContent !== txt) legenda.textContent = txt;
   }
 
   function ler() {
@@ -153,7 +151,7 @@
       if (an && trilha) ler();
     }
     else { for (let i = 0; i < BARRAS; i++) alturas[i] *= 0.9; onda?.fill(0); }
-    for (const d of vistos) desenhar(d.querySelector('canvas'), d.querySelector('p'));
+    for (const d of vistos) desenhar(d.querySelector('canvas'));
   }
   function atualizar() {
     const algum = caixas().some(d => d.open && !d.hidden);
