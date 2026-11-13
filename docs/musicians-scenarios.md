@@ -74,6 +74,17 @@ Nada é inventado: cada músico é uma voz real do motor de som.
 - **A estrela:** com um cantor no palco, a câmera o escolhe cerca de metade das vezes, e nessas dá a volta inteira
   em torno dele.
 
+### Percussão de mão e cabelos
+
+- **Percussão:** além do kit de bateria, cada percussionista segura em 3D o instrumento que mais toca (pandeiro,
+  tamborim, ganzá, agogô, triângulo, cuíca debaixo do braço, repique na cintura, clave, cowbell, ou conga e bongô
+  no chão), com baqueta só onde ela faz sentido. O surdo sai de cena quando a voz não toca nenhum grave de chão.
+- **Cordas:** a mão esquerda segura o braço do instrumento, perto da ponta, e a direita palheta sobre a boca. As
+  poses saem de cinemática inversa por tamanho de instrumento (`MAOS_CORDA`).
+- **Cabelos por gênero:** black power na roda de samba e no jazz, comprido na garagem, moicano no punk e no clube,
+  dreads no reggae, tranças na rua e no afrobeat, coque no teatro e na taverna, franja prateada no espaço, cachos na
+  praia, gomalina no tango. Com chapéu, cabelo curto. A cor varia por músico.
+
 ### Braços
 
 Cada braço tem três juntas: ombro, cotovelo e punho (`junta()`).
@@ -144,10 +155,23 @@ cruzam o céu.
 
 ## Câmera
 
-- **Sem cortes e sem parar:** orbita num arco pela frente da banda e desliza de um músico para outro. Olhar e
-  posição andam como molas com velocidade máxima (`segue()`), sem trancos.
-- **Trocas de foco:** no mínimo 6 s entre uma e outra; um instrumento que acabou de entrar ganha a câmera de perto
-  depois de 3 s. O enquadramento (de perto, médio, dois músicos, a banda inteira) muda devagar.
+- **Planos de cinema, sem cortes:** a câmera trabalha em planos de 5 a 8 s (mais curtos com a banda quente), que
+  deslizam um para o outro:
+
+| Plano | Movimento |
+|---|---|
+| órbita | gira em arco em volta do músico |
+| aproximando | dolly in, de longe até perto |
+| recuando | sai de perto e sobe um pouco |
+| grua | sobe do chão até o alto |
+| câmera baixa | de baixo para cima |
+| dois músicos | os dois que mais tocam |
+| a banda inteira | aberto, com uma grua lenta |
+| a estrela | uma volta inteira em torno do cantor (12 s) |
+
+- **Quem aparece:** cada plano é de quem tocou mais forte há pouco entre os que não estiveram nos dois últimos
+  planos, para a câmera rodar pela banda. Quem acabou de entrar com um instrumento novo, e o cantor, têm a vez antes.
+- **Sem trancos:** olhar e posição seguem molas com velocidade máxima (`segue()`), e os planos trocam na batida.
 
 ## Imagem
 
