@@ -29,7 +29,13 @@
     } catch { return false; }
   }
   const possivel = () => !!(capturar && AC) && !falhou && corsOk();
-  const caixas = () => document.querySelectorAll('.album-visor');
+  // os acordeões são do HTML fixo: lidos uma vez. As cores do tema, uma vez por abertura (não a cada quadro).
+  let _caixas = null, cores = null;
+  const caixas = () => (_caixas ??= [...document.querySelectorAll('.album-visor')]);
+  function lerCores(el) {
+    const cs = getComputedStyle(el);
+    cores = { barra: cs.getPropertyValue('--color-accent').trim() || '#d4a574', onda: cs.getPropertyValue('--color-text').trim() || '#eee' };
+  }
 
   // chamado por album-view.js junto com os outros acordeões
   function renderAlbumVisor() {
@@ -99,9 +105,9 @@
     if (!w || !h) return;
     if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
     ctx.clearRect(0, 0, w, h);
-    const cor = getComputedStyle(cv).getPropertyValue('--color-accent').trim() || '#d4a574';
+    if (!cores) lerCores(cv);
     const gap = Math.max(1, Math.round(w / BARRAS * 0.18)), bw = (w - gap * (BARRAS - 1)) / BARRAS;
-    ctx.fillStyle = cor;
+    ctx.fillStyle = cores.barra;
     for (let i = 0; i < BARRAS; i++) {
       const bh = Math.max(dpr, alturas[i] * h * 0.95);
       ctx.globalAlpha = 0.35 + 0.65 * alturas[i];
@@ -109,7 +115,7 @@
     }
     ctx.globalAlpha = 1;
     if (!reduzMovimento && onda) {
-      ctx.strokeStyle = getComputedStyle(cv).getPropertyValue('--color-text').trim() || '#eee';
+      ctx.strokeStyle = cores.onda;
       ctx.lineWidth = dpr * 1.2;
       ctx.beginPath();
       const passo = Math.max(1, Math.floor(onda.length / w));
@@ -138,7 +144,7 @@
 
   function quadro() {
     raf = 0;
-    const vistos = [...caixas()].filter(d => d.open && !d.hidden && d.getClientRects().length);
+    const vistos = caixas().filter(d => d.open && !d.hidden && d.getClientRects().length);
     if (!vistos.length || document.hidden) { ac?.suspend?.(); return; }
     raf = requestAnimationFrame(quadro);
     if (!audio.paused) {
@@ -150,7 +156,7 @@
     for (const d of vistos) desenhar(d.querySelector('canvas'), d.querySelector('p'));
   }
   function atualizar() {
-    const algum = [...caixas()].some(d => d.open && !d.hidden);
+    const algum = caixas().some(d => d.open && !d.hidden);
     if (algum) { ligar(); if (!raf) raf = requestAnimationFrame(quadro); }
   }
 
@@ -160,7 +166,7 @@
     const d = e.target;
     if (!(d instanceof HTMLDetailsElement) || !d.open || !d.name) return;
     for (const o of document.querySelectorAll(`details[name="${CSS.escape(d.name)}"]`)) if (o !== d && o.open) o.open = false;
-    if (d.classList.contains('album-visor')) atualizar();
+    if (d.classList.contains('album-visor')) { cores = null; atualizar(); }
   }, true);
   audio?.addEventListener('play', atualizar);
   audio?.addEventListener('playing', () => { if (an) ligar(); });
