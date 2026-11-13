@@ -71,10 +71,41 @@
       var b = albuns[acervo], i = b && b.ix.get(id);
       return i === undefined ? null : Array.prototype.slice.call(b.som, i * p.k, (i + 1) * p.k);
     }
+    // Optional: per track, which of its album's "Soa parecido com" candidates sound most like it. The candidates are the
+    // neighbour rows of the album's credited nodes (`p`, in that order, minus those nodes, no repeats) or, with none, its
+    // `albuns` row; same rule as conjunto() in script/build-artistas-parecidos.py. One bit mask per catalog track.
+    var porFaixa = {};
+    Object.keys(p.por_faixa || {}).forEach(function (a) {
+      var b = p.por_faixa[a], ix = new Map(), off = 0;
+      for (var i = 0; i * 5 < b.ids.length; i++) {
+        var id = b.ids.substr(i * 5, 5), conj = [], fora = new Set(b.p[i]);
+        if (b.p[i].length) {
+          b.p[i].forEach(function (no) {
+            for (var j = no * p.k; j < (no + 1) * p.k; j++) {
+              var v = viz.som[j];
+              if (!fora.has(v)) { fora.add(v); conj.push(v); }
+            }
+          });
+        } else conj = vizAlbum(a, id) || [];
+        var largura = (conj.length + 7) >> 3;
+        ix.set(id, { n: b.n[i], conj: conj, largura: largura, off: off });
+        off += b.n[i] * largura;
+      }
+      porFaixa[a] = { ix: ix, m: b64bytes(b.m) };
+    });
+    // Node ids lit for the track at catalog position `pos` of an album with `n` tracks; null when unknown or the
+    // catalog no longer matches the build (a missing light beats a wrong one).
+    function vizFaixa(acervo, id, n, pos) {
+      var b = porFaixa[acervo], e = b && b.ix.get(id);
+      if (!e || e.n !== n || !(pos >= 0 && pos < n)) return null;
+      var out = [], base = e.off + pos * e.largura;
+      for (var t = 0; t < e.conj.length; t++) if (b.m[base + (t >> 3)] & (1 << (t & 7))) out.push(e.conj[t]);
+      return out;
+    }
     return {
       n: p.nomes.length, k: p.k, nomes: p.nomes, chaves: chaves, indice: indice, generos: p.generos,
       acervos: p.acervos, faixas: p.faixas, genero: p.genero, acervo: p.acervo, viz: viz, pos: pos,
-      vizAlbum: vizAlbum,
+      vizAlbum: vizAlbum, vizFaixa: vizFaixa,
     };
   }
 

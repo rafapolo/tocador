@@ -482,6 +482,7 @@ function buildAlbums() {
       name: album.title, artists: album.artist, year: album.year, path: album.path,
       cover: album.has_cover !== false ? `${BASE_URL}/${encodeURIComponent(album.path)}/capa-min.jpg` : null,
       tracks, nameLower, artistsLower, pathLower, artistKeys,
+      srcTracks: album.tracks,   // the catalog's own order: per-track data built offline is aligned to it
       genres,
       genreParents: genres ? new Set(genres.map(g => g.split('---')[0])) : null,
     };
@@ -1293,11 +1294,13 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   document.getElementById('play-artist')?.addEventListener('click', toggleArtistQueue);
   document.getElementById('share-saved')?.addEventListener('click', shareSaved);
   document.querySelectorAll('.album-generos').forEach(d => d.addEventListener('toggle', () => fillAlbumGenres(d)));
+  document.querySelectorAll('.album-instrumentos').forEach(d => d.addEventListener('toggle', () => fillAlbumInstrumentos(d)));
   document.querySelectorAll('.album-parecidos').forEach(d => d.addEventListener('toggle', () => fillAlbumParecidos(d)));
-  // One of the two open at a time: <details name> does it natively; this covers browsers that predate it.
-  document.querySelectorAll('.album-generos, .album-parecidos').forEach(d => d.addEventListener('toggle', () => {
+  // One accordion open at a time: <details name> does it natively; this covers browsers that predate it.
+  const ACORDEOES = '.album-generos, .album-instrumentos, .album-parecidos';
+  document.querySelectorAll(ACORDEOES).forEach(d => d.addEventListener('toggle', () => {
     if (!d.open) return;
-    for (const o of d.parentElement.querySelectorAll(':scope > .album-generos, :scope > .album-parecidos')) if (o !== d) o.open = false;
+    for (const o of d.parentElement.querySelectorAll(ACORDEOES)) if (o !== d && o.parentElement === d.parentElement) o.open = false;
   }));
   // Turning shuffle on with nothing playing starts a random track from what the grid shows.
   const toggleShuffle = () => {

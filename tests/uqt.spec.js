@@ -614,6 +614,31 @@ test('K46e: "Soa parecido com" falls back on the album\'s own neighbours when no
   await expect(box).not.toContainText('ainda não foram analisadas');
 });
 
+test('K46f: the "Soa parecido com" tags of the neighbours that sound most like the current track turn golden', async ({ page }) => {
+  // Chico Buarque is a node; his row [Caetano, Fulano] is the album's pool, and `por_faixa` lights one per track.
+  const u16 = a => Buffer.from(new Uint16Array(a).buffer).toString('base64');
+  const albumShareId = new Function(require('fs').readFileSync(require('path').join(__dirname, '../js/acervo-format.js'), 'utf8')
+    + '\nreturn albumShareId;')();
+  const id = albumShareId('1971 - Chico Buarque - Construção');
+  const viz = u16([1, 2, 0, 2, 0, 1]);
+  const mascaras = Buffer.from([0b01, 0b10, 0b11]).toString('base64');   // Construção → Caetano, Deus lhe Pague → Fulano
+  const payload = { v: 1, k: 2, nomes: ['Chico Buarque', 'Caetano Veloso', 'Fulano Externo'], acervo: [0, 0, 1],
+    acervos: ['uqt', 'homi'], viz: { som: viz, rotulos: viz }, fk: 1, por_faixa: { homi: { ids: id, n: [3], p: [[0]], m: mascaras } } };
+  await page.route('**/data/atlas-artistas.json.gz', r => r.fulfill({ status: 200,
+    headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body: require('zlib').gzipSync(JSON.stringify(payload)) }));
+  await gotoWithFixture(page);
+  await page.locator('.album-item', { hasText: 'Construção' }).click();
+  const box = page.locator('#tracks-panel .album-parecidos');
+  await box.locator('summary').click();
+  const tags = box.locator('.album-genero');
+  await expect(tags).toHaveText(['Caetano Veloso', 'Fulano Externo']);
+  await expect(box.locator('.da-faixa')).toHaveText(['Caetano Veloso']);   // opening the album primes track 1
+  await page.locator('#track-list [data-track-idx="1"]').click();
+  await expect(box.locator('.da-faixa')).toHaveText(['Fulano Externo']);
+  await page.locator('#track-list [data-track-idx="2"]').click();
+  await expect(box.locator('.da-faixa')).toHaveCount(2);
+});
+
   test('K46d: only one of "Gêneros detectados" and "Soa parecido com" is open at a time', async ({ page }) => {
     await page.route('**/data/atlas-artistas.json.gz', r => r.fulfill({ status: 404 }));
     await gotoWithFixture(page);

@@ -225,6 +225,48 @@ function renderAlbumGenres() {
   });
 }
 
+// Acordeão "Instrumentos detectados": até 8 instrumentos que o modelo ouviu nas faixas do álbum, os de mais faixas
+// primeiro; os da faixa tocando ficam dourados. Vem das mesmas features dos gêneros, só ao abrir.
+function renderAlbumInstrumentos() {
+  const known = !!(activeAcervoKey || db?.meta?.features_url);
+  document.querySelectorAll('.album-instrumentos').forEach(details => {
+    details.hidden = !selectedAlbum || !known;
+    fillAlbumInstrumentos(details);
+  });
+}
+
+async function fillAlbumInstrumentos(details) {
+  const album = selectedAlbum, box = details.querySelector('.album-generos-tags');
+  if (!details.open || !album || details.dataset.album === album.path) return;
+  details.dataset.album = album.path;
+  box.replaceChildren(Object.assign(document.createElement('p'), { textContent: 'Carregando…' }));
+  const dados = await _exCarregar();
+  if (selectedAlbum !== album) return;
+  const contagem = new Map();            // nome -> { n faixas, soma dos pesos }
+  for (const t of dados ? album.tracks : []) {
+    const r = t.src?._row;
+    if (r === undefined) continue;
+    for (const { nome, p } of instrumentosPt(dados.f, r)) {
+      const c = contagem.get(nome) || contagem.set(nome, { n: 0, w: 0 }).get(nome);
+      c.n++;
+      c.w += p ?? 0;
+    }
+  }
+  const total = album.tracks.length;
+  const tags = [...contagem].sort((a, b) => b[1].n - a[1].n || b[1].w - a[1].w).slice(0, 8).map(([nome, { n }]) => {
+    const tag = document.createElement('span');
+    tag.className = 'album-genero';
+    tag.dataset.instrumento = nome;
+    tag.textContent = nome;
+    tag.title = `${n} de ${total} faixa${total === 1 ? '' : 's'} (estimativa do modelo de áudio)`;
+    return tag;
+  });
+  box.replaceChildren(...(tags.length ? tags : [Object.assign(document.createElement('p'), {
+    textContent: dados ? 'O modelo não reconheceu instrumentos neste álbum.' : 'Este álbum não tem análise de áudio.' })]));
+  _instrumentosAlbum = dados;
+  syncAlbumInstrumentosTrack();
+}
+
 // Acordeão "Soa parecido com": os artistas mais próximos pelo som (o embedding de áudio), os mesmos vizinhos do grafo
 // do /atlas. data/atlas-artistas.json.gz (~240 KB) só vem quando alguém abre o acordeão.
 function renderAlbumParecidos() {
@@ -278,6 +320,7 @@ async function fillAlbumParecidos(details) {
     const nome = A.nomes[v], noAcervo = aqui.has(fold(nome)), outro = A.acervos[A.acervo[v]];
     const tag = document.createElement('a');
     tag.className = 'album-genero';
+    tag.dataset.no = v;
     tag.textContent = nome;
     if (noAcervo) {
       tag.href = `${APP_ROOT}?${new URLSearchParams({ acervo: activeAcervoKey, artista: nome })}`;
@@ -298,6 +341,8 @@ async function fillAlbumParecidos(details) {
   });
   box.replaceChildren(...tags);
   if (!tags.length) vazio('Nenhum vizinho de som para este artista.');
+  _parecidosAlbum = A;
+  syncAlbumParecidosTrack();
 }
 
 async function fillAlbumGenres(details) {
@@ -346,11 +391,33 @@ function syncAlbumGenresTrack() {
   const nomes = r !== undefined && _generosAlbum.f.has(r)
     ? new Set(_generosAlbum.f.genre(r).map(({ name }) => { const [pai, sub] = name.split('---'); return sub || pai; }))
     : null;
-  document.querySelectorAll('.album-genero').forEach(tag => tag.classList.toggle('da-faixa', !!nomes?.has(tag.dataset.genero)));
+  document.querySelectorAll('.album-generos .album-genero').forEach(tag => tag.classList.toggle('da-faixa', !!nomes?.has(tag.dataset.genero)));
+}
+
+// The same for instruments: the ones the model heard on the current track turn golden.
+let _instrumentosAlbum = null;
+function syncAlbumInstrumentosTrack() {
+  const r = _instrumentosAlbum && selectedAlbum?.tracks.includes(currentTrack) ? currentTrack.src?._row : undefined;
+  const nomes = r !== undefined ? new Set(instrumentosPt(_instrumentosAlbum.f, r).map(o => o.nome)) : null;
+  document.querySelectorAll('.album-instrumentos .album-genero').forEach(tag => tag.classList.toggle('da-faixa', !!nomes?.has(tag.dataset.instrumento)));
+}
+
+// And for "Soa parecido com": the album's neighbours that sound most like the current track (`por_faixa` in
+// data/atlas-artistas.json.gz, aligned to the catalog's track order), from what fillAlbumParecidos() already loaded.
+let _parecidosAlbum = null;
+function syncAlbumParecidosTrack() {
+  const album = selectedAlbum, t = _parecidosAlbum && album?.tracks.includes(currentTrack) ? currentTrack : null;
+  const nos = t && _parecidosAlbum.vizFaixa
+    ? _parecidosAlbum.vizFaixa(activeAcervoKey, albumShareId(album.path), album.srcTracks.length, album.srcTracks.indexOf(t.src))
+    : null;
+  const acesos = nos ? new Set(nos.map(String)) : null;
+  document.querySelectorAll('.album-parecidos .album-genero').forEach(tag => tag.classList.toggle('da-faixa', !!acesos?.has(tag.dataset.no)));
 }
 
 function syncTrackPlayingState(container, tracks) {
   syncAlbumGenresTrack();
+  syncAlbumInstrumentosTrack();
+  syncAlbumParecidosTrack();
   container.querySelectorAll('[data-track-idx]').forEach(item => {
     const isPlaying = tracks[parseInt(item.dataset.trackIdx)] === currentTrack;
     item.classList.toggle('playing', isPlaying);
@@ -367,6 +434,7 @@ function renderTrackList() {
     container.replaceChildren();
     renderTrackFilterNote(container, null);
     renderAlbumGenres();
+    renderAlbumInstrumentos();
     renderAlbumParecidos();
     window.renderAlbumVisor?.();
     renderedAlbum = null;
@@ -386,6 +454,7 @@ function renderTrackList() {
   renderTrackFilterNote(container, selectedAlbum.tracks);
   renderedAlbum = selectedAlbum;
   renderAlbumGenres();
+  renderAlbumInstrumentos();
   renderAlbumParecidos();
   window.renderAlbumVisor?.();
   container.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });

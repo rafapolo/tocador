@@ -85,6 +85,23 @@ test('as etiquetas de gênero acompanham a faixa atual', async ({ page }) => {
   await expect(acordeao.locator('.album-genero.da-faixa').first()).toBeVisible();
 });
 
+test('o acordeão de instrumentos lista até 8, sem repetir, e acende os da faixa atual', async ({ page }) => {
+  await boot(page);
+  await page.locator('.album-item').first().click();
+  const acordeao = page.locator('#tracks-panel .album-instrumentos');
+  await expect(acordeao).toBeVisible();
+  await acordeao.locator('summary').click();
+  await expect(acordeao.locator('.album-genero').first()).toBeVisible();
+  const nomes = await acordeao.locator('.album-genero').allTextContents();
+  expect(nomes.length).toBeLessThanOrEqual(8);
+  expect(new Set(nomes).size).toBe(nomes.length);
+  expect(nomes.every(n => /^[a-zà-ú ]+$/i.test(n) && !/guitar|percussion/.test(n))).toBe(true);   // nomes em pt-BR
+  await page.locator('#track-list [data-track-idx]').first().click();
+  await expect(acordeao.locator('.album-genero.da-faixa').first()).toBeVisible();
+  // os gêneros têm a sua própria luz: acender instrumentos não apaga nem acende a deles
+  await expect(page.locator('#tracks-panel .album-generos .da-faixa')).toHaveCount(0);
+});
+
 test('abre e fecha, trocando com o painel de navegação', async ({ page }) => {
   await boot(page);
   await expect(page.locator('#explorar-panel')).toBeHidden();

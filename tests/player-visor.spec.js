@@ -24,7 +24,7 @@ test('o visor é o primeiro acordeão, um aberto por vez, e com a faixa tocando 
   }
   await expect(visor).toBeVisible();
   // o primeiro acordeão, antes de "Gêneros detectados" e "Soa parecido com", e sem legenda (a faixa já está no player)
-  expect(await visor.evaluate(d => [d.nextElementSibling?.className, d.nextElementSibling?.nextElementSibling?.className])).toEqual(['album-generos', 'album-parecidos']);
+  expect(await visor.evaluate(d => [d.nextElementSibling?.className, d.nextElementSibling?.nextElementSibling?.className])).toEqual(['album-generos', 'album-instrumentos']);
   await expect(visor.locator('p')).toHaveCount(0);
   const generos = page.locator('#tracks-panel .album-generos');
   await generos.locator('summary').click();

@@ -842,29 +842,10 @@
     cartao.hidden = false;
     pedir();
   }
-  // The Jamendo instrument model (js/acervo-features.js): its 40 names in pt-BR, merged where two mean the same to a
-  // listener. Below 0.2 a guess is noise (on uqt tracks before 1970, "synthesizer" & co. drop from 5% to 0.9%).
-  const INSTRUMENTOS = {
-    accordion: 'sanfona', acousticbassguitar: 'baixolão', acousticguitar: 'violão', bass: 'baixo', beat: 'batida eletrônica',
-    bell: 'sino', bongo: 'bongô', brass: 'metais', cello: 'violoncelo', clarinet: 'clarinete', classicalguitar: 'violão',
-    computer: 'eletrônicos', doublebass: 'contrabaixo', drummachine: 'bateria eletrônica', drums: 'bateria',
-    electricguitar: 'guitarra', electricpiano: 'piano elétrico', flute: 'flauta', guitar: 'violão ou guitarra',
-    harmonica: 'gaita', harp: 'harpa', horn: 'trompa', keyboard: 'teclado', oboe: 'oboé', orchestra: 'orquestra',
-    organ: 'órgão', pad: 'sintetizador', percussion: 'percussão', piano: 'piano', pipeorgan: 'órgão de tubos',
-    rhodes: 'piano Rhodes', sampler: 'sampler', saxophone: 'saxofone', strings: 'cordas', synthesizer: 'sintetizador',
-    trombone: 'trombone', trumpet: 'trompete', viola: 'viola de arco', violin: 'violino', voice: 'voz',
-  };
-  const INSTRUMENTO_MIN = 0.2;
+  // The Jamendo instrument model's names in pt-BR (INSTRUMENTOS_PT, instrumentosPt() in js/acervo-features.js).
   function instrumentosDe(i) {
-    const f = feats[A.acervo[i]], r = ptFila?.[i] ?? -1;
-    if (!f || r < 0 || !f.has(r)) return [];
-    const nomes = [];
-    for (const { name, p } of f.instrumentsP(r)) {
-      if (p !== null && p < INSTRUMENTO_MIN) continue;
-      const n = INSTRUMENTOS[name] || name;
-      if (!nomes.includes(n)) nomes.push(n);
-    }
-    return nomes;
+    const r = ptFila?.[i] ?? -1;
+    return r < 0 ? [] : instrumentosPt(feats[A.acervo[i]], r).map(o => o.nome);
   }
   async function mostrarInstrumentos(i) {
     $('cartao-instrumentos').hidden = true;

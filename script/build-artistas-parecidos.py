@@ -14,6 +14,9 @@ Um álbum em que nenhum artista (do álbum ou das faixas) virou nó — pouco ma
 próprios vizinhos: a média das suas faixas, no mesmo espaço de som, contra os artistas do grafo. Vão em `albuns`,
 por acervo, com a id de albumShareId() (js/acervo-format.js); o grafo não os desenha, só o "Soa parecido com".
 
+Cada faixa analisada ganha, em `por_faixa`, os 3 candidatos do "Soa parecido com" do seu álbum que mais soam como
+ela (máscara de bits sobre o conjunto do álbum), para o player acender as tags conforme a faixa toca.
+
 O UMAP só entra para desenhar: `pos` guarda onde cada artista fica na visão geral, com todos os artistas (x, y, z
 em ±32767, por mapa). Os vizinhos continuam vindo do cosseno.
 
@@ -144,11 +147,15 @@ S, R = contraste(S), contraste(R)
 viz = {'som': vizinhos(S), 'rotulos': vizinhos(R)}
 
 no_grafo = set(nomes)
+pos_no = {x: i for i, x in enumerate(nomes)}
 albuns = {}
+proprios_de = {}   # (acervo, sid) -> nós do grafo creditados no álbum
 for a in ACERVOS:
     ids, vetores, sem_faixas = [], [], 0
     for sid, chaves in artistas['_albuns'][a]:
-        if any(chave(x) in no_grafo for k in chaves for x in artistas[a].get(k, ())):
+        proprios = list(dict.fromkeys(pos_no[c] for k in chaves for x in artistas[a].get(k, ()) if (c := chave(x)) in pos_no))
+        if proprios:
+            proprios_de[a, sid] = proprios
             continue
         es = [faixa_emb[a][k] for k in chaves if k in faixa_emb[a]]
         if not es:
@@ -165,8 +172,53 @@ for a in ACERVOS:
         sim = np.stack(vetores[i:i + 512]) @ S.T
         top = np.argpartition(-sim, K, axis=1)[:, :K]
         out[i:i + len(sim)] = np.take_along_axis(top, np.argsort(-np.take_along_axis(sim, top, 1), axis=1), 1)
-    albuns[a] = {'ids': ''.join(ids), 'som': out}
+    albuns[a] = {'ids': ''.join(ids), 'som': out, 'linha': {sid: out[i] for i, sid in enumerate(ids)}}
     print(f'{a}: {len(ids)} álbuns fora do grafo com vizinhos próprios; {sem_faixas} sem faixa analisada', file=sys.stderr)
+
+# Cada faixa: os FAIXA_K artistas do "Soa parecido com" do seu álbum que mais soam como ela, para o player acender
+# as tags conforme a faixa toca. O conjunto do álbum é a união das linhas de vizinhos dos nós creditados nele (`p`, na
+# ordem gravada, sem esses nós e sem repetir) ou, sem nó, a sua linha em `albuns`; o player refaz o conjunto com a mesma
+# regra (vizFaixa() em js/atlas-data.js) e a luz casa pela id do nó, então a ordem de exibição não precisa ser repetida.
+# Por faixa, uma máscara de ceil(len(conjunto)/8) bytes, alinhada às faixas do catálogo pela posição (`n` confere a
+# contagem); máscara zerada = faixa sem análise. Álbuns de uma faixa só, ou com menos de duas analisadas, ficam de fora.
+FAIXA_K = 3
+def conjunto(proprios, linha_album):
+    if not proprios:
+        return [int(v) for v in linha_album]
+    out, fora = [], set(proprios)
+    for i in proprios:
+        for v in viz['som'][i]:
+            v = int(v)
+            if v not in fora:
+                fora.add(v); out.append(v)
+    return out
+
+faixas_viz = {}
+for a in ACERVOS:
+    ids, ns, ps, mascaras = [], [], [], []
+    for sid, chaves in artistas['_albuns'][a]:
+        if len(chaves) < 2:
+            continue
+        proprios = proprios_de.get((a, sid), [])
+        linha = albuns[a]['linha'].get(sid)
+        if not proprios and linha is None:
+            continue
+        pool = conjunto(proprios, linha)
+        es = [faixa_emb[a].get(k) for k in chaves]
+        if sum(e is not None for e in es) < 2 or len(pool) <= FAIXA_K:
+            continue
+        P = S[pool]
+        largura = (len(pool) + 7) // 8
+        bloco = np.zeros((len(chaves), largura), dtype=np.uint8)
+        for j, e in enumerate(es):
+            if e is None:
+                continue
+            v = e - media_S
+            for t in np.argsort(-(P @ (v / (np.linalg.norm(v) + 1e-8))))[:FAIXA_K]:
+                bloco[j, t >> 3] |= 1 << (t & 7)
+        ids.append(sid); ns.append(len(chaves)); ps.append(proprios); mascaras.append(bloco.ravel())
+    faixas_viz[a] = {'ids': ''.join(ids), 'n': ns, 'p': ps, 'm': np.concatenate(mascaras) if mascaras else np.zeros(0, np.uint8)}
+    print(f'{a}: {len(ids)} álbuns com vizinhos por faixa', file=sys.stderr)
 
 if args.amostra is not None and len(args.amostra):
     idx = {x: i for i, x in enumerate(nomes)}
@@ -194,6 +246,8 @@ payload = {
     'viz': {m: b64(v.astype('<u2')) for m, v in viz.items()},
     'pos': {'som': b64(layout(S)), 'rotulos': b64(layout(R))},
     'albuns': {a: {'ids': v['ids'], 'som': b64(v['som'].astype('<u2'))} for a, v in albuns.items()},
+    'fk': FAIXA_K,
+    'por_faixa': {a: {'ids': v['ids'], 'n': v['n'], 'p': v['p'], 'm': b64(v['m'])} for a, v in faixas_viz.items()},
 }
 dest = os.path.join(ROOT, 'data', 'atlas-artistas.json.gz')
 with gzip.GzipFile(dest, 'wb', mtime=0, compresslevel=9) as f:
