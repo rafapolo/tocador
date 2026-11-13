@@ -1219,7 +1219,7 @@ test('cartão: instrumentos estimados acima dos parecidos, em português e sem o
   await expect(bloco).toBeHidden();      // faixa sem análise: nada a mostrar
 });
 
-test('zigue-zague: só aparece no grafo, pula para outro artista de outro gênero e não volta a quem já passou', async ({ page }) => {
+test('zigue-zague no grafo: pula para outro artista de outro gênero, a cada 15 s, e não volta a quem já passou', async ({ page }) => {
   await boot(page, { url: '/atlas?grafo=1&artista=Beta' });
   const btn = page.locator('#btn-zigue');
   await expect(btn).toBeVisible();
@@ -1231,8 +1231,7 @@ test('zigue-zague: só aparece no grafo, pula para outro artista de outro gêner
   await expect.poll(async () => (await grafo(page)).centro).not.toBe('Beta');
   const primeiro = (await grafo(page)).centro;
   expect(['<img src=x onerror=alert(1)>', 'Delta']).toContain(primeiro);
-  await expect(page.locator('#zigue-tempo')).toHaveText(/^[12]:\d\d$/);
-  // os próximos pulos passam pelos que faltam, sem repetir
+  await expect(page.locator('#zigue-tempo')).toHaveText(/^0:1[0-5]$/);
   const vistos = new Set(['Beta', primeiro]);
   for (let k = 0; k < 2; k++) {
     const antes = (await grafo(page)).centro;
@@ -1243,8 +1242,22 @@ test('zigue-zague: só aparece no grafo, pula para outro artista de outro gêner
     vistos.add(c);
   }
   expect(vistos.size).toBe(4);
-  // sair do grafo desliga e esconde
+  // sair do grafo desliga (o botão segue lá, para o mapa)
   await page.locator('#btn-grafo').click();
-  await expect(btn).toBeHidden();
-  expect((await page.evaluate(() => window.__atlas.zigue())).on).toBe(false);
+  await expect.poll(async () => (await page.evaluate(() => window.__atlas.zigue())).on).toBe(false);
+  await expect(btn).toBeVisible();
+});
+
+test('zigue-zague no mapa: voa devagar para outro rótulo de gênero a cada 30 s', async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => localStorage.removeItem('tocador-atlas-zigue-vistos'));
+  const cam = () => page.evaluate(() => { const c = window.__atlas.camera(); return [c.cx, c.cy, c.k / c.k0]; });
+  const antes = await cam();
+  await page.locator('#btn-zigue').click();
+  await expect(page.locator('#zigue-tempo')).toHaveText(/^0:(2\d|30)$/);
+  // o voo leva segundos: logo depois ainda está a caminho, e chega perto (8×)
+  await expect.poll(async () => (await cam())[2], { timeout: 15000 }).toBeGreaterThan(7.5);
+  const depois = await cam();
+  expect(Math.hypot(depois[0] - antes[0], depois[1] - antes[1])).toBeGreaterThan(0);
+  expect((await page.evaluate(() => window.__atlas.zigue())).vistos).toBeGreaterThan(0);
 });

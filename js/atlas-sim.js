@@ -169,10 +169,12 @@
     let pose = 'corda';
     if (m.grupo === 'perc') {
       pose = 'perc';
+      m.surdo = g;
       // baquetas na mão, apontando para a frente: o punho dá o estalo no fim do golpe
       for (const { punho } of m.fig.bracos) {
         const baqueta = malha(geo('baqueta', () => new Cil(0.011, 0.014, 0.42, 6)), mats.madeira, 0, -0.04, 0.17);
         baqueta.rotation.x = Math.PI / 2;
+        baqueta.userData.baqueta = true;
         punho.add(baqueta);
       }
       g.add(malha(geo('surdo', () => new Cil(0.26, 0.26, 0.42, 24)), mats.madeira, 0, 0.72, 0.36));
@@ -190,7 +192,7 @@
       const corpo = new THREE.Group();
       corpo.add(caixa, braco);
       corpo.position.set(0.05, 0.25, 0.24);       // preso ao tronco: balança junto com quem toca
-      corpo.rotation.z = 0.45;
+      corpo.rotation.z = -0.45;                   // o braço do instrumento sobe para a esquerda
       m.fig.tronco.add(corpo);
     } else if (timbre === 'sanfona') {
       pose = 'sanfona';
@@ -282,6 +284,53 @@
     return { roupa: pick(F.roupa, 'r'), listra: listra && [listra[0] ?? pick(F.roupa, 'r'), listra[1]], calca: F.calca,
       chapeu: F.chapeu && hash(chave + 'h') < 0.85 ? F.chapeu : null, extras: F.extras, brilho: F.extras.includes('brilho'), acento: corFam };
   }
+  // ── cabelos ──
+  // O penteado segue o gênero (e varia de músico para músico, sempre o mesmo para cada um): black power na roda de
+  // samba e no jazz, cabelo comprido na garagem do rock, moicano no punk e no clube, dreads no reggae, tranças na rua,
+  // coque no teatro e na taverna, franja prateada no espaço… Com chapéu, cabelo curto, para caber.
+  const PENTEADOS = {
+    roda: ['black', 'curto', 'black', 'ondulado'], praia: ['ondulado', 'curto', 'longo'], sertao: ['curto'],
+    campo: ['longo', 'trancas', 'curto', 'ondulado'], taverna: ['penteado', 'coque'], garagem: ['longo', 'longo', 'curto', 'moicano'],
+    rua: ['trancas', 'black', 'curto', 'trancas'], clube: ['moicano', 'franja', 'curto'], espaco: ['franja', 'longo', 'coque'],
+    jazz: ['black', 'curto', 'coque'], teatro: ['coque', 'penteado', 'curto'],
+  };
+  const PENTEADO_FAMILIA = { reggae: ['dread', 'dread', 'trancas'], dub: ['dread'], punk: ['moicano', 'moicano', 'curto'], hardcore: ['curto', 'moicano'],
+    metal: ['longo'], black: ['longo'], doom: ['longo'], africa: ['trancas', 'black'], afrobeat: ['black', 'trancas'], soul: ['black', 'curto'], funk: ['black'] };
+  const CORES_CABELO = [0x15110e, 0x15110e, 0x2a1a10, 0x3a2414, 0x6a4428, 0xb88a50, 0x8a3a1a, 0x9a9590];
+  function pentear(fig, chave, familia, f) {
+    const { cabeca, mats } = fig, cen = CENARIO_DE[familia] || 'teatro', { CylinderGeometry: Cil, SphereGeometry: Esf, BoxGeometry: Caixa, ConeGeometry: Cone } = THREE;
+    const pick = (l, sal) => l[Math.floor(hash(chave + sal) * l.length) % l.length];
+    let estilo = pick(PENTEADO_FAMILIA[familia] || PENTEADOS[cen] || ['curto'], 'penteado');
+    if (f.exotico) estilo = pick(['moicano', 'black', 'longo', 'coque'], 'pq');
+    if (f.chapeu && !['longo', 'trancas', 'dread'].includes(estilo)) estilo = 'curto';     // o chapéu por cima
+    if (!f.exotico) mats.cabelo.color.set(cen === 'espaco' ? 0xd8d8e8 : pick(CORES_CABELO, 'cor'));
+    const c = mats.cabelo, add = (o) => { cabeca.add(o); return o; };
+    switch (estilo) {
+      case 'black': { const b = add(malha(geo('black', () => new Esf(0.23, 18, 14)), c, 0, 0.08, -0.07)); b.scale.set(1.05, 0.95, 0.85); break; }
+      case 'longo':
+        add(malha(geo('longo', () => new Caixa(0.3, 0.42, 0.07)), c, 0, -0.14, -0.12));
+        for (const l of [-1, 1]) add(malha(geo('longo-lado', () => new Caixa(0.05, 0.32, 0.14)), c, l * 0.155, -0.09, -0.04));
+        break;
+      case 'dread': case 'trancas': {
+        const n = estilo === 'dread' ? 10 : 8, comp = estilo === 'dread' ? 0.38 : 0.3, r = estilo === 'dread' ? 0.02 : 0.014;
+        for (let k = 0; k < n; k++) {
+          const a = Math.PI * 0.55 + (k / (n - 1)) * Math.PI * 0.9;      // de um lado ao outro, por trás
+          const fio = add(malha(geo('fio-' + estilo, () => new Cil(r, r * 0.8, comp, 6)), c, Math.cos(a) * 0.15, -comp / 2 + 0.04, Math.sin(-a) * 0.15 - 0.02));
+          fio.rotation.z = Math.cos(a) * 0.15;
+        }
+        break;
+      }
+      case 'moicano':
+        for (let k = 0; k < 6; k++) add(malha(geo('moicano', () => new Cone(0.035, 0.13, 6)), c, 0, 0.17 - Math.abs(k - 2.5) * 0.008, 0.1 - k * 0.045)).rotation.x = -0.2 + k * 0.08;
+        break;
+      case 'coque': add(malha(geo('coque', () => new Esf(0.07, 12, 10)), c, 0, 0.12, -0.13)); break;
+      case 'franja': add(malha(geo('franja', () => new Caixa(0.27, 0.06, 0.07)), c, 0, 0.1, 0.12)).rotation.x = 0.3; break;
+      case 'ondulado': for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; add(malha(geo('cacho', () => new Esf(0.055, 8, 6)), c, Math.sin(a) * 0.12, 0.11 + Math.cos(a * 2) * 0.02, Math.cos(a) * 0.1 - 0.03)); } break;
+      case 'penteado': c.roughness = 0.25; c.metalness = 0.2; break;      // gomalina: o mesmo corte, brilhando
+    }
+    fig.penteado = estilo;
+  }
+
   // os acessórios, montados na cabeça, no tronco e nas pernas do boneco
   function vestir(fig, f) {
     const { CylinderGeometry: Cil, SphereGeometry: Esf, BoxGeometry: Caixa, ConeGeometry: Cone, TorusGeometry: Toro, PlaneGeometry: Plano } = THREE;
@@ -361,16 +410,81 @@
     }
     g.add(k);
     m.kit = k;
+    if (m.mao) { m.mao.parent?.remove(m.mao); m.mao = null; m.maoPeca = null; }
+    m.fig.bracos.forEach(j => j.punho.children.forEach(c => { if (c.userData.baqueta) c.visible = true; }));
+    if (m.surdo) m.surdo.visible = true;
+    m.pose = 'perc';
   }
-  function montarPandeiro(m) {
-    const { mats, bracos } = m.fig, { CylinderGeometry: Cil } = THREE;
-    const p = new THREE.Group();
-    p.add(malha(geo('pandeiro-aro', () => new Cil(0.13, 0.13, 0.05, 18, 1, true)), mats.madeira, 0, 0, 0));
-    p.add(malha(geo('pandeiro-pele', () => new Cil(0.13, 0.13, 0.005, 18)), mats.metal, 0, 0.02, 0));
-    p.position.set(0, -0.08, 0.08);
-    p.rotation.x = Math.PI / 2 - 0.4;
-    bracos[0].punho.add(p);
-    m.pandeiro = p;
+  // Os instrumentos de mão (ou de corpo) da percussão, em 3D: um por vez, o que a voz mais toca.
+  const MAO = new Set(['pandeiro', 'tamborim', 'ganza', 'agogo', 'triangulo', 'cuica', 'repique', 'clave', 'cowbell', 'conga', 'bongo']);
+  function montarMao(m, peca) {
+    const { mats, bracos, tronco, g } = m.fig, { CylinderGeometry: Cil, ConeGeometry: Cone, BoxGeometry: Caixa, SphereGeometry: Esf } = THREE;
+    if (m.mao) { m.mao.parent?.remove(m.mao); m.mao = null; }
+    const o = new THREE.Group(), esq = bracos[0].punho, dir = bracos[1].punho;
+    let pai = esq;
+    const pele = mats.pelePerc || (mats.pelePerc = material(0xe8dcc0, { roughness: 0.7 }));
+    switch (peca) {
+      case 'pandeiro':
+        o.add(malha(geo('pandeiro-aro', () => new Cil(0.13, 0.13, 0.05, 18, 1, true)), mats.madeira, 0, 0, 0));
+        o.add(malha(geo('pandeiro-pele', () => new Cil(0.13, 0.13, 0.005, 18)), pele, 0, 0.02, 0));
+        for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; o.add(malha(geo('platinela', () => new Cil(0.022, 0.022, 0.012, 8)), mats.metal, Math.sin(a) * 0.13, 0, Math.cos(a) * 0.13)); }
+        o.position.set(0, -0.08, 0.08); o.rotation.x = Math.PI / 2 - 0.4; break;
+      case 'tamborim':
+        o.add(malha(geo('tamborim', () => new Cil(0.09, 0.09, 0.045, 16)), mats.metal, 0, 0, 0));
+        o.add(malha(geo('tamborim-pele', () => new Cil(0.088, 0.088, 0.004, 16)), pele, 0, 0.024, 0));
+        o.position.set(0, -0.06, 0.07); o.rotation.x = Math.PI / 2 - 0.5; break;
+      case 'ganza':
+        pai = dir;
+        o.add(malha(geo('ganza', () => new Cil(0.035, 0.035, 0.28, 12)), mats.metal, 0, 0, 0));
+        o.position.set(0, -0.05, 0.08); o.rotation.z = Math.PI / 2; break;
+      case 'agogo':
+        o.add(malha(geo('agogo-a', () => new Cone(0.045, 0.16, 12, 1, true)), mats.metal, -0.04, 0.02, 0.12));
+        o.add(malha(geo('agogo-b', () => new Cone(0.035, 0.13, 12, 1, true)), mats.metal, 0.05, 0.02, 0.1));
+        o.add(malha(geo('agogo-cabo', () => new Cil(0.008, 0.008, 0.16, 6)), mats.metal, 0, -0.04, 0.05));
+        o.rotation.x = -Math.PI / 2; break;
+      case 'triangulo': {
+        for (let k = 0; k < 3; k++) {
+          const a = k / 3 * Math.PI * 2, l = malha(geo('triangulo-lado', () => new Cil(0.006, 0.006, 0.2, 5)), mats.metal, Math.sin(a + Math.PI / 3) * 0.058, -0.12 + Math.cos(a + Math.PI / 3) * 0.058, 0.08);
+          l.rotation.z = -a; o.add(l);
+        }
+        break;
+      }
+      case 'cuica': {      // debaixo do braço esquerdo, de lado na cintura
+        pai = tronco;
+        const c = malha(geo('cuica', () => new Cil(0.12, 0.12, 0.3, 16)), mats.metal, 0, 0, 0);
+        o.add(c, malha(geo('cuica-pele', () => new Cil(0.118, 0.118, 0.005, 16)), pele, 0, 0.152, 0));
+        o.position.set(-0.24, 0.12, 0.16); o.rotation.set(0, 0.4, Math.PI / 2); break;
+      }
+      case 'repique': {    // pendurado na frente, na altura da cintura
+        pai = tronco;
+        o.add(malha(geo('repique', () => new Cil(0.16, 0.16, 0.28, 18)), mats.metal, 0, 0, 0));
+        o.add(malha(geo('repique-pele', () => new Cil(0.158, 0.158, 0.005, 18)), pele, 0, 0.142, 0));
+        o.position.set(0.02, 0.0, 0.32); o.rotation.x = 0.35; break;
+      }
+      case 'clave':
+        for (const p of [esq, dir]) { const c = malha(geo('clave', () => new Cil(0.018, 0.018, 0.2, 8)), mats.madeira, 0, -0.05, 0.08); c.rotation.x = Math.PI / 2; p.add(c); (o.userData.extras ||= []).push(c); }
+        break;
+      case 'cowbell':
+        o.add(malha(geo('cowbell', () => new Caixa(0.08, 0.14, 0.06)), mats.metal, 0, -0.08, 0.08)); break;
+      case 'conga': case 'bongo': {   // no chão, na frente: dois tambores
+        pai = g;
+        const alto = peca === 'conga' ? 0.75 : 0.32, r = peca === 'conga' ? 0.15 : 0.1;
+        for (const [x, rr] of [[-0.16, r], [0.17, r * 0.85]]) {
+          o.add(malha(geo('t-' + peca + rr, () => new Cil(rr, rr * 0.85, alto, 16)), mats.madeira, x, alto / 2 + (peca === 'bongo' ? 0.45 : 0), 0.42));
+          o.add(malha(geo('tp-' + peca + rr, () => new Cil(rr, rr, 0.005, 16)), pele, x, alto + (peca === 'bongo' ? 0.45 : 0) + 0.002, 0.42));
+        }
+        if (peca === 'bongo') o.add(malha(geo('bongo-pe', () => new Cil(0.015, 0.015, 0.45, 6)), mats.metal, 0, 0.22, 0.42));
+        break;
+      }
+    }
+    if (o.children.length) pai.add(o);
+    // as baquetas só ficam onde fazem sentido: tamborim e triângulo usam uma; pandeiro, ganzá, cuíca, clave, conga, mão
+    const usaBaquetas = { tamborim: [false, true], triangulo: [false, true], agogo: [false, true], cowbell: [false, true], repique: [true, true] }[peca] || [false, false];
+    m.fig.bracos.forEach((j, k) => j.punho.children.forEach(c => { if (c.userData.baqueta) c.visible = usaBaquetas[k]; }));
+    m.mao = o; m.maoPeca = peca;
+    // o surdo some quando essa voz não toca nenhum grave de chão
+    if (m.surdo) m.surdo.visible = ['surdo', 'bumbo', 'zabumba'].some(k => m.pecas.has(k));
+    m.pose = m.surdo?.visible ? 'perc' : 'mao';
   }
 
   function criarMusico(chave, familia, grupo, timbre) {
@@ -382,9 +496,10 @@
     const figurino = figurinoDe(chave, familia, cor.getHex());
     const fig = criarCorpo(chave, new THREE.Color(figurino.roupa));
     vestir(fig, figurino);
+    pentear(fig, chave, familia, figurino);
     const m = { chave, familia, grupo, timbre, fig, nomeFamilia: f.nome, pose: 'corda', pecas: new Set(),
       vis: 0, energia: 0, foco: 0, golpe: [0, 0], lado: 0, preparo: 0, prox: Infinity, ultimo: performance.now() / 1000, cabecaY: 0,
-      alvo: new THREE.Vector3(), fase: hash(chave) * Math.PI * 2, exotico: !!figurino.exotico, chapeu: figurino.chapeu };
+      alvo: new THREE.Vector3(), fase: hash(chave) * Math.PI * 2, exotico: !!figurino.exotico, chapeu: figurino.chapeu, penteado: fig.penteado };
     criarInstrumento(m, timbre);
     run.cena.add(fig.g);
     return m;
@@ -585,7 +700,7 @@
         add(new Cil(0.3, 0.28, 0.75, 16), mat(0x2a2a2a, { metalness: 0.4, roughness: 0.4 }), x + 1.1, 0.38, z + 0.2, 0, 0, 0);
         add(new Cil(0.3, 0.3, 0.02, 16), mat(0xe8dcc0), x + 1.1, 0.76, z + 0.2);
         // a plateia em volta, batendo palma no tempo da banda
-        const corpoGente = new Cil(0.17, 0.2, 0.75, 8), cabecaGente = new Esf(0.13, 10, 8), bracoGente = new Cil(0.035, 0.03, 0.45, 6);
+        const corpoGente = new Cil(0.17, 0.2, 0.75, 8), cabecaGente = new Esf(0.13, 10, 8), bracoGente = new Cil(0.035, 0.03, 0.45, 6), pernaGente = new Cil(0.06, 0.05, 0.85, 6);
         for (let k = 0; k < 11; k++) {
           const a = -1.75 + 3.5 * k / 10 + (hash('pl' + k) - 0.5) * 0.18, raio = 7.4 + hash('pr' + k) * 0.9;
           const p = new THREE.Group();
@@ -593,7 +708,8 @@
           p.rotation.y = Math.atan2(-p.position.x, 2.5 - p.position.z);
           const pele = mat(new THREE.Color().setHSL(0.06 + hash('pp' + k) * 0.04, 0.4, 0.25 + hash('pq' + k) * 0.4));
           const roupa = mat([0xf2f2f2, 0xd2553a, 0x2a6ad2, 0xf2c230, 0x1a1a1a, 0x4fbf5a][k % 6]);
-          p.add(malha(new Cil(0.06, 0.05, 0.85, 6), mat(0x2a2a30), 0, 0.42, 0));
+          const calca = mat(0x2a2a30);
+          for (const l of [-1, 1]) p.add(malha(pernaGente, calca, l * 0.085, 0.42, 0));
           p.add(malha(corpoGente, roupa, 0, 1.2, 0), malha(cabecaGente, pele, 0, 1.72, 0));
           const bracos = [-1, 1].map(l => { const o = new THREE.Group(); o.position.set(0.2 * l, 1.5, 0); o.add(malha(bracoGente, pele, 0, -0.22, 0)); p.add(o); return o; });
           g.add(p);
@@ -824,8 +940,14 @@
     }
     if (grupo === 'perc') {
       m.pecas.add(e.papel);
+      (m.contagem ||= {})[e.papel] = (m.contagem[e.papel] || 0) + 1;
       if (!m.kit && KIT.has(e.papel)) montarKit(m);
-      if (!m.pandeiro && e.papel === 'pandeiro' && !m.kit) montarPandeiro(m);
+      if (!m.kit && MAO.has(e.papel)) {
+        // na mão vai o instrumento que essa voz mais toca
+        let topo = null;
+        for (const k of MAO) if ((m.contagem[k] || 0) > (m.contagem[topo] || 0)) topo = k;
+        if (topo && topo !== m.maoPeca) montarMao(m, topo);
+      }
     }
     m.ultimo = agora;
     const v = Math.min(1.2, e.vel * 2.2 + 0.15);
@@ -1065,6 +1187,15 @@
   // nota, com um rebote. As mãos se alternam: arma a que bate em seguida.
   // ox/oy/oz: o ombro (para a frente, torcido, para o lado); cx: o cotovelo; px: o punho. As poses de flauta, sopro,
   // violino e voz saíram de cinemática inversa: as mãos caem no instrumento, que vai preso à cabeça (erro < 5 mm).
+  // corda, por instrumento: [ombro x, ombro y, ombro z, cotovelo] da mão no braço (esquerda) e da mão na boca (direita),
+  // por cinemática inversa sobre o instrumento preso ao tronco (erro < 3 mm)
+  const MAOS_CORDA = {
+    cavaco: [[-0.15, -0.1, -0.03, -2.17], [-0.21, -0.72, 0, -1.44]], bandolim: [[-0.12, 0, -0.1, -2.17], [-0.21, -0.72, 0, -1.44]],
+    banjo: [[-0.39, -0.49, -0.01, -2.12], [-0.2, -0.7, 0, -1.44]], guitarra: [[-0.46, -0.55, -0.04, -2.09], [-0.2, -0.7, 0, -1.44]],
+    violao: [[-0.64, -0.74, 0, -2.02], [-0.2, -0.69, 0, -1.43]], violao7: [[-0.73, -0.8, -0.02, -1.98], [-0.2, -0.69, 0, -1.43]],
+    baixo: [[-0.98, -1, 0, -1.87], [-0.18, -0.67, 0, -1.44]],
+  };
+  MAOS_CORDA.dist = MAOS_CORDA.guitarra; MAOS_CORDA.sub = MAOS_CORDA.baixo;
   function junta(j, ox, oz, cx, px, oy = 0) { j.ombro.rotation.set(ox, oy, oz); j.cotovelo.rotation.x = cx; j.punho.rotation.x = px; }
   function posar(m, [esq, dir], b, parado) {
     const [ge, gd] = m.golpe, pr = parado ? 0 : m.preparo * m.preparo, osc = parado ? 0 : Math.sin(b * 2) * 0.04;
@@ -1081,6 +1212,10 @@
         });
         break;
       }
+      case 'mao':             // o instrumento de mão na esquerda, erguido na frente; a direita bate (ou chacoalha) na nota
+        junta(esq, -0.85 - pr * 0.1, 0.15, -1.35 + ge * 0.15, 0.3, 0.35);
+        junta(dir, -0.75 - pr * 0.35 + gd * 0.25, -0.15, -1.3 - pr * 0.45 + gd * 0.45, 0.35 - pr * 0.9 + gd * 0.7, -0.45);
+        break;
       case 'tecla':
         junta(esq, -0.45 - pr * 0.1, 0.18, -0.95 - pr * 0.25 + ge * 0.2, 0.3 - pr * 0.4 + ge * 0.35);
         junta(dir, -0.45 - pr * 0.1, -0.18, -0.95 - pr * 0.25 + gd * 0.2, 0.3 - pr * 0.4 + gd * 0.35);
@@ -1109,43 +1244,63 @@
         junta(esq, -1.0, -0.45, -1.15, 0);
         junta(dir, -0.25 - pr * 0.2, 0.05, -0.75 - pr * 0.45 + gd * 0.4, -0.2 - pr * 0.4 + gd * 0.5);
         break;
-      default:       // corda: a mão esquerda no braço do instrumento, a direita palheta para cima e para baixo na nota
-        junta(esq, -0.75, 0.55, -1.3, 0.2);
-        junta(dir, -0.35, -0.2, -1.05 - pr * 0.3 + gd * 0.35, 0.2 - pr * 0.6 + gd * 0.7);
+      default: {     // corda: a mão esquerda no braço do instrumento, a direita palheta sobre a boca, para cima e para baixo na nota
+        const [e, d] = MAOS_CORDA[m.timbre] || MAOS_CORDA.violao;
+        junta(esq, e[0], e[2], e[3], 0.1 + osc, e[1]);
+        junta(dir, d[0], d[2], d[3] - pr * 0.18 + gd * 0.22, 0.15 - pr * 0.55 + gd * 0.65, d[1]);
+      }
     }
   }
 
-  // ── direção: uma câmera na mão que nunca para ──
-  // Sem cortes: a câmera orbita sempre, num arco pela frente da banda (vai e volta, sem passar para as costas dos
-  // músicos), e desliza de um músico para outro. Quem acabou de entrar com um instrumento novo ganha a câmera por
-  // alguns segundos, de perto; fora isso, a cada 8 tempos ela vai até quem tocou mais forte. O enquadramento (perto,
-  // médio, a banda inteira) também muda devagar, no mesmo movimento. Movimento reduzido: o plano aberto, parado.
-  const ENQUADRAMENTOS = {
-    perto: { raio: 1.75, alto: 1.45, olhar: 1.25, nome: 'de perto' },
-    medio: { raio: 2.9, alto: 1.6, olhar: 1.05, nome: 'plano médio' },
-    dois: { raio: 3.8, alto: 1.75, olhar: 1.05, nome: 'dois músicos' },
-    aberto: { raio: 9.5, alto: 3.4, olhar: 1, nome: 'a banda inteira' },
+  // ── direção: planos de cinema, sem cortes ──
+  // A câmera trabalha em planos de 5 a 8 s (mais curtos quando a banda esquenta), e passa de um para o outro
+  // deslizando, nunca cortando. Cada plano tem um movimento: órbita, aproximação (dolly in), recuo, grua subindo,
+  // câmera baixa, dois músicos ou a banda inteira. O músico de cada plano é quem tocou mais forte há pouco entre os
+  // que não estiveram nos dois últimos planos, para a câmera rodar pela banda; quem acabou de entrar com um
+  // instrumento novo e o cantor (a estrela, com uma volta inteira) têm a vez antes. Movimento reduzido: o plano
+  // aberto, parado.
+  const ESTILOS = {
+    orbita: { raio: [2.8, 2.5], alto: [1.5, 1.7], olhar: 1.1, arco: 0.9, nome: 'órbita' },
+    dolly: { raio: [4.2, 1.9], alto: [1.45, 1.4], olhar: 1.2, arco: 0.3, nome: 'aproximando' },
+    recuo: { raio: [1.9, 4.2], alto: [1.5, 2.3], olhar: 1.1, arco: 0.35, nome: 'recuando' },
+    grua: { raio: [3.3, 3.0], alto: [0.6, 2.9], olhar: 1.15, arco: 0.45, nome: 'grua' },
+    baixo: { raio: [2.3, 2.0], alto: [0.5, 0.7], olhar: 1.5, arco: 0.6, nome: 'câmera baixa' },
+    dois: { raio: [3.6, 3.2], alto: [1.7, 1.6], olhar: 1.05, arco: 0.5, nome: 'dois músicos' },
+    aberto: { raio: [9.8, 8.6], alto: [3.6, 3.1], olhar: 1, arco: 0.5, nome: 'a banda inteira' },
+    estrela: { raio: [2.4, 2.2], alto: [1.5, 1.8], olhar: 1.3, arco: Math.PI * 2, nome: 'a estrela' },
   };
-  const NOVO_S = 4.5;          // tanto tempo de câmera para quem acabou de entrar
+  const PESO_ESTILO = { orbita: 3, dolly: 2.5, recuo: 2, grua: 2, baixo: 1.5, dois: 2, aberto: 1.2 };
+  const NOVO_S = 4.5;
   const v3 = () => new THREE.Vector3();
-  function escolherFoco(t, novo) {
+  const suave = u => u * u * (3 - 2 * u);
+  function novoPlano(t, forcado = null) {
     const p = run.plano, ativos = run.ativos;
-    let a = null, b = null;
-    for (const m of ativos) { if (!a || m.foco > a.foco) { b = a; a = m; } else if (!b || m.foco > b.foco) b = m; }
-    if (novo) { p.a = novo; p.b = null; p.tipo = 'perto'; p.ateNovo = t + NOVO_S; p.estrela = false; return; }
-    if (!a) { p.a = p.b = null; p.tipo = 'aberto'; p.estrela = false; return; }
-    // quem canta é a estrela: quando há voz, a câmera volta a ela muitas vezes e, nelas, dá a volta inteira em torno
+    const recentes = p.recentes || (p.recentes = []);
+    let a = null, b = null, estilo;
     const cantor = ativos.find(m => m.pose === 'voz');
-    if (cantor && p.a !== cantor && Math.random() < 0.5) {
-      p.a = cantor; p.b = null; p.tipo = Math.random() < 0.6 ? 'perto' : 'medio'; p.estrela = true;
-      return;
+    if (forcado) { a = forcado; estilo = Math.random() < 0.5 ? 'dolly' : 'orbita'; }
+    else if (cantor && !recentes.includes(cantor.chave) && Math.random() < 0.35) { a = cantor; estilo = 'estrela'; }
+    else if (ativos.length) {
+      const fora = ativos.filter(m => !recentes.includes(m.chave)), pool = fora.length ? fora : ativos;
+      for (const m of pool) { if (!a || m.foco > a.foco) { b = a; a = m; } else if (!b || m.foco > b.foco) b = m; }
+      // o estilo: sorteado, sem repetir o anterior; dois músicos só com dois; aberto de vez em quando
+      let tot = 0;
+      const ok = x => x !== p.estilo && (x !== 'dois' || b);
+      for (const x in PESO_ESTILO) if (ok(x)) tot += PESO_ESTILO[x];
+      let r = Math.random() * tot;
+      for (const x in PESO_ESTILO) { if (!ok(x)) continue; r -= PESO_ESTILO[x]; if (r <= 0) { estilo = x; break; } }
     }
-    p.estrela = false;
-    // perto e médio mais vezes; dois músicos quando há dois; a banda inteira de vez em quando
-    const r = Math.random(), anterior = p.tipo;
-    let tipo = r < 0.38 ? 'perto' : r < 0.72 ? 'medio' : r < 0.88 && b ? 'dois' : 'aberto';
-    if (tipo === anterior && tipo === 'aberto') tipo = 'medio';
-    p.tipo = tipo; p.a = a; p.b = tipo === 'dois' ? b : null;
+    if (!a) estilo = 'aberto';
+    if (estilo !== 'dois') b = null;
+    if (estilo === 'aberto') { a = b = null; }
+    const quente = ativos.some(m => m.energia > 0.8);
+    p.a = a; p.b = b; p.estilo = estilo; p.tipo = estilo; p.estrela = estilo === 'estrela';
+    p.t0 = t; p.dur = estilo === 'estrela' ? 12 : (quente ? 4.5 : 5.5) + Math.random() * 2.5;
+    // o arco sai de onde a câmera está e anda para o lado de dentro (para a frente da banda)
+    p.ang0 = p.ang ?? 0;
+    p.dir = p.ang0 > 0.4 ? -1 : p.ang0 < -0.4 ? 1 : (Math.random() < 0.5 ? -1 : 1);
+    if (a) { recentes.push(a.chave); while (recentes.length > 2) recentes.shift(); }
+    if (forcado) p.ateNovo = t + NOVO_S;
   }
   // aproxima `v` de `alvo` como uma mola amortecida (k por segundo), sem passar de `max` unidades por segundo
   function segue(v, alvo, dt, k, max, parado) {
@@ -1158,58 +1313,46 @@
   function dirigir(t, dt, batidaAntes, parado) {
     const { cam, foco } = run, p = run.plano, ativos = run.ativos;
     const vivo = m => m && !m.saindo && run.musicos.has(m.chave);
-    if (parado) { p.tipo = 'aberto'; p.a = p.b = null; }
+    if (parado) { p.estilo = p.tipo = 'aberto'; p.a = p.b = null; p.estrela = false; p.t0 = t; p.dur = 1e9; }
     else {
-      // um instrumento novo chegou: a câmera vai até ele
-      // trocas de foco espaçadas (no mínimo 6 s entre uma e outra), para a câmera nunca correr de um lado ao outro
-      const pode = t - (p.tTroca || -99) > 6;
-      if (t - (p.tTroca || -99) > 3 && run.novo && vivo(run.novo) && run.novo !== p.a && run.novo.vis > 0.2) { escolherFoco(t, run.novo); run.novo = null; p.tTroca = t; }
-      const cada = 16, virou = Math.floor(run.batida / cada) !== Math.floor(batidaAntes / cada);
-      const perdeu = (p.tipo !== 'aberto' && !vivo(p.a)) || (p.b && !vivo(p.b)) || (p.tipo === 'aberto' && ativos.length && !p.a);
-      if (perdeu || (pode && virou && t > (p.ateNovo || 0))) { escolherFoco(t, null); p.tTroca = t; }
+      const novoOk = run.novo && vivo(run.novo) && run.novo !== p.a && run.novo.vis > 0.2 && t - (p.t0 ?? -99) > 2.5;
+      const acabou = t - (p.t0 ?? -99) > (p.dur ?? 0);
+      const naBatida = Math.floor(run.batida) !== Math.floor(batidaAntes);       // planos trocam na batida
+      const perdeu = (p.a && !vivo(p.a)) || (p.b && !vivo(p.b)) || (p.estilo === 'aberto' && ativos.length && t - p.t0 > 4);
+      if (novoOk) { novoPlano(t, run.novo); run.novo = null; }
+      else if (perdeu || (acabou && naBatida) || p.t0 === undefined) novoPlano(t);
     }
-    // o arco: a fase anda sempre (mais rápida quando a banda está quente) e o ângulo vai e volta pela frente
-    const quente = ativos.reduce((x, m) => Math.max(x, m.energia), 0);
-    // a órbita: velocidade que muda devagar (a "quentura" da banda é suavizada), nunca aos trancos
-    p.velo = (p.velo ?? 0.18) + ((0.16 + 0.1 * Math.min(1, quente)) - (p.velo ?? 0.18)) * Math.min(1, dt * 0.3);
-    if (!parado) p.fase += dt * p.velo;
-    // o ângulo anda suave: no vai-e-vem pela frente da banda, ou dando a volta inteira em torno da estrela
-    if (parado) p.ang = 0;
-    else if (p.estrela && p.a === run.musicos.get(p.a?.chave)) p.ang = (p.ang ?? 0) + dt * 0.3;
-    else {
-      const alvoAng = Math.sin(p.fase) * 1.0 + Math.sin(p.fase * 0.37) * 0.22;
-      let d = alvoAng - (p.ang ?? 0);
-      d = Math.atan2(Math.sin(d), Math.cos(d));          // pelo caminho mais curto, depois de uma volta inteira
-      p.ang = (p.ang ?? 0) + d * Math.min(1, dt * 0.5);
-    }
-    const ang = p.ang;
-    // o alvo: o músico em foco, o meio de dois, ou o meio da banda
-    const alvo = run.alvoCam, E = ENQUADRAMENTOS[p.tipo] || ENQUADRAMENTOS.aberto;
-    if (p.a && p.tipo !== 'aberto') {
+    const E = ESTILOS[p.estilo] || ESTILOS.aberto, u = parado ? 0 : suave(Math.min(1, (t - p.t0) / Math.max(1, p.dur)));
+    // o ângulo do plano: do ângulo de partida, um arco pelo lado de dentro (na estrela, a volta inteira)
+    const alvoAng = parado ? 0 : p.ang0 + p.dir * E.arco * u;
+    p.ang = (p.ang ?? 0) + (alvoAng - (p.ang ?? 0)) * (parado ? 1 : Math.min(1, dt * 1.5));
+    // o alvo: o músico do plano, o meio de dois, ou o meio da banda
+    const alvo = run.alvoCam;
+    if (p.a) {
       const ap = p.a.fig.g.position;
       if (p.b) { const bp = p.b.fig.g.position; alvo.set((ap.x + bp.x) / 2, E.olhar, (ap.z + bp.z) / 2); }
       else alvo.set(ap.x, E.olhar, ap.z);
     } else alvo.set(0, 1, 2.2);
-    // raio, altura e alvo andam suaves (como numa grua), então trocar de músico ou de enquadramento é um deslize
-    const aspecto = Math.max(1, 1.1 / cam.aspect), sm = parado ? 1 : Math.min(1, dt * 0.35);
-    p.raio += (E.raio * aspecto * (p.b ? 1 + p.a.fig.g.position.distanceTo(p.b.fig.g.position) * 0.25 : 1) - p.raio) * sm;
-    p.alto += (E.alto + (p.tipo === 'aberto' ? 1.5 * Math.max(0, 1 / cam.aspect - 1) + Math.sin(t * 0.12) * 0.6 : Math.sin(p.fase * 1.3) * 0.25) - p.alto) * sm;
+    const aspecto = Math.max(1, 1.1 / cam.aspect), sm = parado ? 1 : Math.min(1, dt * 0.6);
+    const raio = (E.raio[0] + (E.raio[1] - E.raio[0]) * u) * aspecto * (p.b ? 1 + p.a.fig.g.position.distanceTo(p.b.fig.g.position) * 0.25 : 1);
+    const alto = E.alto[0] + (E.alto[1] - E.alto[0]) * u + (p.estilo === 'aberto' ? 1.5 * Math.max(0, 1 / cam.aspect - 1) : 0);
+    p.raio = (p.raio ?? raio) + (raio - (p.raio ?? raio)) * sm;
+    p.alto = (p.alto ?? alto) + (alto - (p.alto ?? alto)) * sm;
     // o olhar e a câmera andam com velocidade limitada e suave, como numa grua: nada de chicote
-    segue(run.olhar, alvo, dt, 0.7, 1.2, parado);
+    segue(run.olhar, alvo, dt, 0.8, 1.4, parado);
     const pos = run.posCam;
-    pos.set(run.olhar.x + Math.sin(ang) * p.raio, p.alto, run.olhar.z + Math.cos(ang) * p.raio);
-    // perto dos músicos a câmera fica dentro do palco (fora dele estão os objetos do cenário, que tampariam a vista),
-    // com uma borda macia: o limite cresce junto com o raio, sem degrau
+    pos.set(run.olhar.x + Math.sin(p.ang) * p.raio, p.alto, run.olhar.z + Math.cos(p.ang) * p.raio);
+    // perto dos músicos a câmera fica dentro do palco (fora dele estão os objetos do cenário), com borda macia
     const dx = pos.x, dz = pos.z - 2.5, r = Math.hypot(dx, dz), max = 6.6 + Math.max(0, p.raio - 4) * 1.4;
     if (r > max) { pos.x = dx * max / r; pos.z = 2.5 + dz * max / r; }
-    segue(cam.position, pos, dt, 0.9, 2.2, parado);
+    segue(cam.position, pos, dt, 1.0, 2.6, parado);
     cam.lookAt(run.olhar);
     run.cena.fog.far = cam.position.distanceTo(run.olhar) + 45;     // a névoa recua com a câmera e deixa o cenário à vista
     run.cena.fog.near = run.cena.fog.far - 35;
-    const a = p.tipo !== 'aberto' ? p.a : null;
+    const a = p.a;
     foco.target.position.copy(a ? a.fig.g.position : alvo);
     foco.intensity += ((a ? 55 : 0) - foco.intensity) * Math.min(1, dt * 3);
-    const txt = a ? rotulo(a) + '|' + p.tipo : '';
+    const txt = a ? rotulo(a) + '|' + p.estilo : '';
     if (txt !== run.focoTxt) {
       run.focoTxt = txt;
       const el = $('sim-foco');
@@ -1277,7 +1420,7 @@
     abrindo = false;
     $('sim-status').textContent = '';
     run = { musicos: new Map(), inst: new Map(), tInst: 0, fila: [], ativos: [], desordem: false, batida: 0, bpm: 100, focoEm: null, focoTxt: '', vazio: null, flash: 0,
-      plano: { tipo: 'aberto', a: null, b: null, fase: 0, raio: 9.5, alto: 3.4, ateNovo: 0 }, novo: null,
+      plano: { tipo: 'aberto', estilo: 'aberto', a: null, b: null, raio: 9.5, alto: 3.4, ang: 0, ateNovo: 0 }, novo: null,
       dtMedio: 1 / 60, tRes: 0, iRes: 0, iResMax: 0,
       alvoCam: new THREE.Vector3(), posCam: new THREE.Vector3(), olhar: new THREE.Vector3(0, 1, 2), ...montarCena() };
     run.ro = new ResizeObserver(medir);
@@ -1338,7 +1481,13 @@
   const desktop = () => matchMedia('(min-width: 721px) and (pointer: fine)').matches;
   function aplicarCartao(c) {
     const el = $('sim');
-    if (!c || !desktop()) { for (const v of ['--sim-x', '--sim-y', '--sim-largo', '--sim-alto']) el.style.removeProperty(v); return; }
+    if (!c) { for (const v of ['--sim-x', '--sim-y', '--sim-largo', '--sim-alto']) el.style.removeProperty(v); return; }
+    if (!desktop()) {      // no celular o cartão tem a largura da tela: só sobe e desce
+      for (const v of ['--sim-x', '--sim-largo', '--sim-alto']) el.style.removeProperty(v);
+      const h = el.offsetHeight || 200;
+      el.style.setProperty('--sim-y', `${Math.max(8, Math.min(c.y, innerHeight - Math.min(h, 120)))}px`);
+      return;
+    }
     const largo = Math.max(260, Math.min(c.largo, innerWidth - 24)), alto = Math.max(160, Math.min(c.alto, innerHeight - 220));
     el.style.setProperty('--sim-largo', `${largo}px`);
     el.style.setProperty('--sim-alto', `${alto}px`);
@@ -1353,7 +1502,7 @@
     return { x: Math.round(r.left), y: Math.round(r.top), largo: Math.round(r.width), alto: Math.round(palco.height) };
   }
   function arrastar(e, modo) {
-    if (!desktop() || e.button !== 0) return;
+    if ((modo === 'redimensionar' && !desktop()) || (e.pointerType === 'mouse' && e.button !== 0)) return;
     if (modo === 'mover' && e.target.closest('button')) return;
     e.preventDefault();
     const el = $('sim'), c0 = cartaoAtual(), x0 = e.clientX, y0 = e.clientY;
@@ -1407,7 +1556,7 @@
 
   window.__atlasSim = {
     iniciar, parar,
-    estado: () => run && { estrela: !!run.plano.estrela, musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], kit: !!m.kit, pandeiro: !!m.pandeiro, pose: m.pose, vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
+    estado: () => run && { estrela: !!run.plano.estrela, musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], kit: !!m.kit, mao: m.maoPeca || null, pandeiro: m.maoPeca === 'pandeiro', pose: m.pose, vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu, penteado: m.penteado })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
       cenarios: Object.fromEntries(Object.entries(run.cenarios).filter(([, c]) => c.peso > 0.02).map(([n, c]) => [n, +c.peso.toFixed(2)])) },
     // testes: notas sem depender do áudio
     nota: e => aoTocar(e),
@@ -1416,7 +1565,7 @@
       const m = run?.musicos.get(chave);
       if (!m) return false;
       const p = run.plano;
-      Object.assign(p, { a: m, b: null, tipo: 'perto', estrela: false, tTroca: performance.now() / 1000 + 30, raio: 1.75, alto: 1.45 });
+      Object.assign(p, { a: m, b: null, tipo: 'orbita', estilo: 'orbita', estrela: false, t0: performance.now() / 1000, dur: 60, ang0: 0, dir: 1, raio: 2.2, alto: 1.5 });
       run.olhar.set(m.fig.g.position.x, 1.25, m.fig.g.position.z);
       return true;
     },

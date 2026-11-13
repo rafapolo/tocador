@@ -154,9 +154,6 @@ button { font: inherit; color: inherit; }
 #btn-musica.espera { color: var(--accent); }
 #btn-musica:disabled { opacity: 0.45; cursor: not-allowed; }
 #btn-sim[aria-pressed="true"] { color: var(--accent); }
-/* o zigue-zague só existe no grafo */
-#btn-zigue[hidden] { display: none; }
-body.em-grafo #btn-zigue:not([hidden]) { display: inline-flex; }
 #btn-zigue[aria-pressed="true"] { color: var(--accent); }
 #zigue-tempo { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-2); }
 #zigue-tempo:empty { display: none; }
@@ -494,6 +491,7 @@ body.em-grafo #btn-zigue:not([hidden]) { display: inline-flex; }
 #sim { width: var(--sim-largo, 340px); }
 /* no desktop o cartão se arrasta pela faixa de cima e se redimensiona pelo canto (js/atlas-sim.js, moverCartao) */
 #sim-redim { display: none; }
+#sim-topo { touch-action: none; }       /* arrastar o cartão no toque não rola a página */
 @media (min-width: 721px) and (pointer: fine) {
   #sim-topo { cursor: grab; }
   #sim.arrastando #sim-topo { cursor: grabbing; }

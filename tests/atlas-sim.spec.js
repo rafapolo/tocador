@@ -363,3 +363,37 @@ test('com um cantor no palco, a câmera faz dele a estrela de vez em quando', as
     await expect.poll(async () => { const e = await sim(page); return e.foco === 'mpb|mel|voz' && e.estrela; }, { timeout: 25000 }).toBe(true);
   } finally { clearInterval(tocar); }
 });
+
+test('no celular o cartão também se arrasta (para cima e para baixo, já que tem a largura da tela)', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+  const page = await ctx.newPage();
+  try {
+    await boot(page);
+    await page.locator('#btn-sim').click();
+    await expect.poll(() => sim(page)).not.toBeNull();
+    const a = await page.locator('#sim').boundingBox();
+    const topo = await page.locator('#sim-topo').boundingBox();
+    const x = topo.x + 40, y = topo.y + topo.height - 6;
+    await page.locator('#sim-topo').dispatchEvent('pointerdown', { pointerType: 'touch', clientX: x, clientY: y, button: 0, isPrimary: true });
+    await page.evaluate(([x, y]) => window.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'touch', clientX: x, clientY: y + 160, isPrimary: true })), [x, y]);
+    await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', isPrimary: true })));
+    const b = await page.locator('#sim').boundingBox();
+    expect(b.y - a.y).toBeGreaterThan(120);
+    expect(Math.abs(b.x - a.x)).toBeLessThan(2);
+  } finally { await ctx.close(); }
+});
+
+test('percussão de mão em 3D e cabelos por gênero', async ({ page }) => {
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  for (let k = 0; k < 3; k++) await nota(page, { papel: 'tamborim', familia: 'samba', vel: 0.6 });
+  for (let k = 0; k < 3; k++) await nota(page, { papel: 'ganza', familia: 'forro', vel: 0.6 });
+  await nota(page, { papel: 'acorde', familia: 'rock', vel: 0.5, timbre: 'guitarra' });
+  await expect.poll(async () => (await sim(page)).musicos.length).toBe(3);
+  const por = Object.fromEntries((await sim(page)).musicos.map(m => [m.chave, m]));
+  expect(por['samba|perc'].mao).toBe('tamborim');
+  expect(por['forro|perc'].mao).toBe('ganza');
+  expect(por['samba|perc'].pose).toBe('mao');            // sem surdo nem bumbo, o surdo sai de cena
+  expect(typeof por['rock|acorde|guitarra'].penteado).toBe('string');
+});
