@@ -30,3 +30,7 @@ tasks/
 
 # per-track audio features (JSONL is the resumable checkpoint; compact output feeds the MCP)
 /data/features/
+data/fix-missing-tracks/
+
+# progresso do build-torrents.js (o manifest data/torrents-<acervo>.json.gz é commitado)
+/data/torrents/

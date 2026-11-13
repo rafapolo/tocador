@@ -3,9 +3,10 @@
 import { sigV4Encode, s3GetSigned, keyCandidates, isSafeKey, bucketFor, BUCKET } from './lib/s3.js';
 import { MAP_HARD_CAP, deviceCounts, rawIpCounts, incDevice, decDevice, incRawIp, decRawIp, heartbeatTokenBuckets, HEARTBEAT_BUCKET_CAP, HEARTBEAT_BUCKET_REFILL,
   BUCKET_CAP, BUCKET_REFILL, deviceTokenBuckets, RAW_BUCKET_CAP, RAW_BUCKET_REFILL, rawIpTokenBuckets, RAW_CONCURRENCY_CAP,
-  REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL, reportTokenBuckets, takeFrom, deviceKey } from './lib/limits.js';
+  REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL, reportTokenBuckets, takeFrom, deviceKey,
+  PLAY_BEACON_BUCKET_CAP, PLAY_BEACON_BUCKET_REFILL, playBeaconTokenBuckets } from './lib/limits.js';
 import { state, RADIO_ID_RE, radioListeners, todayListenerIds, ensureToday, markOk, mark4xx, mark5xx,
-  UPSTREAM_FAIL_THRESHOLD, markUpstreamOk, markUpstreamFail, metricsJSON, markPlay, markRefused } from './lib/metrics.js';
+  UPSTREAM_FAIL_THRESHOLD, markUpstreamOk, markUpstreamFail, metricsJSON, markPlay, markRefused, markP2pBytes } from './lib/metrics.js';
 import { realIp, refererAllowed, blockedBot, goodBotRegex } from './lib/access.js';
 
 
@@ -52,6 +53,8 @@ Allow: /
 Disallow: /report-error
 Disallow: /radio-heartbeat
 Disallow: /metrics
+Disallow: /play-beacon
+Disallow: /t/
 Disallow: /*.mp3$
 Disallow: /*.m4a$
 Disallow: /*.mp4$
@@ -148,6 +151,22 @@ function releaseOnEnd(body, release) {
     cancel(reason) { fin(); return reader.cancel(reason).catch(() => {}); },
   }, { highWaterMark: 0 });
 }
+
+// §19 — which page started a play: the radio's listeners hear the same track at once, so its
+// overlap is counted apart from the player's (tasks/plans/p2p-gun-tracker.md, G0).
+function origemDoPlay(req) {
+  try { return /\/radio(\.html)?$/.test(new URL(req.headers.get('referer') ?? '').pathname) ? 'radio' : 'player'; }
+  catch { return 'player'; }
+}
+
+// §21 — P2P (tasks/plans/p2p-gun-tracker.md). Each acervo's .torrent files live in its own
+// bucket under torrents/<acervo>/<infohash>.torrent (script/build-torrents.js); bucketFor() on
+// the acervo's audio prefix picks the same bucket the audio is in.
+const P2P_ACERVOS = { uqt: 'uqt', homi: 'indie' };       // acervo -> audio prefix
+const TORRENT_RE = /^\/t\/(uqt|homi)\/([0-9a-f]{40})\.torrent$/;
+const AUDIO_KEY_RE = /\.(mp3|mp4|m4a)$/i;
+// A play-beacon's numbers: whole bytes, at most 2 GB (a track is tens of MB).
+const bytesOk = (n) => Number.isSafeInteger(n) && n >= 0 && n <= 2e9;
 
 // §6 — Range header regex (hoisted to avoid per-request allocation)
 const RANGE_RE = /^bytes=(\d{0,15})-(\d{0,15})$/;
@@ -388,9 +407,65 @@ _server = Bun.serve({
       return new Response(null, { status: 204, headers: corsBase });
     }
 
+    // §21 — POST /play-beacon: a P2P player says a track started and where its bytes came from
+    // ({acervo, path: '<album>/<file>', fonte: 'cdn'|'p2p', bytesPeers, bytesSeed}). A 'cdn' play
+    // was already counted by its byte-0 Range (§17), so only 'p2p' calls markPlay(), with the same
+    // device key and the same '<prefix>/<album>/<file>' path an audio GET would have used.
+    if (req.method === 'POST' && url.pathname === '/play-beacon') {
+      if (goodBotRegex.test(ua)) return new Response(null, { status: 204, headers: corsBase });
+      if (!refererAllowed(req)) { mark4xx(); return new Response('Forbidden', { status: 403, headers: corsBase }); }
+      const pbIp = realIp(req, server);
+      if (!takeFrom(playBeaconTokenBuckets, pbIp, PLAY_BEACON_BUCKET_CAP, PLAY_BEACON_BUCKET_REFILL)) {
+        mark4xx();
+        return new Response('Too Many Requests', { status: 429, headers: { ...corsBase, 'Retry-After': '30' } });
+      }
+      let b;
+      try { b = await req.json(); }
+      catch { mark4xx(); return new Response('Bad Request', { status: 400, headers: corsBase }); }
+      const prefixo = P2P_ACERVOS[b?.acervo];
+      if (!prefixo || typeof b.path !== 'string' || b.path.length > 1024 || !isSafeKey(b.path) || !AUDIO_KEY_RE.test(b.path)
+          || (b.fonte !== 'cdn' && b.fonte !== 'p2p') || !bytesOk(b.bytesPeers ?? 0) || !bytesOk(b.bytesSeed ?? 0)) {
+        mark4xx();
+        return new Response('Bad Request', { status: 400, headers: corsBase });
+      }
+      if (b.fonte === 'p2p') markPlay(deviceKey(pbIp, req), `${prefixo}/${b.path}`, origemDoPlay(req));
+      markP2pBytes(b.bytesPeers ?? 0, b.bytesSeed ?? 0);
+      markOk();
+      return new Response(null, { status: 204, headers: corsBase });
+    }
+
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       mark4xx();
       return new Response('Method Not Allowed', { status: 405, headers: corsBase });
+    }
+
+    // §21 — GET /t/<acervo>/<infohash>.torrent: content-addressed, so cached for good. Same
+    // hotlink rule as audio: a .torrent carries the web seed URL, which is the audio itself.
+    if (url.pathname.startsWith('/t/')) {
+      const m = TORRENT_RE.exec(url.pathname);
+      if (!m) { mark4xx(); return new Response('Not Found', { status: 404, headers: corsBase }); }
+      if (!refererAllowed(req)) { markRefused('hotlink', ua); mark4xx(); return new Response('Forbidden', { status: 403, headers: corsBase }); }
+      const isHeadT = req.method === 'HEAD';
+      state.activeRequests++;
+      try {
+        const r = await s3GetSigned(bucketFor(`${P2P_ACERVOS[m[1]]}/`), `torrents/${m[1]}/${m[2]}.torrent`, null);
+        markUpstreamOk();
+        if (!r.ok) {
+          r.body?.cancel().catch(() => {});
+          if (r.status === 404) { mark4xx(); return new Response('Not Found', { status: 404, headers: corsBase }); }
+          mark5xx(); return new Response('Error', { status: 502, headers: corsBase });
+        }
+        markOk();
+        const headers = { ...corsHeaders, 'Content-Type': 'application/x-bittorrent', 'Cache-Control': 'public, max-age=31536000, immutable' };
+        const len = r.headers.get('content-length');
+        if (len) headers['Content-Length'] = len;
+        if (isHeadT) r.body?.cancel().catch(() => {});
+        return new Response(isHeadT ? null : r.body, { status: 200, headers });
+      } catch (err) {
+        console.error(`[torrent] ${url.pathname}: ${err?.message ?? err}`);
+        mark5xx(); markUpstreamFail();
+        return new Response('Bad Gateway', { status: 502, headers: corsBase });
+      } finally { state.activeRequests--; }
     }
 
     // §1 — decode path with try/catch; malformed percent-sequences return 400 instead of crashing
@@ -482,7 +557,10 @@ _server = Bun.serve({
       // native-client path left to fall back to.
       const res = await signedPassthrough(bucket, path, rangeHeader, isHead);
       // §17 — a track starting: audio, a body, the range (if any) begins at byte 0
-      if (isAudio && !isHead && res.status < 300 && (!rangeHeader || rangeHeader.startsWith('bytes=0-'))) markPlay(device, path);
+      // The CDN monitor's curl probes (cdn-health-monitor.yml, every 30 min) are not listeners: they
+      // topped today.topTracks and would drag today.overlapRatio down.
+      if (isAudio && !isHead && res.status < 300 && (!rangeHeader || rangeHeader.startsWith('bytes=0-'))
+          && !ua.startsWith('curl/')) markPlay(device, path, origemDoPlay(req));
       // The device's stream slot is held until the body is fully sent or the client
       // goes away, not just until the headers are out: otherwise "5 streams per
       // device" capped only request starts, and a downloader could pull any number
