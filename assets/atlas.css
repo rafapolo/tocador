@@ -89,15 +89,20 @@ button { font: inherit; color: inherit; }
 #contagem { margin: 0; color: var(--text-2); font-size: 12.5px; white-space: nowrap; }
 
 /* ── controles ── */
-/* Same bar as the search: identity and search on the left, what changes the view on the right. Under 1040 px they
-   take a line of their own; between that and 1280 px the labels that repeat themselves make room first. */
-#controles { display: flex; gap: 8px; flex: none; flex-wrap: wrap; margin-left: auto; }
-@media (max-width: 1279px) {
-  [data-acervo] .ic, [data-mapa] .ic, #btn-musica span, #btn-sim span, #btn-zigue span, #btn-sobre span { display: none; }
+/* Same bar as the search: identity and search on the left, what changes the view on the right, in the order a visit
+   uses them: how the map is laid out (Som/Gêneros, Grafo), what it shows (acervo), what it sounds like (Sonificar,
+   ZigZag, Simulação), and last the guides (Tour, Sobre), set a little apart. One line whenever it fits, without
+   squeezing the search: under 1680 px the sound group and Sobre go icon-only (their titles say the rest) and the
+   layout and acervo buttons drop their decorative icons; under 1240 px the controls take a whole line of their own,
+   under the search, where Som/Gêneros get their icons back (the acervo names say enough). */
+#controles { display: flex; gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+#controles > .seg-guia { margin-left: 8px; }
+@media (max-width: 1679px) {
+  #btn-musica span, #btn-sim span, #btn-zigue span, #btn-sobre span, [data-acervo] .ic, [data-mapa] .ic { display: none; }
 }
-@media (max-width: 1039px) {
-  [data-acervo] .ic, [data-mapa] .ic { display: inline-block; }
-  #controles { flex: 1 1 100%; margin-left: 0; }
+@media (max-width: 1239px) {
+  [data-mapa] .ic { display: inline-block; }
+  #controles { flex: 1 1 100%; margin-left: 0; justify-content: flex-start; }
 }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--glass); }
 .seg button, .seg a {
@@ -237,9 +242,9 @@ body:not(.em-tour) #visor-som.movido { left: var(--visor-x); top: var(--visor-y)
   #controles { order: 4; }
   .seg button, .seg a { padding: 6px 11px; }
   #btn-musica span, #btn-sim span, #btn-zigue span, #btn-sobre span { display: none; }
-  /* A linha dos filtros já está cheia: o ? usa a sobra ao lado de Som/Gêneros. */
-  #controles > .seg:first-child { order: -2; }
-  #controles > .seg-sobre, #controles > .seg:has(#btn-tour) { order: -1; }
+  /* Same order as desktop, no reshuffling: each line holds two groups (layout + Grafo, acervo + sound) and Tour and
+     Sobre close it together. */
+  #controles > .seg-guia { margin-left: 0; }
   #ajuda { display: none; }
   #legenda { max-width: calc(100% - 96px); }
   #legenda[open] { max-height: 52dvh; overflow: auto; }

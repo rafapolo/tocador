@@ -219,7 +219,7 @@
       const tornozelo = new THREE.Group();
       tornozelo.position.y = -0.38;
       joelho.add(tornozelo);
-      tornozelo.add(malha(geo('sapato', () => new Cap(0.05, 0.13, 4, 10)), mats.escuro, 0, 0.0, 0.05)).rotation.x = Math.PI / 2;
+      tornozelo.add(malha(geo('sapato', () => new Cap(0.05, 0.13, 6, 14)), mats.escuro, 0, 0.0, 0.05)).rotation.x = Math.PI / 2;
       quadril.userData.joelho = joelho;
       quadril.userData.tornozelo = tornozelo;
       pes.push(tornozelo);
@@ -459,7 +459,7 @@
 
   // os acessórios, montados na cabeça, no tronco e nas pernas do boneco
   function vestir(fig, f) {
-    const { CylinderGeometry: Cil, SphereGeometry: Esf, BoxGeometry: Caixa, ConeGeometry: Cone, TorusGeometry: Toro, PlaneGeometry: Plano } = THREE;
+    const { CylinderGeometry: Cil, SphereGeometry: Esf, BoxGeometry: Caixa, CapsuleGeometry: Cap, ConeGeometry: Cone, TorusGeometry: Toro, PlaneGeometry: Plano } = THREE;
     const { cabeca, tronco, mats } = fig, add = (pai, o) => { pai.add(o); return o; };
     const novo = (k, cor, extra) => (mats[k] = material(cor, extra));
     const acento = novo('acento', f.acento, { roughness: 0.6 });
@@ -508,7 +508,7 @@
         case 'plumas': for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; add(tronco, malha(geo('pluma', () => new Esf(0.045, 6, 5)), mats.acento, Math.sin(a) * 0.17, 0.66 + Math.sin(a * 3) * 0.02, Math.cos(a) * 0.15)); } break;
         case 'capa': { const c = add(tronco, malha(geo('capa', () => new Plano(0.55, 0.95)), novo('capa', f.acento, { side: THREE.DoubleSide, metalness: 0.6, roughness: 0.3 }), 0, 0.2, -0.22)); c.rotation.x = 0.12; break; }
         case 'cabeloNeon': mats.cabelo.color.set(f.acento); mats.cabelo.emissive.set(f.acento); mats.cabelo.emissiveIntensity = 0.35; break;
-        case 'plataforma': for (const p of fig.pes) add(p, malha(geo('plataforma', () => new Caixa(0.13, 0.12, 0.24)), novo('plataforma', f.acento, { metalness: 0.7, roughness: 0.25 }), 0, 0.04, 0.05)); break;
+        case 'plataforma': for (const p of fig.pes) add(p, malha(geo('plataforma', () => new Cap(0.065, 0.11, 6, 14).rotateX(Math.PI / 2)), novo('plataforma', f.acento, { metalness: 0.7, roughness: 0.25 }), 0, 0.04, 0.05)); break;
       }
     }
     mats.calca.color.set(f.calca);

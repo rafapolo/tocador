@@ -98,20 +98,20 @@
         <button type="button" data-mapa="som" aria-pressed="true" title="Posição pelo som (embedding de áudio)"><svg class="ic" aria-hidden="true"><use href="#i-som"/></svg>Som</button>
         <button type="button" data-mapa="rotulos" aria-pressed="false" title="Posição pelos rótulos de gênero"><svg class="ic" aria-hidden="true"><use href="#i-genero"/></svg>Gêneros</button>
       </div>
+      <div class="seg" role="group" aria-label="Visualização">
+        <button id="btn-grafo" type="button" aria-pressed="false" title="Ver artistas parecidos como grafo (G)"><svg class="ic" aria-hidden="true"><use href="#i-grafo"/></svg>Grafo</button>
+      </div>
       <div class="seg" role="group" aria-label="Acervo">
         <button type="button" data-acervo="todos" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-todos"/></svg>Todos</button>
         <button type="button" data-acervo="uqt" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-acervo"/></svg>UQT</button>
         <button type="button" data-acervo="homi" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-acervo"/></svg>Homi</button>
-      </div>
-      <div class="seg" role="group" aria-label="Visualização">
-        <button id="btn-grafo" type="button" aria-pressed="false" title="Ver artistas parecidos como grafo (G)"><svg class="ic" aria-hidden="true"><use href="#i-grafo"/></svg>Grafo</button>
       </div>
       <div class="seg" role="group" aria-label="Som">
         <button id="btn-musica" type="button" aria-pressed="true" aria-label="Sonificar o mapa"><svg class="ic" aria-hidden="true"><use href="#i-musica"/></svg><span>Sonificar</span></button>
         <button id="btn-zigue" type="button" aria-pressed="false" title="ZigZag: caminha sozinho, devagar e sem saltos (no grafo, de artista em artista vizinho a cada 15 s; no mapa, deslizando sem parar, ao acaso, por cima dos pontos)"><svg class="ic" aria-hidden="true"><use href="#i-zigue"/></svg><span>ZigZag</span><small id="zigue-tempo"></small></button>
         <button id="btn-sim" type="button" aria-pressed="false" aria-label="Simulação: a banda da sonificação em 3D" title="Simulação: a banda da sonificação em 3D (clique de novo para fechar)"><svg class="ic" aria-hidden="true"><use href="#i-banda"/></svg><span>Simulação</span></button>
       </div>
-      <div class="seg" role="group" aria-label="Tour">
+      <div class="seg seg-guia" role="group" aria-label="Tour">
         <button id="btn-tour" type="button" aria-pressed="false" title="Tour de 2 minutos pelo mapa e pela sonificação (T)" disabled><svg class="ic" aria-hidden="true"><use href="#i-tocar"/></svg><span>Tour</span></button>
       </div>
       <div class="seg seg-sobre">
