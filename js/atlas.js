@@ -382,16 +382,16 @@
   }
 
   let voo = null;
-  function voar(ncx, ncy, nk, animar = true, rot = null, ms = null) {
+  function voar(ncx, ncy, nk, animar = true, rot = null, ms = null, linear = false) {
     nk = limitarK(nk);
     const [yaw1, pitch1] = rot || [yaw, pitch];
     if (!animar || reduzMovimento) { cx = ncx; cy = ncy; k = nk; yaw = yaw1; pitch = pitch1; rotacao(); voo = null; pedir(); return; }
-    voo = { cx0: cx, cy0: cy, k0: k, cx1: ncx, cy1: ncy, k1: nk, yaw0: yaw, yaw1, pitch0: pitch, pitch1, t0: performance.now(), ms: ms ?? (rot ? 650 : 450) };
+    voo = { cx0: cx, cy0: cy, k0: k, cx1: ncx, cy1: ncy, k1: nk, yaw0: yaw, yaw1, pitch0: pitch, pitch1, t0: performance.now(), ms: ms ?? (rot ? 650 : 450), linear };
     pedir();
   }
   function passoVoo(agora) {
     if (!voo) return false;
-    const f = Math.min(1, (agora - voo.t0) / voo.ms), e = 1 - Math.pow(1 - f, 3);
+    const f = Math.min(1, (agora - voo.t0) / voo.ms), e = voo.linear ? f : 1 - Math.pow(1 - f, 3);
     k = Math.exp(Math.log(voo.k0) * (1 - e) + Math.log(voo.k1) * e);
     cx = voo.cx0 + (voo.cx1 - voo.cx0) * e;
     cy = voo.cy0 + (voo.cy1 - voo.cy0) * e;
@@ -1317,82 +1317,38 @@
     som?.momento();
   }
   // ── ZigZag ──
-  // O botão ZigZag caminha sozinho, mas sem saltos: cada passo vai para perto de onde está. No grafo, a cada
-  // 15 s, para um vizinho do artista atual (o "Soa parecido com") sorteado entre os ainda não vistos; quando todos já
-  // foram vistos, volta por um vizinho já visto (não o de onde acabou de vir, e de preferência um que ainda tem
-  // vizinhos novos), e assim se afasta devagar, nunca pulando longe. No mapa, voa devagar (9 s de voo) a cada 30 s para um dos rótulos de gênero mais próximos
-  // do centro da vista, seguindo mais ou menos na mesma direção, para não ir e voltar, perto o bastante (8×) para a
-  // banda inteira tocar. Entre os próximos, prefere outra família de gênero e a menos visitada até agora, então a
-  // música muda aos poucos. Nunca volta aonde já foi (a lista fica neste navegador). A música e a banda mudam com a
-  // caminhada. Desliga ao trocar de grafo para mapa (ou o contrário) e no tour.
-  const ZIGUE_GRAFO_MS = 15000, ZIGUE_MAPA_MS = 30000, VOO_ZIGUE_MS = 9000, CHAVE_ZIGUE = 'tocador-atlas-zigue-vistos';
-  const ZIGUE_PERTO = 6;             // entre quantos dos mais próximos escolher
+  // O botão ZigZag caminha sozinho, devagar e sem saltos. No grafo, a cada 15 s, vai para um vizinho do artista atual
+  // (o "Soa parecido com") sorteado entre os ainda não vistos; quando todos já foram vistos, volta por um vizinho já
+  // visto (não o de onde acabou de vir, e de preferência um que ainda tem vizinhos novos), e assim se afasta aos
+  // poucos (a lista dos vistos fica neste navegador). No mapa, desliza sem parar, em velocidade constante, um terço
+  // da tela a cada 10 s, numa direção que muda um pouco ao acaso a cada passo e sempre para cima de pontos acesos
+  // (com zoom de 8×, perto o bastante para a banda inteira tocar). A música e a banda mudam com a caminhada. Desliga ao
+  // trocar de grafo para mapa (ou o contrário) e no tour.
+  const ZIGUE_GRAFO_MS = 15000, ZIGUE_MAPA_MS = 10000, ZIGUE_PASSO = 1 / 3, CHAVE_ZIGUE = 'tocador-atlas-zigue-vistos';
   const zigue = { on: false, t: 0, prox: 0, vistos: new Set(), familias: new Map(), modo: null, rumo: null };
   try { for (const n of JSON.parse(localStorage.getItem(CHAVE_ZIGUE) || '[]')) zigue.vistos.add(n); } catch {}
   function familiaDeGenero(g) { return window.RECEITAS_ATLAS?.familiaDe(g) || macroDe(g); }
-  // escolhe entre candidatos { chave, genero, peso, dist, dx?, dy? }: não visitados, entre os mais próximos, o que
-  // muda de família (a menos visitada), mais perto e sem dar meia-volta
-  function escolherZigue(todos, atualGenero, atualChave) {
+  // no grafo sem vizinhos no acervo escolhido: o artista mais perto pelo "Soa parecido com" ainda não visto, de
+  // preferência de outra família de gênero
+  function maisPertoNoGrafo() {
+    const centro = grafo.centro || zigue.ultimoChave, passos = new Map();
+    if (centro) {
+      passos.set(centro, 0);
+      let fila = [centro];
+      for (let d = 1; d <= 4 && fila.length; d++) {
+        const prox = [];
+        for (const n of fila) for (const v of grafo.vizinhos(n)) if (!passos.has(v)) { passos.set(v, d); prox.push(v); }
+        fila = prox;
+      }
+    }
+    const todos = grafo.artistas().filter(a => a.nome !== centro);
     if (!todos.length) return null;
-    const livres = () => todos.filter(a => !zigue.vistos.has(a.chave) && a.chave !== atualChave && Number.isFinite(a.dist));
-    let cand = livres();
-    if (!cand.length) { for (const a of todos) zigue.vistos.delete(a.chave); cand = livres(); }
-    if (!cand.length) cand = todos.filter(a => a.chave !== atualChave);
-    if (!cand.length) return null;
-    cand.sort((a, b) => a.dist - b.dist);
-    const perto = cand.slice(0, ZIGUE_PERTO), d0 = Math.max(perto[0].dist, 1e-9);
-    const famAtual = atualGenero ? familiaDeGenero(atualGenero) : null;
-    let melhor = null, nota = Infinity;
-    for (const a of perto) {
-      const f = familiaDeGenero(a.genero);
-      let n = Number.isFinite(a.dist) ? a.dist / d0 : 3;
-      if (zigue.rumo && a.dx !== undefined) {        // no mapa: virar custa, voltar custa mais
-        const l = Math.hypot(a.dx, a.dy) || 1, cos = (a.dx * zigue.rumo[0] + a.dy * zigue.rumo[1]) / l;
-        n *= 1 + 0.6 * (1 - cos);
-      }
-      if (famAtual && f === famAtual) n += 0.8;
-      n += 0.3 * (zigue.familias.get(f) || 0) - 0.1 * Math.log1p(a.peso) + 0.4 * Math.random();
-      if (n < nota) { nota = n; melhor = a; }
-    }
-    return melhor;
-  }
-  function candidatosZigue() {
-    const atual = zigue.ultimoChave || null;
-    if (grafo.aberto) {
-      // a distância é o número de passos pelo "Soa parecido com" a partir do artista do centro
-      const centro = grafo.centro || atual, passos = new Map();
-      if (centro) {
-        passos.set(centro, 0);
-        let fila = [centro];
-        for (let d = 1; d <= 4 && fila.length; d++) {
-          const prox = [];
-          for (const n of fila) for (const v of grafo.vizinhos(n)) if (!passos.has(v)) { passos.set(v, d); prox.push(v); }
-          fila = prox;
-        }
-      }
-      const lista = grafo.artistas().map(a => ({ chave: a.nome, genero: a.genero, peso: Math.sqrt(a.faixas), nome: a.nome, dist: centro ? passos.get(a.nome) ?? Infinity : 1 }));
-      return { lista, genero: grafo.estado().genero, atual: grafo.centro || atual };
-    }
-    // no mapa: os rótulos de gênero (marcos) do mapa atual, dos gêneros ligados na legenda
-    const lista = [];
-    for (const [gi, qx, qy, n] of A.marcos[mapa]) {
-      const g = A.generos[gi], c = MACROS.findIndex(m => m[0] === macroDe(g));
-      if (filtro.off.has(c < 0 ? OUTROS : c)) continue;
-      lista.push({ chave: 'mapa:' + g, genero: g, peso: Math.sqrt(n), x: qx / 65535, y: qy / 65535 });
-    }
-    // sem rótulos no payload: o centro dos pontos acesos de cada gênero
-    if (!lista.length) {
-      const soma = new Map();
-      for (let i = 0; i < N; i++) {
-        if (!ativo[i]) continue;
-        const g = A.generos[A.genero[i]], c = soma.get(g) || soma.set(g, { x: 0, y: 0, n: 0 }).get(g);
-        c.x += px(i, mapa); c.y += py(i, mapa); c.n++;
-      }
-      for (const [g, c] of soma) lista.push({ chave: 'mapa:' + g, genero: g, peso: Math.sqrt(c.n), x: c.x / c.n, y: c.y / c.n });
-    }
-    // a distância é do centro da vista (de onde a pessoa está, mesmo que tenha arrastado o mapa)
-    for (const a of lista) { a.dx = a.x - cx; a.dy = a.y - cy; a.dist = Math.hypot(a.dx, a.dy); }
-    return { lista, genero: zigue.ultimoGenero || null, atual };
+    let cand = todos.filter(a => !zigue.vistos.has(a.nome));
+    if (!cand.length) { for (const a of todos) zigue.vistos.delete(a.nome); cand = todos; }
+    const famAtual = grafo.estado().genero ? familiaDeGenero(grafo.estado().genero) : null;
+    const nota = a => (passos.get(a.nome) ?? 9) + (familiaDeGenero(a.genero) === famAtual ? 0.5 : 0) + Math.random() * 0.4;
+    const a = cand.reduce((m, x) => (nota(x) < nota(m) ? x : m));
+    return { chave: a.nome, genero: a.genero, nome: a.nome };
   }
   // no grafo: um passo pelo "Soa parecido com" (ver acima); null sem vizinhos no acervo escolhido
   function passoNoGrafo() {
@@ -1415,19 +1371,46 @@
     zigue.anterior = centro;
     return { chave: a.nome, genero: a.genero, nome: a.nome };
   }
+  // o ponto aceso mais perto de (x, y), até `raio` (em unidades do mundo); -1 se não houver
+  function pontoAcesoPerto(x, y, raio = Infinity) {
+    let melhor = -1, d2 = raio * raio;
+    for (let i = 0; i < N; i++) {
+      if (!ativo[i]) continue;
+      const dx = px(i, mapa) - x, dy = py(i, mapa) - y, d = dx * dx + dy * dy;
+      if (d < d2) { d2 = d; melhor = i; }
+    }
+    return melhor;
+  }
+  // no mapa: um passo curto numa direção que vira um pouco ao acaso; se ali não houver pontos acesos, tenta virar
+  // mais (para os lados, depois para trás). O voo dura o passo inteiro e é linear: a câmera nunca para.
+  function passoNoMapa() {
+    const kAlvo = Math.max(k, k0 * 8), passo = ZIGUE_PASSO * Math.min(W, H) / kAlvo;
+    let ang = zigue.rumo ?? Math.random() * Math.PI * 2;
+    ang += (Math.random() - 0.5) * 1.2;
+    let alvo = -1;
+    for (const virar of [0, 0.8, -0.8, 1.6, -1.6, Math.PI]) {
+      const a = ang + virar, x = cx + Math.cos(a) * passo, y = cy + Math.sin(a) * passo;
+      alvo = pontoAcesoPerto(x, y, passo * 0.6);
+      if (alvo >= 0) break;
+    }
+    if (alvo < 0) alvo = pontoAcesoPerto(cx, cy);   // num vazio (ou depois de um filtro): o ponto aceso mais perto
+    if (alvo < 0) return;
+    const x = px(alvo, mapa), y = py(alvo, mapa);
+    if (Math.hypot(x - cx, y - cy) > 1e-9) zigue.rumo = Math.atan2(y - cy, x - cx);
+    if (sel >= 0 && audio.paused) fecharCartao();
+    voar(x, y, kAlvo, !reduzMovimento, null, reduzMovimento ? 0 : ZIGUE_MAPA_MS, true);
+  }
   function pularZigue() {
-    let a = zigue.modo === 'grafo' ? passoNoGrafo() : null;
-    if (!a) { const { lista, genero, atual } = candidatosZigue(); a = escolherZigue(lista, genero, atual); }
     zigue.prox = performance.now() + (zigue.modo === 'grafo' ? ZIGUE_GRAFO_MS : ZIGUE_MAPA_MS);
+    if (zigue.modo !== 'grafo') { passoNoMapa(); return; }
+    const a = passoNoGrafo() || maisPertoNoGrafo();
     if (!a) return;
     zigue.vistos.add(a.chave);
     const f = familiaDeGenero(a.genero);
     zigue.familias.set(f, (zigue.familias.get(f) || 0) + 1);
     zigue.ultimoGenero = a.genero; zigue.ultimoChave = a.chave;
-    if (a.dx !== undefined) { const l = Math.hypot(a.dx, a.dy); if (l > 0) zigue.rumo = [a.dx / l, a.dy / l]; }
     try { localStorage.setItem(CHAVE_ZIGUE, JSON.stringify([...zigue.vistos].slice(-3000))); } catch {}
-    if (zigue.modo === 'grafo') abrirGrafo(a.nome);
-    else { if (sel >= 0 && audio.paused) fecharCartao(); voar(a.x, a.y, k0 * 8, !reduzMovimento, null, reduzMovimento ? 0 : VOO_ZIGUE_MS); }
+    abrirGrafo(a.nome);
   }
   function relogioZigue() {
     if (!zigue.on) return;

@@ -1247,16 +1247,18 @@ test('ZigZag no grafo: anda para um vizinho a cada 15 s, primeiro os não vistos
   await expect(btn).toBeVisible();
 });
 
-test('ZigZag no mapa: voa devagar para outro rótulo de gênero a cada 30 s', async ({ page }) => {
+test('ZigZag no mapa: desliza devagar e ao acaso, um passo curto de cada vez, sem parar', async ({ page }) => {
   await boot(page);
-  await page.evaluate(() => localStorage.removeItem('tocador-atlas-zigue-vistos'));
   const cam = () => page.evaluate(() => { const c = window.__atlas.camera(); return [c.cx, c.cy, c.k / c.k0]; });
-  const antes = await cam();
   await page.locator('#btn-zigue').click();
-  await expect(page.locator('#zigue-tempo')).toHaveText(/^0:(2\d|30)$/);
-  // o voo leva segundos: logo depois ainda está a caminho, e chega perto (8×)
+  await expect(page.locator('#zigue-tempo')).toHaveText(/^0:(0\d|10)$/);
+  // vai chegando a 8× e anda: um passo é um terço da tela, nunca um salto pelo mapa
   await expect.poll(async () => (await cam())[2], { timeout: 15000 }).toBeGreaterThan(7.5);
-  const depois = await cam();
-  expect(Math.hypot(depois[0] - antes[0], depois[1] - antes[1])).toBeGreaterThan(0);
-  expect((await page.evaluate(() => window.__atlas.zigue())).vistos).toBeGreaterThan(0);
+  const a = await cam();
+  await page.evaluate(() => window.__atlas.zigueAgora());
+  await page.waitForTimeout(1500);
+  const b = await cam();
+  const passo = Math.hypot(b[0] - a[0], b[1] - a[1]), tela = await page.evaluate(() => { const c = window.__atlas.camera(); return Math.min(innerWidth, innerHeight) / c.k; });
+  expect(passo).toBeGreaterThan(0);                      // está andando
+  expect(passo).toBeLessThan(tela * 0.6);                // e pouco: no máximo um passo
 });
