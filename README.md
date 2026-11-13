@@ -157,6 +157,7 @@ O merge recusa duplicatas (caminho, artista/título/ano ou artista + faixas), ma
 - **Páginas por álbum e sitemaps**: geradas no deploy por `script/build-album-pages.js` a partir dos catálogos publicados.
 - **Dados de áudio**: `script/analyze-tracks.py` (Essentia) extrai andamento, tom, humor, gênero e um embedding por faixa; daí saem a Pegada, os gêneros e o Atlas.
 - **Proxy** (`proxy.js` + `lib/`): Bun com `Bun.S3Client`, atrás de nginx, em `cdn.tocador.cc`. Os buckets são privados: todo áudio e capa passa pelo proxy, que assina a requisição, repassa `Range` (seek sem baixar o arquivo), aplica limites por aparelho e IP e recusa hotlink. O nginx guarda as capas em cache.
+- **P2P** (em preparação): torrents de uma faixa com o CDN como web seed, o GUN como tracker e âncoras guardando o acervo, para depender cada vez menos do S3. Fases, métricas e decisões: [docs/P2P.md](docs/P2P.md).
 - **Deploy**: o player vai para o GitHub Pages a cada push; o proxy, por Haloy + Docker, com um teste real de áudio antes de dar o deploy por bom e um monitor a cada 30 min.
 
 Detalhes, armadilhas e solução de problemas: [CLAUDE.md](CLAUDE.md) e [docs/PROXY_SETUP.md](docs/PROXY_SETUP.md).
