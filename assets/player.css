@@ -1474,12 +1474,20 @@ audio {
     display: none !important;
   }
 
-  /* Player bar: compact two-row layout */
+  /* Player bar: compact two-row layout. A column that may shrink, so a tall open drawer
+     (the only part allowed to give way) scrolls inside the room left under the search. */
   .player-bar {
     padding: 10px var(--spacing-sm) 0;
     padding-bottom: max(8px, env(safe-area-inset-bottom));
-    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 1;
+    min-height: 0;
   }
+  .player-bar > .mobile-track-drawer { flex: 0 1 auto; min-height: 0; }
+  .player-bar > .player-content { flex-shrink: 0; }
+  .app-header { flex-shrink: 0; }
+  .app-layout { min-height: 49px; }   /* the search row */
 
   .player-content {
     grid-template-columns: 1fr;
@@ -1587,9 +1595,12 @@ audio {
     border-top: 1px solid transparent;
   }
 
+  /* The open drawer grows into the grid's space (the bar shrinks the grid, not the other way round),
+     so an album that fits on screen shows whole instead of scrolling inside a 65dvh box; only one
+     taller than the free space scrolls, and the search row above always stays. */
   .mobile-track-drawer.open {
     border-top-color: var(--color-border);
-    max-height: 65dvh;
+    max-height: 100svh;
   }
 
   .drawer-header {
