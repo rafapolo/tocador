@@ -1016,8 +1016,11 @@
     document.addEventListener('visibilitychange', atualizar);
 
     const pv = o.previa;
-    pv.addEventListener('play', () => { previaTocando = true; atualizar(); });
-    for (const ev of ['pause', 'ended', 'emptied']) pv.addEventListener(ev, () => { previaTocando = false; atualizar(); });
+    // Uma prévia desliga a sonificação (o botão apaga, não fica âmbar); pausar ou acabar a prévia religa, se estava
+    // ligada. A escolha guardada (localStorage) não muda: fechar a página no meio da prévia não a desliga de vez.
+    let religar = false;
+    pv.addEventListener('play', () => { previaTocando = true; if (vontade) { religar = true; vontade = false; } atualizar(); });
+    for (const ev of ['pause', 'ended', 'emptied']) pv.addEventListener(ev, () => { previaTocando = false; if (religar) { religar = false; vontade = true; } atualizar(); });
 
     // One sound at a time, both ways: a track starting in another tab silences the sonification (even one
     // turned on over it), and turning the sonification on pauses that tab (tomarSom()).
@@ -1045,6 +1048,7 @@
       }
       const estava = aceso();
       ativado = true;
+      religar = false;                 // o clique decide agora; o fim da prévia não mexe mais
       if (!pv.paused) o.pararPrevia();
       if (estava) vontade = false;
       else { vontade = true; tomarSom(); }

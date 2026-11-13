@@ -382,26 +382,27 @@ test('o visor se arrasta (mouse), fica onde foi solto ao recarregar, e o duplo c
   expect(await page.evaluate(() => localStorage.getItem('tocador-atlas-visor'))).toBeNull();
 });
 
-test('♪ calado não aparece ligado: com uma prévia tocando fica âmbar e diz por quê, e o clique volta a sonificar', async ({ page }) => {
+test('uma prévia desliga o Sonificar, e pausá-la religa (se estava ligado), sem mudar a escolha guardada', async ({ page }) => {
   await boot(page);
   await page.keyboard.press('+');
   await soando(page);
   const b = page.locator('#btn-musica');
   await expect(b).toHaveAttribute('aria-pressed', 'true');
-  // uma prévia começou: a sonificação cala, e o botão também deixa de prometer som
-  await page.evaluate(() => {
-    const a = document.getElementById('previa');
-    window.pausou = false;
-    a.pause = () => { window.pausou = true; a.dispatchEvent(new Event('pause')); };
-    a.dispatchEvent(new Event('play'));
-  });
+  const prev = ev => page.evaluate(e => document.getElementById('previa').dispatchEvent(new Event(e)), ev);
+  // a prévia começa: o botão apaga (desligado, não âmbar)
+  await prev('play');
   await expect(b).toHaveAttribute('aria-pressed', 'false');
-  await expect(b).toHaveClass(/espera/);
-  await expect(b).toHaveAttribute('title', /prévia/);
-  expect((await page.evaluate(() => window.__atlas.som())).pausa).toBe('previa');
-  // o clique para a prévia e volta a sonificar, em vez de desligar
-  await b.click();
-  expect(await page.evaluate(() => window.pausou)).toBe(true);
+  await expect(b).not.toHaveClass(/espera/);
+  expect((await page.evaluate(() => window.__atlas.som())).vontade).toBe(false);
+  expect(await page.evaluate(() => localStorage.getItem('tocador-atlas-musica'))).not.toBe('0');
+  // pausou: volta a sonificar
+  await prev('pause');
   await expect(b).toHaveAttribute('aria-pressed', 'true');
   expect((await page.evaluate(() => window.__atlas.som())).vontade).toBe(true);
+  // desligado antes da prévia: continua desligado depois dela
+  await b.click();
+  await expect(b).toHaveAttribute('aria-pressed', 'false');
+  await prev('play');
+  await prev('ended');
+  await expect(b).toHaveAttribute('aria-pressed', 'false');
 });
