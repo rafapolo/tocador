@@ -1,0 +1,32 @@
+name: P2P · sobreposição diária
+
+# Portão G0 de tasks/plans/p2p-gun-tracker.md: today.overlapRatio medido por 7 dias. Os contadores
+# today.* do /metrics zeram à meia-noite de São Paulo (e a cada deploy do proxy), então a leitura
+# de cada dia é anotada às 23:50 (02:50 UTC) como comentário numa issue de acompanhamento.
+
+on:
+  schedule:
+    - cron: '50 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TITULO: "[p2p] sobreposição diária (portão G0)"
+
+jobs:
+  anotar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ler /metrics e anotar
+        run: |
+          json=$(curl -sf -u "x:610336c3eeea7dc0347bd58b3a197473" https://cdn.tocador.cc/metrics)
+          linha=$(echo "$json" | jq -c '{data: (.timestamp[0:10]), uptimeH: (.uptimeSeconds/3600|floor), plays: .today.plays, overlapPlays: .today.overlapPlays, overlapRatio: .today.overlapRatio, porOrigem: .today.overlapPorOrigem, p2p: .today.p2p, ouvintesRadio: .today.uniqueListeners}')
+          echo "$linha"
+          num=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"$TITULO\" in:title" --json number,title -q ".[] | select(.title == \"$TITULO\") | .number" | head -1)
+          if [ -z "$num" ]; then
+            num=$(gh issue create -R "$GITHUB_REPOSITORY" --title "$TITULO" --body "Uma leitura por dia de \`today.overlap*\` do /metrics, às 23:50 de São Paulo. \`uptimeH\` < 24 quer dizer que houve deploy no dia e a contagem é parcial. Portão: 7 dias (tasks/plans/p2p-gun-tracker.md, G0)." | grep -oE '[0-9]+$')
+          fi
+          gh issue comment "$num" -R "$GITHUB_REPOSITORY" --body "\`$linha\`"
