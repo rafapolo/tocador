@@ -212,6 +212,11 @@ button { font: inherit; color: inherit; }
   body:has(#cartao:not([hidden])) #visor-som { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { #visor-som { transition: opacity 0.2s; transform: translate(-50%, 0); } }
+/* arrastável (js/atlas-visor.js, moverVisor): visível, pega o ponteiro; solto num lugar, fica lá (fora do tour) */
+#visor-som.ativo { pointer-events: auto; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+#visor-som.arrastando { cursor: grabbing; transition: opacity 0.6s; }
+body:not(.em-tour) #visor-som.movido { left: var(--visor-x); top: var(--visor-y); bottom: auto; transform: none; }
+.em-tour #visor-som.ativo { pointer-events: none; }
 
 #carregando {
   position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -521,23 +526,21 @@ button { font: inherit; color: inherit; }
 #sim-legenda { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 4px 0 0; font-size: 11.5px; color: var(--text-2); }
 #sim-legenda span { display: inline-flex; align-items: center; gap: 5px; }
 #sim-legenda i { width: 8px; height: 8px; border-radius: 50%; }
+#sim-legenda em { font-style: normal; color: var(--text); font-variant-numeric: tabular-nums; }
 #sim-legenda b { font-weight: 500; color: var(--text); }
 #sim-legenda .sim-previa { flex-basis: 100%; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#sim-sair {
+#sim-sair, #sim-ampliar {
   flex: none; width: 30px; height: 30px; display: grid; place-items: center; padding: 0; cursor: pointer;
   color: var(--text); background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border); border-radius: 50%;
 }
-#sim-sair:hover, #sim-sair:focus-visible { background: var(--surface-light); outline: none; border-color: var(--accent); }
+#sim-sair:hover, #sim-sair:focus-visible, #sim-ampliar:hover, #sim-ampliar:focus-visible { background: var(--surface-light); outline: none; border-color: var(--accent); }
 /* embaixo do palco: a dica de quem está em foco (como o #dica do mapa) e os instrumentos com a parte de cada um */
-#sim-info { display: grid; gap: 8px; padding: 0 12px 8px; }
-#sim-info:has(#sim-foco[hidden]) { display: none; }
 .sim-dica {
   margin: 0; padding: 6px 10px; border-radius: 8px; font-size: 12.5px;
   background: var(--glass); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 .sim-dica b { display: block; font-weight: 600; color: var(--text); }
 .sim-dica span { color: var(--text-2); }
-#sim-foco[hidden] { display: none; }
 /* o painel dos instrumentos, no alto do cartão: recolhido por padrão, e só calcula aberto */
 #sim-instrumentos { border-bottom: 1px solid var(--border); }
 #sim-instrumentos summary {
@@ -565,6 +568,15 @@ button { font: inherit; color: inherit; }
 #sim-instrumentos-lista li b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
 #sim-instrumentos-lista li.some { opacity: 0.35; }
 @media (prefers-reduced-motion: reduce) { #sim-instrumentos-lista li { transition: none; } }
+/* ampliada: a banda toma a janela, com uma margem que deixa ver o mapa na borda (não é a tela cheia do navegador) */
+#sim.ampliado {
+  position: fixed; z-index: 60; width: auto; display: flex; flex-direction: column;
+  inset: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+#sim.ampliado { background: #141210; }
+#sim.ampliado #sim-palco { flex: 1; height: auto; }
+#sim.ampliado #sim-topo { cursor: default; }
+#sim.ampliado #sim-redim { display: none; }
 #sim-vazio, #sim-status { position: absolute; left: 16px; right: 16px; top: 42%; margin: 0; text-align: center; font-size: 13px; color: var(--text-2); }
 #sim-vazio[hidden] { display: none; }
 #sim-status:empty { display: none; }

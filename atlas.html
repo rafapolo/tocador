@@ -44,6 +44,8 @@
 <body>
 <svg hidden aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-ampliar" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-reduzir" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></symbol>
   <symbol id="i-som" viewBox="0 0 24 24"><path d="M3 12h1.5M7 8v8M11 4v16M15 8v8M19 10.5v3M21.5 12H21"/></symbol>
   <symbol id="i-genero" viewBox="0 0 24 24"><path d="M12 3h6a2 2 0 0 1 2 2v6a2 2 0 0 1-.6 1.4l-8 8a2 2 0 0 1-2.8 0l-6-6a2 2 0 0 1 0-2.8l8-8A2 2 0 0 1 12 3Z"/><circle cx="16" cy="8" r="1.2"/></symbol>
   <symbol id="i-todos" viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></symbol>
@@ -164,15 +166,13 @@
   <section id="sim" aria-label="Banda em 3D" hidden>
     <details id="sim-instrumentos">
       <summary>Instrumentos <span title="Quanto cada instrumento soou nos últimos segundos, entre todos os da banda. Só é calculado com o painel aberto.">· ao vivo</span></summary>
-      <div id="sim-info">
-        <p id="sim-foco" class="sim-dica" hidden><b></b><span></span></p>
-      </div>
       <ul id="sim-instrumentos-lista" aria-label="Instrumentos tocando agora, com a parte de cada um"></ul>
     </details>
     <div id="sim-palco">
       <canvas id="sim-canvas" aria-hidden="true"></canvas>
       <div id="sim-topo">
         <p id="sim-legenda" aria-live="polite"></p>
+        <button id="sim-ampliar" type="button" aria-pressed="false" aria-label="Ampliar a banda para a janela inteira" title="Ampliar (F)"><svg class="ic" aria-hidden="true"><use href="#i-ampliar"/></svg></button>
         <button id="sim-sair" type="button" aria-label="Fechar a banda (Esc)"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <p id="sim-vazio">A banda entra quando o som começa. Nenhum som? Ligue o Sonificar (M).</p>

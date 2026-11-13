@@ -818,6 +818,12 @@
         for (let i = 0; i < D.n; i++) if (a === 'todos' || D.acervo[i] === ai) out.push({ nome: D.nomes[i], genero: D.generos[D.genero[i]], faixas: D.faixas[i] });
         return out;
       },
+      // os vizinhos de som (ou de rótulo) de um artista, os mesmos do "Soa parecido com" (para o zigue-zague)
+      vizinhos(nome) {
+        const i = D ? indice(nome) : -1;
+        if (i < 0) return [];
+        return [...viz(i)].filter(j => j >= 0 && j < D.nomes.length).map(j => D.nomes[j]);
+      },
       get zoom() { return vista.k; },
       redesenhar() { if (aberto && D) desenhar(); },
       atualizarPainel() { if (aberto && D) desenharPainel(); },   // the catalogs arrive after the graph on a direct link

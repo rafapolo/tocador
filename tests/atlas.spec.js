@@ -1219,29 +1219,28 @@ test('cartão: instrumentos estimados acima dos parecidos, em português e sem o
   await expect(bloco).toBeHidden();      // faixa sem análise: nada a mostrar
 });
 
-test('zigue-zague no grafo: pula para outro artista de outro gênero, a cada 15 s, e não volta a quem já passou', async ({ page }) => {
+test('zigue-zague no grafo: anda para um vizinho a cada 15 s, primeiro os não vistos, e só volta quando não há para onde ir', async ({ page }) => {
   await boot(page, { url: '/atlas?grafo=1&artista=Beta' });
   const btn = page.locator('#btn-zigue');
   await expect(btn).toBeVisible();
   await expect(page.locator('#grafo-titulo')).toHaveText('Beta');
   await page.evaluate(() => localStorage.removeItem('tocador-atlas-zigue-vistos'));
+  const vizinhos = n => page.evaluate(n => window.__atlas.grafoVizinhos(n), n);
+  const artistas = new Set(await page.evaluate(() => window.__atlas.grafoArtistas()));
+  const vistos = new Set(['Beta']);
+  let antes = 'Beta';
   await btn.click();
   await expect(btn).toHaveAttribute('aria-pressed', 'true');
-  // Beta é samba: o primeiro pulo vai para um artista do outro gênero (punk)
-  await expect.poll(async () => (await grafo(page)).centro).not.toBe('Beta');
-  const primeiro = (await grafo(page)).centro;
-  expect(['<img src=x onerror=alert(1)>', 'Delta']).toContain(primeiro);
   await expect(page.locator('#zigue-tempo')).toHaveText(/^0:1[0-5]$/);
-  const vistos = new Set(['Beta', primeiro]);
-  for (let k = 0; k < 2; k++) {
-    const antes = (await grafo(page)).centro;
-    await page.evaluate(() => window.__atlas.zigueAgora());
+  for (let k = 0; k < 4; k++) {
+    if (k) await page.evaluate(() => window.__atlas.zigueAgora());
     await expect.poll(async () => (await grafo(page)).centro).not.toBe(antes);
-    const c = (await grafo(page)).centro;
-    expect(vistos.has(c)).toBe(false);
+    const c = (await grafo(page)).centro, viz = (await vizinhos(antes)).filter(v => artistas.has(v));
+    expect(viz).toContain(c);                                  // nunca um salto: sempre um vizinho
+    if (viz.some(v => !vistos.has(v))) expect(vistos.has(c)).toBe(false);   // havendo vizinho novo, vai para ele
     vistos.add(c);
+    antes = c;
   }
-  expect(vistos.size).toBe(4);
   // sair do grafo desliga (o botão segue lá, para o mapa)
   await page.locator('#btn-grafo').click();
   await expect.poll(async () => (await page.evaluate(() => window.__atlas.zigue())).on).toBe(false);

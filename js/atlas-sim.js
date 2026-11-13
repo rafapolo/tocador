@@ -505,13 +505,12 @@
     return m;
   }
 
-  const instDe = m => (m.grupo === 'perc' ? [...m.pecas].slice(-3).map(p => NOME_PERC[p] || p).join(', ') || NOME_GRUPO.perc : NOME_TIMBRE[m.timbre] || NOME_GRUPO[m.grupo]);
-  function rotulo(m) { return `${instDe(m)} · ${m.nomeFamilia}`; }
 
   // ── instrumentos ao vivo ──
   // Cada nota soma a sua força ao instrumento que a tocou (a peça, na percussão; o timbre, no resto), e tudo esquece
   // devagar (meia-vida de ~2 s). A parte de cada um é a fatia desse total: o que a banda está tocando agora.
   const MEIA_VIDA_S = 2;
+  const BASE_FOV = 42, ASPECTO_BASE = 1.1;      // a lente do cartão normal; telas em pé abrem a partir dela (medir())
   // Recolhido, o painel não custa nada: as notas nem são somadas. Abrir começa a ouvir do zero.
   const CHAVE_INST = 'tocador-atlas-sim-instrumentos';
   const instAberto = () => !!run && $('sim-instrumentos').open;
@@ -586,7 +585,7 @@
     const { Scene, Fog, PerspectiveCamera, WebGLRenderer, HemisphereLight, DirectionalLight, SpotLight, CircleGeometry, Mesh, MeshStandardMaterial, RingGeometry, SphereGeometry, ShaderMaterial, Color, BackSide } = THREE;
     const cena = new Scene();
     cena.fog = new Fog(0x0f0e0c, 9, 22);
-    const cam = new PerspectiveCamera(42, 1, 0.1, 90);
+    const cam = new PerspectiveCamera(BASE_FOV, 1, 0.1, 90);
     cam.position.set(0, 3.2, 9.5);
     const r = new WebGLRenderer({ canvas: $('sim-canvas'), antialias: true, powerPreference: 'high-performance' });
     r.setPixelRatio(Math.min(2, devicePixelRatio || 1));
@@ -953,10 +952,12 @@
     const v = Math.min(1.2, e.vel * 2.2 + 0.15);
     somarInstrumento(e, v);
     m.energia = Math.min(2, m.energia + v * 0.6);
+    run.famPeso.set(e.familia, (run.famPeso.get(e.familia) || 0) + v);
     m.foco = m.foco * 0.98 + v;
     m.lado ^= 1;
     m.golpe[grupo === 'perc' ? m.lado : 1] = Math.max(m.golpe[1], v);
-    if ((e.papel === 'bumbo' || e.papel === 'surdo' || e.papel === 'prato') && v > 0.9) run.flash = Math.min(1, run.flash + 0.5);
+    // clarão só no prato forte, e no máximo um por segundo: no bumbo do clube (quatro por compasso) a imagem pulsava
+    if (e.papel === 'prato' && v > 0.9 && (e.t - (run.ultimoFlash ?? -9)) > 1) { run.flash = Math.min(1, run.flash + 0.5); run.ultimoFlash = e.t; }
   }
   function removerMusico(m) {
     run.cena.remove(m.fig.g);
@@ -1136,7 +1137,7 @@
     run.poeira.material.uniforms.t.value = parado ? 0 : t;
     // um clarão na exposição a cada golpe forte: o "flash" de clipe
     run.flash *= Math.exp(-dt * 6);
-    run.r.toneMappingExposure = 0.95 + (parado ? 0 : run.flash * 0.3);
+    run.r.toneMappingExposure = 0.95 + (parado ? 0 : run.flash * 0.12);
     dirigir(t, dt, antes, parado);
     desenharInstrumentos(dt);
     run.r.render(run.cena, run.cam);
@@ -1154,10 +1155,12 @@
     for (const k in mats) if (k !== 'sombra' && k !== 'facho') opacidade(mats[k], vis);
     mats.sombra.opacity = 0.6 * vis;
     const hit = m.golpe[0] + m.golpe[1];
-    mats.roupa.emissive.setRGB(0.22 * hit, 0.16 * hit, 0.07 * hit);
+    // a roupa não acende na nota: no punk e no clube, com golpes a cada semicolcheia, ela piscava clara sem parar.
+    // O facho sobe e desce com a energia (já suavizada), não a cada golpe, pelo mesmo motivo.
+    m.brilhoFacho = (m.brilhoFacho ?? 0) + (Math.min(1, m.energia) - (m.brilhoFacho ?? 0)) * Math.min(1, dt * 2);
     // de perto o facho some: com a câmera dentro do cone, a luz aditiva lavaria a imagem
     const dCam = run.cam.position.distanceTo(g.position), perto = Math.min(1, Math.max(0, (dCam - 2.4) / 2.2));
-    mats.facho.opacity = vis * perto * (0.03 + 0.1 * Math.min(1, m.energia) + 0.08 * hit);
+    mats.facho.opacity = vis * perto * (0.03 + 0.1 * m.brilhoFacho);
     if (parado) {
       corpo.position.set(0, 0, 0); corpo.rotation.set(0, 0, 0); tronco.rotation.set(0, 0, 0); cabeca.rotation.set(0, 0, 0);
       pernas[0].rotation.x = pernas[1].rotation.x = 0;
@@ -1285,7 +1288,7 @@
       for (const m of pool) { if (!a || m.foco > a.foco) { b = a; a = m; } else if (!b || m.foco > b.foco) b = m; }
       // o estilo: sorteado, sem repetir o anterior; dois músicos só com dois; aberto de vez em quando
       let tot = 0;
-      const ok = x => x !== p.estilo && (x !== 'dois' || b);
+      const ok = x => x !== p.estilo && (x !== 'dois' || b) && (x !== 'aberto' || ativos.length > 1);
       for (const x in PESO_ESTILO) if (ok(x)) tot += PESO_ESTILO[x];
       let r = Math.random() * tot;
       for (const x in PESO_ESTILO) { if (!ok(x)) continue; r -= PESO_ESTILO[x]; if (r <= 0) { estilo = x; break; } }
@@ -1324,7 +1327,9 @@
     }
     const E = ESTILOS[p.estilo] || ESTILOS.aberto, u = parado ? 0 : suave(Math.min(1, (t - p.t0) / Math.max(1, p.dur)));
     // o ângulo do plano: do ângulo de partida, um arco pelo lado de dentro (na estrela, a volta inteira)
-    const alvoAng = parado ? 0 : p.ang0 + p.dir * E.arco * u;
+    // palco vazio: a câmera fica onde estava, olhando para onde a banda estava, e não passeia pelo cenário sem ninguém
+    const vazio = !p.a && !ativos.length && !parado;
+    const alvoAng = parado ? 0 : vazio ? (p.ang ?? 0) : p.ang0 + p.dir * E.arco * u;
     p.ang = (p.ang ?? 0) + (alvoAng - (p.ang ?? 0)) * (parado ? 1 : Math.min(1, dt * 1.5));
     // o alvo: o músico do plano, o meio de dois, ou o meio da banda
     const alvo = run.alvoCam;
@@ -1332,12 +1337,19 @@
       const ap = p.a.fig.g.position;
       if (p.b) { const bp = p.b.fig.g.position; alvo.set((ap.x + bp.x) / 2, E.olhar, (ap.z + bp.z) / 2); }
       else alvo.set(ap.x, E.olhar, ap.z);
-    } else alvo.set(0, 1, 2.2);
-    const aspecto = Math.max(1, 1.1 / cam.aspect), sm = parado ? 1 : Math.min(1, dt * 0.6);
+    } else if (ativos.length) {        // plano aberto: o meio de quem está tocando, não o meio do palco
+      let x = 0, z = 0;
+      for (const m of ativos) { x += m.fig.g.position.x; z += m.fig.g.position.z; }
+      alvo.set(x / ativos.length, 1, z / ativos.length);
+    } else if (parado || !run.alvoVisto) alvo.set(0, 1, 2.2);
+    if (p.a || ativos.length) run.alvoVisto = true;
+    const aspecto = run.fatorAspecto || 1, sm = parado ? 1 : Math.min(1, dt * 0.6);
     const raio = (E.raio[0] + (E.raio[1] - E.raio[0]) * u) * aspecto * (p.b ? 1 + p.a.fig.g.position.distanceTo(p.b.fig.g.position) * 0.25 : 1);
     const alto = E.alto[0] + (E.alto[1] - E.alto[0]) * u + (p.estilo === 'aberto' ? 1.5 * Math.max(0, 1 / cam.aspect - 1) : 0);
-    p.raio = (p.raio ?? raio) + (raio - (p.raio ?? raio)) * sm;
-    p.alto = (p.alto ?? alto) + (alto - (p.alto ?? alto)) * sm;
+    if (!vazio || p.raio === undefined) {
+      p.raio = (p.raio ?? raio) + (raio - (p.raio ?? raio)) * sm;
+      p.alto = (p.alto ?? alto) + (alto - (p.alto ?? alto)) * sm;
+    }
     // o olhar e a câmera andam com velocidade limitada e suave, como numa grua: nada de chicote
     segue(run.olhar, alvo, dt, 0.8, 1.4, parado);
     const pos = run.posCam;
@@ -1352,23 +1364,26 @@
     const a = p.a;
     foco.target.position.copy(a ? a.fig.g.position : alvo);
     foco.intensity += ((a ? 55 : 0) - foco.intensity) * Math.min(1, dt * 3);
-    const txt = a ? rotulo(a) + '|' + p.estilo : '';
-    if (txt !== run.focoTxt) {
-      run.focoTxt = txt;
-      const el = $('sim-foco');
-      el.hidden = !a;
-      if (a) { el.firstChild.textContent = instDe(a); el.lastChild.textContent = `${a.nomeFamilia} · ${E.nome}`; }
-    }
     run.focoEm = a?.chave ?? null;
   }
 
+  // a legenda no alto do palco: as famílias de quem está no palco, cada uma com a sua parte do que soou nos últimos
+  // segundos (o peso das notas, com meia-vida de MEIA_VIDA_S, como no painel dos instrumentos), da maior para a menor
   function legenda(s) {
+    const agora = performance.now() / 1000, caiu = Math.pow(0.5, Math.max(0, agora - (run.tFam || agora)) / MEIA_VIDA_S);
+    run.tFam = agora;
+    for (const [f, v] of run.famPeso) { if (v * caiu < 1e-4) run.famPeso.delete(f); else run.famPeso.set(f, v * caiu); }
     const fams = [...new Set([...run.musicos.values()].filter(m => !m.saindo).map(m => m.familia))];
+    let tot = 0;
+    for (const f of fams) tot += run.famPeso.get(f) || 0;
+    const parte = f => (tot > 0 ? (run.famPeso.get(f) || 0) / tot : 1 / fams.length);
+    fams.sort((a, b) => parte(b) - parte(a));
     const el = $('sim-legenda');
     el.replaceChildren(...fams.map(f => {
       const span = document.createElement('span'), p = document.createElement('i'), info = at.familia(f);
       p.style.background = info.cor;
-      span.append(p, info.nome);
+      span.append(p, info.nome, Object.assign(document.createElement('em'), { textContent: ` ${Math.round(parte(f) * 100)}%` }));
+      span.title = `${info.nome}: ${Math.round(parte(f) * 100)}% do que a banda tocou nos últimos segundos`;
       return span;
     }));
     if (run.pv) el.prepend(Object.assign(document.createElement('b'), { textContent: `Prévia: ${run.pv.titulo}`, className: 'sim-previa' }));
@@ -1384,7 +1399,13 @@
     if (!run) return;
     const c = $('sim-canvas'), w = Math.max(1, c.clientWidth), h = Math.max(1, c.clientHeight);
     run.r.setSize(w, h, false);
-    run.cam.aspect = w / h;
+    // tela em pé (celular, cartão ampliado): o campo de visão abre na vertical para manter na horizontal o que o
+    // cartão normal (≈ 1,1 : 1) mostra, até 68°; o que faltar a câmera recua (fatorAspecto, em dirigir())
+    const asp = w / h, meia = Math.tan((BASE_FOV / 2) * Math.PI / 180) * ASPECTO_BASE;
+    const fov = asp >= ASPECTO_BASE ? BASE_FOV : Math.min(68, 2 * Math.atan(meia / asp) * 180 / Math.PI);
+    run.cam.fov = fov;
+    run.cam.aspect = asp;
+    run.fatorAspecto = Math.max(1, meia / (Math.tan((fov / 2) * Math.PI / 180) * asp));
     run.cam.updateProjectionMatrix();
   }
 
@@ -1419,7 +1440,7 @@
     if (!abrindo) return;          // Esc ou ✕ enquanto o three.js carregava: parar() já desfez tudo
     abrindo = false;
     $('sim-status').textContent = '';
-    run = { musicos: new Map(), inst: new Map(), tInst: 0, fila: [], ativos: [], desordem: false, batida: 0, bpm: 100, focoEm: null, focoTxt: '', vazio: null, flash: 0,
+    run = { musicos: new Map(), inst: new Map(), tInst: 0, fila: [], ativos: [], desordem: false, batida: 0, bpm: 100, focoEm: null, famPeso: new Map(), tFam: 0, vazio: null, flash: 0,
       plano: { tipo: 'aberto', estilo: 'aberto', a: null, b: null, raio: 9.5, alto: 3.4, ang: 0, ateNovo: 0 }, novo: null,
       dtMedio: 1 / 60, tRes: 0, iRes: 0, iResMax: 0,
       alvoCam: new THREE.Vector3(), posCam: new THREE.Vector3(), olhar: new THREE.Vector3(0, 1, 2), ...montarCena() };
@@ -1443,13 +1464,13 @@
       return;
     }
     if (!run) return;
+    ampliar(false);
     at.ouvirBanda(null);
     at.folgaSom?.(0.14);
     cancelAnimationFrame(run.raf);
     run.ro.disconnect();
     for (const m of [...run.musicos.values()]) removerMusico(m);
     $('sim-instrumentos-lista').replaceChildren();
-    $('sim-foco').hidden = true;
     for (const c of Object.values(run.cenarios)) { c.g.traverse(o => o.geometry?.dispose()); for (const m of c.mats) m.dispose(); }
     run.r.dispose();
     run.actx?.close?.();
@@ -1473,6 +1494,17 @@
   }
 
   $('sim-sair')?.addEventListener('click', parar);
+  // ampliar: a banda toma a janela inteira (com uma margem, sem a tela cheia do navegador); de novo, ou Esc, volta
+  function ampliar(on = !$('sim').classList.contains('ampliado')) {
+    const el = $('sim'), b = $('sim-ampliar');
+    el.classList.toggle('ampliado', on);
+    if (!b) return;
+    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', on ? 'Voltar a banda ao cartão' : 'Ampliar a banda para a janela inteira');
+    b.title = on ? 'Reduzir (F)' : 'Ampliar (F)';
+    b.querySelector('use')?.setAttribute('href', on ? '#i-reduzir' : '#i-ampliar');
+  }
+  $('sim-ampliar')?.addEventListener('click', () => ampliar());
 
   // ── mover e redimensionar (desktop) ──
   // Arrastar pela faixa de cima move o cartão; o canto de baixo à direita muda largura e altura do palco. Fica dentro
@@ -1504,6 +1536,7 @@
   function arrastar(e, modo) {
     if ((modo === 'redimensionar' && !desktop()) || (e.pointerType === 'mouse' && e.button !== 0)) return;
     if (modo === 'mover' && e.target.closest('button')) return;
+    if ($('sim').classList.contains('ampliado')) return;
     e.preventDefault();
     const el = $('sim'), c0 = cartaoAtual(), x0 = e.clientX, y0 = e.clientY;
     el.classList.add(modo === 'mover' ? 'arrastando' : 'redimensionando');
@@ -1528,7 +1561,7 @@
   addEventListener('resize', () => { if (!$('sim').hidden) aplicarCartao(lerCartao()); });
   // duplo clique na faixa de cima: volta ao lugar e ao tamanho padrão
   $('sim-topo')?.addEventListener('dblclick', e => {
-    if (e.target.closest('button') || !desktop()) return;
+    if (e.target.closest('button') || !desktop() || $('sim').classList.contains('ampliado')) return;
     try { localStorage.removeItem(CHAVE_CARTAO); } catch {}
     aplicarCartao(null);
   });
@@ -1539,7 +1572,9 @@
   // fecha o cartão ou o grafo), e o T fica parado, porque o tour tomaria o mapa.
   addEventListener('keydown', e => {
     if (!run && !abrindo) return;
-    if (e.key === 'Escape' && document.activeElement?.closest?.('#sim')) { e.preventDefault(); e.stopImmediatePropagation(); parar(); }
+    const ampliado = $('sim').classList.contains('ampliado');
+    if (e.key === 'Escape' && (ampliado || document.activeElement?.closest?.('#sim'))) { e.preventDefault(); e.stopImmediatePropagation(); if (ampliado) ampliar(false); else parar(); }
+    else if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) { e.preventDefault(); e.stopImmediatePropagation(); ampliar(); }
     else if (e.key === 't' || e.key === 'T') e.stopImmediatePropagation();
   }, true);
 
@@ -1556,7 +1591,7 @@
 
   window.__atlasSim = {
     iniciar, parar,
-    estado: () => run && { estrela: !!run.plano.estrela, musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], kit: !!m.kit, mao: m.maoPeca || null, pandeiro: m.maoPeca === 'pandeiro', pose: m.pose, vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu, penteado: m.penteado })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
+    estado: () => run && { ampliado: $('sim').classList.contains('ampliado'), estrela: !!run.plano.estrela, musicos: [...run.musicos.values()].filter(m => !m.saindo).map(m => ({ chave: m.chave, grupo: m.grupo, timbre: m.timbre, pecas: [...m.pecas], kit: !!m.kit, mao: m.maoPeca || null, pandeiro: m.maoPeca === 'pandeiro', pose: m.pose, vis: +m.vis.toFixed(2), preparo: +m.preparo.toFixed(2), exotico: m.exotico, chapeu: m.chapeu, penteado: m.penteado })), batida: +run.batida.toFixed(2), instrumentos: [...$('sim-instrumentos-lista').children].filter(li => !li.classList.contains('ouvindo')).map(li => li.textContent), instCalculados: run.inst.size, foco: run.focoEm, plano: run.plano.tipo, previa: run.pv && { faixa: run.pv.i, vozes: run.pv.vozes.map(chaveDe), analisador: !!run.pv.an }, cam: run.cam.position.toArray().map(v => +v.toFixed(3)), fps: Math.round(1 / run.dtMedio), resolucao: RESOLUCOES[run.iRes], fila: run.fila.length, bpm: run.bpm,
       cenarios: Object.fromEntries(Object.entries(run.cenarios).filter(([, c]) => c.peso > 0.02).map(([n, c]) => [n, +c.peso.toFixed(2)])) },
     // testes: notas sem depender do áudio
     nota: e => aoTocar(e),

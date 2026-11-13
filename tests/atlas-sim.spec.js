@@ -223,10 +223,6 @@ test('instrumentos num painel recolhível no alto do cartão: fechado não calcu
   const soma = partes.reduce((a, b) => a + b, 0);
   expect(soma).toBeGreaterThanOrEqual(98);
   expect(soma).toBeLessThanOrEqual(102);
-  // a dica de quem está em foco fica dentro do painel, acima da lista
-  await expect(page.locator('#sim-foco')).toBeVisible();
-  const [dica, lis] = await Promise.all([page.locator('#sim-foco').boundingBox(), page.locator('#sim-instrumentos-lista').boundingBox()]);
-  expect(dica.y + dica.height).toBeLessThanOrEqual(lis.y + 1);
   // fechar para de calcular e lembra a escolha ao reabrir a banda
   await painel.locator('summary').click();
   await expect.poll(async () => (await sim(page)).instCalculados).toBe(0);
@@ -396,4 +392,43 @@ test('percussão de mão em 3D e cabelos por gênero', async ({ page }) => {
   expect(por['forro|perc'].mao).toBe('ganza');
   expect(por['samba|perc'].pose).toBe('mao');            // sem surdo nem bumbo, o surdo sai de cena
   expect(typeof por['rock|acorde|guitarra'].penteado).toBe('string');
+});
+
+test('ao lado do ✕, ampliar leva a banda à janela inteira (com margem); de novo ou Esc volta ao cartão', async ({ page }) => {
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  const caixa = () => page.locator('#sim').boundingBox();
+  const antes = await caixa(), vp = page.viewportSize();
+  const btn = page.locator('#sim-ampliar');
+  await expect(btn).toHaveAttribute('aria-pressed', 'false');
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await caixa()).width).toBeGreaterThan(vp.width - 40);
+  const amp = await caixa();
+  expect(amp.x).toBeGreaterThan(0);                       // não é a tela cheia: sobra uma margem
+  expect(amp.height).toBeGreaterThan(vp.height - 40);
+  // o palco cresce junto (o canvas acompanha)
+  await expect.poll(() => page.locator('#sim-canvas').evaluate(c => c.clientHeight)).toBeGreaterThan(vp.height * 0.6);
+  await btn.click();
+  await expect.poll(async () => Math.round((await caixa()).width)).toBe(Math.round(antes.width));
+  await btn.click();
+  await expect(btn).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');                     // o primeiro Esc só reduz
+  await expect(btn).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#sim')).toBeVisible();
+  await page.locator('#sim-sair').focus();               // fora do modo ampliado, Esc fecha só com o foco na banda
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#sim')).toBeHidden();
+});
+
+test('palco vazio: a câmera fica parada onde estava, sem passear pelo cenário', async ({ page }) => {
+  await boot(page);
+  await page.locator('#btn-sim').click();
+  await expect.poll(() => sim(page)).not.toBeNull();
+  // sem ninguém, a câmera não dá a volta pelo cenário: só se assenta de frente, no eixo do palco
+  for (let i = 0; i < 6; i++) {
+    expect(Math.abs((await sim(page)).cam[0])).toBeLessThan(0.05);
+    await page.waitForTimeout(500);
+  }
 });

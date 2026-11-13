@@ -356,6 +356,32 @@ test('o visor aparece embaixo enquanto a sonificação soa, com os gêneros e o 
   await expect(visor).not.toHaveClass(/ativo/, { timeout: 6000 });
 });
 
+test('o visor se arrasta (mouse), fica onde foi solto ao recarregar, e o duplo clique o devolve ao meio', async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => localStorage.removeItem('tocador-atlas-visor'));
+  const visor = page.locator('#visor-som');
+  await page.locator('#btn-musica').click();
+  await soando(page);
+  await expect(visor).toHaveClass(/ativo/, { timeout: 6000 });
+  await page.waitForTimeout(700);                          // a entrada desliza 8 px
+  const a = await visor.boundingBox();
+  await page.mouse.move(a.x + 40, a.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(a.x - 160, a.y - 220, { steps: 8 });
+  await page.mouse.up();
+  const b = await visor.boundingBox();
+  expect(a.x - b.x).toBeGreaterThan(180);
+  expect(a.y - b.y).toBeGreaterThan(220);
+  const salvo = await page.evaluate(() => JSON.parse(localStorage.getItem('tocador-atlas-visor')));
+  expect(Math.abs(salvo.x - b.x)).toBeLessThan(2);
+  // a janela encolhe: o visor fica dentro dela
+  await page.setViewportSize({ width: 500, height: 400 });
+  await expect.poll(async () => { const c = await visor.boundingBox(); return c.x + c.width <= 500 && c.y + c.height <= 400; }).toBe(true);
+  await visor.dblclick();
+  await expect(visor).not.toHaveClass(/movido/);
+  expect(await page.evaluate(() => localStorage.getItem('tocador-atlas-visor'))).toBeNull();
+});
+
 test('♪ calado não aparece ligado: com uma prévia tocando fica âmbar e diz por quê, e o clique volta a sonificar', async ({ page }) => {
   await boot(page);
   await page.keyboard.press('+');

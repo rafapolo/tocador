@@ -105,6 +105,47 @@
       const alvo = tour || casa;
       if (caixa.parentElement !== alvo) alvo.append(caixa);
     }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    // Arrastável, no mouse e no toque, como o cartão da banda: solto, fica onde ficou (guardado neste navegador, só
+    // conveniência: sem localStorage volta ao meio, embaixo), sempre inteiro dentro da janela; duplo clique volta ao
+    // lugar padrão. No tour não se mexe: lá ele mora na barra da legenda.
+    const CHAVE = 'tocador-atlas-visor';
+    function colocar(p) {
+      if (!p) { caixa.classList.remove('movido'); caixa.style.removeProperty('--visor-x'); caixa.style.removeProperty('--visor-y'); return; }
+      const w = caixa.offsetWidth || 280, h = caixa.offsetHeight || 70;
+      caixa.style.setProperty('--visor-x', `${Math.round(Math.max(8, Math.min(p.x, innerWidth - w - 8)))}px`);
+      caixa.style.setProperty('--visor-y', `${Math.round(Math.max(8, Math.min(p.y, innerHeight - h - 8)))}px`);
+      caixa.classList.add('movido');
+    }
+    const lido = () => { try { return JSON.parse(localStorage.getItem(CHAVE) || 'null'); } catch { return null; } };
+    colocar(lido());
+    caixa.addEventListener('pointerdown', e => {
+      if (document.body.classList.contains('em-tour') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const r = caixa.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      caixa.classList.add('arrastando');
+      const mover = ev => colocar({ x: ev.clientX - dx, y: ev.clientY - dy });
+      const soltar = () => {
+        removeEventListener('pointermove', mover);
+        removeEventListener('pointerup', soltar);
+        removeEventListener('pointercancel', soltar);
+        caixa.classList.remove('arrastando');
+        if (caixa.classList.contains('movido')) {
+          const q = caixa.getBoundingClientRect();
+          try { localStorage.setItem(CHAVE, JSON.stringify({ x: Math.round(q.left), y: Math.round(q.top) })); } catch {}
+        }
+      };
+      addEventListener('pointermove', mover);
+      addEventListener('pointerup', soltar);
+      addEventListener('pointercancel', soltar);
+    });
+    caixa.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      try { localStorage.removeItem(CHAVE); } catch {}
+      colocar(null);
+    });
+    addEventListener('resize', () => { const p = lido(); if (p) colocar(p); });
+
     return { visivel: () => visivel, texto: () => texto };
   }
 

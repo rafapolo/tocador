@@ -99,8 +99,15 @@ Cada braço tem três juntas: ombro, cotovelo e punho (`junta()`).
 - **Instrumentos · ao vivo:** painel recolhível no alto do cartão, acima do palco. Começa fechado, e só aberto as
   notas são somadas. Mostra a parte de cada instrumento nos últimos segundos (meia-vida de 2 s) e lembra se estava
   aberto (`localStorage`).
-- **Dica:** embaixo do palco, no estilo do `#dica` do mapa: o instrumento de quem está em foco, a família e o tipo
-  de plano.
+- **Legenda no alto do palco** (`#sim-legenda`): as famílias de quem está no palco, cada uma com a sua parte do que
+  a banda tocou nos últimos segundos (peso das notas, meia-vida de 2 s, sempre calculado), da maior para a menor, e o
+  bpm. Substituiu a antiga dica de quem estava em foco.
+- **Ampliar** (`#sim-ampliar`, ao lado do ✕, tecla F): a banda toma a janela inteira, com 12 px de margem (e as áreas
+  seguras do celular), sem a tela cheia do navegador. O botão de novo, F ou Esc voltam ao cartão; no modo ampliado
+  o cartão não se arrasta nem se redimensiona.
+- **Telas em pé** (celular, cartão ampliado): o campo de visão abre na vertical (até 68°) para manter na horizontal
+  o que o cartão normal mostra (`medir()`), e o que faltar a câmera recua (`fatorAspecto`). Assim o músico cabe
+  inteiro mesmo numa tela estreita.
 - **No desktop:** arrastar a faixa de cima move o cartão, e o canto de baixo à direita redimensiona a largura e a
   altura do palco. O cartão fica dentro da janela e lembra o lugar; um duplo clique na faixa de cima volta ao
   padrão.
@@ -172,15 +179,20 @@ cruzam o céu.
 - **Quem aparece:** cada plano é de quem tocou mais forte há pouco entre os que não estiveram nos dois últimos
   planos, para a câmera rodar pela banda. Quem acabou de entrar com um instrumento novo, e o cantor, têm a vez antes.
 - **Sem trancos:** olhar e posição seguem molas com velocidade máxima (`segue()`), e os planos trocam na batida.
+- **Só músicos:** o plano aberto mira o meio de quem está tocando, não o meio do palco, e só existe com dois ou mais
+  músicos. Com o palco vazio a câmera fica onde estava, sem passear pelo cenário sem ninguém.
 
 ## Imagem
 
 ### Luz e imagem de filme
 
-- **Tom:** tone mapping ACES (a curva de filme), exposição 0,95, com um clarão de até +0,3 em cada golpe forte de
-  bumbo, surdo ou prato.
+- **Tom:** tone mapping ACES (a curva de filme), exposição 0,95, com um clarão de até +0,12 num prato forte, no
+  máximo um por segundo. Antes era +0,3 em cada bumbo forte, e no clube (quatro por compasso) a imagem pulsava.
+- **Roupas não piscam:** a roupa não acende mais a cada nota. Com semicolcheias no punk e no clube, as roupas escuras
+  piscavam claras sem parar.
 - **Luzes:** contraluz na cor do cenário, que desenha a silhueta dos músicos, e uma luz principal quente.
-- **Fachos:** um cone aditivo sobre cada músico, na cor da família, que acende com o que ele toca. De perto o facho
+- **Fachos:** um cone aditivo sobre cada músico, na cor da família, que sobe e desce devagar com a energia de quem
+  toca (suavizada, nunca a cada golpe). De perto o facho
   some, porque com a câmera dentro do cone a luz lavaria a imagem.
 - **Poeira:** 240 partículas aditivas flutuando nos fachos, animadas no shader.
 - **Sombra:** um disco desfocado sob os pés, no lugar de um shadow map.
@@ -221,7 +233,7 @@ cruzam o céu.
 
 ## Teclas e som
 
-- **Esc:** fecha a banda quando o foco está no cartão, mesmo com o three.js ainda carregando. Fora do cartão, Esc
+- **Esc:** no modo ampliado, volta ao cartão. Senão, fecha a banda quando o foco está no cartão, mesmo com o three.js ainda carregando. Fora do cartão, Esc
   continua sendo do mapa (fecha o cartão da faixa ou o grafo).
 - **T:** fica bloqueado com a banda aberta, porque o tour tomaria o mapa.
 - **Som:** liga dentro do próprio clique de abrir, porque o Safari recusa som depois de um carregamento assíncrono.
