@@ -188,13 +188,12 @@ test('a nota aparece quando sai no alto-falante, e o braço sobe antes dela', as
   await expect.poll(async () => (await sim(page)).musicos.find(m => m.chave === 'samba|perc').preparo, { timeout: 3000, intervals: [20] }).toBeGreaterThan(0.3);
 });
 
-test('a Simulação tem o seu grupo nos controles, com ícone, fora do grupo do Tour', async ({ page }) => {
+test('Sonificar, ZigZag e Simulação formam um grupo nos controles, nessa ordem, com ícones', async ({ page }) => {
   await boot(page);
-  const grupo = page.locator('#controles > .seg[aria-label="Simulação"]');
+  const grupo = page.locator('#controles > .seg[aria-label="Som"]');
   await expect(grupo.locator('#btn-sim svg use')).toHaveAttribute('href', '#i-banda');
-  await expect(page.locator('.seg[aria-label="Tour"] #btn-sim')).toHaveCount(0);
-  const ordem = await page.evaluate(() => [...document.querySelectorAll('#controles > .seg')].map(g => g.getAttribute('aria-label')));
-  expect(ordem.indexOf('Simulação')).toBe(ordem.indexOf('Som') + 1);
+  expect(await grupo.locator('button').evaluateAll(bs => bs.map(b => b.id))).toEqual(['btn-musica', 'btn-zigue', 'btn-sim']);
+  await expect(page.locator('.seg[aria-label="Visualização"] #btn-zigue')).toHaveCount(0);
 });
 
 test('instrumentos num painel recolhível no alto do cartão: fechado não calcula nada; aberto mostra a parte de cada um', async ({ page }) => {
