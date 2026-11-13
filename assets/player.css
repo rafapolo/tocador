@@ -837,7 +837,7 @@ body.is-playing .album-item.playing-album .card-play::before {
   margin: 0;
 }
 
-.album-generos, .album-parecidos {
+.album-generos, .album-parecidos, .album-visor {
   flex: none;
   max-height: 40%;
   overflow-y: auto;
@@ -846,12 +846,16 @@ body.is-playing .album-item.playing-album .card-play::before {
   color: var(--color-text-secondary);
 }
 
-.album-generos[hidden], .album-parecidos[hidden] { display: none; }
-.album-generos summary, .album-parecidos summary { padding: 8px 16px; border-bottom: 1px solid var(--color-border); cursor: pointer; user-select: none; }
-.album-generos summary:hover, .album-parecidos summary:hover { color: var(--color-text); }
-.album-generos summary:focus-visible, .album-parecidos summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.album-generos[hidden], .album-parecidos[hidden], .album-visor[hidden] { display: none; }
+.album-generos summary, .album-parecidos summary, .album-visor summary { padding: 8px 16px; border-bottom: 1px solid var(--color-border); cursor: pointer; user-select: none; }
+.album-generos summary:hover, .album-parecidos summary:hover, .album-visor summary:hover { color: var(--color-text); }
+.album-generos summary:focus-visible, .album-parecidos summary:focus-visible, .album-visor summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .album-generos-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px 12px; }
 .album-generos-tags p { margin: 0; }
+/* o visor do som (js/player-visor.js): espectro e forma de onda da faixa tocando, como o do /atlas */
+.album-visor-tela { padding: 10px 16px 12px; }
+.album-visor canvas { display: block; width: 100%; height: 56px; }
+.album-visor p { margin: 6px 0 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .album-genero {
   padding: 2px 8px;

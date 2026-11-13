@@ -1058,6 +1058,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   audio.addEventListener('error', async () => {
     setLoading(false);
     if (!currentTrack || !_playRequested) return;
+    if (window.__visorRecarregando) return;     // o visor do som recarregando a faixa em modo CORS (js/player-visor.js)
     const errored = currentTrack;
     const src = audio.currentSrc || audio.src;
     const mediaCode = audio.error?.code;

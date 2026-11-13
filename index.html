@@ -62,6 +62,7 @@
         <script src="js/explorar.js" defer></script>
         <script src="js/album-view.js" defer></script>
         <script src="js/playback.js" defer></script>
+        <script src="js/player-visor.js" defer></script>
         <script defer src="https://cloud.umami.is/script.js" data-website-id="9fad9893-55da-4e20-abbf-b79b12bf3146"></script>
     </head>
 
@@ -260,6 +261,7 @@
                 <div class="album-header" id="album-header"></div>
                 <ol class="track-list" id="track-list" aria-label="Lista de faixas"></ol>
                 <details class="album-generos" name="album-extra" hidden><summary>Gêneros detectados</summary><div class="album-generos-tags"></div></details>
+                <details class="album-visor" name="album-extra" hidden><summary>Visor do som</summary><div class="album-visor-tela"><canvas aria-hidden="true"></canvas><p></p></div></details>
                 <details class="album-parecidos" name="album-extra" hidden><summary>Soa parecido com</summary><div class="album-generos-tags"></div></details>
             </aside>
         </div>
@@ -389,6 +391,7 @@
                 </div>
                 <ol id="drawer-track-list" class="drawer-track-list"></ol>
                 <details class="album-generos" name="album-extra-gaveta" hidden><summary>Gêneros detectados</summary><div class="album-generos-tags"></div></details>
+                <details class="album-visor" name="album-extra-gaveta" hidden><summary>Visor do som</summary><div class="album-visor-tela"><canvas aria-hidden="true"></canvas><p></p></div></details>
                 <details class="album-parecidos" name="album-extra-gaveta" hidden><summary>Soa parecido com</summary><div class="album-generos-tags"></div></details>
             </div>
 

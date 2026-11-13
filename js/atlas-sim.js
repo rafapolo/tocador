@@ -968,9 +968,9 @@
   // ── a prévia: a banda toca a faixa de verdade ──
   // Com uma prévia tocando, a sonificação cala, e a banda passa a tocar a faixa. Quem sobe ao palco são os
   // instrumentos que a análise de áudio viu nela (o top-3 do modelo Jamendo, em js/acervo-features.js), na família
-  // de gênero dela. O ritmo vem do próprio mp3: com captureStream (Chrome, Firefox) um analisador de espectro ouve o
+  // de gênero dela. O ritmo vem do próprio mp3: com captureStream (Chrome, Edge) um analisador de espectro ouve o
   // <audio> sem desviar o som dele, e cada ataque no grave, no médio ou no agudo vira um golpe de quem toca naquela
-  // faixa; sem captureStream (Safari), as batidas seguem o bpm da faixa e o tempo do <audio>.
+  // faixa; sem captureStream (Safari, Firefox), as batidas seguem o bpm da faixa e o tempo do <audio>.
   const DE_JAMENDO = {
     drums: ['perc', 'bumbo'], drummachine: ['perc', 'bumbo'], beat: ['perc', 'bumbo'], percussion: ['perc', 'pandeiro'], bongo: ['perc', 'bongo'],
     bass: ['baixo', 'baixo'], doublebass: ['baixo', 'contrabaixo'], acousticbassguitar: ['baixo', 'baixo'],
@@ -998,7 +998,7 @@
     if (P.an !== undefined) return;
     P.an = null;
     try {
-      const st = pv.el.captureStream?.() || pv.el.mozCaptureStream?.();
+      const st = pv.el.captureStream?.();       // não o mozCaptureStream do Firefox, que cala o <audio> enquanto captura
       if (!st || !st.getAudioTracks().length) return;
       run.actx ||= new (window.AudioContext || window.webkitAudioContext)();
       const an = run.actx.createAnalyser();

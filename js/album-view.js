@@ -368,6 +368,7 @@ function renderTrackList() {
     renderTrackFilterNote(container, null);
     renderAlbumGenres();
     renderAlbumParecidos();
+    window.renderAlbumVisor?.();
     renderedAlbum = null;
     return;
   }
@@ -386,5 +387,6 @@ function renderTrackList() {
   renderedAlbum = selectedAlbum;
   renderAlbumGenres();
   renderAlbumParecidos();
+  window.renderAlbumVisor?.();
   container.querySelector('.track-item.playing')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
