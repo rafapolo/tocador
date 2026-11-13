@@ -1219,7 +1219,7 @@ test('cartão: instrumentos estimados acima dos parecidos, em português e sem o
   await expect(bloco).toBeHidden();      // faixa sem análise: nada a mostrar
 });
 
-test('zigue-zague no grafo: anda para um vizinho a cada 15 s, primeiro os não vistos, e só volta quando não há para onde ir', async ({ page }) => {
+test('ZigZag no grafo: anda para um vizinho a cada 15 s, primeiro os não vistos, e só volta quando não há para onde ir', async ({ page }) => {
   await boot(page, { url: '/atlas?grafo=1&artista=Beta' });
   const btn = page.locator('#btn-zigue');
   await expect(btn).toBeVisible();
@@ -1247,7 +1247,7 @@ test('zigue-zague no grafo: anda para um vizinho a cada 15 s, primeiro os não v
   await expect(btn).toBeVisible();
 });
 
-test('zigue-zague no mapa: voa devagar para outro rótulo de gênero a cada 30 s', async ({ page }) => {
+test('ZigZag no mapa: voa devagar para outro rótulo de gênero a cada 30 s', async ({ page }) => {
   await boot(page);
   await page.evaluate(() => localStorage.removeItem('tocador-atlas-zigue-vistos'));
   const cam = () => page.evaluate(() => { const c = window.__atlas.camera(); return [c.cx, c.cy, c.k / c.k0]; });

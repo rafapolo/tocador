@@ -811,14 +811,14 @@
           fn(c.sx * vista.k + vista.x, c.sy * vista.k + vista.y, D.generos[D.genero[i]], Math.imul(i, 2654435761) >>> 0, peso);
         }
       },
-      // Os artistas do grafo no acervo escolhido: { nome, genero, faixas } (para o zigue-zague de js/atlas.js).
+      // Os artistas do grafo no acervo escolhido: { nome, genero, faixas } (para o ZigZag de js/atlas.js).
       artistas() {
         if (!D) return [];
         const a = acervo(), ai = D.acervos.indexOf(a), out = [];
         for (let i = 0; i < D.n; i++) if (a === 'todos' || D.acervo[i] === ai) out.push({ nome: D.nomes[i], genero: D.generos[D.genero[i]], faixas: D.faixas[i] });
         return out;
       },
-      // os vizinhos de som (ou de rótulo) de um artista, os mesmos do "Soa parecido com" (para o zigue-zague)
+      // os vizinhos de som (ou de rótulo) de um artista, os mesmos do "Soa parecido com" (para o ZigZag)
       vizinhos(nome) {
         const i = D ? indice(nome) : -1;
         if (i < 0) return [];

@@ -1316,8 +1316,8 @@
     grafo.abrir(nome);
     som?.momento();
   }
-  // ── zigue-zague ──
-  // O botão Zigue-zague caminha sozinho, mas sem saltos: cada passo vai para perto de onde está. No grafo, a cada
+  // ── ZigZag ──
+  // O botão ZigZag caminha sozinho, mas sem saltos: cada passo vai para perto de onde está. No grafo, a cada
   // 15 s, para um vizinho do artista atual (o "Soa parecido com") sorteado entre os ainda não vistos; quando todos já
   // foram vistos, volta por um vizinho já visto (não o de onde acabou de vir, e de preferência um que ainda tem
   // vizinhos novos), e assim se afasta devagar, nunca pulando longe. No mapa, voa devagar (9 s de voo) a cada 30 s para um dos rótulos de gênero mais próximos
