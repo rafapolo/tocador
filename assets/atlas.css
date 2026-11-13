@@ -524,11 +524,17 @@ body:not(.em-tour) #visor-som.movido { left: var(--visor-x); top: var(--visor-y)
   background: linear-gradient(rgba(15, 14, 12, 0.75), rgba(15, 14, 12, 0));
 }
 /* os gêneros no palco agora, embaixo dos instrumentos, dentro do mesmo painel */
-#sim-legenda { display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 0; padding: 8px 12px 10px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-2); }
+#sim-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 8px 12px 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-2); }
 #sim-legenda:empty { display: none; }
-#sim-legenda span { display: inline-flex; align-items: center; gap: 5px; }
-#sim-legenda i { width: 8px; height: 8px; border-radius: 50%; }
-#sim-legenda em { font-style: normal; color: var(--text); font-variant-numeric: tabular-nums; }
+/* mesmo chip de #sim-instrumentos-lista li: o fundo enche até a parte da família */
+#sim-legenda span {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 10px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cor, var(--accent)) 38%, transparent) var(--p, 0%), var(--surface-light) var(--p, 0%));
+  transition: background 0.3s linear;
+}
+#sim-legenda i { width: 7px; height: 7px; border-radius: 50%; background: var(--cor, var(--accent)); }
+#sim-legenda em { font-style: normal; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { #sim-legenda span { transition: none; } }
 #sim-legenda b { font-weight: 500; color: var(--text); }
 #sim-legenda .sim-previa { flex-basis: 100%; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #sim-sair, #sim-ampliar {

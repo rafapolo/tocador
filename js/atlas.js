@@ -419,6 +419,7 @@
   function desenhar(agora) {
     pendente = false;
     let mais = passoVoo(agora);
+    if (derivaZigue(agora)) mais = true;
     if (t !== tAlvo) {
       const f = reduzMovimento ? 1 : Math.min(1, (agora - tTrans0) / 900);
       const e = f < 0.5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2;
@@ -1301,12 +1302,13 @@
   // O botão ZigZag caminha sozinho, devagar e sem saltos. No grafo, a cada 15 s, vai para um vizinho do artista atual
   // (o "Soa parecido com") sorteado entre os ainda não vistos; quando todos já foram vistos, volta por um vizinho já
   // visto (não o de onde acabou de vir, e de preferência um que ainda tem vizinhos novos), e assim se afasta aos
-  // poucos (a lista dos vistos fica neste navegador). No mapa, desliza sem parar, em velocidade constante, um terço
-  // da tela a cada 10 s, numa direção que muda um pouco ao acaso a cada passo e sempre para cima de pontos acesos
-  // (com zoom de 8×, perto o bastante para a banda inteira tocar). A música e a banda mudam com a caminhada. Desliga ao
-  // trocar de grafo para mapa (ou o contrário) e no tour.
-  const ZIGUE_GRAFO_MS = 15000, ZIGUE_MAPA_MS = 10000, ZIGUE_PASSO = 1 / 3, CHAVE_ZIGUE = 'tocador-atlas-zigue-vistos';
-  const zigue = { on: false, t: 0, prox: 0, vistos: new Set(), familias: new Map(), modo: null, rumo: null };
+  // poucos (a lista dos vistos fica neste navegador). No mapa não há passos nem contagem: a câmera deriva sem parar,
+  // devagar (ZIGUE_VEL da tela por segundo, a 8×, perto o bastante para a banda inteira tocar), e vira aos poucos para
+  // onde há mais pontos acesos à frente, fugindo do vazio (sem música) e dos lugares por onde já passou (`rastro`).
+  // A música e a banda mudam com a caminhada. Desliga ao trocar de grafo para mapa (ou o contrário) e no tour.
+  const ZIGUE_GRAFO_MS = 15000, CHAVE_ZIGUE = 'tocador-atlas-zigue-vistos';
+  const ZIGUE_VEL = 0.03, ZIGUE_GIRO = 0.25, ZIGUE_RUMO_MS = 1200, ZIGUE_SETORES = 24, ZIGUE_SALTO_MS = 10000;
+  const zigue = { on: false, t: 0, prox: 0, vistos: new Set(), familias: new Map(), modo: null, rumo: null, alvo: null, rastro: [] };
   try { for (const n of JSON.parse(localStorage.getItem(CHAVE_ZIGUE) || '[]')) zigue.vistos.add(n); } catch {}
   function familiaDeGenero(g) { return window.RECEITAS_ATLAS?.familiaDe(g) || macroDe(g); }
   // no grafo sem vizinhos no acervo escolhido: o artista mais perto pelo "Soa parecido com" ainda não visto, de
@@ -1362,28 +1364,89 @@
     }
     return melhor;
   }
-  // no mapa: um passo curto numa direção que vira um pouco ao acaso; se ali não houver pontos acesos, tenta virar
-  // mais (para os lados, depois para trás). O voo dura o passo inteiro e é linear: a câmera nunca para.
-  function passoNoMapa() {
-    const kAlvo = Math.max(k, k0 * 8), passo = ZIGUE_PASSO * Math.min(W, H) / kAlvo;
-    let ang = zigue.rumo ?? Math.random() * Math.PI * 2;
-    ang += (Math.random() - 0.5) * 1.2;
-    let alvo = -1;
-    for (const virar of [0, 0.8, -0.8, 1.6, -1.6, Math.PI]) {
-      const a = ang + virar, x = cx + Math.cos(a) * passo, y = cy + Math.sin(a) * passo;
-      alvo = pontoAcesoPerto(x, y, passo * 0.6);
-      if (alvo >= 0) break;
+  // no mapa: o rumo para onde derivar. Os pontos acesos num anel à frente (de 0,4 a 1,8 meia tela) contados por setor;
+  // cada setor vale a música que tem, menos o quanto o seu ponto de chegada já foi visitado e o quanto exige virar.
+  // Setor quase vazio não conta. Sem nenhum, aponta para o ponto aceso mais perto; sem ponto aceso, null.
+  function rumoNoMapa() {
+    const L = 0.5 * Math.min(W, H) / k, r0 = (0.4 * L) ** 2, r1 = (1.8 * L) ** 2, S = ZIGUE_SETORES;
+    const cont = new Float32Array(S);
+    for (let i = 0; i < N; i++) {
+      if (!ativo[i]) continue;
+      const dx = px(i, mapa) - cx, dy = py(i, mapa) - cy, d2 = dx * dx + dy * dy;
+      if (d2 < r0 || d2 > r1) continue;
+      cont[Math.floor((Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI) * S) % S]++;
     }
-    if (alvo < 0) alvo = pontoAcesoPerto(cx, cy);   // num vazio (ou depois de um filtro): o ponto aceso mais perto
-    if (alvo < 0) return;
-    const x = px(alvo, mapa), y = py(alvo, mapa);
-    if (Math.hypot(x - cx, y - cy) > 1e-9) zigue.rumo = Math.atan2(y - cy, x - cx);
+    const atual = zigue.rumo, raio2 = (0.7 * L) ** 2;
+    let melhor = null, nota = -Infinity;
+    for (let s = 0; s < S; s++) {
+      const m = cont[s] + 0.5 * (cont[(s + 1) % S] + cont[(s + S - 1) % S]);
+      if (m < 4) continue;                                      // quase nada ali: sem música
+      const ang = (s + 0.5) / S * 2 * Math.PI - Math.PI, x = cx + Math.cos(ang) * L, y = cy + Math.sin(ang) * L;
+      let visto = 0;
+      for (const [qx, qy] of zigue.rastro) visto += Math.exp(-((qx - x) ** 2 + (qy - y) ** 2) / raio2);
+      const virar = atual == null ? 0 : Math.abs(Math.atan2(Math.sin(ang - atual), Math.cos(ang - atual))) / Math.PI;
+      const n = Math.log1p(m) - 0.35 * visto - 1.6 * virar * virar + Math.random() * 0.3;
+      if (n > nota) { nota = n; melhor = ang; }
+    }
+    if (melhor != null) return melhor;
+    const i = pontoAcesoPerto(cx, cy);
+    return i < 0 ? null : Math.atan2(py(i, mapa) - cy, px(i, mapa) - cx);
+  }
+  // Um quadro da deriva (chamado por desenhar()): true enquanto anda. Para quando outra coisa move a câmera (um voo,
+  // um dedo, a troca de mapa) e retoma de onde ela deixou.
+  function derivaZigue(agora) {
+    const dt = Math.min(0.1, (agora - (zigue.tUlt ?? agora)) / 1000);
+    zigue.tUlt = agora;
+    if (!zigue.on || zigue.modo !== 'mapa' || reduzMovimento || voo || ptrs.size || t !== tAlvo) { zigue.vel = 0; return false; }
+    if (agora >= zigue.proxRumo) {
+      zigue.proxRumo = agora + ZIGUE_RUMO_MS;
+      const L = 0.5 * Math.min(W, H) / k;
+      if (pontoAcesoPerto(cx, cy, L) < 0) {             // largada no vazio (um gesto, um filtro): volta à música
+        const i = pontoAcesoPerto(cx, cy);
+        if (i >= 0) { zigue.rumo = null; voar(px(i, mapa), py(i, mapa), k, true, null, 2500); return true; }
+      }
+      zigue.alvo = rumoNoMapa();
+      const ult = zigue.rastro[zigue.rastro.length - 1];
+      if (!ult || Math.hypot(ult[0] - cx, ult[1] - cy) > 0.15 * Math.min(W, H) / k) {
+        zigue.rastro.push([cx, cy]);
+        if (zigue.rastro.length > 400) zigue.rastro.shift();
+      }
+    }
+    if (zigue.alvo == null) return false;
+    zigue.rumo ??= zigue.alvo;
+    const falta = Math.atan2(Math.sin(zigue.alvo - zigue.rumo), Math.cos(zigue.alvo - zigue.rumo));
+    zigue.rumo += Math.max(-ZIGUE_GIRO * dt, Math.min(ZIGUE_GIRO * dt, falta));
+    zigue.vel = Math.min(1, (zigue.vel || 0) + dt / 2);       // arranca em 2 s, sem tranco
+    const v = zigue.vel * ZIGUE_VEL * Math.min(W, H) / k * dt;
+    cx += Math.cos(zigue.rumo) * v; cy += Math.sin(zigue.rumo) * v;
+    return true;
+  }
+  // começo no mapa: chega a 8× (e, num vazio, no ponto aceso mais perto); a deriva segue quando o voo termina
+  function entrarNoMapa() {
     if (sel >= 0 && audio.paused) fecharCartao();
-    voar(x, y, kAlvo, !reduzMovimento, null, reduzMovimento ? 0 : ZIGUE_MAPA_MS, true);
+    const kAlvo = Math.max(k, k0 * 8), L = 0.5 * Math.min(W, H) / kAlvo;
+    let [x, y] = [cx, cy];
+    if (pontoAcesoPerto(cx, cy, L) < 0) { const i = pontoAcesoPerto(cx, cy); if (i >= 0) { x = px(i, mapa); y = py(i, mapa); } }
+    if (kAlvo !== k || x !== cx || y !== cy) voar(x, y, kAlvo, true, null, 1600);
+    pedir();
+  }
+  // movimento reduzido: sem deriva, um salto de meia tela a cada ZIGUE_SALTO_MS pelo mesmo rumo
+  function saltoNoMapa() {
+    zigue.prox = performance.now() + ZIGUE_SALTO_MS;
+    const ang = rumoNoMapa();
+    if (ang == null) return;
+    zigue.rumo = ang;
+    zigue.rastro.push([cx, cy]);
+    const L = 0.5 * Math.min(W, H) / k;
+    voar(cx + Math.cos(ang) * L, cy + Math.sin(ang) * L, k, false);
   }
   function pularZigue() {
-    zigue.prox = performance.now() + (zigue.modo === 'grafo' ? ZIGUE_GRAFO_MS : ZIGUE_MAPA_MS);
-    if (zigue.modo !== 'grafo') { passoNoMapa(); return; }
+    if (zigue.modo !== 'grafo') {
+      if (reduzMovimento) saltoNoMapa();
+      else { zigue.proxRumo = 0; pedir(); }                 // escolhe o rumo de novo já
+      return;
+    }
+    zigue.prox = performance.now() + ZIGUE_GRAFO_MS;
     const a = passoNoGrafo() || maisPertoNoGrafo();
     if (!a) return;
     zigue.vistos.add(a.chave);
@@ -1397,6 +1460,12 @@
     if (!zigue.on) return;
     if (window.__atlasTour?.estado().ativo) { alternarZigue(false); return; }
     if ((grafo.aberto ? 'grafo' : 'mapa') !== zigue.modo) { alternarZigue(false); return; }     // trocou de vista
+    if (zigue.modo === 'mapa') {
+      if (reduzMovimento) { if (zigue.prox - performance.now() <= 0) saltoNoMapa(); }
+      else pedir();                  // a deriva anda nos quadros de desenhar(); isto só a acorda depois de um gesto
+      som?.mexeu();
+      return;
+    }
     if (zigue.prox - performance.now() <= 0) pularZigue();
     const s2 = Math.max(0, Math.ceil((zigue.prox - performance.now()) / 1000));
     $('zigue-tempo').textContent = `${Math.floor(s2 / 60)}:${String(s2 % 60).padStart(2, '0')}`;
@@ -1411,7 +1480,9 @@
     if (!zigue.on) return;
     if (grafo.aberto && grafo.centro) zigue.vistos.add(grafo.centro);
     zigue.ultimoGenero = null; zigue.ultimoChave = null; zigue.rumo = null; zigue.anterior = null;
-    pularZigue();                    // o primeiro pulo é já, para o clique ter resposta
+    zigue.alvo = null; zigue.rastro = []; zigue.vel = 0; zigue.proxRumo = 0;
+    if (zigue.modo === 'mapa') { entrarNoMapa(); if (reduzMovimento) zigue.prox = performance.now() + ZIGUE_SALTO_MS; }
+    else pularZigue();               // o primeiro pulo é já, para o clique ter resposta
     zigue.t = setInterval(relogioZigue, 1000);
     relogioZigue();
   }
@@ -1551,7 +1622,7 @@
     agoraSom: () => som?.agora() ?? 0,
     ouvidoSom: () => som?.ouvido() ?? 0,     // o que está saindo no alto-falante agora (com a latência de saída)
     batidaSom: () => som?.batida() ?? null,   // o pulso da banda nesse instante, em seminímas
-    zigue: () => ({ on: zigue.on, faltaMs: zigue.on ? Math.max(0, zigue.prox - performance.now()) : 0, vistos: zigue.vistos.size, familias: Object.fromEntries(zigue.familias) }),
+    zigue: () => ({ on: zigue.on, faltaMs: zigue.on && zigue.modo === 'grafo' ? Math.max(0, zigue.prox - performance.now()) : 0, rumo: zigue.rumo, vistos: zigue.vistos.size, familias: Object.fromEntries(zigue.familias) }),
     zigueAgora: () => zigue.on && pularZigue(),
     folgaSom: s => som?.folga(s),            // quanto à frente o som agenda (a banda 3D pede mais, para não engasgar)
     acordarSom: () => som?.mexeu(),          // alguém está assistindo: a música não adormece

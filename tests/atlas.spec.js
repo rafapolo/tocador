@@ -1247,18 +1247,29 @@ test('ZigZag no grafo: anda para um vizinho a cada 15 s, primeiro os não vistos
   await expect(btn).toBeVisible();
 });
 
-test('ZigZag no mapa: desliza devagar e ao acaso, um passo curto de cada vez, sem parar', async ({ page }) => {
+test('ZigZag no mapa: deriva devagar e sem parar, sem contagem, e foge do vazio', async ({ page }) => {
   await boot(page);
   const cam = () => page.evaluate(() => { const c = window.__atlas.camera(); return [c.cx, c.cy, c.k / c.k0]; });
   await page.locator('#btn-zigue').click();
-  await expect(page.locator('#zigue-tempo')).toHaveText(/^0:(0\d|10)$/);
-  // vai chegando a 8× e anda: um passo é um terço da tela, nunca um salto pelo mapa
+  await expect(page.locator('#btn-zigue')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#zigue-tempo')).toHaveText('');            // no mapa não há passos para contar
   await expect.poll(async () => (await cam())[2], { timeout: 15000 }).toBeGreaterThan(7.5);
-  const a = await cam();
+  const tela = await page.evaluate(() => { const c = window.__atlas.camera(); return Math.min(innerWidth, innerHeight) / c.k; });
+  await page.waitForTimeout(2500);                                        // arranque suave
+  const percurso = [await cam()];
+  for (let i = 0; i < 3; i++) { await page.waitForTimeout(800); percurso.push(await cam()); }
+  for (let i = 1; i < percurso.length; i++) {
+    const d = Math.hypot(percurso[i][0] - percurso[i - 1][0], percurso[i][1] - percurso[i - 1][1]);
+    expect(d).toBeGreaterThan(0);                 // nunca para
+    expect(d).toBeLessThan(tela * 0.1);           // e anda devagar: nada de saltos
+  }
+  expect((await page.evaluate(() => window.__atlas.zigue())).rumo).not.toBeNull();
+  // num vazio, volta para onde há música
+  const vazio = await page.evaluate(() => { window.__atlas.voar(-5, -5, window.__atlas.camera().k, 0); return true; });
+  expect(vazio).toBe(true);
   await page.evaluate(() => window.__atlas.zigueAgora());
+  const longe = Math.hypot((await cam())[0] + 5, (await cam())[1] + 5);
   await page.waitForTimeout(1500);
-  const b = await cam();
-  const passo = Math.hypot(b[0] - a[0], b[1] - a[1]), tela = await page.evaluate(() => { const c = window.__atlas.camera(); return Math.min(innerWidth, innerHeight) / c.k; });
-  expect(passo).toBeGreaterThan(0);                      // está andando
-  expect(passo).toBeLessThan(tela * 0.6);                // e pouco: no máximo um passo
+  const depois = await cam();
+  expect(Math.hypot(depois[0] + 5, depois[1] + 5)).toBeGreaterThan(longe);   // afastou-se do vazio rumo aos pontos
 });

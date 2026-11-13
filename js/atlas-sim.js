@@ -1689,8 +1689,9 @@
     const el = $('sim-legenda');
     el.replaceChildren(...fams.map(f => {
       const span = document.createElement('span'), p = document.createElement('i'), info = at.familia(f);
-      p.style.background = info.cor;
-      span.append(p, info.nome, Object.assign(document.createElement('em'), { textContent: ` ${Math.round(parte(f) * 100)}%` }));
+      span.style.setProperty('--cor', info.cor);
+      span.style.setProperty('--p', `${(parte(f) * 100).toFixed(1)}%`);
+      span.append(p, info.nome, Object.assign(document.createElement('em'), { textContent: `${Math.round(parte(f) * 100)}%` }));
       span.title = `${info.nome}: ${Math.round(parte(f) * 100)}% do que a banda tocou nos últimos segundos`;
       return span;
     }));
