@@ -31,7 +31,8 @@
   const $ = id => document.getElementById(id);
   const SOME_S = 5;            // calado por tanto tempo, o músico sai
   const MAX_MUSICOS = 8;
-  const PREPARO_S = 0.14;      // o braço começa a subir tanto antes da nota       // no palco ao mesmo tempo; os que saem não contam
+  const PREPARO_S = 0.14;      // o braço começa a subir tanto antes da nota (o padrão; ver janelaPreparo)
+  const PREPARO_MAX = 0.3, PREPARO_MIN = 0.09;   // a janela de fato: metade do intervalo até a próxima nota, entre esses dois       // no palco ao mesmo tempo; os que saem não contam
 
   // Cenário por família de gênero (as 57 de js/atlas-receitas.js). céu: [alto, horizonte]; chão; luz.
   const CENARIOS = {
@@ -80,13 +81,22 @@
   // ── figuras ──
   // Materiais opacos por padrão: só viram transparentes enquanto somem ou aparecem (transparência custa ordenação e
   // sobreposição de pixels, e um palco cheio de objetos semitransparentes pesa no celular).
-  // Plástico de verdade: a rugosidade varia em manchas (umas partes mais foscas, outras mais brilhantes) e a superfície
-  // tem um relevo mínimo, os dois de uma textura de ruído só, 128², compartilhada por todos os materiais. Quem dá o
-  // brilho é o mapa de ambiente (ambienteNeutro()): sem reflexo, rugosidade nenhuma parece plástico.
+  // A rugosidade varia de leve em manchas (uma textura de ruído, 128², compartilhada por todos os materiais; um
+  // relevo (bumpMap) foi tirado: 3 leituras de textura por pixel por um efeito que não se via). O reflexo do ambiente
+  // (ambienteNeutro()) vai só no que brilha de fato, metal e verniz: em tecido fosco ele quase não muda nada e é o
+  // mais caro por pixel. No nível baixo nem isso, e o metal clareia (sem reflexo, metal puro fica preto).
+  let AMB = null, NIVEL_BAIXO = false;
+  function brilhante(m) { return m.metalness > 0.5 || m.roughness < 0.35; }
+  function acabamento(m) {
+    if (!brilhante(m)) return;
+    if (NIVEL_BAIXO) { m.envMap = null; if (!m.userData.metalOriginal) { m.userData.metalOriginal = m.metalness; m.metalness *= 0.35; } }
+    else m.envMap = AMB;
+  }
   function material(cor, extra = {}) {
-    const m = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.65, metalness: 0.05, roughnessMap: texturaPlastico(), bumpMap: texturaPlastico(), bumpScale: 0.08, ...extra });
+    const m = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.65, metalness: 0.05, roughnessMap: texturaPlastico(), ...extra });
     m.onBeforeCompile = oclusaoPelaAltura;
     m.customProgramCacheKey = () => 'ao-altura';
+    acabamento(m);
     return m;
   }
   // Oclusão de ambiente falsa: perto do chão a luz indireta (céu, ambiente) chega menos, como no canto entre o pé e o
@@ -112,9 +122,9 @@
     if (TEX_PLASTICO) return TEX_PLASTICO;
     const n = 128, a = ruido(n, 8, 'pl'), b = ruido(n, 32, 'pf'), px = new Uint8Array(n * n * 4);
     for (let i = 0; i < n * n; i++) {
-      const r = 0.78 + 0.22 * a[i] + 0.06 * (b[i] - 0.5);          // multiplica a rugosidade do material: 0,8–1,0
+      const r = 0.92 + 0.08 * a[i] + 0.03 * (b[i] - 0.5);          // multiplica a rugosidade: 0,9–1,0 (mais que isso, a roupa escura parecia feltro manchado)
       const g = Math.round(Math.min(1, r) * 255), h = Math.round((0.35 * a[i] + 0.65 * b[i]) * 255);
-      px.set([h, g, h, 255], i * 4);                               // G = rugosidade, R = relevo (bumpMap lê o R)
+      px.set([h, g, h, 255], i * 4);                               // G = rugosidade (o three lê o verde)
     }
     TEX_PLASTICO = new THREE.DataTexture(px, n, n);
     TEX_PLASTICO.wrapS = TEX_PLASTICO.wrapT = THREE.RepeatWrapping;
@@ -195,18 +205,31 @@
       escuro: material(0x16130f, { roughness: 0.6 }) };
     const g = new THREE.Group(), corpo = new THREE.Group();
     g.add(corpo);
+    // perna em dois ossos (coxa 0,42, canela 0,38) com joelho: quando o corpo desce na batida, o joelho dobra e o pé
+    // fica plantado (pernaIK()), em vez de a perna inteira girar no quadril e o pé afundar e escorregar
+    const pes = [];
     const pernas = [-0.11, 0.11].map(x => {
       const quadril = new THREE.Group();
       quadril.position.set(x, 0.8, 0);
-      quadril.add(malha(geo('perna', () => new Cil(0.075, 0.06, 0.8, 10)), mats.calca, 0, -0.4, 0));
-      quadril.add(malha(geo('sapato', () => new Caixa(0.12, 0.07, 0.22)), mats.escuro, 0, -0.79, 0.05));
+      quadril.add(malha(geo('coxa', () => new Cap(0.072, 0.3, 4, 10)), mats.calca, 0, -0.21, 0));
+      const joelho = new THREE.Group();
+      joelho.position.y = -0.42;
+      quadril.add(joelho);
+      joelho.add(malha(geo('canela', () => new Cap(0.062, 0.27, 4, 10)), mats.calca, 0, -0.19, 0));
+      const tornozelo = new THREE.Group();
+      tornozelo.position.y = -0.38;
+      joelho.add(tornozelo);
+      tornozelo.add(malha(geo('sapato', () => new Cap(0.05, 0.13, 4, 10)), mats.escuro, 0, 0.0, 0.05)).rotation.x = Math.PI / 2;
+      quadril.userData.joelho = joelho;
+      quadril.userData.tornozelo = tornozelo;
+      pes.push(tornozelo);
       corpo.add(quadril);
       return quadril;
     });
     const tronco = new THREE.Group();
     tronco.position.y = 0.8;
     corpo.add(tronco);
-    tronco.add(malha(geo('tronco', () => new Cap(0.2, 0.42, 6, 16)), mats.roupa, 0, 0.28, 0));
+    tronco.add(malha(geo('tronco', () => new Cap(0.2, 0.42, 6, 16)), mats.roupa, 0, 0.28, 0)).scale.set(1.1, 1, 0.94);   // mais largo que fundo: não uma pílula
     const cabeca = new THREE.Group();
     cabeca.position.set(0, 0.8, 0);
     tronco.add(cabeca);
@@ -219,12 +242,12 @@
     const bracos = [-1, 1].map(lado => {
       const ombro = new THREE.Group();
       ombro.position.set(0.27 * lado, 0.55, 0);
-      ombro.add(malha(geo('braco-sup', () => new Cil(0.056, 0.05, 0.32, 10)), mats.roupa, 0, -0.16, 0));
+      ombro.add(malha(geo('braco-sup', () => new Cap(0.054, 0.22, 4, 10)), mats.roupa, 0, -0.16, 0));     // cápsula: o ombro arredonda, sem tampa chata
       const cotovelo = new THREE.Group();
       cotovelo.position.y = -0.32;
       ombro.add(cotovelo);
       cotovelo.add(malha(geo('cotovelo', () => new Esf(0.05, 10, 8)), mats.roupa, 0, 0, 0));
-      cotovelo.add(malha(geo('antebraco', () => new Cil(0.048, 0.04, 0.28, 10)), mats.pele, 0, -0.14, 0));
+      cotovelo.add(malha(geo('antebraco', () => new Cap(0.045, 0.19, 4, 10)), mats.pele, 0, -0.14, 0));
       const punho = new THREE.Group();
       punho.position.y = -0.29;
       cotovelo.add(punho);
@@ -237,12 +260,22 @@
     sombra.position.y = 0.02;
     g.add(sombra);
     mats.sombra = sombra.material;
-    // o facho de luz sobre o músico: um cone aberto, aditivo, na cor da família, que acende com o que ele toca
-    const facho = new THREE.Mesh(geo('facho', () => new THREE.ConeGeometry(0.9, 6, 24, 1, true)), new THREE.MeshBasicMaterial({ color: cor, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    // o facho de luz sobre o músico: um cone aberto, aditivo, na cor da família, que acende com o que ele toca. Borda
+    // macia (some onde a superfície fica de lado para a câmera) e só a face da frente: as arestas duras do cone, que
+    // cruzavam o quadro, eram o que mais denunciava computação gráfica, e as duas faces dobravam o preenchimento
+    const facho = new THREE.Mesh(geo('facho', () => new THREE.ConeGeometry(0.9, 6, 24, 1, true)), materialFacho(cor));
     facho.position.y = 3;
     g.add(facho);
     mats.facho = facho.material;
-    return { g, corpo, tronco, cabeca, bracos, pernas, mats };
+    return { g, corpo, tronco, cabeca, bracos, pernas, pes, mats, sombra, facho };
+  }
+  const FACHO_VS = 'varying vec3 vN; varying vec3 vV; varying float vH; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vH = position.y / 6.0 + 0.5; gl_Position = projectionMatrix * mv; }';
+  const FACHO_FS = 'uniform vec3 cor; uniform float op; varying vec3 vN; varying vec3 vV; varying float vH; void main() { float borda = pow(abs(dot(normalize(vN), normalize(vV))), 1.5); gl_FragColor = vec4(cor, op * borda * smoothstep(0.0, 0.3, vH) * (0.6 + 0.4 * vH)); }';
+  function materialFacho(cor) {
+    const m = new THREE.ShaderMaterial({ uniforms: { cor: { value: new THREE.Color(cor) }, op: { value: 0 } }, vertexShader: FACHO_VS, fragmentShader: FACHO_FS,
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.FrontSide, fog: false });
+    m.customProgramCacheKey = () => 'facho';
+    return m;
   }
   let TEX_SOMBRA = null;
   function texturaSombra() {
@@ -475,7 +508,7 @@
         case 'plumas': for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; add(tronco, malha(geo('pluma', () => new Esf(0.045, 6, 5)), mats.acento, Math.sin(a) * 0.17, 0.66 + Math.sin(a * 3) * 0.02, Math.cos(a) * 0.15)); } break;
         case 'capa': { const c = add(tronco, malha(geo('capa', () => new Plano(0.55, 0.95)), novo('capa', f.acento, { side: THREE.DoubleSide, metalness: 0.6, roughness: 0.3 }), 0, 0.2, -0.22)); c.rotation.x = 0.12; break; }
         case 'cabeloNeon': mats.cabelo.color.set(f.acento); mats.cabelo.emissive.set(f.acento); mats.cabelo.emissiveIntensity = 0.35; break;
-        case 'plataforma': for (const p of fig.pernas) add(p, malha(geo('plataforma', () => new Caixa(0.13, 0.12, 0.24)), novo('plataforma', f.acento, { metalness: 0.7, roughness: 0.25 }), 0, -0.76, 0.05)); break;
+        case 'plataforma': for (const p of fig.pes) add(p, malha(geo('plataforma', () => new Caixa(0.13, 0.12, 0.24)), novo('plataforma', f.acento, { metalness: 0.7, roughness: 0.25 }), 0, 0.04, 0.05)); break;
       }
     }
     mats.calca.color.set(f.calca);
@@ -485,13 +518,17 @@
   // frente, chimbal à esquerda, prato à direita, bumbo atrás do surdo, que vira o surdo de chão), e quem toca
   // pandeiro sem bateria segura um na mão esquerda.
   const KIT = new Set(['caixa', 'aro', 'bumbo', 'chimbal', 'aberto', 'prato']);
+  const MEMBRO_KIT = { chimbal: 0, aberto: 0, caixa: 1, aro: 1, prato: 1, bumbo: 'pe' };
+  const membroDe = (m, papel) => (m.kit ? MEMBRO_KIT[papel] ?? -1 : -1);
+  // para onde a mão vai em cada peça do kit: [ombro x (mais alto, negativo), ombro z (para fora)]
+  const ALCANCE = { prato: [-0.42, 0.3], chimbal: [-0.12, -0.08], aberto: [-0.12, -0.08] };
   function montarKit(m) {
     const { mats, g } = m.fig, { CylinderGeometry: Cil } = THREE, k = new THREE.Group();
     if (!mats.casco) mats.casco = material(0x7a1a1a, { metalness: 0.3, roughness: 0.35 });
     if (!mats.prato) mats.prato = material(0xd8b44a, { metalness: 0.95, roughness: 0.25 });
     k.add(malha(geo('caixa-kit', () => new Cil(0.17, 0.17, 0.13, 18)), mats.casco, 0.05, 0.72, 0.42));
     k.add(malha(geo('pele-caixa', () => new Cil(0.172, 0.172, 0.01, 18)), mats.metal, 0.05, 0.79, 0.42));
-    const bumbo = malha(geo('bumbo-kit', () => new Cil(0.3, 0.3, 0.3, 20)), mats.casco, 0, 0.32, 0.9);
+    const bumbo = malha(geo('bumbo-kit', () => new Cil(0.3, 0.3, 0.3, 32)), mats.casco, 0, 0.32, 0.9);
     bumbo.rotation.x = Math.PI / 2;
     k.add(bumbo);
     for (const [x, y, z] of [[-0.38, 0.95, 0.42], [0.42, 1.2, 0.62]]) {
@@ -592,6 +629,7 @@
     pentear(fig, chave, familia, figurino);
     const m = { chave, familia, grupo, timbre, fig, nomeFamilia: f.nome, pose: 'corda', pecas: new Set(),
       vis: 0, energia: 0, foco: 0, golpe: [0, 0], lado: 0, preparo: 0, prox: Infinity, ultimo: performance.now() / 1000, cabecaY: 0,
+      golpePe: 0, preparoPe: 0, proxV: 0.5, proxPapel: '', tUlt: -9, forcaPrep: 1, alvoMao: ['', ''], alcance: [0, 0], molaC: { x: 0, v: 0 }, molaT: { x: 0, v: 0 },
       alvo: new THREE.Vector3(), fase: hash(chave) * Math.PI * 2, exotico: !!figurino.exotico, chapeu: figurino.chapeu, penteado: fig.penteado };
     criarInstrumento(m, timbre);
     run.cena.add(fig.g);
@@ -695,24 +733,27 @@
       fragmentShader: 'uniform vec3 alto; uniform vec3 baixo; varying float h; void main() { gl_FragColor = vec4(mix(baixo, alto, smoothstep(-0.05, 0.6, h)), 1.0); }',
     }));
     cena.add(ceu);
-    // o mapa de ambiente (ambienteNeutro()) já traz a luz do céu; o hemisfério fica mais fraco para não somar duas vezes
-    const hemi = new HemisphereLight(0xfff1dc, 0x1a140d, 0.35);
+    const hemi = new HemisphereLight(0xfff1dc, 0x1a140d, 0.7);
     cena.add(hemi);
     // o sol, de lado e alto, é a única luz com sombra de verdade (cai em diagonal, à vista da câmera): mapa de 1024, câmera ortográfica justa no palco (raio ~6,5 em z = 3)
-    const sol = new DirectionalLight(0xffe0b0, 2.0);
+    // a luz principal, de lado e alto, sem sombra
+    const sol = new DirectionalLight(0xffe0b0, 1.6);
     sol.position.set(8, 7, 4.5);
     sol.target.position.set(0, 0, 3);
-    sol.castShadow = true;
-    sol.shadow.mapSize.set(1024, 1024);
-    Object.assign(sol.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 22 });
-    sol.shadow.bias = -0.0004;
-    sol.shadow.normalBias = 0.02;
-    sol.shadow.radius = 3;
     cena.add(sol, sol.target);
-    // contraluz: desenha a silhueta dos músicos contra o fundo, na cor do cenário
-    const contra = new DirectionalLight(0xffc890, 1.6);
-    contra.position.set(-2, 5, -8);
-    cena.add(contra);
+    // contraluz: desenha a silhueta dos músicos contra o fundo, numa cor que contrasta com a do cenário. É ela que tem
+    // a sombra (a única luz com shadow map, de 1024, câmera justa no palco): vindo de trás, a sombra cai comprida em
+    // direção à câmera, como num palco, em vez de se esconder atrás dos corpos
+    const contra = new DirectionalLight(0xffc890, 1.8);
+    contra.position.set(-2, 6, -8);
+    contra.target.position.set(0, 0, 3);
+    contra.castShadow = true;
+    contra.shadow.mapSize.set(1024, 1024);
+    Object.assign(contra.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 26 });
+    contra.shadow.bias = -0.0004;
+    contra.shadow.normalBias = 0.02;
+    contra.shadow.radius = 7;
+    cena.add(contra, contra.target);
     // poeira na névoa dos fachos: 240 pontos aditivos que flutuam no shader, sem custo de CPU por quadro
     const n = 240, pos = new Float32Array(n * 3), fase = new Float32Array(n);
     for (let i = 0; i < n; i++) { pos.set([(hash('px' + i) - 0.5) * 12, hash('py' + i) * 5, (hash('pz' + i) - 0.5) * 8 + 2], i * 3); fase[i] = hash('pf' + i) * 6.28; }
@@ -745,8 +786,7 @@
     const foco = new SpotLight(0xfff0d0, 0, 14, 0.35, 0.6, 1);
     foco.position.set(0, 7, 5);
     cena.add(foco, foco.target);
-    cena.environmentIntensity = 0.7;
-    return { cena, cam, r, foco, ceu, hemi, sol, contra, terra, chao, poeira, cenarios: {}, pmrem: new THREE.PMREMGenerator(r) };
+    return { cena, cam, r, foco, ceu, hemi, sol, contra, luzSombra: contra, terra, chao, borda, poeira, cenarios: {}, pmrem: new THREE.PMREMGenerator(r) };
   }
 
   // O mapa de ambiente: o que as superfícies refletem. Uma cena mínima de estúdio (um degradê neutro e quente, o chão
@@ -925,14 +965,16 @@
           x2.fillStyle = gr; x2.fillRect(0, 0, 64, 64);
           return new THREE.CanvasTexture(c);
         })();
-        for (let k = 0; k < 9; k++) {
-          const m2 = new THREE.MeshBasicMaterial({ map: fumacaTex, transparent: true, depthWrite: false, opacity: 0.5, color: 0xd8d0d8, fog: false });
-          m2.userData.base = 0.5;
+        // três lençóis fracos, nos lados e no fundo, longe dos pés: nove no meio do palco cortavam as canelas com uma
+        // faixa cinza e custavam camadas de transparência em tela cheia
+        [[-5, 0.5], [5, 1], [0, -2.5]].forEach(([fx, fz], k) => {
+          const m2 = new THREE.MeshBasicMaterial({ map: fumacaTex, transparent: true, depthWrite: false, opacity: 0.25, color: 0xd8d0d8, fog: false });
+          m2.userData.base = 0.25;
           mats.push(m2);
-          const f = add(new Plano(4.5, 4.5), m2, (hash('fx' + k) - 0.5) * 12, 0.12 + k * 0.015, 2.5 + (hash('fz' + k) - 0.5) * 8, -Math.PI / 2);
-          const x0 = f.position.x, v = 0.15 + hash('fv' + k) * 0.2;
-          anim.push(t => { f.position.x = x0 + Math.sin(t * v + k) * 1.5; f.rotation.z = t * v * 0.3 + k; });
-        }
+          const f = add(new Plano(4.5, 4.5), m2, fx, 0.12 + k * 0.015, fz, -Math.PI / 2);
+          const v = 0.15 + hash('fv' + k) * 0.2;
+          anim.push(t => { f.position.x = fx + Math.sin(t * v + k) * 0.8; f.rotation.z = t * v * 0.3 + k; });
+        });
         break;
       }
       case 'rua': {
@@ -978,9 +1020,66 @@
         break;
       }
     }
+    const fundidos = fundirCenario(g, mats, anim);
     g.visible = false;
     run.cena.add(g);
-    return { g, mats, anim, peso: 0, alvo: 0, def: CENARIOS[nome] };
+    return { g, mats: fundidos, anim, peso: 0, alvo: 0, def: CENARIOS[nome] };
+  }
+
+  // Um cenário tem de dezenas a ~170 peças, cada uma uma chamada de desenho (e outra na passada de sombra). As que não
+  // se mexem viram uma malha por tipo de material (fosco, brilhante), com a cor de cada peça nos vértices: de ~170
+  // para algumas chamadas. Quem é animado se descobre rodando as animações do cenário em dois instantes e vendo o que
+  // mudou; essas, as emissivas (a cor delas não vai nos vértices), as com textura e as transparentes ficam soltas.
+  function fundirCenario(g, mats, anim) {
+    g.updateMatrixWorld(true);
+    const foto = o => [...o.position.toArray(), ...o.quaternion.toArray(), ...o.scale.toArray(), o.visible ? 1 : 0,
+      o.material?.emissiveIntensity ?? 0, o.material?.opacity ?? 1, o.material?.color?.getHex?.() ?? 0].join(',');
+    const todos = [], malhas = [];
+    g.traverse(o => { if (o !== g) { todos.push(o); if (o.isMesh) malhas.push(o); } });
+    const antes = todos.map(foto);
+    for (const t of [1.37, 2.91]) for (const f of anim) f(t);
+    const mexe = new Set(todos.filter((o, i) => foto(o) !== antes[i]));
+    // a peça animada, ou dentro de um grupo animado (um móbile que gira), fica solta
+    const solto = o => { for (let p = o; p && p !== g; p = p.parent) if (mexe.has(p)) return true; return false; };
+    const baldes = { fosco: [], brilho: [] }, compartilhadas = new Set(GEO.values());
+    const inv = new THREE.Matrix4().copy(g.matrixWorld).invert(), mtx = new THREE.Matrix4();
+    for (const o of malhas) {
+      const mt = o.material;
+      if (solto(o) || !mt?.isMeshStandardMaterial || mt.map || mt.transparent && (mt.userData.base ?? 1) < 1 || mt.emissiveIntensity > 0 && mt.emissive.getHex() || mt.side !== THREE.FrontSide) continue;
+      const geom = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone());
+      geom.applyMatrix4(mtx.multiplyMatrices(inv, o.matrixWorld));
+      const n = geom.attributes.position.count, cor = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) cor.set([mt.color.r, mt.color.g, mt.color.b], i * 3);
+      geom.setAttribute('color', new THREE.BufferAttribute(cor, 3));
+      for (const k of Object.keys(geom.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) geom.deleteAttribute(k);
+      baldes[brilhante(mt) ? 'brilho' : 'fosco'].push(geom);
+      o.parent.remove(o);
+      if (!compartilhadas.has(o.geometry)) o.geometry.dispose();
+    }
+    const usados = new Set();
+    g.traverse(o => { if (o.material) usados.add(o.material); });
+    const resto = mats.filter(m => { if (usados.has(m)) return true; m.dispose(); return false; });
+    for (const [k, lista] of Object.entries(baldes)) {
+      if (!lista.length) continue;
+      const m = material(0xffffff, k === 'brilho' ? { vertexColors: true, metalness: 0.7, roughness: 0.3 } : { vertexColors: true, roughness: 0.8 });
+      g.add(malha(juntar(lista), m));
+      resto.push(m);
+    }
+    for (const t of [0]) for (const f of anim) f(t);
+    return resto;
+  }
+  // junta geometrias sem índice com os mesmos atributos (position, normal, uv, color) numa só
+  function juntar(lista) {
+    const out = new THREE.BufferGeometry();
+    for (const nome of ['position', 'normal', 'uv', 'color']) {
+      if (!lista.every(g => g.attributes[nome])) continue;
+      const tam = lista[0].attributes[nome].itemSize, tot = lista.reduce((a, g) => a + g.attributes[nome].count, 0), arr = new Float32Array(tot * tam);
+      let o = 0;
+      for (const g of lista) { arr.set(g.attributes[nome].array, o); o += g.attributes[nome].array.length; g.dispose(); }
+      out.setAttribute(nome, new THREE.BufferAttribute(arr, tam));
+    }
+    out.computeBoundingSphere();
+    return out;
   }
 
   // Peso de cada cenário: os músicos no palco da família dele, cada um por quanto aparece e toca.
@@ -1031,9 +1130,13 @@
     run.ceu.material.uniforms.baixo.value.copy(baixo);
     run.cena.fog.color.copy(baixo);
     run.terra.material.color.copy(chao);
-    run.hemi.color.copy(luz);
+    // contraste de cor: a principal na cor do cenário, a contraluz puxada para a cor do céu (bem clara), o hemisfério
+    // com o céu por cima e o chão por baixo. Antes as três recebiam a mesma cor e tudo saía de um tom só
     run.sol.color.copy(luz);
-    run.contra.color.copy(luz);
+    const c = run.contra.color.copy(alto).lerp(luz, 0.3), mx = Math.max(c.r, c.g, c.b, 1e-3);
+    c.multiplyScalar(1 / mx).lerp(tmp.setRGB(1, 1, 1), 0.25);
+    run.hemi.color.copy(luz).lerp(alto, 0.35);
+    run.hemi.groundColor.copy(chao).multiplyScalar(0.5);
     run.poeira.material.uniforms.cor.value.copy(luz);
   }
 
@@ -1087,8 +1190,18 @@
     m.energia = Math.min(2, m.energia + v * 0.6);
     run.famPeso.set(e.familia, (run.famPeso.get(e.familia) || 0) + v);
     m.foco = m.foco * 0.98 + v;
-    m.lado ^= 1;
-    m.golpe[grupo === 'perc' ? m.lado : 1] = Math.max(m.golpe[1], v);
+    m.tUlt = e.t;
+    // na bateria cada peça tem o seu membro (chimbal na esquerda, caixa e prato na direita, bumbo no pé); sem kit, e
+    // nas peças sem dono, as mãos se alternam. Fora da percussão a nota é da direita (o lado só vira a palhetada)
+    const membro = grupo === 'perc' ? membroDe(m, e.papel) : 1;
+    if (membro === 'pe') m.golpePe = Math.max(m.golpePe, v);
+    else {
+      const lado = membro < 0 ? (m.lado ^= 1) : membro;
+      if (grupo === 'perc') m.lado = lado; else m.lado ^= 1;
+      const i = grupo === 'perc' ? lado : 1;
+      m.golpe[i] = Math.max(m.golpe[i], v);
+      m.alvoMao[i] = e.papel;
+    }
     // clarão só no prato forte, e no máximo um por segundo: no bumbo do clube (quatro por compasso) a imagem pulsava
     if (e.papel === 'prato' && v > 0.9 && (e.t - (run.ultimoFlash ?? -9)) > 1) { run.flash = Math.min(1, run.flash + 0.5); run.ultimoFlash = e.t; }
   }
@@ -1231,16 +1344,24 @@
     while (k < fila.length && fila[k].t <= agoraAudio) tocarNota(fila[k++], t);
     if (k) fila.splice(0, k);
     if (fila.length > 2000) fila.splice(0, fila.length - 2000);
-    for (const m of run.musicos.values()) m.prox = Infinity;
+    for (const m of run.musicos.values()) { m.prox = Infinity; m.proxPe = Infinity; }
     for (const e of fila) {
-      if (e.t - agoraAudio > PREPARO_S) break;
-      const m = run.musicos.get(chaveDe(e));
-      if (m && e.t < m.prox) m.prox = e.t;
+      if (e.t - agoraAudio > PREPARO_MAX) break;
+      const m = run.musicos.get(e.k ??= chaveDe(e));
+      if (!m) continue;
+      if (m.kit && e.papel === 'bumbo') { if (e.t < m.proxPe) m.proxPe = e.t; continue; }
+      if (e.t < m.prox) { m.prox = e.t; m.proxV = e.vel ?? 0.5; m.proxPapel = e.papel; }
     }
+    // Antecipação proporcional: a janela é metade do intervalo desde a nota anterior (entre 90 e 300 ms): num surdo
+    // lento o braço sobe devagar e alto, numa semicolcheia só o punho. A altura segue a força da próxima nota.
     for (const m of run.musicos.values()) {
+      const janela = Math.min(PREPARO_MAX, Math.max(PREPARO_MIN, (m.prox - m.tUlt) * 0.5));
       const falta = m.prox - agoraAudio;
-      const alvo = falta < PREPARO_S ? 1 - falta / PREPARO_S : 0;
+      const alvo = falta < janela ? 1 - falta / janela : 0;
       m.preparo = alvo > m.preparo ? alvo : m.preparo * Math.exp(-dt * 18);     // sobe junto com a nota; desce rápido
+      if (alvo > 0) m.forcaPrep = 0.55 + 0.45 * Math.min(1, m.proxV * 2);
+      const faltaPe = m.proxPe - agoraAudio, alvoPe = faltaPe < 0.12 ? 1 - faltaPe / 0.12 : 0;
+      m.preparoPe = alvoPe > m.preparoPe ? alvoPe : m.preparoPe * Math.exp(-dt * 18);
     }
 
     // o andamento: lido do motor duas vezes por segundo, a fase do tempo corre entre uma leitura e outra
@@ -1274,6 +1395,7 @@
       m.foco *= Math.exp(-dt * 0.8);
       m.golpe[0] *= Math.exp(-dt * 12);
       m.golpe[1] *= Math.exp(-dt * 12);
+      m.golpePe *= Math.exp(-dt * 14);
       animarMusico(m, t, dt, b, parado);
     }
     if (saiu) rearranjar();
@@ -1295,38 +1417,73 @@
     if (vazio !== run.vazio || semAnalise) { run.vazio = vazio; $('sim-vazio').hidden = !vazio; }
   }
 
+  // mola de segunda ordem (w rad/s, z amortecimento): passa do ponto e volta, ao contrário de um lerp. Dois meios
+  // passos, para não explodir num quadro longo de celular (dt até 50 ms)
+  function mola(s, alvo, dt, w, z) {
+    for (let i = 0; i < 2; i++) { const h = dt / 2; s.v += ((alvo - s.x) * w * w - 2 * z * w * s.v) * h; s.x += s.v * h; }
+  }
+  // dois ossos, alvo bem abaixo do quadril a d metros: coxa para a frente, joelho para trás, pé paralelo ao chão.
+  // `ergue` levanta a coxa (o pé do bumbo)
+  const L1 = 0.42, L2 = 0.38;
+  function pernaIK(q, d, ergue) {
+    d = Math.min(L1 + L2 - 1e-3, Math.max(0.45, d));
+    const a = Math.acos((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d)), j = Math.PI - Math.acos((L1 * L1 + L2 * L2 - d * d) / (2 * L1 * L2));
+    q.rotation.x = -a - ergue;
+    q.userData.joelho.rotation.x = j + ergue * 0.6;
+    q.userData.tornozelo.rotation.x = a - j + ergue * 0.4;
+  }
   function animarMusico(m, t, dt, b, parado) {
     const { g, corpo, tronco, cabeca, bracos, pernas, mats } = m.fig, vis = m.vis;
     g.position.lerp(m.alvo, Math.min(1, dt * 1.6));
     g.rotation.y = Math.atan2(run.cam.position.x * 0.15 - g.position.x, 12 - g.position.z);
     g.scale.setScalar(0.4 + 0.6 * vis);
     for (const k in mats) if (k !== 'sombra' && k !== 'facho') opacidade(mats[k], vis);
-    mats.sombra.opacity = 0.6 * vis;
+    // com a sombra de verdade, o disco vira só o contato sob os pés; sem ela, é a sombra inteira
+    mats.sombra.opacity = (run.sombraViva ? 0.35 : 0.6) * vis;
+    m.fig.sombra.scale.setScalar(run.sombraViva ? 0.55 : 1);
     const hit = m.golpe[0] + m.golpe[1];
     // a roupa não acende na nota: no punk e no clube, com golpes a cada semicolcheia, ela piscava clara sem parar.
     // O facho sobe e desce com a energia (já suavizada), não a cada golpe, pelo mesmo motivo.
     m.brilhoFacho = (m.brilhoFacho ?? 0) + (Math.min(1, m.energia) - (m.brilhoFacho ?? 0)) * Math.min(1, dt * 2);
     // de perto o facho some: com a câmera dentro do cone, a luz aditiva lavaria a imagem
     const dCam = run.cam.position.distanceTo(g.position), perto = Math.min(1, Math.max(0, (dCam - 2.4) / 2.2));
-    mats.facho.opacity = vis * perto * (0.03 + 0.1 * m.brilhoFacho);
+    // no nível baixo só o músico do plano tem facho (cada cone é uma camada aditiva sobre a imagem)
+    const comFacho = run.nivel !== 'baixo' || run.plano.a === m;
+    m.fig.facho.visible = comFacho;
+    mats.facho.uniforms.op.value = comFacho ? vis * perto * (0.06 + 0.2 * m.brilhoFacho) : 0;
     if (parado) {
       corpo.position.set(0, 0, 0); corpo.rotation.set(0, 0, 0); tronco.rotation.set(0, 0, 0); cabeca.rotation.set(0, 0, 0);
-      pernas[0].rotation.x = pernas[1].rotation.x = 0;
+      pernaIK(pernas[0], 0.8, 0); pernaIK(pernas[1], 0.8, 0);
     } else {
       // no tempo: os joelhos dobram em cada batida, o peso passa de um pé ao outro a cada duas, o tronco se inclina
       // no golpe e a cabeça acompanha com um atraso, como quem sente a música
-      const e = 0.25 + Math.min(1, m.energia), passo = Math.sin(b / 2 + m.fase * 0.2);
-      const desce = Math.abs(Math.sin(b / 2)) * 0.07 * e;
+      // o pouso cai na batida (o bico de 1 − |sen| está no tempo); a troca de peso assenta em cada pé (tanh), em vez
+      // de oscilar como um pêndulo
+      const e = 0.25 + Math.min(1, m.energia), passo = Math.tanh(2.5 * Math.sin(b / 2 + m.fase * 0.2)) / 0.987;
+      const desce = (1 - Math.abs(Math.sin(b / 2))) * 0.07 * e;
       corpo.position.set(passo * 0.035 * e, -desce, 0);
       corpo.rotation.z = passo * 0.05 * e;
-      pernas[0].rotation.x = -desce * 2.2 * (passo > 0 ? 1.4 : 0.6);
-      pernas[1].rotation.x = -desce * 2.2 * (passo > 0 ? 0.6 : 1.4);
-      tronco.rotation.x = 0.08 * hit + 0.03 * e;
+      // o quadril baixa desce (e um pouco mais do lado do peso): cada perna dobra o joelho o quanto precisa para o pé
+      // continuar no chão. O pé do bumbo levanta (coxa sobe) e pisa
+      const pesoE = passo > 0 ? 1.25 : 0.75, pe = m.kit ? 0.22 * m.preparoPe ** 2 - 0.06 * m.golpePe : 0;
+      pernaIK(pernas[0], 0.8 - desce * pesoE, 0);
+      pernaIK(pernas[1], 0.8 - desce * (2 - pesoE), pe);
+      // o tronco numa mola: o golpe empurra, ele passa do ponto e volta (antes saltava num quadro só)
+      mola(m.molaT, 0.08 * hit + 0.03 * e, dt, 18, 0.45);
+      tronco.rotation.x = m.molaT.x;
       tronco.rotation.y = Math.sin(b / 4 + m.fase) * 0.14 * e;
-      const alvoCabeca = Math.max(0, Math.sin(b - 0.5)) * 0.2 * e + 0.05 * hit;
-      m.cabecaY += (alvoCabeca - m.cabecaY) * Math.min(1, dt * 9);
-      cabeca.rotation.x = m.cabecaY;
+      // a cabeça acena na batida, numa mola (~4 Hz, meio amortecida): chega um pouco depois do corpo e passa do ponto
+      const alvoCabeca = Math.max(0, Math.cos(b)) ** 2 * 0.18 * e + 0.05 * hit;
+      mola(m.molaC, alvoCabeca, dt, 25, 0.5);
+      cabeca.rotation.x = m.cabecaY = m.molaC.x;
       cabeca.rotation.z = -corpo.rotation.z * 0.6;
+    }
+    if (m.pose === 'perc') for (let i = 0; i < 2; i++) {
+      // a mão viaja até a peça que vai tocar (a próxima, se já armando; senão a última)
+      const peca = m.preparo > 0.05 && membroDe(m, m.proxPapel) === i ? m.proxPapel : m.alvoMao[i];
+      m.alcance[i] += ((ALCANCE[peca] ? 1 : 0) - m.alcance[i]) * Math.min(1, dt * 12);
+      m.alvoAlc ||= ['', ''];
+      if (ALCANCE[peca]) m.alvoAlc[i] = peca;
     }
     posar(m, bracos, b, parado);
     if (m.pratos && !parado) for (const [k, p] of m.pratos.entries()) p.rotation.x = 0.12 + Math.sin(t * 28 + k) * 0.08 * (k ? m.golpe[1] : m.golpe[0]);
@@ -1349,17 +1506,19 @@
   MAOS_CORDA.dist = MAOS_CORDA.guitarra; MAOS_CORDA.sub = MAOS_CORDA.baixo;
   function junta(j, ox, oz, cx, px, oy = 0) { j.ombro.rotation.set(ox, oy, oz); j.cotovelo.rotation.x = cx; j.punho.rotation.x = px; }
   function posar(m, [esq, dir], b, parado) {
-    const [ge, gd] = m.golpe, pr = parado ? 0 : m.preparo * m.preparo, osc = parado ? 0 : Math.sin(b * 2) * 0.04;
+    const [ge, gd] = m.golpe, pr = parado ? 0 : m.preparo * m.preparo * m.forcaPrep, osc = parado ? 0 : Math.sin(b * 2) * 0.04;
     switch (m.pose) {
       case 'perc': {
-        const vez = m.lado ^ 1;
+        // arma a mão da próxima nota: a dona da peça no kit, ou a que não bateu por último
+        const dono = membroDe(m, m.proxPapel), vez = dono === 0 || dono === 1 ? dono : m.lado ^ 1;
         [esq, dir].forEach((j, lado) => {
           const arma = vez === lado ? pr : 0, bate = lado === 0 ? ge : gd, l = lado ? -1 : 1;
+          const [ax, az] = ALCANCE[m.alvoAlc?.[lado]] || [0, 0], k = m.alcance[lado];
           // repouso: braço junto ao corpo, antebraço para a frente, baqueta sobre a pele do surdo
-          const ombro = -0.35 - arma * 0.25 + bate * 0.08 + osc * l;
+          const ombro = -0.35 - arma * 0.25 + bate * 0.08 + osc * l + ax * k;
           const cotov = -1.05 - arma * 0.55 + bate * 0.3;
           const punho = 0.15 - arma * 0.9 + bate * 0.55 - (bate > 0.6 ? (bate - 0.6) * 0.6 : 0);     // estalo e rebote
-          junta(j, ombro, 0.12 * l, cotov, punho);
+          junta(j, ombro, (0.12 + az * k) * l, cotov, punho);
         });
         break;
       }
@@ -1398,7 +1557,8 @@
       default: {     // corda: a mão esquerda no braço do instrumento, a direita palheta sobre a boca, para cima e para baixo na nota
         const [e, d] = MAOS_CORDA[m.timbre] || MAOS_CORDA.violao;
         junta(esq, e[0], e[2], e[3], 0.1 + osc, e[1]);
-        junta(dir, d[0], d[2], d[3] - pr * 0.18 + gd * 0.22, 0.15 - pr * 0.55 + gd * 0.65, d[1]);
+        const sobe = m.lado ? 1 : -1;      // palhetada alternada: uma nota desce, a seguinte sobe
+        junta(dir, d[0], d[2], d[3] - pr * 0.18 + gd * 0.22, 0.15 - pr * 0.55 + gd * 0.65 * sobe, d[1]);
       }
     }
   }
@@ -1558,10 +1718,37 @@
   }
 
   // ── abrir e fechar ──
-  const NIVEL_LENTO_MS = 9;      // por quadro, com o palco vazio: um M4 fica em ~1–2 ms, o GL em software do headless em ~20
+  const NIVEL_LENTO_MS = 12;     // por quadro, com a banda de aquecimento: um M4 fica em ~3 ms
+  // família, grupo, timbre, peça: cobre as poses, o kit, a mão e figurinos de cenários diferentes
+  const AQUECE = [['rock', 'perc', '', 'kit'], ['samba', 'perc', '', 'pandeiro'], ['samba', 'mel', 'cavaco'], ['punk', 'mel', 'dist'],
+    ['forro', 'acorde', 'sanfona'], ['bossa', 'mel', 'voz'], ['jazz', 'mel', 'flauta'], ['classica', 'acorde', 'cordas'],
+    ['jazz', 'baixo', 'contrabaixo'], ['funk', 'mel', 'sax'], ['house', 'acorde', 'pad'], ['reggae', 'baixo', 'baixo']];
+  function aquecer() {
+    for (const nome of Object.keys(CENARIOS)) if (!run.cenarios[nome]) run.cenarios[nome] = montarCenario(nome);
+    return AQUECE.map(([fam, grupo, timbre, peca], i) => {
+      const m = criarMusico('__aquece|' + i, fam, grupo, timbre);
+      if (peca === 'kit') montarKit(m); else if (peca) montarMao(m, peca);
+      m.fig.g.position.set(-3 + (i % 6) * 1.2, 0, 2 + Math.floor(i / 6) * 1.5);
+      return m;
+    });
+  }
+  async function compilarTudo(banda) {
+    const cens = Object.values(run.cenarios);
+    for (const o of [1, 0.5]) {
+      for (const m of banda) for (const k in m.fig.mats) if (k !== 'sombra' && k !== 'facho') opacidade(m.fig.mats[k], o);
+      for (const c of cens) { c.g.visible = true; c.g.scale.set(1, 1, 1); for (const mt of c.mats) opacidade(mt, o * (mt.userData.base ?? 1)); c.op = o; }
+      if (run.r.compileAsync) await run.r.compileAsync(run.cena, run.cam).catch(() => {});
+      else run.r.compile(run.cena, run.cam);
+      if (!run) return;
+    }
+    for (const m of banda) for (const k in m.fig.mats) if (k !== 'sombra' && k !== 'facho') opacidade(m.fig.mats[k], 1);
+    for (const c of cens) { for (const mt of c.mats) opacidade(mt, mt.userData.base ?? 1); c.op = 1; c.g.visible = c === run.cenarios.garagem; }
+  }
   function medirAbertura() {
     const gl = run.r.getContext(), px = new Uint8Array(4), sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-    for (let i = 0; i < 2; i++) run.r.render(run.cena, run.cam);       // texturas sobem e o que faltar compila aqui, fora da conta
+    // texturas sobem e o que faltar compila aqui, fora da conta; a sombra é desenhada já (sem o mapa, o shader de sombra
+    // amostraria uma textura que não existe: erro de GL a cada quadro)
+    for (let i = 0; i < 2; i++) { run.r.shadowMap.needsUpdate = true; run.r.render(run.cena, run.cam); }
     sync();
     const t0 = performance.now();
     for (let i = 0; i < 4; i++) { run.r.shadowMap.needsUpdate = i % 2 === 0; run.r.render(run.cena, run.cam); }
@@ -1606,24 +1793,31 @@
     run.ro.observe($('sim-canvas'));
     medir();
     run.amb = ambienteNeutro();
-    run.cena.environment = run.amb.texture;
-    // os programas de shader compilam antes do primeiro quadro, sem travar a thread em que o som é agendado
-    if (run.r.compileAsync) await run.r.compileAsync(run.cena, run.cam).catch(() => {});
+    AMB = run.amb.texture;
+    NIVEL_BAIXO = false;
+    for (const o of [run.borda]) acabamento(o.material);
+    // Aquecimento: uma banda de teste (todas as poses, kit, instrumento de mão, figurinos de vários cenários) e todos
+    // os cenários, fora da vista do público, para os shaders compilarem agora e não na primeira nota com a música
+    // tocando. Compila duas vezes: opaco e semitransparente (quem entra e sai do palco passa pelos dois programas).
+    const banda = aquecer();
+    await compilarTudo(banda);
     if (!run) return;
-    // Nível de acabamento, decidido uma vez, medindo: alguns quadros do palco ainda vazio, cronometrados até a GPU
-    // terminar. Lento (aparelho fraco, GL em software), o palco fica sem reflexo de ambiente e sem sombra do sol, o que
-    // custa mais por pixel (o ambiente pesa ~60% do acréscimo em software). Tirar isso depois, no meio da música,
-    // recompilaria todos os shaders (200–350 ms parados); aqui ainda não toca nada na tela.
+    // Nível de acabamento, decidido uma vez, medindo essa banda inteira num cenário (o custo real é desenhar centenas
+    // de peças, não o palco vazio). Lento (celular fraco, GL em software), o palco fica sem reflexo e sem sombra.
+    // Tirar isso depois, no meio da música, recompilaria tudo (200–350 ms parados); aqui ainda não há nada na tela.
     run.nivel = medirAbertura() > NIVEL_LENTO_MS ? 'baixo' : 'alto';
     if (run.nivel === 'baixo') {
-      run.cena.environment = null;
-      run.hemi.intensity = 0.7;
-      run.sol.castShadow = false;
+      NIVEL_BAIXO = true;
+      run.cena.traverse(o => { if (o.material?.isMeshStandardMaterial) acabamento(o.material); });
+      run.luzSombra.castShadow = false;
       run.r.shadowMap.enabled = false;
       run.sombraViva = false;
-      if (run.r.compileAsync) await run.r.compileAsync(run.cena, run.cam).catch(() => {});
+      if (run.iRes < 2) { run.iRes = 2; run.r.setPixelRatio(Math.min(RESOLUCOES[2], devicePixelRatio || 1)); medir(); }   // e começa em 1,25×
+      await compilarTudo(banda);
       if (!run) return;
     }
+    for (const m of banda) { run.cena.remove(m.fig.g); for (const k in m.fig.mats) m.fig.mats[k].dispose(); }
+    for (const c of Object.values(run.cenarios)) c.g.visible = false;
     run.raf = requestAnimationFrame(quadro);
     $('sim-sair').focus();
   }

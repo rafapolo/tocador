@@ -196,7 +196,7 @@ test('Sonificar, ZigZag e Simulação formam um grupo nos controles, nessa ordem
   await expect(page.locator('.seg[aria-label="Visualização"] #btn-zigue')).toHaveCount(0);
 });
 
-test('instrumentos num painel recolhível no alto do cartão: fechado não calcula nada; aberto mostra a parte de cada um', async ({ page }) => {
+test('instrumentos e gêneros num painel recolhível embaixo do palco: fechado não calcula nada; aberto mostra a parte de cada um', async ({ page }) => {
   await boot(page);
   await page.locator('#btn-sim').click();
   await expect.poll(() => sim(page)).not.toBeNull();
@@ -206,9 +206,11 @@ test('instrumentos num painel recolhível no alto do cartão: fechado não calcu
   for (let k = 0; k < 3; k++) await nota(page, { papel: 'pandeiro', familia: 'samba', vel: 0.8 });
   await expect.poll(async () => (await sim(page)).musicos.length).toBe(1);
   expect((await sim(page)).instCalculados).toBe(0);
-  // o painel fica acima do palco
+  // o painel fica embaixo do palco, e os gêneros (a legenda) vão dentro dele, depois dos instrumentos
   const [p0, palco] = await Promise.all([painel.boundingBox(), page.locator('#sim-palco').boundingBox()]);
-  expect(p0.y + p0.height).toBeLessThanOrEqual(palco.y + 1);
+  expect(p0.y).toBeGreaterThanOrEqual(palco.y + palco.height - 1);
+  expect(await page.locator('#sim-instrumentos > #sim-legenda').count()).toBe(1);
+  await expect(painel.locator('summary')).toContainText('Instrumentos e gêneros');
   // aberto: começa ouvindo e calcula a parte de cada um
   await painel.locator('summary').click();
   await expect(page.locator('#sim-instrumentos-lista .ouvindo')).toBeVisible();
