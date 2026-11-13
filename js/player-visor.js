@@ -87,7 +87,7 @@
         onda = new Float32Array(an.fftSize);
       }
       fluxo ||= capturar();
-      const t0 = fluxo.getAudioTracks()[0] || null;
+      const t0 = fluxo.getAudioTracks().find(t => t.readyState === 'live') || null;
       if (t0 && t0 !== trilha) {
         fonte?.disconnect();
         trilha = t0;
@@ -167,6 +167,9 @@
     if (d.classList.contains('album-visor')) { cores = null; atualizar(); }
   }, true);
   audio?.addEventListener('play', atualizar);
+  // Cada faixa nova pede uma captura nova: no Chrome a trilha da captura antiga continua "live" depois da troca, mas
+  // muda (o visor ficava vazio da segunda faixa em diante, até recarregar a página)
+  audio?.addEventListener('loadstart', () => { fluxo = null; trilha = null; });
   audio?.addEventListener('playing', () => { if (an) ligar(); });
   document.addEventListener('visibilitychange', atualizar);
 
