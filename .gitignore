@@ -30,3 +30,6 @@ tasks/
 
 # per-track audio features (JSONL is the resumable checkpoint; compact output feeds the MCP)
 /data/features/
+
+# fix-missing-tracks state (jobs/results of the recovery, see script/fix-missing-tracks)
+/data/fix-missing-tracks/
