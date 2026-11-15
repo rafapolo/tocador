@@ -342,6 +342,9 @@ function showToast(msg, duration = 3500, { ok = false, action = null } = {}) {
     btn.addEventListener('click', () => { hideToast(); action.onClick(); });
     _toastEl.append(' ', btn);
   }
+  // Same line as the header stats badges (the header isn't fixed, but the page doesn't scroll).
+  const stats = document.querySelector('.header-stats')?.getBoundingClientRect();
+  if (stats?.height) _toastEl.style.setProperty('--toast-meio', `${Math.round(stats.top + stats.height / 2)}px`);
   _toastEl.classList.add('show');
   const armar = () => { clearTimeout(_toastTimer); _toastTimer = setTimeout(hideToast, duration); };
   _toastEl.onfocusin = _toastEl.onpointerenter = () => clearTimeout(_toastTimer);

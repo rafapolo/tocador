@@ -522,7 +522,9 @@ body {
 
 #toast {
   position: fixed;
-  top: calc(16px + env(safe-area-inset-top, 0px));
+  /* --toast-meio is set by showToast() to the vertical middle of .header-stats, so the
+     pill sits on the same line as the stats badges; the fallback is roughly that line. */
+  top: var(--toast-meio, calc(47px + env(safe-area-inset-top, 0px)));
   left: 50%;
   background: rgba(40, 6, 6, 0.96);
   border: 1px solid #c0392b;
@@ -538,7 +540,7 @@ body {
   letter-spacing: 0.5px;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-50%) translateY(-6px);
+  transform: translate(-50%, calc(-50% - 6px));
   transition: opacity 0.25s ease, transform 0.25s ease;
   z-index: 9999;
   white-space: nowrap;
@@ -565,7 +567,7 @@ body {
 
 #toast.show {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translate(-50%, -50%);
 }
 
 /* O vermelho é para erro; confirmações usam amarelo. */
