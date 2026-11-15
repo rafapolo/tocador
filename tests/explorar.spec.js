@@ -623,3 +623,21 @@ test.describe('mobile', () => {
     await expect(page.locator('#explorar-apply')).toHaveText('nenhum álbum passa nos filtros');
   });
 });
+
+test('features mais velhas que o catálogo (cache do service worker depois de um ETL) são buscadas de novo pela rede', async ({ page }) => {
+  const zlib = require('zlib');
+  const velhas = JSON.parse(zlib.gunzipSync(featuresGz));
+  velhas.cat.id = '00000000';
+  const velhasGz = zlib.gzipSync(JSON.stringify(velhas));
+  let pedidos = 0;
+  await boot(page);   // as features só são pedidas ao abrir o acordeão: esta rota, a mais nova, vence a do boot
+  // a 1ª resposta é a cópia velha; a 2ª, a da rede (o page.route não vê o cache: 'reload' nos headers)
+  await page.route('**/*-features.json.gz', r => r.fulfill({ status: 200,
+    headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body: pedidos++ ? featuresGz : velhasGz }));
+  await page.locator('.album-item').first().click();
+  const acordeao = page.locator('#tracks-panel .album-generos');
+  await acordeao.locator('summary').click();
+  await expect(acordeao.locator('.album-genero').first()).toBeVisible();
+  await expect(acordeao).not.toContainText('não tem análise');
+  expect(pedidos).toBe(2);
+});

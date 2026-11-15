@@ -41,10 +41,10 @@ const EX_PROBS = ['voice', 'dance', 'acoustic', 'electronic', 'happy', 'sad', 'r
 
 function isExplorarOpen() { return !!_exLayout?.classList.contains('explorar-mode'); }
 
-async function _exBuscar(rel) {
-  if (/^https?:/.test(rel)) { try { const r = await fetch(rel); return r.ok ? r : null; } catch { return null; } }
+async function _exBuscar(rel, init) {
+  if (/^https?:/.test(rel)) { try { const r = await fetch(rel, init); return r.ok ? r : null; } catch { return null; } }
   for (const base of [APP_ROOT, `${SITE_ORIGIN}/`]) {
-    try { const r = await fetch(base + rel); if (r.ok) return r; } catch { /* tenta a próxima origem */ }
+    try { const r = await fetch(base + rel, init); if (r.ok) return r; } catch { /* tenta a próxima origem */ }
   }
   return null;
 }
@@ -64,13 +64,22 @@ function _exCarregar() {
     const key = typeof activeAcervoKey !== 'undefined' ? activeAcervoKey : null;
     const urls = [db?.meta?.features_url, key && `data/${key}-features.json.gz`].filter(Boolean);
     let f = null;
+    const keys = [];
+    for (const a of db?.albums || []) for (const t of a.tracks) keys.push(`${a.path}/${t.file}`.normalize('NFC'));
     for (const u of urls) {
       const r = await _exBuscar(u);
       if (!r) continue;
       try {
-        const keys = [];
-        for (const a of db.albums) for (const t of a.tracks) keys.push(`${a.path}/${t.file}`.normalize('NFC'));
-        f = decodeFeatures(await _exGz(r), keys);
+        try {
+          f = decodeFeatures(await _exGz(r), keys);
+        } catch (e) {
+          // O service worker revalida o catálogo a cada visita, mas as features só quando alguém as abre: depois de
+          // um ETL o catálogo novo chega antes e a cópia velha das features é recusada. Busca de novo pela rede.
+          if (e.message !== 'FEATURES_CATALOG_MISMATCH') throw e;
+          const fresca = await _exBuscar(u, { cache: 'reload' });
+          if (!fresca) throw e;
+          f = decodeFeatures(await _exGz(fresca), keys);
+        }
         break;
       } catch (e) {
         console.warn('features ignoradas:', e.message);

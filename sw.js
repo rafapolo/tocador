@@ -85,5 +85,8 @@ self.addEventListener('fetch', e => {
   // bare path is what install precached, the copy to use offline.
   const versao = sameOrigin && url.searchParams.has('v');
   const cacheKey = !sameOrigin ? request : versao ? url.pathname + url.search : url.pathname;
+  // fetch(url, { cache: 'reload' }) asks for the network on purpose (features rejected as older than the catalog,
+  // js/explorar.js): answering it from the cache would hand back the same stale copy.
+  if (request.cache === 'reload' || request.cache === 'no-store') { e.respondWith(networkFirst(cacheKey, request)); return; }
   e.respondWith(staleWhileRevalidate(cacheKey, request, sameOrigin ? url.pathname : request));
 });
