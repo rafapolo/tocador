@@ -116,7 +116,14 @@
     // by its caption. The tour pins the panel at the top right (js/atlas-tour.js, .em-tour in assets/atlas.css): a
     // panel up there takes no height at the bottom, or the graph gets squeezed into a strip above it.
     const painelNoAlto = r => r.height > 0 && r.top < camada.clientHeight * 0.4;
+    // Phones stack the panel on the card (CSS `bottom: calc(var(--cartao-alto) + 8px)`). Written here too, not only from
+    // the ResizeObserver below: WebKit (Linux CI, maybe Safari) delivered its first, all-zero notification while
+    // everything was hidden and none after the graph and the card showed up, so the panel sat on top of the card.
+    function medirCartao() {
+      camada.style.setProperty('--cartao-alto', `${$('cartao').offsetHeight}px`);
+    }
     function reservaBaixo() {
+      medirCartao();
       const H = camada.clientHeight, cartao = $('cartao'), painel = $('grafo-painel').getBoundingClientRect(), tops = [H - 4];
       if (!painelNoAlto(painel)) tops.push(painel.top);
       if (!cartao.hidden) tops.push(cartao.getBoundingClientRect().top);
@@ -741,7 +748,7 @@
     svg.addEventListener('pointercancel', soltar);
 
     const ajustar = new ResizeObserver(() => {
-      camada.style.setProperty('--cartao-alto', `${$('cartao').offsetHeight}px`);   // phones stack the panel on the card
+      medirCartao();
       if (aberto && D && (camada.clientWidth !== larguraFeita || camada.clientHeight !== alturaFeita
         || Math.abs(reservaBaixo() - reservaFeita) > 1)) desenhar(false);
     });

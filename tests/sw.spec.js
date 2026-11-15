@@ -54,3 +54,13 @@ test('SW4: um pedido cache: "reload" vai à rede, e a cópia nova substitui a ve
   expect(await tamanho({ cache: 'reload' })).toBeGreaterThan(1000);
   expect(await tamanho({})).toBeGreaterThan(1000);       // e ficou guardada no lugar da velha
 });
+
+// Uma navegação que falha sem cópia guardada dava Response.error(): o console acusava "The FetchEvent … resulted
+// in a network error response" e o navegador mostrava a própria página de erro.
+test('SW5: sem rede, uma página nunca guardada mostra "Sem conexão" e um botão para tentar de novo', async ({ page, context }) => {
+  await comWorker(page);
+  await context.setOffline(true);
+  await page.goto('/homi/pagina-que-nunca-foi-guardada/').catch(() => {});
+  await expect(page.locator('h1')).toHaveText('Sem conexão');
+  await expect(page.getByRole('button', { name: 'Tentar de novo' })).toBeVisible();
+});

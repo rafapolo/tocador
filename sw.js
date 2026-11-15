@@ -56,6 +56,16 @@ async function staleWhileRevalidate(cacheKey, request, offlineKey = cacheKey) {
   return network;
 }
 
+// What a page the worker can't fetch and never cached gets, instead of Response.error() ("The FetchEvent for
+// https://tocador.cc/homi/<album>/ resulted in a network error response", seen 2026-11-15 on a flaky connection,
+// which leaves the browser's own error page). Self-contained: offline, no stylesheet or script would load.
+const SEM_REDE = `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>♪ Tocador · sem conexão</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#141210;color:#e8e0d4;font:16px system-ui,sans-serif;text-align:center">
+<main style="padding:24px"><p style="font-size:2rem;margin:0">♪</p><h1 style="font-size:1.2rem;font-weight:500">Sem conexão</h1>
+<p style="color:#a89f92">Esta página ainda não foi guardada para uso offline.</p>
+<button onclick="location.reload()" style="font:inherit;padding:10px 20px;border-radius:999px;border:0;background:#c9a06b;color:#141210;cursor:pointer">Tentar de novo</button>
+<script>addEventListener('online', () => location.reload())</script></main></body></html>`;
+
 async function networkFirst(cacheKey, request) {
   const cache = await caches.open(CACHE);
   try {
@@ -63,7 +73,13 @@ async function networkFirst(cacheKey, request) {
     if (resp.ok) cache.put(cacheKey, resp.clone());
     return resp;
   } catch {
-    return (await cache.match(cacheKey)) || Response.error();
+    const copia = await cache.match(cacheKey);
+    if (copia) return copia;
+    if (request.mode !== 'navigate') return Response.error();
+    // A blip (a mobile network switching, a request cut short) often clears in a moment: one more try.
+    await new Promise(r => setTimeout(r, 600));
+    try { return await fetch(request); } catch { /* offline de fato */ }
+    return new Response(SEM_REDE, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
   }
 }
 

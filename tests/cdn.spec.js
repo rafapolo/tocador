@@ -1,4 +1,22 @@
-const { test, expect } = require('@playwright/test');
+const base = require('@playwright/test');
+const { expect } = base;
+
+// From a CI runner every request leaves one IP, and the proxy's per-IP limit (lib/limits.js) answers 429 with
+// Retry-After once this file and its retries pile up; the runner is also far from the Helsinki bucket, so 5 s
+// timed out. Neither is the regression these tests guard against: wait out a 429 and give each request 15 s.
+const test = base.test.extend({
+  request: async ({ request }, use) => {
+    const paciente = metodo => async (url, opcoes = {}) => {
+      for (let tentativa = 0; ; tentativa++) {
+        const res = await request[metodo](url, { timeout: 15000, ...opcoes });
+        if (res.status() !== 429 || tentativa === 3) return res;
+        const espera = Math.min(Number(res.headers()['retry-after']) || 2, 10);
+        await new Promise(r => setTimeout(r, espera * 1000));
+      }
+    };
+    await use(new Proxy(request, { get: (alvo, k) => (k === 'get' || k === 'head' ? paciente(k) : alvo[k]) }));
+  },
+});
 const path = require('path');
 const fs = require('fs');
 
