@@ -1,6 +1,10 @@
 // A banda em 3D do /atlas (js/atlas-sim.js): ?sim=1 pede um clique, os músicos entram com as notas que o motor de
 // som agenda e saem quando a voz se cala, e Esc fecha. three.js vem de node_modules, nunca do jsdelivr.
-const { test, expect } = require('@playwright/test');
+const { test, expect: expectBase } = require('@playwright/test');
+// O motor de som agenda as notas e o three.js monta o palco em tempo real: na suíte inteira, com dezenas de
+// navegadores disputando a CPU, os 5 s padrão estouravam (testes que passam sozinhos falhavam juntos, outros a
+// cada rodada). As esperas daqui ganham mais prazo; as que medem tempo de propósito passam o próprio timeout.
+const expect = expectBase.configure({ timeout: 15000 });
 const path = require('path');
 const fs = require('fs');
 
@@ -8,7 +12,7 @@ const fx = n => fs.readFileSync(path.join(__dirname, 'fixtures', n));
 const gz = body => ({ status: 200, headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body });
 const three = n => fs.readFileSync(path.join(__dirname, '..', 'node_modules', 'three', 'build', n));
 
-test.use({ serviceWorkers: 'block' });
+test.use({ serviceWorkers: 'block', actionTimeout: 15000 });
 
 async function boot(page, url = '/atlas') {
   await page.route('**/data/atlas-faixas.json.gz', r => r.fulfill(gz(fx('atlas-faixas-teste.json.gz'))));

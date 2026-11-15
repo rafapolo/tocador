@@ -66,12 +66,28 @@ test.describe('actionable playback errors', () => {
     await page.route('**/*.mp3', r => r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': '0' }, body: '' }));
     await card(page, 'Construção').locator('.card-play').click();
     const titulo = await page.evaluate(() => selectedAlbum.tracks[0].title);
-    await expect(page.locator('#toast')).toContainText(`Faixa vazia: ${titulo}`);
+    await expect(page.locator('#toast')).toContainText(`Faixa vazia: ${titulo}`, { timeout: 8000 });
     const itens = page.locator('#track-list .track-item');
     await expect(itens.nth(0)).toHaveClass(/unavailable/);
-    await expect(itens.nth(1)).toHaveClass(/unavailable/, { timeout: 5000 });
-    await expect(itens.nth(2)).toHaveClass(/unavailable/, { timeout: 5000 });
+    // no WebKit não há 'error' para 0 bytes: o vigia (3 s) pergunta ao servidor, e só então pula
+    await expect(itens.nth(1)).toHaveClass(/unavailable/, { timeout: 8000 });
+    await expect(itens.nth(2)).toHaveClass(/unavailable/, { timeout: 8000 });
     await expect(page.locator('#toast')).not.toContainText('Vários erros');
+  });
+
+  // O vigia do WebKit (0 bytes sem 'error') não pode confundir rede lenta com arquivo vazio: com o GET parado e o
+  // HEAD dizendo que o arquivo existe e tem tamanho, a faixa espera, sem pular e sem marcar nada.
+  test('a slow track is waited for, not skipped by the empty-file watchdog', async ({ page }) => {
+    await gotoWithFixture(page);
+    await page.unroute('**/*.mp3');
+    await page.route('**/*.mp3', r => r.request().method() === 'HEAD'
+      ? r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': '4000000' }, body: '' })
+      : undefined);                                                       // o GET nunca responde
+    await card(page, 'Construção').locator('.card-play').click();
+    await page.waitForTimeout(5000);                                      // passa do VIGIA_MS (3 s) com folga
+    expect(await page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack))).toBe(0);
+    await expect(page.locator('#track-list .track-item').first()).not.toHaveClass(/unavailable/);
+    await expect(page.locator('#toast')).not.toContainText('Faixa');
   });
 
   // Faixas conhecidas como quebradas (js/faixas-indisponiveis.js) ficam no catálogo, listadas desativadas:

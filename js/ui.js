@@ -1056,7 +1056,8 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     playTrack(currentTrack);
   });
 
-  audio.addEventListener('error', async () => {
+  // `jaClassificada`: o vigia abaixo já perguntou ao servidor (o WebKit não deu erro nenhum).
+  async function falhaDeAudio(jaClassificada) {
     setLoading(false);
     if (!currentTrack || !_playRequested) return;
     if (window.__visorRecarregando) return;     // o visor do som recarregando a faixa em modo CORS (js/player-visor.js)
@@ -1064,7 +1065,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     const src = audio.currentSrc || audio.src;
     const mediaCode = audio.error?.code;
     _consecutiveErrors++;
-    const kind = await classifyAudioError(src, mediaCode);
+    const kind = jaClassificada || await classifyAudioError(src, mediaCode);
     if (currentTrack !== errored) return;   // the listener moved on while we asked
     // Arquivo vazio é defeito da faixa, não sinal de CDN fora: não conta para a pausa por erros seguidos.
     if (kind === 'empty') _consecutiveErrors = 0;
@@ -1101,7 +1102,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       // track) and this track's error is still the audio element's current state —
       // otherwise a stale timeout can yank the user off a track they just chose.
       setTimeout(() => {
-        if (currentTrack === errored && audio.error) playNext();
+        if (currentTrack === errored && (audio.error || audio.readyState === 0)) playNext();
       }, 1500);
       return;
     }
@@ -1109,7 +1110,28 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       : kind === 'blocked' ? 'O servidor recusou a faixa'
       : 'Servidor de áudio indisponível';
     showToast(msg, 15000, { action: retry });
-  });
+  }
+  audio.addEventListener('error', () => falhaDeAudio());
+
+  // O WebKit (Safari, todo navegador no iPhone) não dispara 'error' para um MP3 de 0 bytes: fica para sempre em
+  // networkState LOADING com readyState 0, e a faixa "toca" muda sem pular. Se a faixa pedida segue sem dado
+  // nenhum depois de VIGIA_MS, pergunta ao servidor; só uma resposta definitiva (vazia, 404) conta como falha.
+  // Rede lenta dá 200 com tamanho, e aí se continua esperando.
+  const VIGIA_MS = 3000;
+  let _vigia = 0;
+  const vigiar = () => {
+    clearTimeout(_vigia);
+    if (!_playRequested || audio.readyState > 0) return;
+    const track = currentTrack, src = audio.currentSrc || audio.src;
+    _vigia = setTimeout(async () => {
+      if (currentTrack !== track || (audio.currentSrc || audio.src) !== src || audio.readyState > 0 || audio.error) return;
+      const kind = await classifyAudioError(src, undefined);
+      if ((kind === 'empty' || kind === 'missing') && currentTrack === track && audio.readyState === 0 && !audio.error) falhaDeAudio(kind);
+    }, VIGIA_MS);
+  };
+  audio.addEventListener('waiting', vigiar);
+  audio.addEventListener('loadstart', vigiar);
+  audio.addEventListener('loadedmetadata', () => clearTimeout(_vigia));
 
   const progressFill = document.querySelector('#progress-fill');
   const mainProgressBar = document.getElementById('main-progress-bar');
