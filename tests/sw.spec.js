@@ -42,3 +42,15 @@ test('SW3: sem rede, página e script com ?v= saem do cache', async ({ page, con
   await page.goto('/?acervo=uqt');
   await expect(page.locator('#btn-atlas')).toBeAttached();
 });
+
+// Depois de um ETL o catálogo novo chegava antes das features (revalidadas só quando alguém abre um acordeão
+// ou a Pegada), a cópia velha era recusada pela impressão digital e todo álbum dizia "não tem análise de áudio".
+// js/explorar.js então pede de novo com cache: 'reload', e o worker não pode responder isso com a cópia guardada.
+test('SW4: um pedido cache: "reload" vai à rede, e a cópia nova substitui a velha no cache', async ({ page }) => {
+  await comWorker(page);
+  await envelhecer(page, '/data/homi-features.json.gz', 'velho');
+  const tamanho = init => page.evaluate(i => fetch('/data/homi-features.json.gz', i).then(r => r.arrayBuffer()).then(b => b.byteLength), init);
+  // (sem um fetch normal antes: a revalidação em segundo plano dele trocaria a cópia velha por conta própria)
+  expect(await tamanho({ cache: 'reload' })).toBeGreaterThan(1000);
+  expect(await tamanho({})).toBeGreaterThan(1000);       // e ficou guardada no lugar da velha
+});
