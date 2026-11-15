@@ -1485,7 +1485,9 @@ audio {
     min-height: 0;
   }
   .player-bar > .mobile-track-drawer { flex: 0 1 auto; min-height: 0; }
-  .player-bar > .player-content { flex-shrink: 0; }
+  /* width: its desktop `margin: 0 auto` would otherwise stop the flex stretch and shrink the
+     controls to their content (progress bar gone, shuffle/☰ on top of prev/next). */
+  .player-bar > .player-content { flex-shrink: 0; width: 100%; }
   .app-header { flex-shrink: 0; }
   .app-layout { min-height: 49px; }   /* the search row */
 
