@@ -847,6 +847,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   activeAcervoKey = resolveAcervoKey(dataUrl, acervoParam);
   activeAcervoId = activeAcervoKey || dataUrl;
   lembrarBaseDoAcervo(activeAcervoId, BASE_URL);
+  window.prepararCorsVisor?.();   // o visor do som lê o <audio> por CORS: ligado antes da 1ª faixa, abrir o visor não recarrega
   const indexLink = document.getElementById('acervo-index-link');
   if (indexLink) {
     // Plain link to the static album index of the loaded acervo — the crawl path

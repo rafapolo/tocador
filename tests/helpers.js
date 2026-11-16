@@ -13,10 +13,10 @@ const fixtureMp3 = fs.readFileSync(path.join(__dirname, 'fixtures', 'silence.mp3
 // The real CDN answers Range with 206; Chromium can't seek a plain 200 body (empty `seekable`).
 function rangedMp3(route) {
   const m = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range || '');
-  if (!m) return route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes' }, body: fixtureMp3 });
+  if (!m) return route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Access-Control-Allow-Origin': '*' }, body: fixtureMp3 });
   const ini = +m[1], fim = m[2] ? Math.min(+m[2], fixtureMp3.length - 1) : fixtureMp3.length - 1;
   return route.fulfill({ status: 206, body: fixtureMp3.subarray(ini, fim + 1), headers: {
-    'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Content-Range': `bytes ${ini}-${fim}/${fixtureMp3.length}` } });
+    'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Access-Control-Allow-Origin': '*', 'Content-Range': `bytes ${ini}-${fim}/${fixtureMp3.length}` } });
 }
 
 async function gotoWithFixture(page, url = '/', { blockAudio = false, ranges = false } = {}) {
@@ -56,7 +56,7 @@ async function gotoWithFixture(page, url = '/', { blockAudio = false, ranges = f
   await page.route('**/*.mp3', route => blockAudio
     ? route.abort()
     : ranges ? rangedMp3(route)
-    : route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: fixtureMp3 }));
+    : route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Access-Control-Allow-Origin': '*' }, body: fixtureMp3 }));
   await page.route('**/capa-m*.jpg', route => route.fulfill({ status: 404 }));
   await page.route('**/report-error', route => route.fulfill({ status: 204 }));
   await page.goto(url);

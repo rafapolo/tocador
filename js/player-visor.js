@@ -6,8 +6,9 @@
 // O som é lido sem desviar o <audio>: captureStream() (Chrome, Firefox) dá uma cópia do que ele toca a um
 // AnalyserNode, e o som segue saindo pelo próprio <audio>. Assim nada muda na reprodução, nem no fundo com a tela
 // apagada. Ler o som de outro domínio exige CORS: o cdn.tocador.cc responde com Access-Control-Allow-Origin, então
-// na primeira abertura o <audio> passa a pedir em modo CORS (crossorigin="anonymous"), recarregando a faixa atual
-// no mesmo ponto. Um acervo de fora (?acervo=<url>) pode não ter CORS: aí o visor nem aparece. Sem captureStream
+// o <audio> passa a pedir em modo CORS (crossorigin="anonymous"), recarregando a faixa atual
+// no mesmo ponto. Para não cortar o som ao abrir, o modo CORS é ligado antes da primeira faixa (prepararCors()),
+// e o recarregamento só sobra como reserva. Um acervo de fora (?acervo=<url>) pode não ter CORS: aí o visor nem aparece. Sem captureStream
 // sem prefixo (Safari, Firefox) também não.
 (function () {
   'use strict';
@@ -37,6 +38,14 @@
     cores = { barra: cs.getPropertyValue('--color-accent').trim() || '#d4a574', onda: cs.getPropertyValue('--color-text').trim() || '#eee' };
   }
 
+  // Chamado por ui.js assim que o BASE_URL do acervo é conhecido, antes de qualquer faixa carregar: com o visor
+  // possível, o <audio> já pede em modo CORS desde a primeira faixa. Abrir o visor depois não precisa recarregar a
+  // faixa (o recarregamento cortava o som por um instante, como um curto).
+  function prepararCors() {
+    if (!audio || audio.src || audio.crossOrigin === 'anonymous') return;
+    if (possivel()) audio.crossOrigin = 'anonymous';
+  }
+
   // chamado por album-view.js junto com os outros acordeões
   function renderAlbumVisor() {
     const ok = possivel();
@@ -44,7 +53,7 @@
     atualizar();
   }
 
-  // a faixa atual, carregada sem CORS, volta a carregar com CORS no mesmo ponto (só uma vez por página)
+  // reserva: a faixa atual, carregada sem CORS (prepararCors() não chegou a tempo), volta a carregar com CORS no mesmo ponto (só uma vez por página)
   function garantirCors() {
     if (audio.crossOrigin === 'anonymous') return true;
     if (!corsOk()) return false;
@@ -174,5 +183,6 @@
   document.addEventListener('visibilitychange', atualizar);
 
   window.renderAlbumVisor = renderAlbumVisor;
+  window.prepararCorsVisor = prepararCors;
   window.__visorPlayer = { estado: () => ({ possivel: possivel(), cors: audio.crossOrigin, ligado: !!an, desenhando: !!raf, falhou }) };
 })();

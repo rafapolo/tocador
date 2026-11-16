@@ -26,6 +26,9 @@ test('o visor é o primeiro acordeão, um aberto por vez, e com a faixa tocando 
   // o primeiro acordeão, antes de "Gêneros detectados" e "Soa parecido com", e sem legenda (a faixa já está no player)
   expect(await visor.evaluate(d => [d.nextElementSibling?.className, d.nextElementSibling?.nextElementSibling?.className])).toEqual(['album-generos', 'album-instrumentos']);
   await expect(visor.locator('p')).toHaveCount(0);
+  // o <audio> já toca em modo CORS: abrir o visor não recarrega a faixa (o recarregamento cortava o som)
+  expect(await page.evaluate(() => document.getElementById('audio').crossOrigin)).toBe('anonymous');
+  await page.evaluate(() => { window.__cargas = 0; document.getElementById('audio').addEventListener('loadstart', () => window.__cargas++); });
   const generos = page.locator('#tracks-panel .album-generos');
   await generos.locator('summary').click();
   await expect(generos).toHaveAttribute('open', '');
@@ -34,8 +37,9 @@ test('o visor é o primeiro acordeão, um aberto por vez, e com a faixa tocando 
   await expect(generos).not.toHaveAttribute('open', '');          // só um aberto
   await expect.poll(() => page.evaluate(() => window.__visorPlayer.estado().cors)).toBe('anonymous');
   await expect.poll(() => page.evaluate(() => window.__visorPlayer.estado().desenhando)).toBe(true);
-  // a faixa segue tocando depois de recarregar em modo CORS
+  // a faixa segue tocando, sem ter sido recarregada
   await expect.poll(() => page.evaluate(() => !document.getElementById('audio').paused)).toBe(true);
+  expect(await page.evaluate(() => window.__cargas)).toBe(0);
   // fechado, para de desenhar
   await visor.locator('summary').click();
   await expect.poll(() => page.evaluate(() => window.__visorPlayer.estado().desenhando)).toBe(false);
