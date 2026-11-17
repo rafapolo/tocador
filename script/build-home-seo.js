@@ -77,7 +77,10 @@ function textoHtml(n) {
 
 function jsonLd(n) {
   const { uqt, homi } = n;
-  const acervo = (alias, nome, desc, x) => ({
+  // creator: o blog que montou a coleção; license: a seção "Licença e direitos" do repo do acervo
+  // (os direitos são dos artistas, não há licença aberta a declarar). A ligação com o catálogo é
+  // includedInDataCatalog: o Google só aceita CreativeWork/URL em isPartOf de um Dataset.
+  const acervo = (alias, nome, desc, x, criador, repo) => ({
     '@type': 'Dataset',
     '@id': `${SITE}/${alias}/#acervo`,
     name: nome,
@@ -85,7 +88,9 @@ function jsonLd(n) {
     url: `${SITE}/${alias}/`,
     inLanguage: 'pt-BR',
     temporalCoverage: `${x.anoMin}/${x.anoMax}`,
-    isPartOf: { '@id': `${SITE}/#catalogo` },
+    creator: { '@type': 'Organization', ...criador },
+    license: `https://github.com/rafapolo/${repo}#licen%C3%A7a-e-direitos`,
+    includedInDataCatalog: { '@id': `${SITE}/#catalogo` },
   });
   const grafo = {
     '@context': 'https://schema.org',
@@ -119,8 +124,9 @@ function jsonLd(n) {
         url: `${SITE}/`,
         inLanguage: 'pt-BR',
         dataset: [
-          acervo('uqt', 'Acervo UQT', '100 anos de MPB', uqt),
-          acervo('homi', 'Hominis Canidae', 'Música independente brasileira desde 2009', homi),
+          acervo('uqt', 'Acervo UQT', '100 anos de MPB', uqt, { name: 'Um Que Tenha' }, 'uqt'),
+          acervo('homi', 'Hominis Canidae', 'Música independente brasileira desde 2009', homi,
+            { name: 'Hominis Canidae', url: 'https://hominiscanidae.org/' }, 'hominiscanidae'),
         ],
       },
     ],

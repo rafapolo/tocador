@@ -66,6 +66,13 @@ test('JSON-LD da home: WebSite com SearchAction, Organization e DataCatalog; sem
   const site = ld['@graph'][0];
   expect(site.potentialAction.target.urlTemplate).toBe('https://tocador.cc/?acervo=uqt&q={search_term_string}');
   expect(ld['@graph'][2].dataset.map(d => d.url)).toEqual(['https://tocador.cc/uqt/', 'https://tocador.cc/homi/']);
+  // o Search Console cobrava creator e license, e recusava isPartOf apontando para o DataCatalog
+  for (const d of ld['@graph'][2].dataset) {
+    expect(d.creator.name).toBeTruthy();
+    expect(d.license).toMatch(/^https:\/\/github\.com\/rafapolo\//);
+    expect(d.includedInDataCatalog).toEqual({ '@id': 'https://tocador.cc/#catalogo' });
+    expect(d.isPartOf).toBeUndefined();
+  }
 });
 
 test('gerar() é idempotente e llms.txt lista acervos, ferramentas e sitemaps', () => {
