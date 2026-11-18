@@ -79,7 +79,6 @@ const FAIXAS_INDISPONIVEIS = {
     "2002 - Sambas de Enredo Grupo A/7. Unidos da Villa Rica.mp3": "vazio",
     "2002 - Sambas de Enredo Grupo A/8. Acadêmicos da Rocinha.mp3": "vazio",
     "2002 - Sambas de Enredo Grupo A/9. Estácio de Sá.mp3": "vazio",
-    "2006 - Ze Paulo Becker - Um Violao Na Roda Do Choro/08 Frevo.mp3": "truncado",
   },
 };
 
