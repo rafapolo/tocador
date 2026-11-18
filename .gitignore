@@ -33,3 +33,6 @@ tasks/
 
 # fix-missing-tracks state (jobs/results of the recovery, see script/fix-missing-tracks)
 /data/fix-missing-tracks/
+
+# torrents gerados localmente
+/data/torrents/
