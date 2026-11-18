@@ -10,7 +10,7 @@ script/models/
 test-results/
 dist/
 sync-to-bucket.log
-tmp-atlas-homi/
+tmp-atlas-*/
 plans/
 plan/
 tasks/
