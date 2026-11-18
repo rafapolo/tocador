@@ -855,6 +855,16 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     if (activeAcervoKey) indexLink.href = `${SITE_ORIGIN}/${activeAcervoKey}/`;
     else indexLink.hidden = true;
   }
+  // Static link to the other acervo's index: in the HTML it already points at /uqt/,
+  // so crawlers find every acervo without relying on the sitemap being fetched.
+  const outroLink = document.getElementById('acervo-index-outro');
+  if (outroLink) {
+    const outro = { homi: 'uqt', uqt: 'homi' }[activeAcervoKey];
+    if (outro) {
+      outroLink.href = `${SITE_ORIGIN}/${outro}/`;
+      outroLink.textContent = `Índice do ${outro} ↗`;
+    } else outroLink.hidden = true;
+  }
   const acervoQuery = activeAcervoKey
     ? `?acervo=${encodeURIComponent(activeAcervoKey)}`
     : (acervoParam ? `?acervo=${encodeURIComponent(acervoParam)}` : '');

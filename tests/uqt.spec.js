@@ -867,6 +867,10 @@ test('L62: browse panel links to the loaded acervo album index', async ({ page }
   await expect(link).toHaveText('Índice de álbuns ↗');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveCSS('text-align', 'right');
+  const outro = page.locator('#acervo-index-outro');
+  await expect(outro).toBeVisible();
+  await expect(outro).toHaveAttribute('href', 'https://tocador.cc/uqt/');
+  await expect(outro).toHaveText('Índice do uqt ↗');
 });
 
 // Fix #3: --color-text-muted (#7a7268 → #958d83) needed to clear WCAG AA's

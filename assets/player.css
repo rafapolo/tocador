@@ -2089,6 +2089,8 @@ audio {
 
 .acervo-index-link[hidden] { display: none; }
 
+.acervo-index-outro { border-top: 0; padding-top: 0; }
+
 .browse-share {
   flex-shrink: 0;
   display: flex;
