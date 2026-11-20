@@ -39,6 +39,18 @@ test('erro de JS não tratado vira reporte "js" com contexto', async ({ page }) 
   expect(r.body).toContain('**online:**');
 });
 
+test('erro de carteira cripto injetada pelo navegador (Brave no iOS) não vira reporte', async ({ page }) => {
+  const reportes = await rotear(page);
+  await page.goto('/');
+  await page.waitForSelector('.album-item');
+  await page.evaluate(() => {
+    setTimeout(() => { window.ethereum.selectedAddress = undefined; });
+    setTimeout(() => { throw new Error('marcador depois da carteira'); }, 50);
+  });
+  await expect.poll(() => reportes.find(r => r.title.includes('marcador depois da carteira'))).toBeTruthy();
+  expect(reportes.filter(r => /ethereum/.test(r.title))).toEqual([]);
+});
+
 test('rejeição com valor que não é Error diz o tipo do valor e leva pilha sintética', async ({ page }) => {
   const reportes = await rotear(page);
   await page.goto('/');

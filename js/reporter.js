@@ -66,6 +66,9 @@
     if (!(e instanceof ErrorEvent)) return;
     const msg = e.message || String(e);
     if (msg.includes('ResizeObserver')) return; // browser noise, not actionable
+    // Crypto wallets injected by the browser (Brave on iOS runs `window.ethereum.selectedAddress = undefined` as an
+    // inline script, #659/#660): the stack points at the page, but the app never touches these globals.
+    if (/\b(ethereum|solana|web3|phantom)\b/i.test(msg)) return;
     // Cross-origin scripts (loaded without CORS) report as bare "Script error." with no
     // filename/lineno — that's third-party code (analytics, extensions), not ours.
     if (msg === 'Script error.' && !e.filename) return;
