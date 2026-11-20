@@ -5,6 +5,11 @@ name: CDN Health Monitor
 # (fixes the case where credentials went stale) and files/updates a tracking
 # issue so a broken CDN can't sit unnoticed for days again, as it did on
 # 2026-08-11..2026-08-20.
+#
+# Telegram (secrets TELEGRAM_BOT / TELEGRAM_CHAT_ID, the owner's linkme bot): one
+# message when an outage starts, one when it ends, and one when S3 stalls spike
+# (/metrics today.s3Slow growing by S3_SLOW_ALERT or more since the previous run;
+# 2026-11-20 had ~20 in a day). No message while things stay the same.
 
 on:
   schedule:
@@ -24,12 +29,29 @@ env:
   SMOKE_URL_NFD: "https://cdn.tocador.cc/uqt/1965%20-%20Forma65/03%20Canc%CC%A7a%CC%83o%20do%20Olhar%20Amado.mp3"
   SMOKE_URL_NFC: "https://cdn.tocador.cc/uqt/1960%20-%20Elza%20Soares,%20Oswaldo%20Borba%20-%20Se%20Acaso%20Voc%C3%AA%20Chegasse/03%20Mulata%20Assanhada.mp3"
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TELEGRAM_BOT: ${{ secrets.TELEGRAM_BOT }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  # md5("tocador.cc/metrics"): the endpoint's documented, non-secret password (see CLAUDE.md)
+  METRICS_AUTH: "x:610336c3eeea7dc0347bd58b3a197473"
+  S3_SLOW_ALERT: "10"
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      # `telegram "<html>"`: a no-op without the secrets (forks), never fails the run.
+      - name: Telegram helper
+        run: |
+          cat > "$RUNNER_TEMP/telegram.sh" <<'SH'
+          telegram() {
+            [ -n "$TELEGRAM_BOT" ] && [ -n "$TELEGRAM_CHAT_ID" ] || return 0
+            curl -s -o /dev/null --max-time 15 "https://api.telegram.org/bot${TELEGRAM_BOT}/sendMessage" \
+              --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "parse_mode=HTML" \
+              --data-urlencode "disable_web_page_preview=true" --data-urlencode "text=$1" || true
+          }
+          SH
 
       - name: Real fetch through the proxy
         id: probe
@@ -43,7 +65,7 @@ jobs:
             echo "[$label] status: $code"
             if [ "$code" != "206" ] && [ "$code" != "200" ]; then
               ok=false
-              detail="${detail}${label} -> HTTP ${code}; "
+              detail="${detail}${label}: HTTP ${code}; "
             fi
           done
           echo "ok=$ok" >> "$GITHUB_OUTPUT"
@@ -54,15 +76,47 @@ jobs:
       - name: Recovery — close any open outage issue
         if: steps.probe.outputs.ok == 'true'
         run: |
+          . "$RUNNER_TEMP/telegram.sh"
           issue=$(gh issue list --repo "$GITHUB_REPOSITORY" --label cdn-outage --state open --json number -q '.[0].number')
           if [ -n "$issue" ]; then
             gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body "CDN is serving real audio again as of $(date -u +%Y-%m-%dT%H:%M:%SZ)."
             gh issue close "$issue" --repo "$GITHUB_REPOSITORY"
+            telegram "✅ <b>cdn.tocador.cc voltou</b>: o áudio toca de novo. <a href=\"https://github.com/${GITHUB_REPOSITORY}/issues/${issue}\">#${issue}</a> fechada."
           fi
+
+      # The previous run's today.s3Slow, to tell a spike from the day's slow climb.
+      - name: Restore last S3 stall count
+        uses: actions/cache/restore@v4
+        with:
+          path: .s3slow
+          key: s3slow-${{ github.run_id }}
+          restore-keys: s3slow-
+
+      - name: S3 stalls — alert on a spike
+        run: |
+          . "$RUNNER_TEMP/telegram.sh"
+          atual=$(curl -s --max-time 15 -u "$METRICS_AUTH" https://cdn.tocador.cc/metrics | jq -r '.today.s3Slow // empty' || true)
+          [ -n "$atual" ] || { echo "no s3Slow in /metrics"; exit 0; }
+          anterior=$(cat .s3slow 2>/dev/null || echo "$atual")
+          # a new day (or a restarted proxy) resets the counter: count from zero
+          if [ "$atual" -lt "$anterior" ]; then delta=$atual; else delta=$((atual - anterior)); fi
+          echo "s3Slow: $anterior -> $atual (+$delta)"
+          echo "$atual" > .s3slow
+          if [ "$delta" -ge "$S3_SLOW_ALERT" ]; then
+            telegram "🐢 <b>S3 travando</b>: ${delta} pedidos de áudio ficaram sem resposta do S3 na última meia hora (${atual} hoje). O player tenta de novo sozinho; se continuar, olhe a Hetzner."
+          fi
+
+      - name: Save S3 stall count
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .s3slow
+          key: s3slow-${{ github.run_id }}
 
       - name: Outage — file/update issue and try one redeploy
         if: steps.probe.outputs.ok == 'false'
         run: |
+          . "$RUNNER_TEMP/telegram.sh"
           issue=$(gh issue list --repo "$GITHUB_REPOSITORY" --label cdn-outage --state open --json number -q '.[0].number')
           if [ -z "$issue" ]; then
             gh issue create --repo "$GITHUB_REPOSITORY" \
@@ -70,6 +124,7 @@ jobs:
               --label cdn-outage \
               --body "Smoke test got HTTP ${{ steps.probe.outputs.code }} fetching a real file through the proxy at $(date -u +%Y-%m-%dT%H:%M:%SZ). Triggering an automatic redeploy now. If this issue reopens/stays open after that, the credentials or S3 endpoint likely need a manual look — see the 2026-08-20 incident for the failure modes already ruled out (stale AWS keys, quoted S3_ENDPOINT/S3_BUCKET secrets)."
             gh workflow run deploy-proxy.yml --repo "$GITHUB_REPOSITORY"
+            telegram "🔴 <b>cdn.tocador.cc fora</b>: ${{ steps.probe.outputs.code }}redeploy automático disparado. <a href=\"https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\">run</a>"
           else
             gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" \
               --body "Still failing (HTTP ${{ steps.probe.outputs.code }}) as of $(date -u +%Y-%m-%dT%H:%M:%SZ). Not re-triggering a redeploy automatically — this needs manual investigation."
