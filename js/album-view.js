@@ -262,7 +262,7 @@ async function fillAlbumInstrumentos(details) {
     return tag;
   });
   box.replaceChildren(...(tags.length ? tags : [Object.assign(document.createElement('p'), {
-    textContent: dados ? 'O modelo não reconheceu instrumentos neste álbum.' : 'Este álbum não tem análise de áudio.' })]));
+    textContent: dados ? 'O modelo não reconheceu instrumentos neste álbum.' : _exSemAnalise('Este álbum não tem análise de áudio.') })]));
   _instrumentosAlbum = dados;
   syncAlbumInstrumentosTrack();
 }
@@ -378,7 +378,8 @@ async function fillAlbumGenres(details) {
     }
     return tag;
   });
-  box.replaceChildren(...(tags.length ? tags : [Object.assign(document.createElement('p'), { textContent: 'Este álbum não tem análise de áudio.' })]));
+  box.replaceChildren(...(tags.length ? tags : [Object.assign(document.createElement('p'), {
+    textContent: dados ? 'Este álbum não tem análise de áudio.' : _exSemAnalise('Este álbum não tem análise de áudio.') })]));
   _generosAlbum = dados;
   syncAlbumGenresTrack();
 }

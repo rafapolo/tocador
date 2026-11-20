@@ -17,6 +17,8 @@ function ensureDecodeAcervo() {
 
 // State
 let db;
+// URL the catalog in `db` came from: js/explorar.js asks the network for it again when the features reject it.
+let dbUrl = null;
 let albums = [];
 let filteredAlbums = [];
 let selectedAlbum = null;
@@ -832,6 +834,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   await ensureDecodeAcervo();
   try {
     db = decodeAcervo(JSON.parse(json));
+    dbUrl = dataUrl;
   } catch (err) {
     skeletonEl.remove();
     const k = resolveAcervoKey(dataUrl, acervoParam);

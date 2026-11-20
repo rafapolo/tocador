@@ -8,6 +8,7 @@
 let _exPanel, _exLayout, _exBody, _exBtn, _exSearch, _exApply;
 let _exCarga = null;              // Promise do carregamento do acervo ativo
 let _exDb = null;                 // db a que a carga se refere
+let _exCatalogoVelho = false;     // as features batem com o catálogo da rede, não com a cópia em cache desta visita
 let _exDados = null;              // { f, n, analisados, faixasAnalisadas, resumo }
 let _exFiltros = {};              // chave -> [lo, hi] (só os que estão fora do padrão)
 let _exVoz = 'any';               // 'any' | 'com' | 'sem'
@@ -56,10 +57,32 @@ async function _exGz(resp) {
 const _exPl = (x, um, varios) => `${x.toLocaleString('pt-BR')} ${x === 1 ? um : varios}`;
 const _exMediana = a => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
 
+// As features recusadas batem com o catálogo como está na rede agora? Pedir com `cache: 'reload'` também faz o
+// service worker guardar essa cópia, então a próxima visita já abre com ela.
+async function _exCatalogoDaRedeBate(payload) {
+  if (typeof dbUrl === 'undefined' || !dbUrl) return false;
+  try {
+    const r = await fetch(dbUrl, { cache: 'reload' });
+    if (!r.ok) return false;
+    const novo = decodeAcervo(JSON.parse(await gunzipText(r)));
+    const keys = [];
+    for (const a of novo.albums) for (const t of a.tracks) keys.push(`${a.path}/${t.file}`.normalize('NFC'));
+    decodeFeatures(payload, keys);
+    return true;
+  } catch { return false; }
+}
+
+// O que os acordeões do álbum (Gêneros, Instrumentos) dizem sem features: com o catálogo velho desta visita, a análise
+// existe e volta com uma recarga, então "não tem análise" seria falso.
+function _exSemAnalise(texto) {
+  return _exCatalogoVelho ? 'O acervo acabou de ser atualizado: recarregue a página para ver.' : texto;
+}
+
 // Nunca lança: sem features publicadas (espelhos, ?acervo=<url>) o painel só avisa.
 function _exCarregar() {
   if (_exCarga && _exDb === db) return _exCarga;
   _exDb = db;
+  _exCatalogoVelho = false;
   _exCarga = (async () => {
     const key = typeof activeAcervoKey !== 'undefined' ? activeAcervoKey : null;
     const urls = [db?.meta?.features_url, key && `data/${key}-features.json.gz`].filter(Boolean);
@@ -78,7 +101,18 @@ function _exCarregar() {
           if (e.message !== 'FEATURES_CATALOG_MISMATCH') throw e;
           const fresca = await _exBuscar(u, { cache: 'reload' });
           if (!fresca) throw e;
-          f = decodeFeatures(await _exGz(fresca), keys);
+          const payload = await _exGz(fresca);
+          try {
+            f = decodeFeatures(payload, keys);
+          } catch (e2) {
+            // O caso inverso: a cópia velha é a do catálogo (servida do cache nesta visita, já revalidada para a
+            // próxima) e as features novas são as certas. Não é defeito dos dados: o painel pede para recarregar.
+            if (e2.message === 'FEATURES_CATALOG_MISMATCH' && await _exCatalogoDaRedeBate(payload)) {
+              _exCatalogoVelho = true;
+              break;
+            }
+            throw e2;
+          }
         }
         break;
       } catch (e) {
@@ -88,6 +122,7 @@ function _exCarregar() {
       }
     }
     if (!f) {
+      if (_exCatalogoVelho) return null;
       // Nossos acervos sempre têm features: nenhuma URL respondeu.
       if (key && navigator.onLine) window.reportar?.('features', `features não carregaram: ${key}`, urls.join('\n'));
       return null;
@@ -536,7 +571,16 @@ async function renderExplorar() {
   if (!isExplorarOpen()) return;
   if (!dados) {
     _exDados = null;
-    _exBody.replaceChildren(_exEl('p', 'explorar-empty', 'Este acervo ainda não tem análise de áudio publicada, então não dá para filtrar por características.'));
+    if (_exCatalogoVelho) {
+      const p = _exEl('p', 'explorar-empty', 'O acervo acabou de ganhar álbuns novos. Recarregue a página para filtrar pela Pegada. ');
+      const b = _exEl('button', 'explorar-recarregar', 'Recarregar');
+      b.type = 'button';
+      b.addEventListener('click', () => location.reload());
+      p.append(b);
+      _exBody.replaceChildren(p);
+    } else {
+      _exBody.replaceChildren(_exEl('p', 'explorar-empty', 'Este acervo ainda não tem análise de áudio publicada, então não dá para filtrar por características.'));
+    }
     _exAtualizarContagem();
     return;
   }

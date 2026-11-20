@@ -2445,6 +2445,7 @@ audio {
 /* --ex-thumb: diâmetro da alça; histograma e trilha recuam metade dele para alinhar valor e barra. */
 .explorar-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 0 12px; --ex-thumb: 16px; }
 .explorar-empty { padding: 16px 14px; font-size: 0.85rem; color: var(--color-text-secondary); }
+.explorar-recarregar { background: none; border: 0; padding: 0; font: inherit; color: var(--color-accent); text-decoration: underline; cursor: pointer; }
 .ex-busca-vazia[hidden] { display: none; }
 .ex-topo { position: sticky; top: 0; z-index: 3; background: var(--color-surface); padding: 8px 14px 0; border-bottom: 1px solid var(--color-border); }
 .ex-status { font-size: 0.8rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; padding-bottom: 8px; }

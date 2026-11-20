@@ -13,13 +13,13 @@ test.use({ serviceWorkers: 'block' });
 // Features em que as faixas de um mesmo álbum divergem (ver fixtures/build-features-mistas.js).
 const mistasFile = fx('albums-features-mistas.json.gz');
 
-async function boot(page, { semFeatures = false, mistas = false, generos = false, indiceGeneros = null, url = '/' } = {}) {
+async function boot(page, { semFeatures = false, mistas = false, generos = false, indiceGeneros = null, url = '/', catalogo = null } = {}) {
   // Limpa só na primeira carga da aba: um reload no meio do teste mantém o que o painel guardou.
   await page.addInitScript(() => {
     if (!sessionStorage.getItem('__limpo')) { localStorage.clear(); sessionStorage.setItem('__limpo', '1'); }
   });
   const gz = body => ({ status: 200, headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body });
-  for (const f of ['uqt-albums.json.gz', 'homi-albums.json.gz']) await page.route(`**/${f}`, r => r.fulfill(gz(albumsGz)));
+  for (const f of ['uqt-albums.json.gz', 'homi-albums.json.gz']) await page.route(`**/${f}`, r => r.fulfill(gz(catalogo ? catalogo() : albumsGz)));
   await page.route('**/*-features.json.gz', r => semFeatures ? r.fulfill({ status: 404 }) : r.fulfill(gz(mistas ? mistasFile : featuresGz)));
   await page.route('**/resumo-acervo.json', r => r.fulfill({ status: 404 }));
   // Índice de gêneros por álbum (o do homi): todos os álbuns de teste são Latin---Samba.
@@ -640,4 +640,27 @@ test('features mais velhas que o catálogo (cache do service worker depois de um
   await expect(acordeao.locator('.album-genero').first()).toBeVisible();
   await expect(acordeao).not.toContainText('não tem análise');
   expect(pedidos).toBe(2);
+});
+
+test('catálogo mais velho que as features (cache do service worker depois de um ETL): o painel pede recarga e nada é reportado', async ({ page }) => {
+  const zlib = require('zlib');
+  const cheio = JSON.parse(zlib.gunzipSync(albumsGz));
+  const velhoGz = zlib.gzipSync(JSON.stringify({ ...cheio, albums: cheio.albums.slice(0, -1) }));
+  let pedidos = 0;
+  // a 1ª carga do catálogo é a cópia velha do cache; a seguinte, a da rede, já com o álbum novo
+  await boot(page, { catalogo: () => pedidos++ ? albumsGz : velhoGz });
+  await page.evaluate(() => { window.__reportes = []; window.reportar = (cat, titulo) => window.__reportes.push(titulo); });
+  if (page.viewportSize().width <= 768) await page.click('#btn-browse');
+  await page.click('#btn-explorar');
+  await expect(page.locator('#explorar-body')).toContainText('Recarregue a página');
+  await expect(page.locator('.explorar-recarregar')).toBeVisible();
+  expect(pedidos).toBe(2);
+  expect(await page.evaluate(() => window.__reportes)).toEqual([]);
+  // os acordeões do álbum também não dizem que falta análise
+  if (page.viewportSize().width > 768) {
+    await page.locator('.album-item').first().click();
+    const acordeao = page.locator('#tracks-panel .album-generos');
+    await acordeao.locator('summary').click();
+    await expect(acordeao).toContainText('recarregue a página');
+  }
 });
