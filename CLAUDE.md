@@ -409,6 +409,14 @@ albums) while leaving homi untouched — which is why it went unnoticed for mont
 this apart from a missing sync by listing the prefix: if the key is *in* the bucket but
 the CDN 404s it, it's normalization, not a gap. Do **not** "fix" it by re-uploading.
 
+**One track "not playable" (MediaError 4), file fine when checked later**: S3 stalled on that object. The
+signed fetch only waits `S3_HEADERS_TIMEOUT_MS` (4 s) for headers, retries once, then answers 504 with CORS
+(`[s3-lento]` in the logs, `today.s3Slow` in `/metrics`; it doesn't touch the `/health` fail streak). Before
+2026-11-20 it waited forever, Bun's 10 s `idleTimeout` dropped the socket and nginx sent its own bare 502
+(#646–#657). Only the headers are timed: an abort after them would cut long tracks on slow connections
+(`tests/proxy-s3-lento.test.js`). Right after an ETL the service worker can serve the old catalog with the new
+features; the Pegada panel then checks the catalog on the network and asks for a reload instead of reporting.
+
 **CORB errors in browser**: Proxy must be running and `base_url` must point to the proxy, not directly to S3.
 
 **Wrong `base_url`**: Regenerate the `.json.gz` with `--base-url`. Do not set it in `KNOWN_ACERVOS`.

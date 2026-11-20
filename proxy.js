@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { sigV4Encode, s3GetSigned, keyCandidates, isSafeKey, bucketFor, BUCKET } from './lib/s3.js';
+import { sigV4Encode, s3GetSigned, keyCandidates, isSafeKey, bucketFor, BUCKET, S3Timeout, S3_HEADERS_TIMEOUT_MS } from './lib/s3.js';
 import { MAP_HARD_CAP, deviceCounts, rawIpCounts, incDevice, decDevice, incRawIp, decRawIp, heartbeatTokenBuckets, HEARTBEAT_BUCKET_CAP, HEARTBEAT_BUCKET_REFILL,
   BUCKET_CAP, BUCKET_REFILL, deviceTokenBuckets, RAW_BUCKET_CAP, RAW_BUCKET_REFILL, rawIpTokenBuckets, RAW_CONCURRENCY_CAP,
   REPORT_BUCKET_CAP, REPORT_BUCKET_REFILL, reportTokenBuckets, takeFrom, deviceKey } from './lib/limits.js';
@@ -81,15 +81,41 @@ function cacheControlFor(key) {
 // (Content-Range with total size, Content-Length, ETag) straight through.
 // Used for keys Bun's S3Client mishandles (# ?) and for open-ended Range
 // requests, where it saves the separate stat() round trip.
+// One S3 request that gets a second chance when the headers don't arrive in time: a stall seen on
+// 2026-11-20 hit one object, not the link, so a fresh connection can land on a healthy node. Both tries
+// together stay under Bun.serve's 10 s idleTimeout, or the socket is dropped before the 504 goes out.
+async function s3ComRetry(bucket, key, range) {
+  try {
+    return await s3GetSigned(bucket, key, range);
+  } catch (err) {
+    if (!(err instanceof S3Timeout)) throw err;
+    console.warn(`[s3-lento] retry ${key}`);
+    return await s3GetSigned(bucket, key, range);
+  }
+}
+
 async function signedPassthrough(bucket, path, rangeHeader, isHead) {
   let r, hit;
-  for (const key of keyCandidates(path)) {
-    hit = key;
-    r = await s3GetSigned(bucket, key, isHead ? null : rangeHeader);
-    if (r.status !== 404) break;
-    r.body?.cancel().catch(() => {}); // don't leak the socket on a retried miss
+  try {
+    for (const key of keyCandidates(path)) {
+      hit = key;
+      r = await s3ComRetry(bucket, key, isHead ? null : rangeHeader);
+      if (r.status !== 404) break;
+      r.body?.cancel().catch(() => {}); // don't leak the socket on a retried miss
+    }
+  } catch (err) {
+    if (!(err instanceof S3Timeout)) throw err;
+    // Not markUpstreamFail(): five in a row flip /health, and one stalled object retried by a lone
+    // listener must not take the node out of rotation. Counted apart in /metrics (today.s3Slow).
+    console.warn(`[s3-lento] 504 ${hit}`);
+    ensureToday();
+    state.todayS3Slow++;
+    mark5xx();
+    return new Response('Gateway Timeout', { status: 504, headers: { ...corsBase, 'Retry-After': '5' } });
   }
   markUpstreamOk(); // S3 answered at all — the link is up, whatever the status
+  // HEAD is signed as a GET: drop the body now, or the whole file keeps streaming from S3 into nothing.
+  if (isHead) r.body?.cancel().catch(() => {});
   // A range past the end (the file shrank since the browser cached its size) must say how
   // big the file is now — `Content-Range: bytes */<total>` (RFC 9110 §15.5.17) — or the
   // browser can't correct itself. Hetzner's S3 sends its 416 without one, so ask byte 0.
@@ -310,7 +336,9 @@ _server = Bun.serve({
           return new Response('OK (not our audio)', { status: 200, headers: corsBase });
         }
         try {
-          const check = await fetch(src, { method: 'HEAD', headers: { Referer: 'https://tocador.cc/' }, signal: AbortSignal.timeout(5000) });
+          // 9 s: longer than the proxy's own worst case (two S3 header waits of S3_HEADERS_TIMEOUT_MS, then a
+          // 504), shorter than Bun.serve's 10 s idleTimeout on this request's own socket.
+          const check = await fetch(src, { method: 'HEAD', headers: { Referer: 'https://tocador.cc/' }, signal: AbortSignal.timeout(9000) });
           const ct = check.headers.get('content-type') || '';
           const len = Number(check.headers.get('content-length') || 0);
           if (check.ok && ct.startsWith('audio/') && len > 10_000) {

@@ -4,7 +4,10 @@
 // request path (URL decode → checks → signed fetch → passthrough), not just a helper.
 
 export function proxyHarness() {
-  const h = { stored: new Map(), requested: [], s3: null, proc: null, port: 0 };
+  const h = { stored: new Map(), requested: [], s3: null, proc: null, port: 0,
+    // key → how many requests for it hang without ever answering (the 2026-11-20 stall), and
+    // key → ms between 1 KB chunks of a body whose headers come at once (a slow but healthy read).
+    stall: new Map(), drip: new Map() };
 
   h.startFakeS3 = () => Bun.serve({
     port: 0,
@@ -17,8 +20,24 @@ export function proxyHarness() {
       const key = segs.map(decodeURIComponent).join('/');
       h.requested.push({ key, range: req.headers.get('range') });
 
+      const pendentes = h.stall.get(key) ?? 0;
+      if (pendentes > 0) { h.stall.set(key, pendentes - 1); return new Promise(() => {}); }
+
       const body = h.stored.get(key);
       if (!body) return new Response('<Error>NoSuchKey</Error>', { status: 404 });
+
+      const passo = h.drip.get(key);
+      if (passo) {
+        let i = 0;
+        const lento = new ReadableStream({
+          async pull(ctrl) {
+            if (i >= body.length) { ctrl.close(); return; }
+            await Bun.sleep(passo);
+            ctrl.enqueue(body.subarray(i, i + 1024)); i += 1024;
+          },
+        });
+        return new Response(lento, { status: 200, headers: { 'Content-Length': String(body.length), 'ETag': '"fake"' } });
+      }
 
       const range = req.headers.get('range');
       if (range) {
@@ -43,7 +62,7 @@ export function proxyHarness() {
     },
   });
 
-  h.start = async () => {
+  h.start = async (env = {}) => {
     h.s3 = h.startFakeS3();
     h.port = 20000 + Math.floor(Math.random() * 20000);
     h.proc = Bun.spawn(['bun', `${import.meta.dir}/../../proxy.js`], {
@@ -55,6 +74,7 @@ export function proxyHarness() {
         S3_BUCKET_MAP: '',
         AWS_ACCESS_KEY_ID: 'test',
         AWS_SECRET_ACCESS_KEY: 'test',
+        ...env,
       },
       stdout: 'ignore',
       stderr: 'ignore',
@@ -68,7 +88,7 @@ export function proxyHarness() {
 
   h.stop = () => { h.proc?.kill(); h.s3?.stop(true); };
 
-  h.reset = (entries) => { h.stored = new Map(entries); h.requested = []; };
+  h.reset = (entries) => { h.stored = new Map(entries); h.requested = []; h.stall.clear(); h.drip.clear(); };
 
   h.url = (key) => `http://127.0.0.1:${h.port}/${key.split('/').map(encodeURIComponent).join('/')}`;
 
