@@ -141,7 +141,8 @@ test.describe('actionable playback errors', () => {
     await page.route('**/*.mp3', r => falha ? r.fulfill({ status: 502 })
       : r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: require('./helpers').fixtureMp3 }));
     await card(page, 'Construção').locator('.card-play').click();
-    await expect(page.locator('#toast')).toContainText('Servidor de áudio indisponível');
+    // two silent retries (1.5 s, 5 s) come first: only then the toast
+    await expect(page.locator('#toast')).toContainText('Servidor de áudio indisponível', { timeout: 15000 });
     falha = false;
     await page.locator('#toast .toast-action').click();
     await expect.poll(() => page.evaluate(() => document.getElementById('audio').paused)).toBe(false);
@@ -247,19 +248,52 @@ test.describe('shuffle', () => {
   });
 });
 
-test('a file that exists but will not decode is skipped, not stuck behind a retry', async ({ page }) => {
+test('a file that exists but will not decode is skipped after the silent retries, not stuck behind them', async ({ page }) => {
   await gotoWithFixture(page);
   await page.unroute('**/*.mp3');
-  let first = true;
+  const pedidos = [];
   await page.route('**/*.mp3', r => {
     if (r.request().method() === 'HEAD') return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' } });
-    if (first) { first = false; return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: 'isto não é um mp3' }); }
-    return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: require('./helpers').fixtureMp3 });
+    const quebrada = decodeURIComponent(r.request().url()).includes('01 Construção');
+    if (quebrada) pedidos.push(Date.now());
+    return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: quebrada ? 'isto não é um mp3' : require('./helpers').fixtureMp3 });
   });
   await card(page, 'Construção').locator('.card-play').click();
   const titulo = await page.evaluate(() => selectedAlbum.tracks[0].title);
-  await expect(page.locator('#toast')).toContainText(`Não foi possível tocar: ${titulo}`);
+  await expect(page.locator('#toast')).toContainText(`Não foi possível tocar: ${titulo}`, { timeout: 15000 });
   await expect.poll(() => page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack)), { timeout: 5000 }).toBe(1);
+  expect(new Set(pedidos.map(t => Math.round(t / 1000))).size).toBeGreaterThanOrEqual(3);   // the load + 2 retries
+});
+
+// S3 stalling on one object (2026-11-20, #657): the file is fine a moment later. The player loads it again quietly
+// instead of skipping it, toasting and filing an issue.
+test('a failure that clears is retried silently: no toast, no skip, no report', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.evaluate(() => { window.__reportes = []; window.reportar = (cat, titulo) => window.__reportes.push(titulo); });
+  await page.unroute('**/*.mp3');
+  let falhas = 1;
+  await page.route('**/*.mp3', r => {
+    if (r.request().method() === 'HEAD') return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' } });
+    if (falhas > 0) { falhas--; return r.fulfill({ status: 504, headers: { 'Access-Control-Allow-Origin': '*' } }); }
+    return r.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' }, body: require('./helpers').fixtureMp3 });
+  });
+  await card(page, 'Construção').locator('.card-play').click();
+  await expect.poll(() => page.evaluate(() => document.getElementById('audio').currentTime), { timeout: 10000 }).toBeGreaterThan(0.2);
+  expect(await page.evaluate(() => selectedAlbum.tracks.indexOf(currentTrack))).toBe(0);
+  await expect(page.locator('#toast')).not.toContainText('Faixa');
+  await expect(page.locator('#toast')).not.toContainText('Não foi possível');
+  expect(await page.evaluate(() => window.__reportes)).toEqual([]);
+});
+
+test('a retry resumes the track where it was, not from 0:00', async ({ page }) => {
+  await gotoWithFixture(page);
+  await page.unroute('**/*.mp3');
+  await page.route('**/*.mp3', require('./helpers').rangedMp3);   // seeking needs Range, as on the real CDN
+  await card(page, 'Construção').locator('.card-play').click();
+  await expect.poll(() => page.evaluate(() => document.getElementById('audio').currentTime)).toBeGreaterThan(0.2);
+  await page.evaluate(() => { document.getElementById('audio').pause(); _ultimaPosicao = { track: currentTrack, t: 3 }; retomarFaixa(currentTrack); });
+  // within 1.5 s: playing on from ~0.2 s could not get there by itself
+  await expect.poll(() => page.evaluate(() => document.getElementById('audio').currentTime), { timeout: 1500 }).toBeGreaterThanOrEqual(3);
 });
 
 test('clicking the player title brings the tracks panel back to the playing album', async ({ page }) => {

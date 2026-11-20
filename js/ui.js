@@ -43,6 +43,16 @@ let savedQueueArtist = null;    // with 'artista': the artist whose albums are q
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
 let renderedAlbum = null;
 let _consecutiveErrors = 0;
+// Where the playing track last was, so a retry (automatic, the toast's button, the network coming back) resumes there
+// instead of from 0:00. Read from timeupdate: after a MediaError audio.currentTime may already be reset.
+let _ultimaPosicao = { track: null, t: 0 };
+// Silent retries of the current track before it is classified as broken, skipped and reported. S3 stalled on single
+// objects for seconds at a time on 2026-11-20: the file was fine a moment later, but the player had already skipped
+// it and filed an issue (#657). `_retentativa.n` counts them per track; 10 s of playback past the retry clears it.
+const RETENTATIVAS_MS = [1500, 5000];
+let _retentativa = { track: null, n: 0, em: 0 };
+// The status the last classifyAudioError() HEAD got (null: network error), for the report.
+let _ultimoHead = null;
 // True from a play request until the next pause. A track that was only primed
 // (album opened or ?t= loaded, nothing pressed) must not auto-skip on a load error:
 // Googlebot's renderer can't fetch audio, and skipping rewrote ?t=4 to ?t=5, which
@@ -319,6 +329,13 @@ function playSharedPlaylist(mixed, setShuffle) {
 }
 
 // Seeks to `time` once the duration is known (the ?seg= handover from the /atlas preview).
+// Plays `track` again from where it last was (see _ultimaPosicao), with a fresh load().
+function retomarFaixa(track) {
+  const t = _ultimaPosicao.track === track ? _ultimaPosicao.t : 0;
+  playTrack(track);
+  if (t > 1) startPlaybackAt(document.getElementById('audio'), t);
+}
+
 function startPlaybackAt(audio, time) {
   const apply = () => {
     if (isFinite(audio.duration) && time < audio.duration) audio.currentTime = time;
@@ -368,9 +385,11 @@ const unavailableTracks = new Set();
 // decode). A HEAD through fetch() carries Origin, so it passes the hotlink check even when
 // <audio> sent no Referer — that case also lands in 'unplayable', it can't be told apart here.
 async function classifyAudioError(src, mediaCode) {
+  _ultimoHead = null;
   if (!navigator.onLine) return 'offline';
   try {
     const r = await fetch(src, { method: 'HEAD', cache: 'no-store' });
+    _ultimoHead = r.status;
     if (r.status === 404) return 'missing';
     if (r.status === 429) return 'limited';
     if (r.status === 403) return 'blocked';
@@ -729,6 +748,8 @@ function reportPlaybackError(track, pausou) {
     `- **Audio src:** \`${audio.currentSrc || audio.src}\``,
     `- **Media error:** ${err ? `MediaError ${err.code}: ${err.message}` : 'none'}`,
     `- **Erros seguidos:** ${_consecutiveErrors}`,
+    `- **Tentativas:** ${_retentativa.track === track ? _retentativa.n + 1 : 1}`,
+    `- **HEAD:** ${_ultimoHead ?? 'sem resposta'}`,
   ].join('\n');
   const titulo = pausou ? `reprodução pausada: ${_consecutiveErrors} faixas seguidas falharam`
     : `not playable: ${album?.path || track.title}`;
@@ -1070,7 +1091,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     if (!_retomarAoReconectar || !currentTrack) return;
     _retomarAoReconectar = false;
     hideToast();
-    playTrack(currentTrack);
+    retomarFaixa(currentTrack);
   });
 
   // `jaClassificada`: o vigia abaixo já perguntou ao servidor (o WebKit não deu erro nenhum).
@@ -1086,7 +1107,24 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     if (currentTrack !== errored) return;   // the listener moved on while we asked
     // Arquivo vazio é defeito da faixa, não sinal de CDN fora: não conta para a pausa por erros seguidos.
     if (kind === 'empty') _consecutiveErrors = 0;
-    const retry = { label: 'Tentar de novo', onClick: () => { _consecutiveErrors = 0; playTrack(errored); } };
+    const retry = { label: 'Tentar de novo', onClick: () => { _consecutiveErrors = 0; retomarFaixa(errored); } };
+    // A server error or a file that exists but failed (a stall that already cleared): load it again, quietly, from
+    // the same second, before skipping, warning or reporting anything.
+    if (kind === 'server' || kind === 'unplayable') {
+      if (_retentativa.track !== errored) _retentativa = { track: errored, n: 0, em: 0 };
+      if (_retentativa.n < RETENTATIVAS_MS.length) {
+        const espera = RETENTATIVAS_MS[_retentativa.n++];
+        _retentativa.em = _ultimaPosicao.track === errored ? _ultimaPosicao.t : 0;
+        _consecutiveErrors--;
+        setLoading(true);
+        // Not _playRequested: the browser's own 'pause' after a failed play() clears it. The listener picking another
+        // track, or pressing play (a fresh load clears audio.error), is what cancels the retry.
+        setTimeout(() => {
+          if (currentTrack === errored && (audio.error || audio.readyState === 0)) retomarFaixa(errored);
+        }, espera);
+        return;
+      }
+    }
     if (kind === 'offline') {
       _retomarAoReconectar = true;
       showToast('Sem conexão — a faixa volta quando a rede voltar', 15000, { action: retry });
@@ -1173,6 +1211,11 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     if (overlayProgressFill) overlayProgressFill.style.width = percent + '%';
 
     const whole = Math.floor(audio.currentTime);
+    if (!audio.paused && audio.currentTime > 0 && currentTrack) {
+      _ultimaPosicao = { track: currentTrack, t: audio.currentTime };
+      // 10 s of real playback after a retry: the track is healthy again, the next failure gets fresh retries
+      if (_retentativa.track === currentTrack && audio.currentTime > _retentativa.em + 10) _retentativa = { track: null, n: 0, em: 0 };
+    }
     if (whole === _lastWholeSecond) return;
     _lastWholeSecond = whole;
     const cur = formatTime(audio.currentTime);

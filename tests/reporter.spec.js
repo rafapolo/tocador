@@ -87,9 +87,12 @@ test('faixa que não toca vira reporte "reproducao" com o Audio src que o proxy 
   await page.waitForSelector('.album-item');
   await page.locator('.album-item', { hasText: 'Construção' }).click();
   await page.locator('#track-list .track-item').first().click();
-  await expect.poll(() => reportes.find(r => r.categoria === 'reproducao')).toBeTruthy();
+  // only after the two silent retries (1.5 s + 5 s)
+  await expect.poll(() => reportes.find(r => r.categoria === 'reproducao'), { timeout: 15000 }).toBeTruthy();
   const r = reportes.find(r => r.categoria === 'reproducao');
   expect(r.title).toMatch(/^\[tocador\] not playable: .*Construção/);
+  expect(r.body).toContain('**Tentativas:** 3');
+  expect(r.body).toMatch(/\*\*HEAD:\*\* (500|sem resposta)/);
   expect(r.body).toMatch(/\*\*Audio src:\*\* `[^`]+\.mp3`/);
   expect(r.body).toContain('**Media error:** MediaError');
 });
