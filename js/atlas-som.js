@@ -1078,9 +1078,16 @@
       // (Bluetooth passa de 150 ms). É por ele que a banda mostra cada nota, e não pelo currentTime.
       ouvido() {
         if (!ac) return 0;
+        const simples = ac.currentTime - (ac.outputLatency || ac.baseLatency || 0);
         const ts = ac.getOutputTimestamp?.();
-        if (ts && ts.contextTime > 0 && ts.performanceTime > 0) return ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
-        return ac.currentTime - (ac.outputLatency || ac.baseLatency || 0);
+        if (ts && ts.contextTime > 0 && ts.performanceTime > 0) {
+          // WebKit (Linux headless at least, 2026-11-20) runs performanceTime at twice performance.now()'s rate, so
+          // the extrapolation drifts seconds behind and the band's queue never released a note. What leaves the
+          // speaker is never later than currentTime nor half a second behind it: outside that, the timestamp lies.
+          const t = ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+          if (t <= ac.currentTime + 0.005 && t >= ac.currentTime - 0.5) return t;
+        }
+        return simples;
       },
       batida() { return m && ac ? m.batidaEm(this.ouvido()) : null; },   // the output's AnalyserNode, for js/atlas-visor.js
       tap(graus, vel) { if (audivel() && m) m.tap(graus, vel); },

@@ -330,9 +330,15 @@ test('com uma prévia tocando, a banda toca a faixa: os instrumentos da análise
   await expect(page.locator('#sim-legenda')).toContainText('120 bpm');
   // os golpes seguem o tempo: o percussionista prepara e bate
   await expect.poll(async () => (await sim(page)).previa?.vozes.length).toBe(3);
-  const b0 = (await sim(page)).batida;
-  await page.waitForTimeout(1000);
-  expect((await sim(page)).batida - b0).toBeGreaterThan(1.5);       // 120 bpm: ~2 tempos por segundo
+  // 120 bpm: ~2 tempos por segundo. Medido pelo relógio da página e numa janela de 2 s: `batida` só anda a cada quadro,
+  // e num WebKit lento (GL por software no CI) uma leitura única, 1 s depois, pegava um quadro atrasado (0,8 tempo).
+  const amostra = () => page.evaluate(() => ({ b: window.__atlasSim.estado().batida, t: performance.now() / 1000 }));
+  const a0 = await amostra();
+  await page.waitForTimeout(2000);
+  const a1 = await amostra();
+  const ritmo = (a1.b - a0.b) / (a1.t - a0.t);
+  expect(ritmo).toBeGreaterThan(1.4);
+  expect(ritmo).toBeLessThan(2.6);
   // a prévia parou: a banda volta a ouvir a sonificação
   await page.evaluate(() => { window.__atlas.previaAtual = () => null; });
   await expect.poll(async () => (await sim(page)).previa).toBeNull();

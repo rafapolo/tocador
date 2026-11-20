@@ -1262,12 +1262,15 @@
     let P = run.pv;
     if (!P || P.i !== pv.i) {
       P = run.pv = { i: pv.i, vozes: vozesDaPrevia(pv), bpm: pv.bpm || 100, batidaAnt: 0, oitavaAnt: -1, titulo: pv.titulo };
+      // O mp3 conta tempos do zero, a banda já ia longe: sem o deslocamento, o Math.max abaixo segurava a dança parada
+      // até o mp3 alcançar a contagem da sonificação (minutos numa sessão longa). Inteiro, para manter a fase do mp3.
+      P.desloc = Math.max(0, Math.ceil(run.batida - (pv.el.currentTime || 0) * P.bpm / 60));
       for (const e of P.vozes) tocarNota({ ...e, vel: 0.35 }, t);      // sobem ao palco já
       if (P.an !== undefined) delete P.an;
     }
     if (!pv.el.paused && pv.el.readyState >= 2) ouvirPrevia(pv);
     // o pulso da dança: o tempo do <audio> no bpm da faixa
-    const batida = pv.el.currentTime * P.bpm / 60;
+    const batida = P.desloc + pv.el.currentTime * P.bpm / 60;
     run.batida = Math.max(run.batida, batida);
     const perc = P.vozes.filter(e => grupoDe(e.papel) === 'perc'), baixo = P.vozes.filter(e => e.papel === 'baixo'), resto = P.vozes.filter(e => e.papel === 'acorde' || e.papel === 'mel');
     const bate = (lista, vel, peca) => { for (const e of lista) tocarNota({ ...e, papel: peca && grupoDe(e.papel) === 'perc' ? peca : e.papel, vel: vel * (0.6 + 0.6 * e.peso) }, t); };
