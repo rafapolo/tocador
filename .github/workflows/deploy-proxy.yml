@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'proxy.js'
+      - 'aquecer-capas.js'
       - 'lib/**'
       - 'package*.json'
       - 'Dockerfile'

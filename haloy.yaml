@@ -4,6 +4,10 @@ api_token:
   from:
     env: "HALOY_API_TOKEN"
 port: 9001
+# nginx's cover cache, filled by aquecer-capas.js: kept across deploys, so a deploy doesn't send
+# every cover back to the (slow) S3.
+volumes:
+  - "tocador-capas:/var/cache/nginx/images"
 health_check_path: /health
 domains:
   - domain: "cdn.tocador.cc"

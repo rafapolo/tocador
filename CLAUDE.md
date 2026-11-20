@@ -47,8 +47,9 @@ caches. Neither happens in the uqt/hominiscanidae mirrors, which serve the sourc
 
 ### Backend / Infrastructure
 - **proxy.js** + **lib/** — Bun reverse proxy on port 9002 (behind nginx on 9001). `lib/s3.js` (SigV4 signing, key handling, bucket routing), `lib/access.js` (client-IP trust, hotlink allowlist, bot policy), `lib/limits.js` (token buckets, concurrency caps, device fingerprint) and `lib/metrics.js` (request counters, upstream health, radio presence, day stats; the old top-level `let` counters live on its exported `state` object) hold the logic; `proxy.js` is routing, the request handler and startup. The Dockerfile copies both, and `deploy-proxy.yml` watches `lib/**`. Uses `Bun.S3Client` (native, no npm deps). CORS, MIME, Range, security hardening (path traversal, hotlink, rate limit, graceful shutdown). Zero production npm dependencies.
-- **haloy.yaml** — Deployment config; deploys proxy to `cdn.tocador.cc`
-- **Dockerfile** — Packages proxy.js for haloy deployment
+- **haloy.yaml** — Deployment config; deploys proxy to `cdn.tocador.cc`. The volume `tocador-capas` holds nginx's image cache (`/var/cache/nginx/images`, `inactive=365d`), so deploys keep it
+- **Dockerfile** — Packages proxy.js for haloy deployment on the official `nginx:<version>-alpine` image (Bun's binary copied from `oven/bun`). Not Alpine's nginx package: Alpine 3.22 shipped 1.28.3, open to 25 advisories fixed in 1.30.7 (2026-11-21). Bump the tag when https://nginx.org/en/security_advisories.html lists a fix past it (`tests/nginx-conf.test.js` holds the minimum). `access_log off` in `nginx.conf`, since that image sends it to stdout
+- **aquecer-capas.js** — runs in the container 60 s after start and then daily: reads both published catalogs and GETs every `capa-min.jpg`/`capa-micro.jpg` (~20k files, ~440 MB) through nginx on localhost, so covers are served from disk and never wait on the Hetzner S3, where a random cold read took over 4 s ~4% of the time (probe on 2026-11-21; half that day's `[s3-lento]` timeouts were covers). Logs one `[capas] N capas em S s: HIT=… MISS=…` line per pass. `AQUECER_LIMITE`/`AQUECER_ATRASO_MS` for a local test
 
 ### Scripts (`script/`)
 - **generate-albums.js** — JS version (uses ffprobe); generates `.json.gz` from MP3s in `unzips/`

@@ -39,3 +39,19 @@ test('nginx takes the client IP from X-Forwarded-For, trusting only the docker b
   expect(conf).toMatch(/^\s*real_ip_header\s+X-Forwarded-For;/m);
   expect(conf).toMatch(/^\s*real_ip_recursive\s+on;/m);
 });
+
+// The cover cache is a haloy volume filled by aquecer-capas.js (2026-11-21): if proxy_cache_path and
+// the mount drift apart, every deploy silently empties the cache and covers go back to the slow S3.
+// nginx comes from the official image, pinned at or past the version that fixed every advisory then open.
+test('the cover cache sits on the haloy volume and nginx is a patched release', () => {
+  const raiz = path.join(__dirname, '..');
+  const conf = fs.readFileSync(path.join(raiz, 'nginx.conf'), 'utf8');
+  const haloy = fs.readFileSync(path.join(raiz, 'haloy.yaml'), 'utf8');
+  const docker = fs.readFileSync(path.join(raiz, 'Dockerfile'), 'utf8');
+  const cache = conf.match(/^\s*proxy_cache_path\s+(\S+)/m)[1];
+  expect(haloy).toContain(`:${cache}"`);
+  expect(conf).toMatch(/inactive=365d/);
+  const [, maior, menor, patch] = docker.match(/^FROM nginx:(\d+)\.(\d+)\.(\d+)-alpine/m).map(Number);
+  expect(maior * 1e6 + menor * 1e3 + patch).toBeGreaterThanOrEqual(1030007);
+  expect(docker).toContain('aquecer-capas.js');
+});
