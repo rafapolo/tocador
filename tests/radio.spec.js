@@ -279,3 +279,29 @@ test('R15: radio filter selects albums with "hominis canidae" and encodes # corr
   expect(url).not.toMatch(/#[^/]/);
   expect(url).toContain('%23');
 });
+
+// S3 stalling on one object (#646-#656): the radio loads the same track again, quietly, twice (1.5 s, 5 s), and
+// only then gives up on it. It used to retry once after 500 ms, still inside the stall, then skip and report.
+test('R19: a track failing twice is retried silently and plays, without skipping', async ({ page }) => {
+  const fixtureMp3 = fs.readFileSync(path.join(__dirname, 'fixtures', 'silence.mp3'));
+  const pedidos = new Map();
+  // registered before gotoRadio's own catch-all, which runs later and so would win: undo it right after
+  await page.route('**/*.mp3', route => {
+    if (route.request().method() === 'HEAD') return route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg' } });
+    const u = route.request().url(), n = (pedidos.get(u) || 0) + 1;
+    pedidos.set(u, n);
+    if (n <= 2) return route.fulfill({ status: 504, headers: { 'Access-Control-Allow-Origin': '*' } });
+    return route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Access-Control-Allow-Origin': '*' }, body: fixtureMp3 });
+  });
+  const minha = page.route.bind(page);
+  page.route = (url, h) => url === '**/*.mp3' ? Promise.resolve() : minha(url, h);   // keep the failing route above
+  await gotoRadio(page);
+  page.route = minha;
+  await tapIfBlocked(page);
+  const titulo = await page.locator('#track-title').textContent();
+  await expect.poll(() => Math.max(0, ...pedidos.values()), { timeout: 15000 }).toBeGreaterThanOrEqual(3);
+  await expect.poll(() => page.evaluate(() => audio.currentTime), { timeout: 10000 }).toBeGreaterThan(0.2);
+  expect(await page.locator('#track-title').textContent()).toBe(titulo);
+  // the same file all along: titles repeat across the fixture's albums, so the title alone can't tell a skip
+  expect(pedidos.size).toBe(1);
+});

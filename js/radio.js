@@ -294,7 +294,10 @@ audio.addEventListener('waiting', () => setLoading(true));
 audio.addEventListener('stalled', () => setLoading(true));
 audio.addEventListener('canplay', () => { clearLoadTimer(); setLoading(false); });
 audio.addEventListener('ended',   next);
-const _retriedSrcs = new Set();
+// src → silent retries already spent on it. Two, after 1.5 s and 5 s: S3 stalled on single objects for seconds on
+// 2026-11-20, and one retry 500 ms later still landed inside the stall (#646-#656 were all such tracks).
+const _retriedSrcs = new Map();
+const RETENTATIVAS_MS = [1500, 5000];
 audio.addEventListener('error',   () => {
   clearLoadTimer();
   setLoading(false);
@@ -305,11 +308,15 @@ audio.addEventListener('error',   () => {
   // #569-577 were all different tracks/albums/browsers with nothing in
   // common, and every reported file decodes cleanly when fetched directly.
   // Retry the same track once with a fresh load() before writing it off.
-  if (failedSrc && curAlbum && curTrack && !_retriedSrcs.has(failedSrc)) {
-    _retriedSrcs.add(failedSrc);
+  const gastas = _retriedSrcs.get(failedSrc) ?? 0;
+  if (failedSrc && curAlbum && curTrack && gastas < RETENTATIVAS_MS.length) {
+    _retriedSrcs.set(failedSrc, gastas + 1);
+    if (_retriedSrcs.size > 500) _retriedSrcs.delete(_retriedSrcs.keys().next().value);
     const album = curAlbum, track = curTrack;
     curSrc = '';
-    setTimeout(() => playTrack(album, track), 500);
+    setLoading(true);
+    // only if the listener is still on it: a skip in the meantime moved curTrack on
+    setTimeout(() => { if (curTrack === track && !curSrc) playTrack(album, track); }, RETENTATIVAS_MS[gastas]);
     return;
   }
   // Only report the first error in a streak: once rate-limited or offline,
