@@ -814,12 +814,23 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     if (!resp.ok) throw new Error(resp.status);
     return gunzipText(resp);
   }
+  // A phone on a shaky connection gets "Failed to fetch" for a catalog that is fine (#665): retry a network
+  // error or a 5xx twice, after 1 s and 3 s, before giving up. A 404 is final.
+  async function decompressGzUrlComRetry(url) {
+    for (const espera of [1000, 3000, null]) {
+      try { return await decompressGzUrl(url); } catch (err) {
+        const transitorio = err instanceof TypeError || /^5\d\d$/.test(err?.message);
+        if (espera == null || !transitorio) throw err;
+        await new Promise(r => setTimeout(r, espera));
+      }
+    }
+  }
 
   if (genresUrl) genreLoading = true;
 
   let catalogFailed = false;
   const [json, genresRaw] = await Promise.all([
-    decompressGzUrl(dataUrl).catch(err => {
+    decompressGzUrlComRetry(dataUrl).catch(err => {
       // A dead catalog URL (third-party ?acervo= gone, typo'd link) must not leave a
       // skeleton forever, nor stick in sessionStorage so every reload fails again.
       console.warn('[tocador] catalog fetch failed:', dataUrl, err);
