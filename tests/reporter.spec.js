@@ -51,6 +51,31 @@ test('erro de carteira cripto injetada pelo navegador (Brave no iOS) não vira r
   expect(reportes.filter(r => /ethereum/.test(r.title))).toEqual([]);
 });
 
+test('script que o Brave/Firefox do iOS injeta (__firefox__) não vira reporte', async ({ page }) => {
+  const reportes = await rotear(page);
+  await page.goto('/');
+  await page.waitForSelector('.album-item');
+  await page.evaluate(() => {
+    setTimeout(() => { window.__firefox__.reader; });
+    setTimeout(() => { throw new Error('marcador depois do firefox'); }, 50);
+  });
+  await expect.poll(() => reportes.find(r => r.title.includes('marcador depois do firefox'))).toBeTruthy();
+  expect(reportes.filter(r => /__firefox__/.test(r.title))).toEqual([]);
+});
+
+test('catálogo que falha na rede uma vez carrega na nova tentativa, sem reporte', async ({ page }) => {
+  const reportes = await rotear(page);
+  let falhas = 0;
+  await page.route('**/uqt-albums.json.gz', r => {
+    if (falhas++ === 0) return r.abort('internetdisconnected');
+    return r.fulfill({ status: 200, headers: { 'Content-Type': 'application/gzip', 'Content-Encoding': 'identity' }, body: albumsGz });
+  });
+  await page.goto('/?acervo=uqt');
+  await page.waitForSelector('.album-item');
+  expect(falhas).toBe(2);
+  expect(reportes.filter(r => r.categoria === 'catalogo')).toEqual([]);
+});
+
 test('rejeição com valor que não é Error diz o tipo do valor e leva pilha sintética', async ({ page }) => {
   const reportes = await rotear(page);
   await page.goto('/');

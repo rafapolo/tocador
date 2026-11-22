@@ -69,6 +69,9 @@
     // Crypto wallets injected by the browser (Brave on iOS runs `window.ethereum.selectedAddress = undefined` as an
     // inline script, #659/#660): the stack points at the page, but the app never touches these globals.
     if (/\b(ethereum|solana|web3|phantom)\b/i.test(msg)) return;
+    // Brave/Firefox on iOS inject their own helpers as page scripts (`window.__firefox__.reader`,
+    // `refresh_youtube_quality_…`, #661-#663); they throw when the injection is half done. Not app code.
+    if (/__firefox__|__gCrWeb|__brave/.test(msg)) return;
     // Cross-origin scripts (loaded without CORS) report as bare "Script error." with no
     // filename/lineno — that's third-party code (analytics, extensions), not ours.
     if (msg === 'Script error.' && !e.filename) return;
