@@ -54,12 +54,23 @@ const MAX_CONCURRENT = isMobile ? 4 : 8;
 // ─── Renderer ────────────────────────────────────────────────────────────────
 
 const canvas = document.getElementById('canvas');
-const renderer = new THREE.WebGLRenderer({
-  canvas,
-  antialias: !isMobile && window.devicePixelRatio < 2,
-  powerPreference: 'high-performance',
-  stencil: false,
-});
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: !isMobile && window.devicePixelRatio < 2,
+    powerPreference: 'high-performance',
+    stencil: false,
+  });
+} catch (err) {
+  // No WebGL context (disabled, blocklisted GPU, too many contexts, #668): nothing to fix on our side, so say so
+  // and stop here. The pending await halts the rest of the module without an uncaught error.
+  console.warn(err);
+  document.getElementById('loading-status').textContent =
+    'Este navegador não conseguiu abrir o WebGL, que o Universo 3D precisa. Tente outro navegador ou aparelho.';
+  document.getElementById('loading-bar-bg')?.remove();
+  await new Promise(() => {});
+}
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
