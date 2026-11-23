@@ -310,25 +310,75 @@ test('clicking the player title brings the tracks panel back to the playing albu
   expect(await page.evaluate(() => document.getElementById('audio').paused)).toBe(false);   // the audio is not cut
 });
 
-// #669: S3 can hold the first read of a cold object for seconds. 45 s before the end, the player asks for one byte
-// of the next track (bytes=1-1, not counted as a play) so that stall happens while the current track still plays.
-test.describe('next-track warm-up', () => {
-  test('asks for one byte of the next track near the end, once, and shuffle plays the warmed pick', async ({ page }) => {
-    const pedidos = [];
-    page.on('request', r => { if (r.url().endsWith('.mp3') && r.headers().range === 'bytes=1-1') pedidos.push(decodeURIComponent(r.url())); });
+// Gapless (#669): AQUECER_S before the end the next track loads in a second <audio>, and the track change swaps them:
+// no load gap, and a cold S3 read stalls while the current track still plays. id="audio" moves to the playing one.
+test.describe('gapless next track', () => {
+  test('preloads the next track once, swaps elements on ended, and the old one goes quiet', async ({ page }) => {
     await gotoWithFixture(page);
     await card(page, 'Construção').locator('.album-item-title').click();
     await page.locator('#track-list .track-item').first().click();
-    expect(await page.evaluate(() => BASE_URL)).toMatch(/^https:\/\/cdn\.tocador\.cc\//);
+    await expect.poll(() => page.evaluate(() => !document.getElementById('audio').paused)).toBe(true);
     const fim = { paused: false, duration: 100, currentTime: 60 };
-    await page.evaluate(f => { aquecerProxima({ ...f, currentTime: 10 }); aquecerProxima(f); aquecerProxima(f); }, fim);
-    await expect.poll(() => pedidos.length).toBe(1);
-    expect(pedidos[0]).toContain(await page.evaluate(() => decodeURIComponent(selectedAlbum.tracks[1].file.split('/').pop())));
+    const proxima = await page.evaluate(f => {
+      aquecerProxima({ ...f, currentTime: 10 });                // too early: nothing
+      if (audioReserva.getAttribute('src')) return 'cedo';
+      aquecerProxima(f);
+      return audioReserva.src;
+    }, fim);
+    expect(proxima).toBe(await page.evaluate(() => new URL(`${BASE_URL}/${selectedAlbum.tracks[1].file}`, location.href).href));
+    await expect.poll(() => page.evaluate(() => audioReserva.readyState)).toBeGreaterThanOrEqual(1);
+    const antes = await page.evaluate(() => { window.__velho = document.getElementById('audio'); return __velho.volume; });
+    await page.evaluate(() => document.getElementById('audio').dispatchEvent(new Event('ended')));
+    const estado = await page.evaluate(() => {
+      const a = document.getElementById('audio');
+      return { trocou: a !== __velho, src: a.src, faixa: currentTrack === selectedAlbum.tracks[1], velhoParado: __velho.paused && !__velho.getAttribute('src'),
+               velhoId: __velho.id, ids: document.querySelectorAll('#audio').length, volume: a.volume };
+    });
+    expect(estado).toEqual({ trocou: true, src: proxima, faixa: true, velhoParado: true, velhoId: '', ids: 1, volume: antes });
+    await expect.poll(() => page.evaluate(() => { const a = document.getElementById('audio'); return !a.paused && a.currentTime > 0.1; })).toBe(true);
+    await expect(page.locator('#btn-play')).toHaveClass(/playing/);
+    // pause/play act on the new element
+    await page.locator('#btn-play').click();
+    await expect.poll(() => page.evaluate(() => document.getElementById('audio').paused)).toBe(true);
+  });
 
-    await page.evaluate(f => { shuffleOn = true; _shufflePronto = null; aquecerProxima(f); }, fim);
-    await expect.poll(() => pedidos.length).toBe(2);
+  test('shuffle plays the pick it preloaded', async ({ page }) => {
+    await gotoWithFixture(page);
+    await card(page, 'Construção').locator('.album-item-title').click();
+    await page.locator('#track-list .track-item').first().click();
+    await page.evaluate(() => { shuffleOn = true; _shufflePronto = null; aquecerProxima({ paused: false, duration: 100, currentTime: 60 }); });
     const pronta = await page.evaluate(() => _shufflePronto[1].file);
+    expect(await page.evaluate(() => audioReserva.src)).toContain(pronta);
     await page.evaluate(() => playNext());
     expect(await page.evaluate(() => currentTrack.file)).toBe(pronta);
+    expect(await page.evaluate(() => document.getElementById('audio').src)).toContain(pronta);
+  });
+
+  test('iOS refusing to start the spare: the track loads in the element that was playing', async ({ page }) => {
+    await gotoWithFixture(page);
+    await card(page, 'Construção').locator('.album-item-title').click();
+    await page.locator('#track-list .track-item').first().click();
+    await expect.poll(() => page.evaluate(() => !document.getElementById('audio').paused)).toBe(true);
+    const proxima = await page.evaluate(() => {
+      aquecerProxima({ paused: false, duration: 100, currentTime: 60 });
+      audioReserva.play = () => Promise.reject(new DOMException('locked screen', 'NotAllowedError'));
+      window.__velho = document.getElementById('audio');
+      __velho.dispatchEvent(new Event('ended'));
+      return audioReserva.src || __velho.src;
+    });
+    await expect.poll(() => page.evaluate(() => document.getElementById('audio') === __velho && !__velho.paused)).toBe(true);
+    expect(await page.evaluate(() => __velho.src)).toContain(await page.evaluate(() => selectedAlbum.tracks[1].file));
+    expect(await page.evaluate(() => [audioReserva.getAttribute('src'), audioReserva.id, document.querySelectorAll('#audio').length])).toEqual([null, '', 1]);
+  });
+
+  test('a track other than the preloaded one empties the spare', async ({ page }) => {
+    await gotoWithFixture(page);
+    await card(page, 'Construção').locator('.album-item-title').click();
+    await page.locator('#track-list .track-item').first().click();
+    await page.evaluate(() => aquecerProxima({ paused: false, duration: 100, currentTime: 60 }));
+    expect(await page.evaluate(() => !!audioReserva.getAttribute('src'))).toBe(true);
+    await page.locator('#track-list .track-item').nth(2).click();
+    expect(await page.evaluate(() => audioReserva.getAttribute('src'))).toBeNull();
+    expect(await page.evaluate(() => document.getElementById('audio').src)).toContain(await page.evaluate(() => selectedAlbum.tracks[2].file));
   });
 });

@@ -40,6 +40,13 @@ test('o visor é o primeiro acordeão, um aberto por vez, e com a faixa tocando 
   // a faixa segue tocando, sem ter sido recarregada
   await expect.poll(() => page.evaluate(() => !document.getElementById('audio').paused)).toBe(true);
   expect(await page.evaluate(() => window.__cargas)).toBe(0);
+  // gapless: a troca para o <audio> reserva (js/playback.js) mantém o modo CORS, e o visor passa a ler o novo elemento
+  await page.evaluate(() => aquecerProxima({ paused: false, duration: 100, currentTime: 60 }));
+  expect(await page.evaluate(() => audioReserva.crossOrigin)).toBe('anonymous');
+  await page.evaluate(() => { window.__velho = document.getElementById('audio'); __velho.dispatchEvent(new Event('ended')); });
+  await expect.poll(() => page.evaluate(() => document.getElementById('audio') !== __velho && !document.getElementById('audio').paused)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__visorPlayer.estado().captaOQueToca)).toBe(true);
+  expect(await page.evaluate(() => window.__visorPlayer.estado().desenhando)).toBe(true);
   // fechado, para de desenhar
   await visor.locator('summary').click();
   await expect.poll(() => page.evaluate(() => window.__visorPlayer.estado().desenhando)).toBe(false);

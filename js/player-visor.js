@@ -14,10 +14,13 @@
   'use strict';
 
   const BARRAS = 40, F_MIN = 40, F_MAX = 12000;
-  const audio = document.getElementById('audio');
+  // O player tem dois <audio> que trocam de lugar a cada faixa (gapless, js/playback.js): o id="audio" fica com o
+  // que toca. Por isso o elemento é lido a cada uso, e a captura é refeita quando ele muda.
+  const el = () => document.getElementById('audio');
   const AC = window.AudioContext || window.webkitAudioContext;
   // só o captureStream() sem prefixo: o mozCaptureStream() do Firefox tira o som do <audio> enquanto captura
-  const capturar = audio?.captureStream ? () => audio.captureStream() : null;
+  const capturar = el()?.captureStream ? () => { fluxoDe = el(); return fluxoDe.captureStream(); } : null;
+  let fluxoDe = null;
   let tentou = 0, ac = null, an = null, fluxo = null, trilha = null, fonte = null, raf = 0, freq = null, onda = null, falhou = false;
   const alturas = new Float32Array(BARRAS);
   const reduzMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -42,6 +45,7 @@
   // possível, o <audio> já pede em modo CORS desde a primeira faixa. Abrir o visor depois não precisa recarregar a
   // faixa (o recarregamento cortava o som por um instante, como um curto).
   function prepararCors() {
+    const audio = el();
     if (!audio || audio.src || audio.crossOrigin === 'anonymous') return;
     if (possivel()) audio.crossOrigin = 'anonymous';
   }
@@ -55,6 +59,7 @@
 
   // reserva: a faixa atual, carregada sem CORS (prepararCors() não chegou a tempo), volta a carregar com CORS no mesmo ponto (só uma vez por página)
   function garantirCors() {
+    const audio = el();
     if (audio.crossOrigin === 'anonymous') return true;
     if (!corsOk()) return false;
     audio.crossOrigin = 'anonymous';
@@ -95,6 +100,7 @@
         freq = new Uint8Array(an.frequencyBinCount);
         onda = new Float32Array(an.fftSize);
       }
+      if (fluxoDe !== el()) { fluxo = null; trilha = null; }
       fluxo ||= capturar();
       const t0 = fluxo.getAudioTracks().find(t => t.readyState === 'live') || null;
       if (t0 && t0 !== trilha) {
@@ -154,7 +160,7 @@
     const vistos = caixas().filter(d => d.open && !d.hidden && d.getClientRects().length);
     if (!vistos.length || document.hidden) { ac?.suspend?.(); return; }
     raf = requestAnimationFrame(quadro);
-    if (!audio.paused) {
+    if (!el().paused) {
       // a trilha da cópia muda a cada faixa (e a captura falha enquanto a faixa recarrega): religa, no máximo 2× por s
       if ((!an || !trilha || trilha.readyState === 'ended') && performance.now() - tentou > 500) { tentou = performance.now(); ligar(); }
       if (an && trilha) ler();
@@ -175,14 +181,16 @@
     for (const o of document.querySelectorAll(`details[name="${CSS.escape(d.name)}"]`)) if (o !== d && o.open) o.open = false;
     if (d.classList.contains('album-visor')) { cores = null; atualizar(); }
   }, true);
-  audio?.addEventListener('play', atualizar);
+  // eventos de mídia não sobem, mas passam pelo document na captura: assim os dois <audio> são ouvidos, e só o que toca conta
+  const doAudio = fn => e => { if (e.target === el()) fn(e); };
+  document.addEventListener('play', doAudio(atualizar), true);
   // Cada faixa nova pede uma captura nova: no Chrome a trilha da captura antiga continua "live" depois da troca, mas
   // muda (o visor ficava vazio da segunda faixa em diante, até recarregar a página)
-  audio?.addEventListener('loadstart', () => { fluxo = null; trilha = null; });
-  audio?.addEventListener('playing', () => { if (an) ligar(); });
+  document.addEventListener('loadstart', doAudio(() => { fluxo = null; trilha = null; }), true);
+  document.addEventListener('playing', doAudio(() => { if (an) ligar(); }), true);
   document.addEventListener('visibilitychange', atualizar);
 
   window.renderAlbumVisor = renderAlbumVisor;
   window.prepararCorsVisor = prepararCors;
-  window.__visorPlayer = { estado: () => ({ possivel: possivel(), cors: audio.crossOrigin, ligado: !!an, desenhando: !!raf, falhou }) };
+  window.__visorPlayer = { estado: () => ({ possivel: possivel(), cors: el().crossOrigin, ligado: !!an, captaOQueToca: !!fluxo && fluxoDe === el(), desenhando: !!raf, falhou }) };
 })();

@@ -63,20 +63,62 @@ function resetProgressUI(track) {
   if (_overlayTimeDurationLbl) _overlayTimeDurationLbl.textContent = dur;
 }
 
+// Swaps the playing <audio> with the spare that already holds the next track (see `audioReserva` in ui.js). The
+// old one is paused first, so other tabs hear "stopped" before "playing" (som-abas.js), then emptied.
+const PROPS_AUDIO = ['volume', 'muted', 'loop', 'playbackRate', 'defaultPlaybackRate'];
+function trocarAudio() {
+  const velho = audio, novo = audioReserva;
+  for (const k of PROPS_AUDIO) novo[k] = velho[k];
+  audio = novo; audioReserva = velho;
+  velho.pause();
+  velho.removeAttribute('id'); velho.dataset.reserva = '';
+  novo.id = 'audio'; delete novo.dataset.reserva;
+  esvaziarReserva();
+  // the spare's own loadedmetadata/canplay fired while it was idle and were ignored: replay them for the UI
+  if (novo.readyState >= 1) novo.dispatchEvent(new Event('loadedmetadata'));
+  if (novo.readyState >= 3) novo.dispatchEvent(new Event('canplay'));
+  return velho;
+}
+function esvaziarReserva() {
+  _aquecida = null;
+  if (!audioReserva?.getAttribute('src')) return;
+  audioReserva.removeAttribute('src');
+  audioReserva.load();
+}
+
 function playTrack(track) {
   if (track?.indisponivel) return;   // a known-broken file (js/faixas-indisponiveis.js) never plays
   currentTrack = track;
   updateNowPlaying();
-  const audio = document.getElementById('audio');
   const newSrc = `${BASE_URL}/${track.file}`;
-  // Also reload when audio.error is set: retrying the same src after a failed
-  // load needs a fresh load() call, otherwise play() just re-rejects the stuck resource.
-  if (audio.src !== newSrc || audio.error) {
+  if (audioReserva && audioReserva.src === newSrc && !audioReserva.error && audio.src !== newSrc) {
     resetProgressUI(track);
-    audio.src = newSrc;
-    audio.load();
+    const velho = trocarAudio(), novo = audio;
+    _playRequested = true;
+    novo.play()?.catch(err => {
+      if (audio !== novo) return;
+      // iOS with the screen locked may refuse to start an element the listener never touched. The old one was
+      // playing a moment ago: load the track there instead, the way the player did before it had two.
+      if (err.name === 'NotAllowedError') {
+        audio = velho; audioReserva = novo;
+        novo.pause(); novo.removeAttribute('id'); novo.dataset.reserva = '';
+        velho.id = 'audio'; delete velho.dataset.reserva;
+        esvaziarReserva();
+        velho.src = newSrc; velho.load();
+      }
+      safePlay(audio);
+    });
+  } else {
+    if (audioReserva?.getAttribute('src')) esvaziarReserva();
+    // Also reload when audio.error is set: retrying the same src after a failed
+    // load needs a fresh load() call, otherwise play() just re-rejects the stuck resource.
+    if (audio.src !== newSrc || audio.error) {
+      resetProgressUI(track);
+      audio.src = newSrc;
+      audio.load();
+    }
+    safePlay(audio);
   }
-  safePlay(audio);
   (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('playing');
   renderTrackList();
   syncDrawerPlayingState();
@@ -263,12 +305,11 @@ function pickShuffleTrack(pool) {
   return pick;
 }
 
-// Warm-up of the track that comes next. The first read of a cold S3 object can stall for 3-27 s (~5% of reads,
-// both buckets, probed 2026-11-23, #669) and later reads of it are fast, so AQUECER_S before the end one byte of
-// the next track is requested (bytes=1-1: a range not starting at 0 isn't counted as a play, see markPlay() in
-// lib/metrics.js) and the stall happens while this track still plays. Only on our CDN, which answers the Range
-// preflight. The radio goes further and preloads the whole track in a second <audio> (gapless, js/radio.js);
-// here #audio is tied to too much (visor, captureStream, som-abas) to swap elements.
+// Gapless and warm-up: AQUECER_S before the end, the track that comes next starts loading in the spare <audio>
+// (`audioReserva`), and playTrack() swaps to it, so there is no load gap between tracks. It also hides cold S3
+// reads: Hetzner holds ~5% of first reads of an object for 3-27 s (both buckets, probed 2026-11-23, #669), later
+// reads are fast, so the stall happens while the current track still plays. 45 s also keeps a listener who skips
+// around from downloading anything extra.
 const AQUECER_S = 45;
 let _shufflePronto = null;   // [album, track] drawn ahead in shuffle, played by playNext() if still valid
 let _aquecida = null;
@@ -289,14 +330,15 @@ function proximaPrevista() {
   }
   return repeatMode === 'all' ? tracks.find(trackPlayable) ?? null : null;
 }
-function aquecerProxima(audio) {
-  if (audio.paused || !(audio.duration - audio.currentTime <= AQUECER_S)) return;
-  if (!/^https:\/\/cdn\.tocador\.cc\//.test(BASE_URL)) return;
+function aquecerProxima(a) {
+  if (!audioReserva || a.paused || !(a.duration - a.currentTime <= AQUECER_S)) return;
   const t = proximaPrevista();
   if (!t || t === currentTrack || t === _aquecida) return;
   _aquecida = t;
-  fetch(`${BASE_URL}/${t.file}`, { headers: { Range: 'bytes=1-1' }, credentials: 'omit', cache: 'no-store' })
-    .then(r => r.body?.cancel()).catch(() => {});
+  // same CORS mode as the playing one (the visor switches it on): a swap must not change what the visor can read
+  if (audio.crossOrigin) audioReserva.crossOrigin = audio.crossOrigin; else audioReserva.removeAttribute('crossorigin');
+  audioReserva.src = `${BASE_URL}/${t.file}`;
+  audioReserva.load();
 }
 
 function playNext() {

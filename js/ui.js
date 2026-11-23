@@ -41,6 +41,14 @@ let savedQueue = null;          // albums of the "play saved" mode, or null when
 let savedQueueKind = 'salvos';  // what filled savedQueue: 'salvos' (the heart-play button), 'lista' (a shared playlist) or 'artista' (#play-artist)
 let savedQueueArtist = null;    // with 'artista': the artist whose albums are queued
 let repeatMode = 'off'; // 'off' | 'one' | 'all'
+// Gapless: `audio` plays, `audioReserva` loads the next track AQUECER_S before the end (js/playback.js), and a track
+// change to that track swaps them instead of loading. id="audio" moves to the playing one, so
+// getElementById('audio') always finds it; listeners go through ouvirAudio(), which ignores the idle element.
+let audio = null;
+let audioReserva = null;
+function ouvirAudio(ev, fn) {
+  for (const el of [audio, audioReserva]) el.addEventListener(ev, e => { if (e.target === audio) fn(e); });
+}
 let renderedAlbum = null;
 let _consecutiveErrors = 0;
 // Where the playing track last was, so a retry (automatic, the toast's button, the network coming back) resumes there
@@ -1056,7 +1064,10 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   // No celular o toque no título já abre o overlay do que está tocando (.now-playing-compact).
   document.getElementById('player-title')?.addEventListener('click', () => { if (!isMobile()) mostrarAlbumTocando(); });
 
-  const audio = document.getElementById('audio');
+  audio = document.getElementById('audio');
+  audioReserva = Object.assign(document.createElement('audio'), { preload: 'auto' });
+  audioReserva.dataset.reserva = '';
+  audio.after(audioReserva);
 
   const overlayBtnPlay = document.getElementById('overlay-btn-play');
   const setLoading = on => {
@@ -1065,6 +1076,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   };
 
   window.anunciarSom?.(audio);    // /atlas keeps quiet while this plays; another tab playing pauses it
+  window.anunciarSom?.(audioReserva);
   // Which grid card holds the current track (its ▶ turns into ⏸ while it plays).
   const markPlayingCard = () => {
     document.body.classList.toggle('is-playing', !audio.paused);
@@ -1073,16 +1085,16 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       el.classList.toggle('playing-album', !!(a && currentTrack && a.tracks.includes(currentTrack)));
     }
   };
-  audio.addEventListener('play', markPlayingCard);
-  audio.addEventListener('pause', markPlayingCard);
-  audio.addEventListener('play',     () => {
+  ouvirAudio('play', markPlayingCard);
+  ouvirAudio('pause', markPlayingCard);
+  ouvirAudio('play',     () => {
     (_btnPlay ??= document.getElementById('btn-play'))?.classList.add('playing');
     overlayBtnPlay?.classList.add('playing');
     _btnPlay?.classList.remove('autoplay-blocked');
     _btnPlay?.setAttribute('aria-label', 'Pausar');
     overlayBtnPlay?.setAttribute('aria-label', 'Pausar');
   });
-  audio.addEventListener('pause',    () => {
+  ouvirAudio('pause',    () => {
     _playRequested = false;
     (_btnPlay ??= document.getElementById('btn-play'))?.classList.remove('playing');
     overlayBtnPlay?.classList.remove('playing');
@@ -1090,10 +1102,10 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     overlayBtnPlay?.setAttribute('aria-label', 'Reproduzir');
     savePlaybackPosition(currentTrack, audio);
   });
-  audio.addEventListener('waiting',  () => setLoading(true));
-  audio.addEventListener('stalled',  () => setLoading(true));
-  audio.addEventListener('canplay',  () => setLoading(false));
-  audio.addEventListener('playing',  () => { setLoading(false); _consecutiveErrors = 0; });
+  ouvirAudio('waiting',  () => setLoading(true));
+  ouvirAudio('stalled',  () => setLoading(true));
+  ouvirAudio('canplay',  () => setLoading(false));
+  ouvirAudio('playing',  () => { setLoading(false); _consecutiveErrors = 0; });
   const MAX_CONSECUTIVE_ERRORS = 3;
   // When the network comes back with a track stuck on an error the listener had asked to
   // hear, pick it up again (a retry toast may still be up; this saves the tap).
@@ -1177,7 +1189,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       : 'Servidor de áudio indisponível';
     showToast(msg, 15000, { action: retry });
   }
-  audio.addEventListener('error', () => falhaDeAudio());
+  ouvirAudio('error', () => falhaDeAudio());
 
   // O WebKit (Safari, todo navegador no iPhone) não dispara 'error' para um MP3 de 0 bytes: fica para sempre em
   // networkState LOADING com readyState 0, e a faixa "toca" muda sem pular. Se a faixa pedida segue sem dado
@@ -1195,9 +1207,9 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
       if ((kind === 'empty' || kind === 'missing') && currentTrack === track && audio.readyState === 0 && !audio.error) falhaDeAudio(kind);
     }, VIGIA_MS);
   };
-  audio.addEventListener('waiting', vigiar);
-  audio.addEventListener('loadstart', vigiar);
-  audio.addEventListener('loadedmetadata', () => clearTimeout(_vigia));
+  ouvirAudio('waiting', vigiar);
+  ouvirAudio('loadstart', vigiar);
+  ouvirAudio('loadedmetadata', () => clearTimeout(_vigia));
 
   const progressFill = document.querySelector('#progress-fill');
   const mainProgressBar = document.getElementById('main-progress-bar');
@@ -1210,7 +1222,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
   // the time label and mediaSession position change at most once per second, so gate
   // those on the integer-second boundary to skip the per-tick text writes and DOM query.
   let _lastWholeSecond = -1;
-  audio.addEventListener('timeupdate', () => {
+  ouvirAudio('timeupdate', () => {
     // 'stalled'/'waiting' can fire mid-playback without a matching 'canplay'/'playing'
     // to clear them (readyState never actually drops), leaving the spinner stuck even
     // though audio is audibly advancing — timeupdate only fires while it truly is.
@@ -1243,7 +1255,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
 
   window.addEventListener('pagehide', () => savePlaybackPosition(currentTrack, audio));
 
-  audio.addEventListener('loadedmetadata', () => {
+  ouvirAudio('loadedmetadata', () => {
     const dur = formatTime(audio.duration);
     (_timeDurationLbl ??= document.getElementById('time-duration')).textContent = dur;
     if (overlayTimeDuration) overlayTimeDuration.textContent = dur;
@@ -1259,7 +1271,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     }
   });
 
-  audio.addEventListener('ended', playNext);
+  ouvirAudio('ended', playNext);
 
   // Singleton player across tabs: pause this tab when another tab starts playing.
   // BroadcastChannel's constructor can throw SecurityError in Firefox when
@@ -1270,7 +1282,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     try {
       const TAB_ID = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
       const playerChannel = new BroadcastChannel('tocador-player');
-      audio.addEventListener('play', () => playerChannel.postMessage({ tabId: TAB_ID }));
+      ouvirAudio('play', () => playerChannel.postMessage({ tabId: TAB_ID }));
       playerChannel.onmessage = ({ data }) => {
         if (data?.tabId !== TAB_ID) audio.pause();
       };
