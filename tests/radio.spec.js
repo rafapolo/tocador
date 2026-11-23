@@ -305,3 +305,31 @@ test('R19: a track failing twice is retried silently and plays, without skipping
   // the same file all along: titles repeat across the fixture's albums, so the title alone can't tell a skip
   expect(pedidos.size).toBe(1);
 });
+
+// #669: an S3 stall reached the listener as a silent skip. The radio now says what happens, and blames the server
+// (the proxy's 504), never the listener's connection, unless the browser itself is offline.
+test('R20: a stalled track tells the listener the server is slow, not their connection', async ({ page }) => {
+  await page.route('**/*.mp3', route => route.fulfill({ status: 504, headers: { 'Access-Control-Allow-Origin': '*' } }));
+  const minha = page.route.bind(page);
+  page.route = (url, h) => url === '**/*.mp3' ? Promise.resolve() : minha(url, h);
+  await gotoRadio(page);
+  page.route = minha;
+  await tapIfBlocked(page);
+  const msg = page.locator('#offline-msg');
+  await expect(msg).toBeVisible({ timeout: 5000 });
+  await expect(msg).toContainText('servidor está lento');
+  await expect(msg).toContainText('indo para a próxima', { timeout: 15000 });
+  await expect(msg).not.toContainText('internet');
+});
+
+test('R21: offline, the radio says so and waits instead of skipping', async ({ page, context }) => {
+  await gotoRadio(page);
+  await tapIfBlocked(page);
+  const titulo = await page.locator('#track-title').textContent();
+  await context.setOffline(true);
+  await page.evaluate(() => { _retriedSrcs.set(curSrc || audio.src, 99); audio.dispatchEvent(new Event('error')); });
+  await expect(page.locator('#offline-msg')).toContainText('sem internet');
+  await page.waitForTimeout(1000);
+  expect(await page.locator('#track-title').textContent()).toBe(titulo);
+  await context.setOffline(false);
+});

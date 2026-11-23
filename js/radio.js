@@ -177,16 +177,26 @@ function onLoadTimeout() {
   if (timeoutStreak >= 5) {
     fatalError();
   } else {
+    aviso(semInternet() ? 'sem internet, tentando de novo…' : 'o servidor demorou, indo para a próxima…');
     next();
   }
+}
+
+// A short line under the controls telling the listener why the music stopped. It must not blame their
+// connection when the stall is ours: on 2026-11-23 a probe found Hetzner's S3 holding ~5% of first reads of a
+// cold object for 3-27 s, in both buckets (#669 came from a 10 Mbps listener). "sem internet" only when the
+// browser says it is offline or its own HEAD can't reach the CDN at all.
+const semInternet = () => navigator.onLine === false;
+function aviso(texto) {
+  offlineEl.textContent = texto || '';
+  offlineEl.classList.toggle('visible', !!texto);
 }
 
 function fatalError() {
   clearLoadTimer();
   setLoading(false);
   controlsEl.style.display = 'none';
-  offlineEl.classList.add('visible');
-  offlineEl.innerHTML = 'sem conexão com o servidor';
+  aviso(semInternet() ? 'sem conexão com a internet' : 'o servidor não está respondendo, tente de novo em instantes');
   titleEl.textContent  = '';
   metaEl.innerHTML     = '';
   albumEl.innerHTML    = '';
@@ -289,7 +299,10 @@ window.addEventListener('pagehide', stopHeartbeat);
 window.anunciarSom?.(audio);
 audio.addEventListener('play',    () => { setPlaying(true); tapOverlay.classList.remove('visible'); startHeartbeat(); });
 audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); stopHeartbeat(); });
-audio.addEventListener('playing', () => { clearLoadTimer(); timeoutStreak = 0; setLoading(false); });
+audio.addEventListener('playing', () => {
+  clearLoadTimer(); timeoutStreak = 0; setLoading(false);
+  if (controlsEl.style.display !== 'none') aviso('');
+});
 audio.addEventListener('waiting', () => setLoading(true));
 audio.addEventListener('stalled', () => setLoading(true));
 audio.addEventListener('canplay', () => { clearLoadTimer(); setLoading(false); });
@@ -315,6 +328,7 @@ audio.addEventListener('error',   () => {
     const album = curAlbum, track = curTrack;
     curSrc = '';
     setLoading(true);
+    aviso(semInternet() ? 'sem internet, tentando de novo…' : 'o servidor está lento, tentando de novo…');
     // only if the listener is still on it: a skip in the meantime moved curTrack on
     setTimeout(() => { if (curTrack === track && !curSrc) playTrack(album, track); }, RETENTATIVAS_MS[gastas]);
     return;
@@ -328,6 +342,14 @@ audio.addEventListener('error',   () => {
   timeoutStreak++;
   if (timeoutStreak >= 5) { fatalError(); return; }
   if (!albums.length) return;
+  // Offline: skipping would only burn through tracks that can't load either. Wait for the network and resume
+  // this same track.
+  if (semInternet()) {
+    const album = curAlbum, track = curTrack;
+    aviso('sem internet, a rádio volta quando a conexão voltar');
+    window.addEventListener('online', () => { if (curTrack === track && !curSrc) { timeoutStreak = 0; playTrack(album, track); } }, { once: true });
+    return;
+  }
   // Verify with a HEAD request before reporting or retrying: a 429 here means
   // we're rate-limited, not that this track is actually broken — retrying
   // immediately would just hit the same limit on the next random track, so
@@ -339,9 +361,15 @@ audio.addEventListener('error',   () => {
       setTimeout(next, retryAfter);
       return;
     }
+    // 504 = the proxy gave up waiting on S3 (a stall on our side). Any other answer: the file itself.
+    aviso(r.status === 504 ? 'o servidor está lento, indo para a próxima…' : 'essa faixa não abriu, indo para a próxima…');
     if (shouldReport) reportPlayback(`audio error (MediaError ${errCode ?? '?'})`);
     setTimeout(next, 500);
-  }).catch(() => setTimeout(next, 500));
+  }).catch(() => {
+    // the browser couldn't reach the CDN at all, not even for a HEAD: that one is the listener's connection
+    aviso('sem conexão com o servidor, verifique sua internet');
+    setTimeout(next, 500);
+  });
 });
 
 audio.addEventListener('durationchange', () => {
