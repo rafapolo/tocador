@@ -302,8 +302,10 @@ test('R19: a track failing twice is retried silently and plays, without skipping
   await expect.poll(() => Math.max(0, ...pedidos.values()), { timeout: 15000 }).toBeGreaterThanOrEqual(3);
   await expect.poll(() => page.evaluate(() => audio.currentTime), { timeout: 10000 }).toBeGreaterThan(0.2);
   expect(await page.locator('#track-title').textContent()).toBe(titulo);
-  // the same file all along: titles repeat across the fixture's albums, so the title alone can't tell a skip
-  expect(pedidos.size).toBe(1);
+  // the same file all along: titles repeat across the fixture's albums, so the title alone can't tell a skip.
+  // (The next track starts loading in the spare <audio> once this one plays, so other URLs show up too.)
+  const falhou = [...pedidos].find(([, n]) => n >= 3)[0];
+  expect(await page.evaluate(() => audio.src)).toBe(falhou);
 });
 
 // #669: an S3 stall reached the listener as a silent skip. The radio now says what happens, and blames the server
@@ -332,4 +334,28 @@ test('R21: offline, the radio says so and waits instead of skipping', async ({ p
   await page.waitForTimeout(1000);
   expect(await page.locator('#track-title').textContent()).toBe(titulo);
   await context.setOffline(false);
+});
+
+// Gapless: the next track loads in a second <audio> before this one ends, and 'ended' swaps them, so there is no
+// load gap between tracks, and a cold S3 object stalls while the previous song is still playing.
+test('R22: the next track is preloaded and plays from the spare element on ended', async ({ page }) => {
+  const fixtureMp3 = fs.readFileSync(path.join(__dirname, 'fixtures', 'silence.mp3'));
+  await page.route('**/*.mp3', route => route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Access-Control-Allow-Origin': '*' }, body: fixtureMp3 }));
+  const minha = page.route.bind(page);
+  page.route = (url, h) => url === '**/*.mp3' ? Promise.resolve() : minha(url, h);
+  await gotoRadio(page);
+  page.route = minha;
+  await tapIfBlocked(page);
+  await expect.poll(() => page.evaluate(() => audio.currentTime), { timeout: 10000 }).toBeGreaterThan(0.2);
+  // silence.mp3 is 10 s long, under PROXIMA_S: the spare starts loading at once
+  await expect.poll(() => page.evaluate(() => proxima && reserva.readyState >= 2), { timeout: 10000 }).toBe(true);
+  const { pronta, original } = await page.evaluate(() => ({ pronta: proxima.src, original: audio.id }));
+  expect(original).toBe('audio');
+  // page.route answers without Range, so the stream isn't seekable: end the track by its event instead
+  await page.evaluate(() => audio.dispatchEvent(new Event('ended')));
+  await expect.poll(() => page.evaluate(() => audio.src), { timeout: 5000 }).toBe(pronta);
+  expect(await page.evaluate(() => audio.id)).toBe('');                       // the spare element is now the one playing
+  await expect.poll(() => page.evaluate(() => !audio.paused && audio.currentTime > 0.1), { timeout: 5000 }).toBe(true);
+  // the old element is silent, and holds nothing but the following track (this one is under PROXIMA_S too)
+  expect(await page.evaluate(() => reserva.paused && (!reserva.getAttribute('src') || reserva.src === proxima?.src))).toBe(true);
 });

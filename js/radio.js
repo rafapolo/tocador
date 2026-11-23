@@ -56,7 +56,12 @@ const failed = new Set();
 const failedTracks = new Set();
 
 const $ = id => document.getElementById(id);
-const audio         = $('audio');
+// Two <audio> elements: `audio` plays, `reserva` loads the next track while this one ends (gapless, and the
+// first read of a cold S3 object, which can stall 3-27 s, happens before anyone is waiting on it). On 'ended'
+// they swap. `audio` is reassigned, so every listener goes through ouvir(), which ignores the idle one.
+let audio           = $('audio');
+let reserva         = Object.assign(document.createElement('audio'), { preload: 'auto' });
+const ouvir = (ev, fn) => { for (const el of [audio, reserva]) el.addEventListener(ev, e => { if (e.target === audio) fn(e); }); };
 const widget        = $('widget');
 const coverImg      = $('cover');
 const titleEl       = $('track-title');
@@ -202,14 +207,62 @@ function fatalError() {
   albumEl.innerHTML    = '';
 }
 
+const srcDe = (album, track) => `${BASE_URL}/${encodeURIComponent(album.path)}/${encodeURIComponent(track.file)}`;
+
+// The next random track, already loading in `reserva`. Picked when the current one has under PROXIMA_S seconds
+// left: early enough to ride out an S3 stall, late enough that a listener skipping around downloads nothing extra.
+const PROXIMA_S = 45;
+let proxima = null;
+function prepararProxima() {
+  if (proxima || !albums.length) return;
+  let p = pickRandom();
+  for (let i = 0; i < 5 && p.track === curTrack; i++) p = pickRandom();   // never the one playing now
+  if (p.track === curTrack) return;
+  proxima = { ...p, src: srcDe(p.album, p.track) };
+  reserva.src = proxima.src;
+  reserva.load();
+}
+function descartarProxima() {
+  proxima = null;
+  reserva.removeAttribute('src');
+  reserva.load();
+}
+
 function playTrack(album, track) {
   showTrack(album, track);
-  const src = `${BASE_URL}/${encodeURIComponent(album.path)}/${encodeURIComponent(track.file)}`;
-  if (curSrc !== src) { curSrc = src; audio.src = src; audio.load(); }
+  const src = srcDe(album, track);
+  let trocou = false;
+  if (proxima && proxima.src === src && curSrc !== src && !reserva.error) {
+    // pause the old one first, so other tabs hear "stopped" then "playing" (som-abas.js), not the reverse
+    const velho = audio;
+    audio = reserva; reserva = velho; proxima = null;
+    velho.pause();
+    velho.removeAttribute('src');
+    velho.load();
+    curSrc = src;
+    trocou = true;
+    if (isFinite(audio.duration)) timeTotalEl.textContent = fmtTime(audio.duration);
+  } else {
+    if (proxima) descartarProxima();
+    if (curSrc !== src) { curSrc = src; audio.src = src; audio.load(); }
+  }
   setLoading(true);
   clearLoadTimer();
   loadTimer = setTimeout(onLoadTimeout, 15000);
-  audio.play().catch(err => { if (err?.name === 'NotAllowedError') { clearLoadTimer(); setLoading(false); tapOverlay.classList.add('visible'); } });
+  const el = audio;
+  el.play().catch(err => {
+    if (err?.name !== 'NotAllowedError' || el !== audio) return;
+    // iOS with the screen locked may refuse play() on an element the listener never touched. The other one was
+    // playing a moment ago: load the track there instead, like the radio did before it had two.
+    if (trocou) {
+      audio = reserva; reserva = el;
+      reserva.removeAttribute('src'); reserva.load();
+      audio.src = src; audio.load();
+      audio.play().catch(e => { if (e?.name === 'NotAllowedError' && audio.src === src) { clearLoadTimer(); setLoading(false); tapOverlay.classList.add('visible'); } });
+      return;
+    }
+    clearLoadTimer(); setLoading(false); tapOverlay.classList.add('visible');
+  });
 }
 
 function pushHist() {
@@ -218,7 +271,7 @@ function pushHist() {
   if (hist.length > 50) hist.shift();
 }
 
-function next() { pushHist(); const p = pickRandom(); playTrack(p.album, p.track); }
+function next() { pushHist(); const p = proxima || pickRandom(); playTrack(p.album, p.track); }
 function prev() { if (hist.length) { const p = hist.pop(); playTrack(p.album, p.track); } }
 
 function startPlay() {
@@ -253,7 +306,7 @@ if (typeof BroadcastChannel !== 'undefined') {
   try {
     const TAB_ID = crypto.randomUUID?.() ?? (Math.random().toString(36).slice(2) + Date.now().toString(36));
     const ch = new BroadcastChannel('tocador-player');
-    audio.addEventListener('play', () => ch.postMessage({ tabId: TAB_ID }));
+    ouvir('play', () => ch.postMessage({ tabId: TAB_ID }));
     ch.onmessage = ({ data }) => { if (data?.tabId !== TAB_ID) audio.pause(); };
   } catch (_) {}
 }
@@ -297,21 +350,22 @@ function stopHeartbeat() {
 window.addEventListener('pagehide', stopHeartbeat);
 
 window.anunciarSom?.(audio);
-audio.addEventListener('play',    () => { setPlaying(true); tapOverlay.classList.remove('visible'); startHeartbeat(); });
-audio.addEventListener('pause',   () => { setPlaying(false); setLoading(false); stopHeartbeat(); });
-audio.addEventListener('playing', () => {
+window.anunciarSom?.(reserva);
+ouvir('play', () => { setPlaying(true); tapOverlay.classList.remove('visible'); startHeartbeat(); });
+ouvir('pause', () => { setPlaying(false); setLoading(false); stopHeartbeat(); });
+ouvir('playing', () => {
   clearLoadTimer(); timeoutStreak = 0; setLoading(false);
   if (controlsEl.style.display !== 'none') aviso('');
 });
-audio.addEventListener('waiting', () => setLoading(true));
-audio.addEventListener('stalled', () => setLoading(true));
-audio.addEventListener('canplay', () => { clearLoadTimer(); setLoading(false); });
-audio.addEventListener('ended',   next);
+ouvir('waiting', () => setLoading(true));
+ouvir('stalled', () => setLoading(true));
+ouvir('canplay', () => { clearLoadTimer(); setLoading(false); });
+ouvir('ended', next);
 // src → silent retries already spent on it. Two, after 1.5 s and 5 s: S3 stalled on single objects for seconds on
 // 2026-11-20, and one retry 500 ms later still landed inside the stall (#646-#656 were all such tracks).
 const _retriedSrcs = new Map();
 const RETENTATIVAS_MS = [1500, 5000];
-audio.addEventListener('error',   () => {
+ouvir('error', () => {
   clearLoadTimer();
   setLoading(false);
   const failedSrc = curSrc || audio.src;
@@ -372,11 +426,11 @@ audio.addEventListener('error',   () => {
   });
 });
 
-audio.addEventListener('durationchange', () => {
+ouvir('durationchange', () => {
   timeTotalEl.textContent = fmtTime(audio.duration);
 });
 
-audio.addEventListener('timeupdate', () => {
+ouvir('timeupdate', () => {
   if (audio.duration) {
     fillEl.style.width = (audio.currentTime / audio.duration * 100) + '%';
     if ('mediaSession' in navigator && !isNaN(audio.duration)) {
@@ -384,6 +438,7 @@ audio.addEventListener('timeupdate', () => {
     }
   }
   timeCurrentEl.textContent = fmtTime(audio.currentTime);
+  if (!proxima && !audio.paused && audio.duration - audio.currentTime <= PROXIMA_S) prepararProxima();
 });
 
 function seekFromClient(clientX) {
