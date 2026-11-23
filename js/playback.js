@@ -263,10 +263,51 @@ function pickShuffleTrack(pool) {
   return pick;
 }
 
+// Warm-up of the track that comes next. The first read of a cold S3 object can stall for 3-27 s (~5% of reads,
+// both buckets, probed 2026-11-23, #669) and later reads of it are fast, so AQUECER_S before the end one byte of
+// the next track is requested (bytes=1-1: a range not starting at 0 isn't counted as a play, see markPlay() in
+// lib/metrics.js) and the stall happens while this track still plays. Only on our CDN, which answers the Range
+// preflight. The radio goes further and preloads the whole track in a second <audio> (gapless, js/radio.js);
+// here #audio is tied to too much (visor, captureStream, som-abas) to swap elements.
+const AQUECER_S = 45;
+let _shufflePronto = null;   // [album, track] drawn ahead in shuffle, played by playNext() if still valid
+let _aquecida = null;
+function proximaPrevista() {
+  if (repeatMode === 'one' || !currentTrack) return null;
+  const inQueue = savedQueueActive();
+  if (shuffleOn) {
+    _shufflePronto ??= pickShuffleTrack(inQueue ? savedQueue : filteredAlbums);
+    return _shufflePronto?.[1] ?? null;
+  }
+  if (!selectedAlbum) return null;
+  const tracks = selectedAlbum.tracks;
+  const next = tracks.find((t, i) => i > tracks.indexOf(currentTrack) && trackPlayable(t));
+  if (next) return next;
+  if (inQueue) {
+    const album = savedQueue.slice(savedQueue.indexOf(selectedAlbum) + 1).find(a => a.tracks.some(trackPlayable));
+    return album?.tracks.find(trackPlayable) ?? null;
+  }
+  return repeatMode === 'all' ? tracks.find(trackPlayable) ?? null : null;
+}
+function aquecerProxima(audio) {
+  if (audio.paused || !(audio.duration - audio.currentTime <= AQUECER_S)) return;
+  if (!/^https:\/\/cdn\.tocador\.cc\//.test(BASE_URL)) return;
+  const t = proximaPrevista();
+  if (!t || t === currentTrack || t === _aquecida) return;
+  _aquecida = t;
+  fetch(`${BASE_URL}/${t.file}`, { headers: { Range: 'bytes=1-1' }, credentials: 'omit', cache: 'no-store' })
+    .then(r => r.body?.cancel()).catch(() => {});
+}
+
 function playNext() {
   const inQueue = savedQueueActive();
   if (shuffleOn) {
-    const pick = pickShuffleTrack(inQueue ? savedQueue : filteredAlbums);
+    const pool = inQueue ? savedQueue : filteredAlbums;
+    // the track already warmed, unless the filter, queue or track changed since it was drawn
+    const pronto = _shufflePronto;
+    _shufflePronto = null;
+    const pick = pronto && pronto[1] !== currentTrack && trackPlayable(pronto[1]) && pool.includes(pronto[0])
+      ? pronto : pickShuffleTrack(pool);
     if (!pick) return;
     if (currentTrack) {
       const from = selectedAlbum?.tracks.includes(currentTrack) ? selectedAlbum : albums.find(a => a.tracks.includes(currentTrack));

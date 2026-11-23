@@ -1229,6 +1229,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
     }
     if (whole === _lastWholeSecond) return;
     _lastWholeSecond = whole;
+    aquecerProxima(audio);
     const cur = formatTime(audio.currentTime);
     if (timeCurrentEl) timeCurrentEl.textContent = cur;
     if (overlayTimeCurrent) overlayTimeCurrent.textContent = cur;
@@ -1351,6 +1352,7 @@ async function handleCatalogDecodeError(err, container, reportCatalogo) {
 
   function applyShuffle(val) {
     shuffleOn = val;
+    _shufflePronto = null;
     btnShuffle?.classList.toggle('active', shuffleOn);
     btnShuffleMobile?.classList.toggle('active', shuffleOn);
     if (btnShuffle) {

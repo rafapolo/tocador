@@ -309,3 +309,26 @@ test('clicking the player title brings the tracks panel back to the playing albu
   await expect(page.locator('#track-list .track-item').first()).toHaveClass(/playing/);
   expect(await page.evaluate(() => document.getElementById('audio').paused)).toBe(false);   // the audio is not cut
 });
+
+// #669: S3 can hold the first read of a cold object for seconds. 45 s before the end, the player asks for one byte
+// of the next track (bytes=1-1, not counted as a play) so that stall happens while the current track still plays.
+test.describe('next-track warm-up', () => {
+  test('asks for one byte of the next track near the end, once, and shuffle plays the warmed pick', async ({ page }) => {
+    const pedidos = [];
+    page.on('request', r => { if (r.url().endsWith('.mp3') && r.headers().range === 'bytes=1-1') pedidos.push(decodeURIComponent(r.url())); });
+    await gotoWithFixture(page);
+    await card(page, 'Construção').locator('.album-item-title').click();
+    await page.locator('#track-list .track-item').first().click();
+    expect(await page.evaluate(() => BASE_URL)).toMatch(/^https:\/\/cdn\.tocador\.cc\//);
+    const fim = { paused: false, duration: 100, currentTime: 60 };
+    await page.evaluate(f => { aquecerProxima({ ...f, currentTime: 10 }); aquecerProxima(f); aquecerProxima(f); }, fim);
+    await expect.poll(() => pedidos.length).toBe(1);
+    expect(pedidos[0]).toContain(await page.evaluate(() => decodeURIComponent(selectedAlbum.tracks[1].file.split('/').pop())));
+
+    await page.evaluate(f => { shuffleOn = true; _shufflePronto = null; aquecerProxima(f); }, fim);
+    await expect.poll(() => pedidos.length).toBe(2);
+    const pronta = await page.evaluate(() => _shufflePronto[1].file);
+    await page.evaluate(() => playNext());
+    expect(await page.evaluate(() => currentTrack.file)).toBe(pronta);
+  });
+});
