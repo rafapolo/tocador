@@ -345,6 +345,14 @@ _server = Bun.serve({
             console.log(`[report-error] skipped, file verified playable: ${src}`);
             return new Response('OK (file verified playable)', { status: 200, headers: corsBase });
           }
+          // 504 is our own answer to S3 sending no headers in time ([s3-lento], today.s3Slow): Hetzner's storage
+          // queues the first read of a cold object for 3-27 s, in both buckets, ~5% of reads (probed 2026-11-23),
+          // and the file plays fine a moment later. Already counted in /metrics; an issue per stall is noise
+          // (#646-#669 were all closed as "S3 slow, file fine").
+          if (check.status === 504) {
+            console.log(`[report-error] skipped, S3 slow: ${src}`);
+            return new Response('OK (S3 slow, not filed)', { status: 200, headers: corsBase });
+          }
         } catch (err) {
           // HEAD failed/timed out — corroborates rather than contradicts the
           // report, so fall through and file it.
